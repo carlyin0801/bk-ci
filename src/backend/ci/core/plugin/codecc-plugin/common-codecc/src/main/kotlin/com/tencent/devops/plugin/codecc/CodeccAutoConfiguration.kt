@@ -36,7 +36,7 @@ import org.springframework.core.Ordered
 
 @Configuration
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)
-class AutoConfiguration {
+class CodeccAutoConfiguration {
 
     @Bean
     fun codeccConfig() = CodeccConfig()
