@@ -61,7 +61,7 @@ interface BuildBuildResource {
         @HeaderParam(AUTH_HEADER_DEVOPS_VM_SEQ_ID)
         vmSeqId: String,
         @ApiParam(value = "构建机名称", required = true)
-        @HeaderParam(AUTH_HEADER_DEVO/varsPS_VM_NAME)
+        @HeaderParam(AUTH_HEADER_DEVOPS_VM_NAME)
         vmName: String
     ): Result<BuildVariables>
 
