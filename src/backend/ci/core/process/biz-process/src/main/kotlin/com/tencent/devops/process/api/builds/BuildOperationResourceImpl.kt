@@ -3,8 +3,9 @@ package com.tencent.devops.process.api.builds
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.process.api.service.BuildOperationResource
 import com.tencent.devops.process.engine.service.PipelineRepositoryService
-import com.tencent.devops.project.pojo.Result
 import org.springframework.beans.factory.annotation.Autowired
+import com.tencent.devops.common.api.pojo.Result
+
 
 @RestResource
 class BuildOperationResourceImpl @Autowired constructor(
