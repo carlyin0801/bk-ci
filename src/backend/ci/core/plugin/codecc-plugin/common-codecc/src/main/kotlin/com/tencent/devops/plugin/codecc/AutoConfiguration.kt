@@ -27,6 +27,8 @@
 package com.tencent.devops.plugin.codecc
 
 import com.tencent.devops.plugin.codecc.config.CodeccConfig
+import com.tencent.devops.plugin.codecc.element.LinuxCodeCCScriptElementBizPlugin
+import com.tencent.devops.plugin.codecc.element.LinuxPaasCodeCCScriptElementBizPlugin
 import org.springframework.boot.autoconfigure.AutoConfigureOrder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -51,4 +53,10 @@ class AutoConfiguration {
             getRuleSetsPath = codeccConfig.getRuleSetsPath
         )
     }
+
+    @Bean
+    fun linuxCodeCCScriptElementBizPlugin() = LinuxCodeCCScriptElementBizPlugin()
+
+    @Bean
+    fun linuxPaasCodeCCScriptElementBizPlugin(coverityApi: CodeccApi) = LinuxPaasCodeCCScriptElementBizPlugin(coverityApi)
 }
