@@ -24,39 +24,44 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.repository.resources
+package com.tencent.devops.process.api.service
 
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.client.Client
+import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.web.RestResource
-import com.tencent.devops.process.api.service.ServiceBuildPermissionResource
-import com.tencent.devops.repository.api.AppRepositoryResource
-import com.tencent.devops.repository.pojo.commit.CommitResponse
-import com.tencent.devops.repository.service.RepositoryService
+import com.tencent.devops.process.engine.service.PipelineRuntimeService
+import com.tencent.devops.process.permission.PipelinePermissionService
 import org.springframework.beans.factory.annotation.Autowired
 
 @RestResource
-class AppRepositoryResourceImpl @Autowired constructor(
-    private val repositoryService: RepositoryService,
-    private val client: Client
-) : AppRepositoryResource {
+class ServiceBuildPermissionResourceImpl @Autowired constructor(
+    private val pipelineRuntimeService: PipelineRuntimeService,
+    private val pipelinePermissionService: PipelinePermissionService
+) : ServiceBuildPermissionResource {
 
-    override fun getCommit(
+    override fun checkViewPermission(
         userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String
-    ): Result<List<CommitResponse>> {
-        // 鉴权
-        val result = client.get(ServiceBuildPermissionResource::class).checkViewPermission(
-            userId = userId,
-            projectId = projectId,
-            pipelineId = pipelineId,
-            buildId = buildId
-        )
-        if (result.isNotOk() || result.data != true) {
-            return Result(emptyList())
+    ): Result<Boolean> {
+        val buildInfo = pipelineRuntimeService.getBuildInfo(buildId)
+            ?: return Result(false)
+        return when {
+            buildInfo.projectId != projectId -> {
+                Result(data = false)
+            }
+            buildInfo.pipelineId != pipelineId -> {
+                Result(data = false)
+            }
+            else -> Result(
+                pipelinePermissionService.checkPipelinePermission(
+                    userId = userId,
+                    projectId = projectId,
+                    pipelineId = pipelineId,
+                    permission = AuthPermission.VIEW
+                )
+            )
         }
-        return Result(repositoryService.getCommit(buildId))
     }
 }
