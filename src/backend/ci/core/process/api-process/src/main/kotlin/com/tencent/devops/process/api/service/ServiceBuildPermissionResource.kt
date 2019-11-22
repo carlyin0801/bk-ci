@@ -24,39 +24,44 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.repository.resources
+package com.tencent.devops.process.api.service
 
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.client.Client
-import com.tencent.devops.common.web.RestResource
-import com.tencent.devops.process.api.service.ServiceBuildPermissionResource
-import com.tencent.devops.repository.api.AppRepositoryResource
-import com.tencent.devops.repository.pojo.commit.CommitResponse
-import com.tencent.devops.repository.service.RepositoryService
-import org.springframework.beans.factory.annotation.Autowired
+import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
+import io.swagger.annotations.ApiParam
+import javax.security.auth.AuthPermission
+import javax.ws.rs.Consumes
+import javax.ws.rs.HeaderParam
+import javax.ws.rs.PUT
+import javax.ws.rs.Path
+import javax.ws.rs.PathParam
+import javax.ws.rs.Produces
+import javax.ws.rs.core.MediaType
 
-@RestResource
-class AppRepositoryResourceImpl @Autowired constructor(
-    private val repositoryService: RepositoryService,
-    private val client: Client
-) : AppRepositoryResource {
+@Api(tags = ["SERVICE_BUILD"], description = "服务-构建资源权限鉴权")
+@Path("/service/builds")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+interface ServiceBuildPermissionResource {
 
-    override fun getCommit(
+    @ApiOperation("检查相应构建是否有读权限")
+    @PUT
+    @Path("/projects/{projectId}/pipelines/{pipelineId}/builds/{buildId}/permission/view")
+    fun checkViewPermission(
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
         projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
         pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
         buildId: String
-    ): Result<List<CommitResponse>> {
-        // 鉴权
-        val result = client.get(ServiceBuildPermissionResource::class).checkViewPermission(
-            userId = userId,
-            projectId = projectId,
-            pipelineId = pipelineId,
-            buildId = buildId
-        )
-        if (result.isNotOk() || result.data != true) {
-            return Result(emptyList())
-        }
-        return Result(repositoryService.getCommit(buildId))
-    }
+    ): Result<Boolean>
 }
