@@ -15,16 +15,16 @@ import javax.ws.rs.core.MediaType
 @Consumes(MediaType.APPLICATION_JSON)
 interface WebIDEExResource {
     @GET
-    @Path("/heartBeat/{ip}/{version}")
+    @Path("/heartBeat")
     @ApiOperation("ide心跳上报接口")
     fun heartBeat(
             @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
             @HeaderParam(AUTH_HEADER_USER_ID)
             userId: String,
-            @PathParam("ip")
+            @QueryParam("ip")
             @ApiParam(value = "IDE实例的ip地址", required = true)
             ip: String,
-            @PathParam("version")
+            @QueryParam("version")
             @ApiParam(value = "IDE实例的版本", required = true)
             version: String
     ): Result<Boolean>
