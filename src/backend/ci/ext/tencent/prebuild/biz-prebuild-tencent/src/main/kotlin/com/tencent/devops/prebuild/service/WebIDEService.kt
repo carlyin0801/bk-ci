@@ -45,6 +45,7 @@ import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.concurrent.Executors
 
@@ -186,7 +187,7 @@ class WebIDEService @Autowired constructor(
             if (!response.isSuccessful) {
                 logger.info("response code: ${response.code()}")
                 logger.info("response: $responseContent")
-                throw RuntimeException("Fail to start docker")
+                throw RuntimeException("fail to get devcloud info")
             }
             logger.info("devcloud content: $responseContent")
             val devCloudUserRes = jacksonObjectMapper().readValue<DevcloudUserRes>(responseContent)
@@ -210,7 +211,32 @@ class WebIDEService @Autowired constructor(
         val encKey = DigestUtils.md5Hex("$token$timestamp$random")
         headerBuilder["ENCKEY"] = encKey
         headerBuilder["TIMESTAMP"] = timestamp
+        headerBuilder["TimeStamp"] = timestamp
+        val token = "14a0a8f272d4ebd39ea360be939a3d3c6748548c1c381cd8e887"
+        val sigContent = timestamp + token + timestamp
+        val digest = MessageDigest.getInstance("SHA-256")
+        val result = toHex(digest.digest(sigContent.toByteArray()))
+        headerBuilder["Signature"] = result
+        headerBuilder["SIGNATURE"] = result
+
         return headerBuilder
+    }
+
+    fun toHex(byteArray: ByteArray): String {
+        val result = with(StringBuilder()) {
+            byteArray.forEach {
+                val hex = it.toInt() and (0xFF)
+                val hexStr = Integer.toHexString(hex)
+                if (hexStr.length == 1) {
+                    this.append("0").append(hexStr)
+                } else {
+                    this.append(hexStr)
+                }
+            }
+            this.toString()
+        }
+        //转成16进制后是32字节
+        return result
     }
 
     private fun addNewInfo(userId: String, newItem: IDEInfo) {
