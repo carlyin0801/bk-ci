@@ -23,14 +23,14 @@ import com.tencent.devops.environment.api.ServiceNodeResource
 import com.tencent.devops.environment.api.thirdPartyAgent.ServicePreBuildAgentResource
 import com.tencent.devops.environment.api.thirdPartyAgent.ServiceThirdPartyAgentResource
 import com.tencent.devops.environment.pojo.enums.NodeType
-import com.tencent.devops.prebuild.pojo.ide.IdeDirInfo
 import com.tencent.devops.environment.pojo.thirdPartyAgent.ThirdPartyAgentInfo
 import com.tencent.devops.environment.pojo.thirdPartyAgent.ThirdPartyAgentStaticInfo
 import com.tencent.devops.prebuild.dao.WebIDEOpenDirDao
 import com.tencent.devops.prebuild.dao.WebIDEStatusDao
-import com.tencent.devops.prebuild.pojo.IDEInfo
 import com.tencent.devops.prebuild.pojo.DevcloudUserRes
+import com.tencent.devops.prebuild.pojo.IDEInfo
 import com.tencent.devops.prebuild.pojo.UserResItem
+import com.tencent.devops.prebuild.pojo.ide.IdeDirInfo
 import com.tencent.devops.process.api.service.ServiceBuildResource
 import com.tencent.devops.process.api.service.ServicePipelineResource
 import com.tencent.devops.process.api.user.UserPipelineResource
@@ -45,7 +45,6 @@ import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
-import java.lang.StringBuilder
 import java.text.SimpleDateFormat
 import java.util.concurrent.Executors
 
@@ -76,11 +75,13 @@ class WebIDEService @Autowired constructor(
         // 2. get database info
         val ideList = mutableListOf<IDEInfo>()
         val infoList = webIDEStatusDao.get(dslContext, userId)
+        val currTimeStamp = System.currentTimeMillis()
         infoList.forEach {
             if (devcloudInfo.containsKey(it.ip)) {
                 devcloudInfo.remove(it.ip)
                 val ideUrl = "http://dev.devgw.devops.oa.com/webide/$userId/${it.ip}/"
-                val info = IDEInfo(it.ideStatus, it.agentStatus, it.ip, ideUrl, it.ideVersion, it.serverType, it.serverCreateTime)
+                var ideStatus = if(Math.abs(currTimeStamp - it.ideLastUpdate) < 13000) 1 else 0
+                val info = IDEInfo(ideStatus, it.agentStatus, it.ip, ideUrl, it.ideVersion, it.serverType, it.serverCreateTime)
                 ideList.add(info)
             } else {
                 webIDEStatusDao.del(dslContext, userId, it.ip)
@@ -101,28 +102,11 @@ class WebIDEService @Autowired constructor(
 
         // 更新服务器agent的状态
         updateAgentStatus(userId, projectId, ideList)
-        // 更新ide状态
-        updateIdeStatus(ideList)
         // 按照服务器创建时间的降序排序（新的在前面）
         ideList.sortByDescending { it.serverCreateTime }
         return ideList
     }
-
-    private fun updateIdeStatus(ideList: List<IDEInfo>) {
-/*        ideList.forEach {
-            logger.info("try testing url: ${it.ideURL}")
-            val request = Request.Builder()
-                    .url(it.ideURL)
-                    .get()
-                    .build()
-            val client = OkHttpClient.Builder().build().newCall(request)
-            val response = client.execute()
-            val responseContent = response.body()!!.string()
-            logger.info("response succ: ${response.isSuccessful}")
-            logger.info("response code: ${response.code()}")
-            logger.info("response: $responseContent")
-        }*/
-    }
+    
 
     private fun updateAgentStatus(userID: String, projectID: String, ideList: List<IDEInfo>) {
         val nodeInfoList = client.get(ServiceNodeResource::class).listNodeByNodeType(projectID, NodeType.THIRDPARTY)
