@@ -357,8 +357,8 @@ class WebIDEService @Autowired constructor(
         return Model("BKVSCode", "", stageList, emptyList(), false, userId)
     }
 
-    fun heartBeat(userId: String, ip: String): Boolean {
-        webIDEStatusDao.updateIDEHeartBeat(dslContext, userId, ip)
+    fun heartBeat(userId: String, ip: String, version: String): Boolean {
+        webIDEStatusDao.updateIDEHeartBeat(dslContext, userId, ip, version)
         return true
     }
 
