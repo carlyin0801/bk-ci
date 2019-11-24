@@ -90,10 +90,11 @@ class WebIDEStatusDao {
         }
     }
 
-    fun updateIDEHeartBeat(dslContext: DSLContext, owner: String, ip: String) {
+    fun updateIDEHeartBeat(dslContext: DSLContext, owner: String, ip: String, version: String) {
         with(TWebideIdeinfo.T_WEBIDE_IDEINFO) {
             dslContext.update(this)
                     .set(IDE_LAST_UPDATE, System.currentTimeMillis())
+                    .set(IDE_VERSION, version)
                     .where(OWNER.eq(owner))
                     .and(IP.eq(ip))
                     .execute()
