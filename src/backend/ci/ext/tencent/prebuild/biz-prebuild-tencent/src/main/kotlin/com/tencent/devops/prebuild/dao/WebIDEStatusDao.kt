@@ -16,8 +16,7 @@ class WebIDEStatusDao {
         ideStatus: Int,
         ideVersion: String,
         serverCreateTime: Long,
-        pipelineId: String,
-        ideLastUpdateTime: Long
+        pipelineId: String
     ) {
         with(TWebideIdeinfo.T_WEBIDE_IDEINFO) {
             dslContext.insertInto(
@@ -39,8 +38,7 @@ class WebIDEStatusDao {
                     ideStatus,
                     ideVersion,
                     serverCreateTime,
-                    pipelineId,
-                    ideLastUpdateTime
+                    pipelineId
             ).execute()
         }
     }
