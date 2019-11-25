@@ -167,7 +167,9 @@ open class CodeccApi constructor(
             AUTH_HEADER_DEVOPS_USER_ID to userId,
             AUTH_HEADER_DEVOPS_PROJECT_ID to projectId
         )
-        val body = mapOf<String, String>()
+        val body = mapOf(
+            "toolNames" to listOf(toolName)
+        )
         val result = taskExecution(
             body = body,
             path = getRuleSetsPath,
