@@ -3,7 +3,6 @@ package com.tencent.devops.prebuild.dao
 import com.tencent.devops.model.prebuild.tables.TWebideIdeinfo
 import com.tencent.devops.model.prebuild.tables.records.TWebideIdeinfoRecord
 import org.jooq.DSLContext
-import org.jooq.types.ULong
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -18,7 +17,7 @@ class WebIDEStatusDao {
         ideVersion: String,
         serverCreateTime: Long,
         pipelineId: String,
-        ideLastUpdate: ULong
+        ideLastUpdate: Long
     ) {
         with(TWebideIdeinfo.T_WEBIDE_IDEINFO) {
             dslContext.insertInto(
@@ -98,7 +97,7 @@ class WebIDEStatusDao {
         with(TWebideIdeinfo.T_WEBIDE_IDEINFO) {
             dslContext.update(this)
                     .set(IDE_VERSION, version)
-                    .set(IDE_LAST_UPDATE, System.currentTimeMillis() as ULong)
+                    .set(IDE_LAST_UPDATE, System.currentTimeMillis())
                     .where(OWNER.eq(owner))
                     .and(IP.eq(ip))
                     .execute()
