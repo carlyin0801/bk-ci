@@ -81,7 +81,9 @@ class WebIDEService @Autowired constructor(
             if (devcloudInfo.containsKey(it.ip)) {
                 devcloudInfo.remove(it.ip)
                 val ideUrl = "http://dev.devgw.devops.oa.com/webide/$userId/${it.ip}/"
-                var ideStatus = if(Math.abs(currTimeStamp - it.ideLastUpdate) < 13000) 1 else 0
+
+                //var ideStatus = if(Math.abs(currTimeStamp - it.ideLastUpdate) < 13000) 1 else 0
+                var ideStatus = if(Math.abs(currTimeStamp - 0) < 13000) 1 else 0
                 val info = IDEInfo(ideStatus, it.agentStatus, it.ip, ideUrl, it.ideVersion, it.serverType, it.serverCreateTime)
                 ideList.add(info)
             } else {
