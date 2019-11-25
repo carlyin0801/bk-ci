@@ -210,7 +210,6 @@ class WebIDEService @Autowired constructor(
         headerBuilder["TIMESTP"] = timestamp
         val encKey = DigestUtils.md5Hex("$token$timestamp$random")
         headerBuilder["ENCKEY"] = encKey
-        headerBuilder["TIMESTAMP"] = timestamp
         headerBuilder["timeStamp"] = timestamp
         val token = "14a0a8f272d4ebd39ea360be939a3d3c6748548c1c381cd8e887"
         val sigContent = timestamp + token + timestamp
