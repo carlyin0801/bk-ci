@@ -30,9 +30,6 @@ dependencies {
     compile project(":core:common:common-websocket")
     compile project(":core:common:common-redis")
     compile project(":core:project:api-project")
-    compile "org.springframework.boot:spring-boot-starter-websocket"
-    compile group: 'javax.websocket', name: 'javax.websocket-api', version: '1.1'
-    compile "io.undertow:undertow-servlet"
-    compile "io.undertow:undertow-websockets-jsr"
+    
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 }

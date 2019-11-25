@@ -24,20 +24,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.project.resources
+package com.tencent.devops.log.model.pojo
 
-import com.tencent.devops.common.web.RestResource
-import com.tencent.devops.project.api.service.ServiceProjectServiceResource
-import com.tencent.devops.project.pojo.Result
-import com.tencent.devops.project.pojo.service.*
-import com.tencent.devops.project.service.UserProjectServiceService
-
-@RestResource
-class ServiceProjectServiceResourceImpl constructor(
-    private val userProjectServiceService: UserProjectServiceService
-) : ServiceProjectServiceResource {
-
-    override fun updateServiceUrlByBatch(userId: String, serviceUrlUpdateInfoList: List<ServiceUrlUpdateInfo>?): Result<Boolean> {
-        return userProjectServiceService.updateServiceUrlByBatch(userId, serviceUrlUpdateInfoList)
-    }
-}
+/**
+ *
+ * Powered By Tencent
+ */
+data class PushStatus(
+    var lastLineNum: Long = 0,
+    var lastPushTime: Long = 0
+)

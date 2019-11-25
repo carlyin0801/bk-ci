@@ -55,18 +55,23 @@ class LogService @Autowired constructor(
 
     fun getInitLogs(gitProjectId: Long, buildId: String, isAnalysis: Boolean?, queryKeywords: String?, tag: String?, jobId: String?, executeCount: Int?): QueryLogs {
         logger.info("get init logs, gitProjectId: $gitProjectId")
-        val gitProjectPipeline = getProjectPipeline(gitProjectId)
-
-        return client.get(ServiceLogResource::class).getInitLogs(
-                gitProjectPipeline.projectCode,
-                gitProjectPipeline.pipelineId,
+        val logService = client.get(ServiceLogResource::class)
+        return if (queryKeywords != null && queryKeywords.isBlank()) {
+            logService.queryLogs(
                 buildId,
-                isAnalysis,
                 queryKeywords,
                 tag,
                 jobId,
                 executeCount
             ).data!!
+        } else {
+            logService.getInitLogs(
+                buildId,
+                tag,
+                jobId,
+                executeCount
+            ).data!!
+        }
     }
 
     fun getMoreLogs(gitProjectId: Long, buildId: String, num: Int?, fromStart: Boolean?, start: Long, end: Long, tag: String?, jobId: String?, executeCount: Int?): QueryLogs {

@@ -27,10 +27,14 @@
 package com.tencent.devops.log.mq
 
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
+import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.log.model.pojo.LogBatchEvent
 import com.tencent.devops.log.model.pojo.LogEvent
+import com.tencent.devops.log.model.pojo.LogPushEvent
 import com.tencent.devops.log.model.pojo.LogStatusEvent
+import com.tencent.devops.log.service.LogPushWebsocketService
 import com.tencent.devops.log.service.LogServiceDispatcher
+import com.tencent.devops.log.utils.LogPushRedisUtlis
 import com.tencent.devops.log.utils.LogDispatcher
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.core.ExchangeTypes
@@ -48,7 +52,9 @@ import org.springframework.stereotype.Component
 @Component
 class LogListener constructor(
     private val rabbitTemplate: RabbitTemplate,
-    private val logServiceDispatcher: LogServiceDispatcher
+    private val logServiceDispatcher: LogServiceDispatcher,
+    private val redisOperation: RedisOperation,
+    private val logPushWebsocketService: LogPushWebsocketService
 ) {
 
     fun logEvent(event: LogEvent) {
@@ -81,6 +87,33 @@ class LogListener constructor(
                 logger.warn("Retry to add log batch event [${event.buildId}|${event.retryTime}]")
                 with(event) {
                     LogDispatcher.dispatch(rabbitTemplate, LogBatchEvent(buildId, logs, retryTime - 1, DelayMills))
+                }
+            }
+        }
+    }
+
+    fun logPushEvent(event: LogPushEvent) {
+        var result = false
+        try {
+            // 对每一条插入成功的日志进行处理
+            event.logs.forEach {
+                if (!it.tag.isBlank()) {
+                    // 记录该Job已插入的最后一条日志行号
+//                    BuildLogEndPoint.refreshBuildEndLineNo(event.buildId, it.tag, it.lineNo)
+                    val jobPushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, event.buildId, it.tag)
+                    if (jobPushStatus != null && it.lineNo - jobPushStatus.lastLineNum > 10) {
+                        logPushWebsocketService.sendTagWebsocketMessage(event.buildId, it.tag, it)
+                    }
+                }
+            }
+            result = true
+        } catch (ignored: Throwable) {
+            logger.warn("Fail to add the log batch event [${event.buildId}|${event.retryTime}]", ignored)
+        } finally {
+            if (!result && event.retryTime >= 0) {
+                logger.warn("Retry to add log batch event [${event.buildId}|${event.retryTime}]")
+                with(event) {
+                    LogDispatcher.dispatch(rabbitTemplate, LogPushEvent(buildId, logs, retryTime - 1, DelayMills))
                 }
             }
         }

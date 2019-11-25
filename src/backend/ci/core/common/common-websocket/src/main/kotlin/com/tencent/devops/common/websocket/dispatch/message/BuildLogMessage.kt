@@ -24,20 +24,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.project.resources
+package com.tencent.devops.common.websocket.dispatch.message
 
-import com.tencent.devops.common.web.RestResource
-import com.tencent.devops.project.api.service.ServiceProjectServiceResource
-import com.tencent.devops.project.pojo.Result
-import com.tencent.devops.project.pojo.service.*
-import com.tencent.devops.project.service.UserProjectServiceService
+import com.tencent.devops.common.websocket.pojo.NotifyPost
 
-@RestResource
-class ServiceProjectServiceResourceImpl constructor(
-    private val userProjectServiceService: UserProjectServiceService
-) : ServiceProjectServiceResource {
-
-    override fun updateServiceUrlByBatch(userId: String, serviceUrlUpdateInfoList: List<ServiceUrlUpdateInfo>?): Result<Boolean> {
-        return userProjectServiceService.updateServiceUrlByBatch(userId, serviceUrlUpdateInfoList)
-    }
-}
+data class BuildLogMessage(
+    val buildId: String?,
+    val tagOrJobId: String,
+    override val userId: String,
+    override val sessionList: List<String>?,
+    override var page: String?,
+    override var notifyPost: NotifyPost
+) : SendMessage(userId, page, sessionList, notifyPost)
