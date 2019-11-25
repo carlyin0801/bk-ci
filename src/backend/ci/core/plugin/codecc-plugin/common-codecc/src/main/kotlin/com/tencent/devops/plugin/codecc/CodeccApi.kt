@@ -50,7 +50,7 @@ open class CodeccApi constructor(
     private val existPath: String = "/ms/task/api/service/task/exists",
     private val deletePath: String = "/ms/task/api/service/task",
     private val report: String = "/api",
-    private val getRuleSetsPath: String = "/ms/task/api/service/checker/tasks/0/checkerSets"
+    private val getRuleSetsPath: String = "/ms/defect/api/service/checker/tasks/0/checkerSets"
 ) {
 
     companion object {
