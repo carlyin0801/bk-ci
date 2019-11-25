@@ -218,7 +218,7 @@ class WebIDEService @Autowired constructor(
         val result = toHex(digest.digest(sigContent.toByteArray()))
 
         headerBuilder["signature"] = result
-        logger.info("Timestamp:${timestamp}, token:${token}, sigContent:${sigContent}, result:${result}")
+        logger.info("Timestamp:${timestamp}, token:${token}, sigContent:${sigContent}, result:${result}, random:${random}, appid:${appId}, enckey:${encKey}")
         return headerBuilder
     }
 
