@@ -37,11 +37,7 @@ import com.tencent.devops.project.dao.ServiceDao
 import com.tencent.devops.project.dao.ServiceTypeDao
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.pojo.ServiceUpdateUrls
-import com.tencent.devops.project.pojo.service.OPPServiceVO
-import com.tencent.devops.project.pojo.service.ServiceCreateInfo
-import com.tencent.devops.project.pojo.service.ServiceListVO
-import com.tencent.devops.project.pojo.service.ServiceUrlUpdateInfo
-import com.tencent.devops.project.pojo.service.ServiceVO
+import com.tencent.devops.project.pojo.service.*
 import com.tencent.devops.project.service.UserProjectServiceService
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
@@ -62,23 +58,23 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
         if (tServiceRecord != null) {
             return Result(
                 ServiceVO(
-                    id = tServiceRecord.id ?: 0,
-                    name = tServiceRecord.name,
-                    link = tServiceRecord.link,
-                    linkNew = tServiceRecord.linkNew,
-                    status = tServiceRecord.status, injectType = tServiceRecord.injectType,
-                    iframeUrl = tServiceRecord.iframeUrl,
-                    cssUrl = tServiceRecord.cssUrl,
-                    jsUrl = tServiceRecord.jsUrl,
-                    grayCssUrl = tServiceRecord.grayCssUrl,
-                    grayJsUrl = tServiceRecord.grayJsUrl,
-                    showProjectList = tServiceRecord.showProjectList,
-                    showNav = tServiceRecord.showNav,
-                    projectIdType = tServiceRecord.projectIdType,
-                    collected = favoriteDao.countFavorite(dslContext, userId, tServiceRecord.id) > 0,
-                    weigHt = tServiceRecord.weight ?: 0,
-                    logoUrl = tServiceRecord.logoUrl,
-                    webSocket = tServiceRecord.webSocket
+                    tServiceRecord.id ?: 0,
+                    tServiceRecord.name,
+                    tServiceRecord.link,
+                    tServiceRecord.linkNew,
+                    tServiceRecord.status, tServiceRecord.injectType,
+                    tServiceRecord.iframeUrl,
+                    tServiceRecord.cssUrl,
+                    tServiceRecord.jsUrl,
+                    tServiceRecord.grayCssUrl,
+                    tServiceRecord.grayJsUrl,
+                    tServiceRecord.showProjectList,
+                    tServiceRecord.showNav,
+                    tServiceRecord.projectIdType,
+                    favoriteDao.countFavorite(dslContext, userId, tServiceRecord.id) > 0,
+                    tServiceRecord.weight ?: 0,
+                    tServiceRecord.logoUrl,
+                    tServiceRecord.webSocket
                 )
             )
         } else {
@@ -96,10 +92,7 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
     /**
      * 批量修改服务url
      */
-    override fun updateServiceUrlByBatch(
-        userId: String,
-        serviceUrlUpdateInfoList: List<ServiceUrlUpdateInfo>?
-    ): Result<Boolean> {
+    override fun updateServiceUrlByBatch(userId: String, serviceUrlUpdateInfoList: List<ServiceUrlUpdateInfo>?): Result<Boolean> {
         if (serviceUrlUpdateInfoList == null) {
             return Result(data = true)
         }
@@ -123,36 +116,34 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
         val tServiceList = serviceDao.getServiceList(dslContext)
         val serviceVOList = ArrayList<OPPServiceVO>()
         tServiceList.map { tServiceRecord ->
-            serviceVOList.add(genServiceVO(tServiceRecord))
+            serviceVOList.add(
+                OPPServiceVO(
+                    tServiceRecord.id,
+                    tServiceRecord.name ?: "",
+                    tServiceRecord.serviceTypeId,
+                    tServiceRecord.showProjectList,
+                    tServiceRecord.showNav,
+                    tServiceRecord.status,
+                    tServiceRecord.link,
+                    tServiceRecord.linkNew,
+                    tServiceRecord.injectType,
+                    tServiceRecord.iframeUrl,
+                    tServiceRecord.cssUrl,
+                    tServiceRecord.jsUrl,
+                    tServiceRecord.grayCssUrl,
+                    tServiceRecord.grayJsUrl,
+                    tServiceRecord.projectIdType,
+                        tServiceRecord.logoUrl,
+                        tServiceRecord.webSocket,
+                    tServiceRecord.createdUser ?: "",
+                    DateTimeUtil.toDateTime(tServiceRecord.createdTime),
+                    tServiceRecord.updatedUser ?: "",
+                    DateTimeUtil.toDateTime(tServiceRecord.updatedTime)
+                )
+            )
         }
 
         return Result(serviceVOList)
-    }
-
-    private fun genServiceVO(tServiceRecord: TServiceRecord): OPPServiceVO {
-        return OPPServiceVO(
-            id = tServiceRecord.id,
-            name = tServiceRecord.name ?: "",
-            serviceTypeId = tServiceRecord.serviceTypeId,
-            showProjectList = tServiceRecord.showProjectList,
-            showNav = tServiceRecord.showNav,
-            status = tServiceRecord.status,
-            link = tServiceRecord.link,
-            linkNew = tServiceRecord.linkNew,
-            injectType = tServiceRecord.injectType,
-            iframeUrl = tServiceRecord.iframeUrl,
-            cssUrl = tServiceRecord.cssUrl,
-            jsUrl = tServiceRecord.jsUrl,
-            grayCssUrl = tServiceRecord.grayCssUrl,
-            grayJsUrl = tServiceRecord.grayJsUrl,
-            projectIdType = tServiceRecord.projectIdType,
-            logoUrl = tServiceRecord.logoUrl,
-            webSocket = tServiceRecord.webSocket,
-            createdUser = tServiceRecord.createdUser ?: "",
-            createdTime = DateTimeUtil.toDateTime(tServiceRecord.createdTime),
-            updatedUser = tServiceRecord.updatedUser ?: "",
-            updatedTime = DateTimeUtil.toDateTime(tServiceRecord.updatedTime)
-        )
     }
 
     /**
@@ -161,7 +152,31 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
     override fun createService(userId: String, serviceCreateInfo: ServiceCreateInfo): Result<OPPServiceVO> {
         val tServiceRecord = serviceDao.create(dslContext, userId, serviceCreateInfo)
         if (tServiceRecord != null) {
-            return Result(genServiceVO(tServiceRecord))
+            return Result(
+                OPPServiceVO(
+                    tServiceRecord.id,
+                    tServiceRecord.name ?: "",
+                    tServiceRecord.serviceTypeId,
+                    tServiceRecord.showProjectList,
+                    tServiceRecord.showNav,
+                    tServiceRecord.status,
+                    tServiceRecord.link,
+                    tServiceRecord.linkNew,
+                    tServiceRecord.injectType,
+                    tServiceRecord.iframeUrl,
+                    tServiceRecord.cssUrl,
+                    tServiceRecord.jsUrl,
+                    tServiceRecord.grayCssUrl,
+                    tServiceRecord.grayJsUrl,
+                    tServiceRecord.projectIdType,
+                        tServiceRecord.logoUrl,
+                        tServiceRecord.webSocket,
+                    tServiceRecord.createdUser ?: "",
+                    DateTimeUtil.toDateTime(tServiceRecord.createdTime),
+                    tServiceRecord.updatedUser ?: "",
+                    DateTimeUtil.toDateTime(tServiceRecord.updatedTime)
+                )
+            )
         }
         return Result(500, "服务添加失败")
     }
@@ -172,21 +187,11 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
     override fun updateCollected(userId: String, serviceId: Long, collector: Boolean): Result<Boolean> {
         if (collector) {
             if (favoriteDao.create(dslContext, userId, serviceId) > 0) {
-                return Result(
-                    status = 0,
-                    message = MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.COLLECTION_SUCC),
-                    requestId = "",
-                    result = true
-                )
+                return Result(0, MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.COLLECTION_SUCC), "", true)
             }
         } else {
             if (favoriteDao.delete(dslContext, userId, serviceId) > 0) {
-                return Result(
-                    status = 0,
-                    message = MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.COLLECTION_CANCEL_SUCC),
-                    requestId = "",
-                    result = true
-                )
+                return Result(0, MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.COLLECTION_CANCEL_SUCC), "", true)
             }
         }
         return Result(false)
@@ -216,37 +221,37 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
                     val favor = favorServices.contains(it.id)
                     services.add(
                         ServiceVO(
-                            id = it.id,
-                            name = it.name ?: "",
-                            link = it.link ?: "",
-                            linkNew = it.linkNew ?: "",
-                            status = status,
-                            injectType = it.injectType ?: "",
-                            iframeUrl = it.iframeUrl ?: "",
-                            cssUrl = getCSSUrl(it, projectId),
-                            jsUrl = getJSUrl(it, projectId),
-                            grayCssUrl = it.grayCssUrl ?: "",
-                            grayJsUrl = it.grayJsUrl ?: "",
-                            showProjectList = it.showProjectList ?: false,
-                            showNav = it.showNav ?: false,
-                            projectIdType = it.projectIdType ?: "",
-                            collected = favor,
-                            weigHt = it.weight ?: 0,
-                            logoUrl = it.logoUrl,
-                            webSocket = it.webSocket
+                            it.id,
+                            it.name ?: "",
+                            it.link ?: "",
+                            it.linkNew ?: "",
+                            status,
+                            it.injectType ?: "",
+                            it.iframeUrl ?: "",
+                            getCSSUrl(it, projectId),
+                            getJSUrl(it, projectId),
+                            it.grayCssUrl ?: "",
+                            it.grayJsUrl ?: "",
+                            it.showProjectList ?: false,
+                            it.showNav ?: false,
+                            it.projectIdType ?: "",
+                            favor,
+                            it.weight ?: 0,
+                            it.logoUrl,
+                            it.webSocket
                         )
                     )
                 }
 
                 serviceListVO.add(
                     ServiceListVO(
-                        title = typeName,
-                        weigHt = serviceType.weight ?: 0,
-                        children = services.sortedByDescending { it.weigHt })
+                        typeName,
+                        serviceType.weight ?: 0,
+                        services.sortedByDescending { it.weigHt })
                 )
             }
 
-            return Result(code = 0, message = "OK", data = serviceListVO)
+            return Result(0, "OK", serviceListVO)
         } finally {
             logger.info("It took ${System.currentTimeMillis() - startEpoch}ms to list services")
         }
@@ -290,11 +295,7 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
         }
     }
 
-    override fun updateServiceUrls(
-        userId: String,
-        name: String,
-        serviceUpdateUrls: ServiceUpdateUrls
-    ): Result<Boolean> {
+    override fun updateServiceUrls(userId: String, name: String, serviceUpdateUrls: ServiceUpdateUrls): Result<Boolean> {
         return Result(serviceDao.updateUrls(dslContext, userId, name, serviceUpdateUrls))
     }
 

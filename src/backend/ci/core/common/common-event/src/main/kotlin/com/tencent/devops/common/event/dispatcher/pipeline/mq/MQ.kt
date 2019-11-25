@@ -128,6 +128,10 @@ object MQ {
     const val ROUTE_LOG_BATCH_BUILD_EVENT = "r.engine.log.batch.build.event"
     const val QUEUE_LOG_BATCH_BUILD_EVENT = "q.engine.log.batch.build.event"
 
+    const val EXCHANGE_LOG_PUSH_BUILD_EVENT = "e.engine.log.push.build.event"
+    const val ROUTE_LOG_PUSH_BUILD_EVENT = "r.engine.log.push.build.event"
+    const val QUEUE_LOG_PUSH_BUILD_EVENT = "q.engine.log.push.build.event"
+
     // 日志事件
     const val EXCHANGE_LOG_STATUS_BUILD_EVENT = "e.engine.log.status.build.event"
     const val ROUTE_LOG_STATUS_BUILD_EVENT = "r.engine.log.status.build.event"

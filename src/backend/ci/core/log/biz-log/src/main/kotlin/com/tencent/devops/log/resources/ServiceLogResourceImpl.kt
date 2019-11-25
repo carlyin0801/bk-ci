@@ -44,16 +44,33 @@ class ServiceLogResourceImpl @Autowired constructor(
 ) : ServiceLogResource {
 
     override fun getInitLogs(
-        projectId: String,
-        pipelineId: String,
         buildId: String,
-        isAnalysis: Boolean?,
-        queryKeywords: String?,
         tag: String?,
         jobId: String?,
         executeCount: Int?
     ): Result<QueryLogs> {
-        return logDispatcher.getInitLogs(projectId, pipelineId, buildId, isAnalysis, queryKeywords, tag, jobId, executeCount)
+        return logDispatcher.getInitLogs(
+            buildId,
+            tag,
+            jobId,
+            executeCount
+        )
+    }
+
+    override fun queryLogs(
+        buildId: String,
+        queryKeywords: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Result<QueryLogs> {
+        return logDispatcher.queryLogsByWords(
+            buildId,
+            queryKeywords,
+            tag,
+            jobId,
+            executeCount
+        )
     }
 
     override fun getMoreLogs(
