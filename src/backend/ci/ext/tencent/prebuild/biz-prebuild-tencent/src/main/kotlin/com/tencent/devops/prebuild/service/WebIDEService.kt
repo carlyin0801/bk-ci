@@ -247,7 +247,8 @@ class WebIDEService @Autowired constructor(
                 newItem.ideInstanceStatus,
                 newItem.ideVersion,
                 newItem.serverCreateTime,
-                "")
+                "",
+                0)
     }
 
     fun setupAgent(userId: String, projectId: String, ip: String): BuildId {
