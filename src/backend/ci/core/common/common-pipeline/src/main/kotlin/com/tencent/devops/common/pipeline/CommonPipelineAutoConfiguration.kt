@@ -24,14 +24,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.plugin.worker.api
+package com.tencent.devops.common.pipeline
 
-import com.tencent.devops.common.api.enums.OSType
-import com.tencent.devops.common.api.pojo.Result
-import okhttp3.Response
+import com.fasterxml.jackson.databind.ObjectMapper
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.AutoConfigureOrder
+import org.springframework.context.annotation.Configuration
+import org.springframework.core.Ordered
+import javax.annotation.PostConstruct
 
-interface CodeccSDKApi {
-    fun saveTask(projectId: String, pipelineId: String, buildId: String): Result<String>
-    fun downloadTool(tool: String, osType: OSType, fileMd5: String, is32Bit: Boolean = false): Response
-    fun downloadToolScript(osType: OSType, fileMd5: String): Response
+@Configuration
+@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)
+class CommonPipelineAutoConfiguration {
+
+    @Autowired(required = false)
+    private var objectMapper: ObjectMapper? = null
+
+    @PostConstruct
+    fun registerSubtypesObjectMapper() {
+        ElementSubTypeRegisterLoader.registerElement(objectMapper)
+        DispatchSubTypeRegisterLoader.registerElement()
+    }
 }
