@@ -802,7 +802,7 @@ class RepositoryService @Autowired constructor(
         projectId: String,
         scmType: ScmType?
     ): List<RepositoryInfoWithPermission> {
-        val dbRecords = repositoryDao.listByProject(dslContext, projectId, scmType, null, 0, 9999)
+        val dbRecords = repositoryDao.listByProject(dslContext, setOf(projectId), scmType, null, 0, 9999)
         val gitRepoIds = dbRecords.filter { it.type == "CODE_GIT" }.map { it.repositoryId }.toSet()
         val gitAuthMap = repositoryCodeGitDao.list(dslContext, gitRepoIds)?.map { it.repositoryId to it }?.toMap()
 
@@ -853,7 +853,7 @@ class RepositoryService @Autowired constructor(
         val count =
             repositoryDao.countByProject(
                 dslContext = dslContext,
-                projectId = projectId,
+                projectIds = setOf(projectId),
                 repositoryType = repositoryType,
                 aliasName = aliasName,
                 repositoryIds = hasListPermissionRepoList.toSet()
@@ -908,7 +908,7 @@ class RepositoryService @Autowired constructor(
 
         val count = repositoryDao.countByProject(
             dslContext = dslContext,
-            projectId = projectId,
+            projectIds = setOf(projectId),
             repositoryType = repositoryType,
             aliasName = null,
             repositoryIds = hasPermissionList.toSet()
@@ -936,7 +936,7 @@ class RepositoryService @Autowired constructor(
     }
 
     fun listByProject(
-        projectId: String,
+        projectIds: Collection<String>,
         repositoryType: ScmType?,
         offset: Int,
         limit: Int
@@ -944,7 +944,7 @@ class RepositoryService @Autowired constructor(
 
         val count = repositoryDao.countByProject(
             dslContext = dslContext,
-            projectId = projectId,
+            projectIds = projectIds,
             repositoryType = repositoryType,
             aliasName = null,
             repositoryIds = null
@@ -952,7 +952,7 @@ class RepositoryService @Autowired constructor(
         val repositoryRecordList =
             repositoryDao.listByProject(
                 dslContext = dslContext,
-                projectId = projectId,
+                projectIds = projectIds,
                 repositoryType = repositoryType,
                 repositoryIds = null,
                 offset = offset,
