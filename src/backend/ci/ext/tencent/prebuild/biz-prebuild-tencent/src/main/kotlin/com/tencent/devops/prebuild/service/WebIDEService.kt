@@ -211,15 +211,14 @@ class WebIDEService @Autowired constructor(
         val encKey = DigestUtils.md5Hex("$token$timestamp$random")
         headerBuilder["ENCKEY"] = encKey
         headerBuilder["TIMESTAMP"] = timestamp
-        headerBuilder["TimeStamp"] = timestamp
+        headerBuilder["timeStamp"] = timestamp
         val token = "14a0a8f272d4ebd39ea360be939a3d3c6748548c1c381cd8e887"
         val sigContent = timestamp + token + timestamp
         val digest = MessageDigest.getInstance("SHA-256")
         val result = toHex(digest.digest(sigContent.toByteArray()))
-        logger.info("Timestamp:${timestamp}, token:${token}, sigContent:${sigContent}, result:${result}")
-        headerBuilder["Signature"] = result
-        headerBuilder["SIGNATURE"] = result
 
+        headerBuilder["signature"] = result
+        logger.info("Timestamp:${timestamp}, token:${token}, sigContent:${sigContent}, result:${result}")
         return headerBuilder
     }
 
