@@ -216,6 +216,7 @@ class WebIDEService @Autowired constructor(
         val sigContent = timestamp + token + timestamp
         val digest = MessageDigest.getInstance("SHA-256")
         val result = toHex(digest.digest(sigContent.toByteArray()))
+        logger.info("Timestamp:${timestamp}, token:${token}, sigContent:${sigContent}, result:${result}")
         headerBuilder["Signature"] = result
         headerBuilder["SIGNATURE"] = result
 
