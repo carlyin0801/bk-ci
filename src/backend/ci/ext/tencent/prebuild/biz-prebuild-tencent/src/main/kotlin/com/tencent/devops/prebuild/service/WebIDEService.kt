@@ -42,6 +42,7 @@ import okhttp3.Request
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.lang3.RandomStringUtils
 import org.jooq.DSLContext
+import org.jooq.types.ULong
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -82,8 +83,8 @@ class WebIDEService @Autowired constructor(
                 devcloudInfo.remove(it.ip)
                 val ideUrl = "http://dev.devgw.devops.oa.com/webide/$userId/${it.ip}/"
 
-                //var ideStatus = if(Math.abs(currTimeStamp - it.ideLastUpdate) < 13000) 1 else 0
-                var ideStatus = if(Math.abs(currTimeStamp - 0) < 13000) 1 else 0
+                var ideStatus = if(Math.abs(currTimeStamp - it.ideLastUpdate as Long) < 13000) 1 else 0
+                //var ideStatus = if(Math.abs(currTimeStamp - 0) < 13000) 1 else 0
                 val info = IDEInfo(ideStatus, it.agentStatus, it.ip, ideUrl, it.ideVersion, it.serverType, it.serverCreateTime)
                 ideList.add(info)
             } else {
@@ -250,7 +251,7 @@ class WebIDEService @Autowired constructor(
                 newItem.ideVersion,
                 newItem.serverCreateTime,
                 "",
-                0)
+                0 as ULong)
     }
 
     fun setupAgent(userId: String, projectId: String, ip: String): BuildId {
