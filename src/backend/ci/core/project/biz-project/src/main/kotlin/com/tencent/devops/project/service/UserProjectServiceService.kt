@@ -28,7 +28,11 @@ package com.tencent.devops.project.service
 
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.pojo.ServiceUpdateUrls
-import com.tencent.devops.project.pojo.service.*
+import com.tencent.devops.project.pojo.service.OPPServiceVO
+import com.tencent.devops.project.pojo.service.ServiceCreateInfo
+import com.tencent.devops.project.pojo.service.ServiceListVO
+import com.tencent.devops.project.pojo.service.ServiceUrlUpdateInfo
+import com.tencent.devops.project.pojo.service.ServiceVO
 
 /**
  * 用户服务列表中展示的业务服务的服务接口
