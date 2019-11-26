@@ -31,6 +31,7 @@ import com.tencent.devops.common.websocket.pojo.NotifyPost
 data class BuildLogMessage(
     val buildId: String?,
     val tagOrJobId: String,
+    val lineNo: Long,
     override val userId: String,
     override val sessionList: List<String>?,
     override var page: String?,
