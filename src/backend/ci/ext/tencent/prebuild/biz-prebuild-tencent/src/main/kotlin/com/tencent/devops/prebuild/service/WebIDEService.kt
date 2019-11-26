@@ -82,8 +82,8 @@ class WebIDEService @Autowired constructor(
                 devcloudInfo.remove(it.ip)
                 val ideUrl = "http://dev.devgw.devops.oa.com/webide/$userId/${it.ip}/"
 
-                var ideStatus = if(Math.abs(currTimeStamp - it.ideLastUpdate) < 13000) 1 else 0
-                //var ideStatus = if(Math.abs(currTimeStamp - 0) < 13000) 1 else 0
+                var ideStatus = if (Math.abs(currTimeStamp - it.ideLastUpdate) < 13000) 1 else 0
+                // var ideStatus = if(Math.abs(currTimeStamp - 0) < 13000) 1 else 0
                 val info = IDEInfo(ideStatus, it.agentStatus, it.ip, ideUrl, it.ideVersion, it.serverType, it.serverCreateTime)
                 ideList.add(info)
             } else {
@@ -109,7 +109,6 @@ class WebIDEService @Autowired constructor(
         ideList.sortByDescending { it.serverCreateTime }
         return ideList
     }
-    
 
     private fun updateAgentStatus(userID: String, projectID: String, ideList: List<IDEInfo>) {
         val nodeInfoList = client.get(ServiceNodeResource::class).listNodeByNodeType(projectID, NodeType.THIRDPARTY)
@@ -219,7 +218,7 @@ class WebIDEService @Autowired constructor(
         val result = toHex(digest.digest(sigContent.toByteArray()))
 
         headerBuilder["signature"] = result
-        logger.info("Timestamp:${timestamp}, token:${token}, sigContent:${sigContent}, result:${result}, random:${random}, appid:${appId}, enckey:${encKey}")
+        logger.info("Timestamp:$timestamp, token:$token, sigContent:$sigContent, result:$result, random:$random, appid:$appId, enckey:$encKey")
         return headerBuilder
     }
 
@@ -236,7 +235,7 @@ class WebIDEService @Autowired constructor(
             }
             this.toString()
         }
-        //转成16进制后是32字节
+        // 转成16进制后是32字节
         return result
     }
 
