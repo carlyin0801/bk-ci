@@ -83,7 +83,7 @@ interface UserLogResource {
 
     @ApiOperation("根据构建ID和关键字查询日志")
     @GET
-    @Path("/{projectId}/{pipelineId}/{buildId}/")
+    @Path("/{projectId}/{pipelineId}/{buildId}/query")
     fun queryLogs(
         @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
