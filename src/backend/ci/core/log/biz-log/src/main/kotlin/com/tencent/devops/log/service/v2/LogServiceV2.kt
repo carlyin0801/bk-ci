@@ -140,6 +140,8 @@ class LogServiceV2 @Autowired constructor(
 
     fun queryInitLogs(
         buildId: String,
+        isAnalysis: Boolean,
+        keywordsStr: String?,
         tag: String?,
         jobId: String?,
         executeCount: Int?
@@ -150,32 +152,22 @@ class LogServiceV2 @Autowired constructor(
             val indexAndType = indexServiceV2.getIndexAndType(buildId)
             val index = indexAndType.index
             val type = indexAndType.type
-            val result = doQueryInitLogs(buildId, index, type, true, defaultKeywords, tag, jobId, executeCount)
-            success = logStatusSuccess(result.status)
-            return result
-        } finally {
-            logBeanV2.query(System.currentTimeMillis() - currentEpoch, success)
-        }
-    }
+            if (keywordsStr == null || keywordsStr.isBlank()) {
+                val result = if (isAnalysis) {
+                    doQueryByKeywords(buildId, index, type, 1, defaultKeywords, tag, jobId, executeCount)
+                } else {
+                    doQueryInitLogs(buildId, index, type, true, defaultKeywords, tag, jobId, executeCount)
+                }
+                success = logStatusSuccess(result.status)
+                return result
+            }
 
-    fun queryLogsByKeywords(
-        buildId: String,
-        keywordsStr: String,
-        tag: String?,
-        jobId: String?,
-        executeCount: Int?
-    ): QueryLogs {
-        val currentEpoch = System.currentTimeMillis()
-        var success = false
-        try {
-            val indexAndType = indexServiceV2.getIndexAndType(buildId)
-            val index = indexAndType.index
-            val type = indexAndType.type
             val keywords =
-                Arrays.asList(*(keywordsStr.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()))
-                    .stream()
-                    .filter { k -> k.isNotBlank() }
-                    .collect(Collectors.toList())
+                    Arrays.asList(*(keywordsStr.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()))
+                            .stream()
+                            .filter { k -> k.isNotBlank() }
+                            .collect(Collectors.toList())
+
             val result = doQueryByKeywords(buildId, index, type, 1, keywords, tag, jobId, executeCount)
             logger.info("query init logs for build($buildId): size-${result.logs.size} size-${result.status}")
             success = true
