@@ -14,14 +14,17 @@ import com.tencent.devops.common.pipeline.utils.RepositoryConfigUtils.replaceCod
 import com.tencent.devops.plugin.worker.pojo.CodeccExecuteConfig
 import com.tencent.devops.plugin.worker.task.scm.util.RepositoryUtils
 import com.tencent.devops.plugin.worker.task.scm.util.SvnUtil
+import com.tencent.devops.process.pojo.AtomErrorCode
 import com.tencent.devops.process.pojo.BuildTask
 import com.tencent.devops.process.pojo.BuildVariables
+import com.tencent.devops.process.pojo.ErrorType
 import com.tencent.devops.repository.pojo.CodeGitRepository
 import com.tencent.devops.repository.pojo.CodeGitlabRepository
 import com.tencent.devops.repository.pojo.CodeSvnRepository
 import com.tencent.devops.repository.pojo.GithubRepository
 import com.tencent.devops.worker.common.api.ApiFactory
 import com.tencent.devops.worker.common.api.process.BuildSDKApi
+import com.tencent.devops.worker.common.exception.TaskExecuteException
 import com.tencent.devops.worker.common.utils.CredentialUtils
 
 object CodeccRepoHelper {
@@ -38,7 +41,11 @@ object CodeccRepoHelper {
         val buildId = buildVariables.buildId
 
         val modelDetail = pipelineApi.getBuildDetail(projectId, pipelineId, buildId).data
-            ?: throw RuntimeException("no model found in $buildId")
+            ?: throw TaskExecuteException(
+                errorType = ErrorType.USER,
+                errorCode = AtomErrorCode.USER_RESOURCE_NOT_FOUND,
+                errorMsg = "no model found in $buildId"
+            )
         val repoElementTypes = setOf(
             CodeSvnElement.classType,
             CodeGitElement.classType,
