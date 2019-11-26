@@ -16,7 +16,8 @@ class WebIDEStatusDao {
         ideStatus: Int,
         ideVersion: String,
         serverCreateTime: Long,
-        pipelineId: String
+        pipelineId: String,
+        ideLastUpdate: Long
     ) {
         with(TWebideIdeinfo.T_WEBIDE_IDEINFO) {
             dslContext.insertInto(
@@ -28,7 +29,8 @@ class WebIDEStatusDao {
             IDE_STATUS,
             IDE_VERSION,
             SERVER_CREATE_TIME,
-            PIPELINE_ID
+            PIPELINE_ID,
+            IDE_LAST_UPDATE
             ).values(
                     owner,
                     ip,
@@ -37,7 +39,8 @@ class WebIDEStatusDao {
                     ideStatus,
                     ideVersion,
                     serverCreateTime,
-                    pipelineId
+                    pipelineId,
+                    ideLastUpdate
             ).execute()
         }
     }
@@ -93,8 +96,8 @@ class WebIDEStatusDao {
     fun updateIDEHeartBeat(dslContext: DSLContext, owner: String, ip: String, version: String) {
         with(TWebideIdeinfo.T_WEBIDE_IDEINFO) {
             dslContext.update(this)
-                    .set(IDE_LAST_UPDATE, System.currentTimeMillis())
                     .set(IDE_VERSION, version)
+                    .set(IDE_LAST_UPDATE, System.currentTimeMillis())
                     .where(OWNER.eq(owner))
                     .and(IP.eq(ip))
                     .execute()

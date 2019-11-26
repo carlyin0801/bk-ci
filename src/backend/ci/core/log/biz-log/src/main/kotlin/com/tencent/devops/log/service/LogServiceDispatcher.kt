@@ -27,28 +27,28 @@
 package com.tencent.devops.log.service
 
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.log.model.pojo.EndPageQueryLogs
 import com.tencent.devops.log.model.pojo.LogBatchEvent
 import com.tencent.devops.log.model.pojo.LogEvent
 import com.tencent.devops.log.model.pojo.LogStatusEvent
 import com.tencent.devops.log.model.pojo.PageQueryLogs
 import com.tencent.devops.log.model.pojo.QueryLogs
+import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.service.v2.LogServiceV2
+import com.tencent.devops.log.utils.LogPushRedisUtlis
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import javax.ws.rs.core.Response
 
 @Service
 class LogServiceDispatcher @Autowired constructor(
-    private val logServiceV2: LogServiceV2
+    private val logServiceV2: LogServiceV2,
+    private val redisOperation: RedisOperation
 ) {
 
     fun getInitLogs(
-        projectId: String,
-        pipelineId: String,
         buildId: String,
-        isAnalysis: Boolean?,
-        queryKeywords: String?,
         tag: String?,
         jobId: String?,
         executeCount: Int?
@@ -56,7 +56,23 @@ class LogServiceDispatcher @Autowired constructor(
         return Result(
             logServiceV2.queryInitLogs(
                 buildId,
-                isAnalysis ?: false,
+                tag,
+                jobId,
+                executeCount
+            )
+        )
+    }
+
+    fun queryLogsByWords(
+        buildId: String,
+        queryKeywords: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Result<QueryLogs> {
+        return Result(
+            logServiceV2.queryLogsByKeywords(
+                buildId,
                 queryKeywords,
                 tag,
                 jobId,
@@ -176,5 +192,17 @@ class LogServiceDispatcher @Autowired constructor(
 
     fun logStatusEvent(event: LogStatusEvent) {
         logServiceV2.updateLogStatus(event)
+    }
+
+    fun getJobPushStatus(buildId: String, jobId: String, lineNo: Long): PushStatus? {
+        val pushStatus = LogPushRedisUtlis.getPushStatusByJobId(redisOperation, buildId, jobId)
+        if (pushStatus == null) LogPushRedisUtlis.writePushStatusByJobId(redisOperation, buildId, jobId, lineNo)
+        return pushStatus
+    }
+
+    fun getTagPushStatus(buildId: String, tag: String, lineNo: Long): PushStatus? {
+        val pushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, buildId, tag)
+        if (pushStatus == null) LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, tag, lineNo)
+        return pushStatus
     }
 }

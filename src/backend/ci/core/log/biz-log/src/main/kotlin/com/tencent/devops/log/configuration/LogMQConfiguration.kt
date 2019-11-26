@@ -29,10 +29,13 @@ package com.tencent.devops.log.configuration
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.EXCHANGE_LOG_BATCH_BUILD_EVENT
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.EXCHANGE_LOG_BUILD_EVENT
+import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.EXCHANGE_LOG_PUSH_BUILD_EVENT
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.QUEUE_LOG_BATCH_BUILD_EVENT
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.QUEUE_LOG_BUILD_EVENT
+import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.QUEUE_LOG_PUSH_BUILD_EVENT
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.ROUTE_LOG_BATCH_BUILD_EVENT
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.ROUTE_LOG_BUILD_EVENT
+import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.ROUTE_LOG_PUSH_BUILD_EVENT
 import com.tencent.devops.log.mq.LogListener
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.core.Binding
@@ -76,6 +79,13 @@ class LogMQConfiguration @Autowired constructor() {
     }
 
     @Bean
+    fun logPushEventExchange(): DirectExchange {
+        val directExchange = DirectExchange(EXCHANGE_LOG_PUSH_BUILD_EVENT, true, false)
+        directExchange.isDelayed = true
+        return directExchange
+    }
+
+    @Bean
     fun logEventQueue(): Queue {
         return Queue(QUEUE_LOG_BUILD_EVENT, true)
     }
@@ -83,6 +93,11 @@ class LogMQConfiguration @Autowired constructor() {
     @Bean
     fun logBatchEventQueue(): Queue {
         return Queue(QUEUE_LOG_BATCH_BUILD_EVENT, true)
+    }
+
+    @Bean
+    fun logPushEventQueue(): Queue {
+        return Queue(QUEUE_LOG_PUSH_BUILD_EVENT, true)
     }
 
     @Bean
@@ -99,6 +114,14 @@ class LogMQConfiguration @Autowired constructor() {
         @Autowired logBatchEventExchange: DirectExchange
     ): Binding {
         return BindingBuilder.bind(logBatchEventQueue).to(logBatchEventExchange).with(ROUTE_LOG_BATCH_BUILD_EVENT)
+    }
+
+    @Bean
+    fun logPushEventBind(
+        @Autowired logPushEventQueue: Queue,
+        @Autowired logPushEventExchange: DirectExchange
+    ): Binding {
+        return BindingBuilder.bind(logPushEventQueue).to(logPushEventExchange).with(ROUTE_LOG_PUSH_BUILD_EVENT)
     }
 
     @Bean
@@ -143,6 +166,27 @@ class LogMQConfiguration @Autowired constructor() {
         messageListenerAdapter.setMessageConverter(messageConverter)
         container.messageListener = messageListenerAdapter
         logger.info("Start log batch event listener")
+        return container
+    }
+
+    @Bean
+    fun logPushEventListener(
+        @Autowired connectionFactory: ConnectionFactory,
+        @Autowired logPushEventQueue: Queue,
+        @Autowired rabbitAdmin: RabbitAdmin,
+        @Autowired logListener: LogListener,
+        @Autowired messageConverter: Jackson2JsonMessageConverter
+    ): SimpleMessageListenerContainer {
+        val container = SimpleMessageListenerContainer(connectionFactory)
+        container.setQueueNames(logPushEventQueue.name)
+        container.setConcurrentConsumers(10)
+        container.setMaxConcurrentConsumers(100)
+        container.setRabbitAdmin(rabbitAdmin)
+        container.setMismatchedQueuesFatal(true)
+        val messageListenerAdapter = MessageListenerAdapter(logListener, logListener::logPushEvent.name)
+        messageListenerAdapter.setMessageConverter(messageConverter)
+        container.messageListener = messageListenerAdapter
+        logger.info("Start log push event listener")
         return container
     }
 

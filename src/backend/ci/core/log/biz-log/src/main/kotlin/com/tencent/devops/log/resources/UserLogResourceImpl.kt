@@ -35,6 +35,7 @@ import com.tencent.devops.common.auth.api.AuthResourceType
 import com.tencent.devops.common.auth.code.PipelineAuthServiceCode
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.log.api.UserLogResource
+import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.model.pojo.QueryLogs
 import com.tencent.devops.log.service.LogServiceDispatcher
 import org.springframework.beans.factory.annotation.Autowired
@@ -56,15 +57,28 @@ class UserLogResourceImpl @Autowired constructor(
         projectId: String,
         pipelineId: String,
         buildId: String,
-        isAnalysis: Boolean?,
-        queryKeywords: String?,
         tag: String?,
         jobId: String?,
         executeCount: Int?
     ): Result<QueryLogs> {
 
         validateAuth(userId, projectId, pipelineId, buildId)
-        return logDispatcher.getInitLogs(projectId, pipelineId, buildId, isAnalysis, queryKeywords, tag, jobId, executeCount)
+        return logDispatcher.getInitLogs(buildId, tag, jobId, executeCount)
+    }
+
+    override fun queryLogs(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        queryKeywords: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Result<QueryLogs> {
+
+        validateAuth(userId, projectId, pipelineId, buildId)
+        return logDispatcher.queryLogsByWords(buildId, queryKeywords, tag, jobId, executeCount)
     }
 
     override fun getMoreLogs(
@@ -158,5 +172,27 @@ class UserLogResourceImpl @Autowired constructor(
         ) {
             throw PermissionForbiddenException("用户($userId)无权限在工程($projectId)下查看流水线")
         }
+    }
+
+//    override fun startJobPush (
+//        userId: String,
+//        projectId: String,
+//        pipelineId: String,
+//        buildId: String,
+//        jobId: String,
+//        lineNo: Long
+//    ): Result<PushStatus?> {
+//        return Result(logDispatcher.getJobPushStatus(buildId, jobId, lineNo))
+//    }
+
+    override fun startLogPush(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        tag: String,
+        lineNo: Long
+    ): Result<PushStatus?> {
+        return Result(logDispatcher.getTagPushStatus(buildId, tag, lineNo))
     }
 }

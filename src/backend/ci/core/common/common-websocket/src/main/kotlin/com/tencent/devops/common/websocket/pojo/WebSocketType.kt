@@ -32,7 +32,8 @@ enum class WebSocketType {
     STATUS, // 状态，首页
     HISTORY, // 历史页
     STORE, // 研发商店
-    DETAIL; // 详情页
+    DETAIL, // 详情页
+    BUILD_LOG; // 构建日志
 
     companion object {
         fun changWebType(webSocketType: WebSocketType): String
