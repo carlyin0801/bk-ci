@@ -37,7 +37,11 @@ import com.tencent.devops.project.dao.ServiceDao
 import com.tencent.devops.project.dao.ServiceTypeDao
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.pojo.ServiceUpdateUrls
-import com.tencent.devops.project.pojo.service.*
+import com.tencent.devops.project.pojo.service.OPPServiceVO
+import com.tencent.devops.project.pojo.service.ServiceCreateInfo
+import com.tencent.devops.project.pojo.service.ServiceListVO
+import com.tencent.devops.project.pojo.service.ServiceUrlUpdateInfo
+import com.tencent.devops.project.pojo.service.ServiceVO
 import com.tencent.devops.project.service.UserProjectServiceService
 import org.jooq.DSLContext
 import org.jooq.impl.DSL

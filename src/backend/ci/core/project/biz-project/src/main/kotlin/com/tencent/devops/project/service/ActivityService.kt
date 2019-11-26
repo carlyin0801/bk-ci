@@ -30,7 +30,11 @@ import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.project.constant.ProjectMessageCode
 import com.tencent.devops.project.dao.ActivityDao
-import com.tencent.devops.project.pojo.*
+import com.tencent.devops.project.pojo.ActivityInfo
+import com.tencent.devops.project.pojo.ActivityStatus
+import com.tencent.devops.project.pojo.OPActivityVO
+import com.tencent.devops.project.pojo.Result
+import com.tencent.devops.project.pojo.OPActivityUpdate
 import com.tencent.devops.project.pojo.enums.ActivityType
 import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
@@ -60,14 +64,15 @@ class ActivityService @Autowired constructor(
         val tActivityRecord = activityDao.get(dslContext, activityId)
 
         if (tActivityRecord != null) {
-            return Result(tActivityRecord.let {
+            return Result(with(tActivityRecord) {
                 OPActivityVO(
-                        it.id,
-                        it.name,
-                        it.link,
-                        it.type,
-                        it.status,
-                        it.creator, DateTimeUtil.toDateTime(it.createTime)
+                    id,
+                    name,
+                    link,
+                    type,
+                    status,
+                    creator,
+                    DateTimeUtil.toDateTime(createTime)
                 )
             })
         }

@@ -27,14 +27,10 @@
 package com.tencent.devops.log.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.redis.RedisOperation
-import com.tencent.devops.common.websocket.dispatch.WebSocketDispatcher
 import com.tencent.devops.common.websocket.enum.NotityLevel
 import com.tencent.devops.common.websocket.pojo.NotifyPost
 import com.tencent.devops.common.websocket.pojo.WebSocketType
-import com.tencent.devops.log.model.message.LogMessageWithLineNo
-import com.tencent.devops.log.utils.LogPushRedisUtlis
 import com.tencent.devops.log.websocket.push.JobLogWebsocketPush
 import com.tencent.devops.log.websocket.page.BuildLogPageBuild
 import com.tencent.devops.log.websocket.push.TagLogWebsocketPush
@@ -45,16 +41,16 @@ import org.springframework.stereotype.Service
 @Service
 class LogPushWebsocketService @Autowired constructor(
     val redisOperation: RedisOperation,
-    val objectMapper: ObjectMapper,
-    val webSocketDispatcher: WebSocketDispatcher
+    val objectMapper: ObjectMapper
 ) {
 
-    fun sendJobWebsocketMessage(buildId: String, jobId: String, log: LogMessageWithLineNo) {
+    fun buildJobWebsocketMessage(buildId: String, jobId: String, lineNo: Long): JobLogWebsocketPush {
         val page = BuildLogPageBuild().buildJobPage(buildId, jobId)
         logger.info("Job build log websocket: page[$page], buildId:[$buildId],tag:[$jobId]")
-        val jobLogWebsocketPush = JobLogWebsocketPush(
+        return JobLogWebsocketPush(
             buildId = buildId,
             jobId = jobId,
+            lineNo = lineNo,
             userId = "",
             redisOperation = redisOperation,
             page = page,
@@ -63,23 +59,22 @@ class LogPushWebsocketService @Autowired constructor(
             notifyPost = NotifyPost(
                 module = "log",
                 level = NotityLevel.LOW_LEVEL.getLevel(),
-                message = JsonUtil.toJson(log),
+                message = "",
                 dealUrl = null,
                 code = 200,
                 webSocketType = WebSocketType.changWebType(WebSocketType.BUILD_LOG),
                 page = page
             )
         )
-        webSocketDispatcher.dispatch(jobLogWebsocketPush)
-        LogPushRedisUtlis.writePushStatusByJobId(redisOperation, buildId, jobId, log.lineNo)
     }
 
-    fun sendTagWebsocketMessage(buildId: String, tag: String, log: LogMessageWithLineNo) {
+    fun buildTagWebsocketMessage(buildId: String, tag: String, lineNo: Long): TagLogWebsocketPush {
         val page = BuildLogPageBuild().buildTagPage(buildId, tag)
         logger.info("Job build log websocket: page[$page], buildId:[$buildId],tag:[$tag]")
-        val jobLogWebsocketPush = TagLogWebsocketPush(
+        return TagLogWebsocketPush(
             buildId = buildId,
             tag = tag,
+            lineNo = lineNo,
             userId = "",
             redisOperation = redisOperation,
             page = page,
@@ -88,15 +83,13 @@ class LogPushWebsocketService @Autowired constructor(
             notifyPost = NotifyPost(
                 module = "log",
                 level = NotityLevel.LOW_LEVEL.getLevel(),
-                message = JsonUtil.toJson(log),
+                message = "",
                 dealUrl = null,
                 code = 200,
                 webSocketType = WebSocketType.changWebType(WebSocketType.BUILD_LOG),
                 page = page
             )
         )
-        webSocketDispatcher.dispatch(jobLogWebsocketPush)
-        LogPushRedisUtlis.writePushStatusByJobId(redisOperation, buildId, tag, log.lineNo)
     }
 
     companion object {

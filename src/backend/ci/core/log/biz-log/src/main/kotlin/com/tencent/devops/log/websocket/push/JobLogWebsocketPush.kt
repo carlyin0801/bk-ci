@@ -30,17 +30,20 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.tencent.devops.common.event.annotation.Event
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
 import com.tencent.devops.common.redis.RedisOperation
+import com.tencent.devops.common.service.utils.SpringContextUtil
 import com.tencent.devops.common.websocket.dispatch.message.BuildLogMessage
 import com.tencent.devops.common.websocket.dispatch.message.SendMessage
 import com.tencent.devops.common.websocket.dispatch.push.WebsocketPush
 import com.tencent.devops.common.websocket.pojo.NotifyPost
 import com.tencent.devops.common.websocket.pojo.WebSocketType
+import com.tencent.devops.log.service.v2.LogServiceV2
 import org.slf4j.LoggerFactory
 
 @Event(exchange = MQ.EXCHANGE_WEBSOCKET_TMP_FANOUT, routeKey = MQ.ROUTE_WEBSOCKET_TMP_EVENT)
 data class JobLogWebsocketPush(
     val buildId: String,
     val jobId: String,
+    val lineNo: Long,
     override val userId: String,
     override val pushType: WebSocketType,
     override val redisOperation: RedisOperation,
@@ -51,6 +54,7 @@ data class JobLogWebsocketPush(
 
     companion object {
         private val logger = LoggerFactory.getLogger(this::class.java)
+        private val logService = SpringContextUtil.getBean(LogServiceV2::class.java)
     }
 
     override fun findSession(page: String): List<String>? {
@@ -64,6 +68,7 @@ data class JobLogWebsocketPush(
         return BuildLogMessage(
             buildId = buildId,
             tagOrJobId = jobId,
+            lineNo = lineNo,
             notifyPost = notifyPost,
             userId = userId,
             page = page,
@@ -73,5 +78,19 @@ data class JobLogWebsocketPush(
 
     override fun buildNotifyMessage(message: SendMessage) {
         val notifyPost = message.notifyPost
+        try {
+            val queryLogs = logService.queryMoreLogsAfterLine(
+                buildId = buildId,
+                start = lineNo,
+                isAnalysis = false,
+                keywordsStr = null,
+                tag = null,
+                jobId = jobId,
+                executeCount = null
+            )
+            notifyPost.message = objectMapper.writeValueAsString(queryLogs)
+        } catch (e: Exception) {
+            logger.error("BuildLogMessage:queryMoreLogsAfterLine error. message:${e.message}")
+        }
     }
 }

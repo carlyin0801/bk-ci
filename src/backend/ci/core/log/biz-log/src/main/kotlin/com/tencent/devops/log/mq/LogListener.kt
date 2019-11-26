@@ -28,6 +28,7 @@ package com.tencent.devops.log.mq
 
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
 import com.tencent.devops.common.redis.RedisOperation
+import com.tencent.devops.common.websocket.dispatch.WebSocketDispatcher
 import com.tencent.devops.log.model.pojo.LogBatchEvent
 import com.tencent.devops.log.model.pojo.LogEvent
 import com.tencent.devops.log.model.pojo.LogPushEvent
@@ -54,7 +55,8 @@ class LogListener constructor(
     private val rabbitTemplate: RabbitTemplate,
     private val logServiceDispatcher: LogServiceDispatcher,
     private val redisOperation: RedisOperation,
-    private val logPushWebsocketService: LogPushWebsocketService
+    private val logPushWebsocketService: LogPushWebsocketService,
+    private val webSocketDispatcher: WebSocketDispatcher
 ) {
 
     fun logEvent(event: LogEvent) {
@@ -102,7 +104,9 @@ class LogListener constructor(
 //                    BuildLogEndPoint.refreshBuildEndLineNo(event.buildId, it.tag, it.lineNo)
                     val jobPushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, event.buildId, it.tag)
                     if (jobPushStatus != null && it.lineNo - jobPushStatus.lastLineNum > 10) {
-                        logPushWebsocketService.sendTagWebsocketMessage(event.buildId, it.tag, it)
+                        val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, it.tag, it.lineNo)
+                        webSocketDispatcher.dispatch(logPush)
+                        LogPushRedisUtlis.writePushStatusByJobId(redisOperation, event.buildId, it.tag, it.lineNo)
                     }
                 }
             }
