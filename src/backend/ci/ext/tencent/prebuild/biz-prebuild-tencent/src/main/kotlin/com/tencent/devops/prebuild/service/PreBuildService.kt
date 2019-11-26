@@ -175,8 +175,15 @@ class PreBuildService @Autowired constructor(
 
     fun getInitLogs(userId: String, pipelineId: String, buildId: String): QueryLogs {
         val projectId = getUserProjectId(userId)
-        val originLog = client.get(UserLogResource::class).getInitLogs(userId, projectId, pipelineId, buildId,
-                false, null, null, null, null).data!!
+        val originLog = client.get(UserLogResource::class).getInitLogs(
+            userId = userId,
+            projectId = projectId,
+            pipelineId = pipelineId,
+            buildId = buildId,
+            tag = null,
+            jobId = null,
+            executeCount = null
+        ).data!!
         val cleanLogs = mutableListOf<LogLine>()
         cleanLogs.addAll(originLog.logs.filterNot { it.message.contains("soda_fold") })
         return QueryLogs(originLog.buildId, originLog.finished, cleanLogs, originLog.timeUsed, originLog.status)
