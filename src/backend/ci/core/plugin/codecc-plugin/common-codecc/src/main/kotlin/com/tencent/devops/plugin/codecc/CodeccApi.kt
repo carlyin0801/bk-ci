@@ -50,7 +50,7 @@ open class CodeccApi constructor(
     private val existPath: String = "/ms/task/api/service/task/exists",
     private val deletePath: String = "/ms/task/api/service/task",
     private val report: String = "/api",
-    private val getRuleSetsPath: String = "/ms/task/api/service/checker/tasks/0/checkerSets"
+    private val getRuleSetsPath: String = "/ms/defect/api/service/checker/tasks/0/checkerSets"
 ) {
 
     companion object {
@@ -161,7 +161,7 @@ open class CodeccApi constructor(
         taskExecution(body, "$deletePath/$taskId", headers, "DELETE")
     }
 
-    fun getRuleSets(projectId: String, userId: String, toolName: String): Result<Map<String, Any>> {
+    fun getRuleSets(projectId: String, userId: String, toolName: String): Result<Map<String, List<CodeccToolRuleSet>>> {
         val headers = mapOf(
             AUTH_HEADER_DEVOPS_USER_ID to userId,
             AUTH_HEADER_DEVOPS_PROJECT_ID to projectId
@@ -175,7 +175,25 @@ open class CodeccApi constructor(
             headers = headers,
             method = "POST"
         )
-        return objectMapper.readValue(result)
+        val mapResult = objectMapper.readValue<Map<String, Any>>(result)
+        val checkerSets = mapResult["checkerSets"] as Map<String, Any>
+        val ruleSetResult = mutableListOf<CodeccToolRuleSet>()
+        checkerSets.forEach { key, value ->
+            if (key == "toolName") return@forEach
+            val childrenMap = value as List<Map<String, Any>>
+            ruleSetResult.add(CodeccToolRuleSet(
+                id = key,
+                name = "",
+                children = childrenMap.map{
+                    CodeccToolRuleSet.CodeccToolRuleSetChild(
+                        it["checkerSetId"] as String,
+                        it["checkerSetName"] as String,
+                        it["codeLangs"] as List<String>
+                        )
+                }
+            ))
+        }
+        return Result(mapOf("records" to ruleSetResult))
     }
 
     private fun taskExecution(
@@ -306,4 +324,16 @@ open class CodeccApi constructor(
         val toolName: String,
         val checkerSetId: String
     )
+
+    data class CodeccToolRuleSet(
+        val id: String,
+        val name: String,
+        val children: List<CodeccToolRuleSetChild>
+    ) {
+        data class CodeccToolRuleSetChild(
+            val ruleSetId: String,
+            val ruleSetName: String,
+            val codeLangs: List<String>
+        )
+    }
 }
