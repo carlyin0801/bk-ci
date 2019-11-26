@@ -79,16 +79,16 @@ import org.springframework.stereotype.Service
 class TxAtomReleaseServiceImpl : TxAtomReleaseService, AtomReleaseServiceImpl() {
 
     @Autowired
-    private lateinit var marketAtomBuildInfoDao: MarketAtomBuildInfoDao
+    lateinit var marketAtomBuildInfoDao: MarketAtomBuildInfoDao
 
     @Autowired
-    private lateinit var marketAtomBuildAppRelDao: MarketAtomBuildAppRelDao
+    lateinit var storePipelineRelDao: StorePipelineRelDao
 
     @Autowired
-    private lateinit var storePipelineBuildRelDao: StorePipelineBuildRelDao
+    lateinit var marketAtomBuildAppRelDao: MarketAtomBuildAppRelDao
 
     @Autowired
-    private lateinit var storePipelineRelDao: StorePipelineRelDao
+    lateinit var storePipelineBuildRelDao: StorePipelineBuildRelDao
 
     @Value("\${git.plugin.nameSpaceId}")
     private lateinit var pluginNameSpaceId: String
