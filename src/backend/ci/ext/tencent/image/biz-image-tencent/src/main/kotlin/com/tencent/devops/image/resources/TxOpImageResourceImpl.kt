@@ -24,35 +24,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.plugin.codecc.config
+package com.tencent.devops.image.resources
 
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.stereotype.Component
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.image.api.TxOpImageResource
+import com.tencent.devops.image.pojo.ImageListResp
+import com.tencent.devops.image.service.ImageArtifactoryService
+import org.springframework.beans.factory.annotation.Autowired
 
-@Component
-class CodeccConfig {
+@RestResource
+class TxOpImageResourceImpl @Autowired constructor(
+    private val imageArtifactoryService: ImageArtifactoryService
+) : TxOpImageResource {
 
-    /**
-     * 代码检查网关地址
-     */
-    @Value("\${codeccGateway.gateway:}")
-    val codeccApiGateWay: String = ""
+    override fun listAllPublicImages(userId: String, searchKey: String?): Result<ImageListResp> {
+        return Result(imageArtifactoryService.listAllPublicImages(searchKey))
+    }
 
-    @Value("\${codeccGateway.api.createTask:/ms/task/api/service/task}")
-    val createPath = "/ms/task/api/service/task"
-
-    @Value("\${codeccGateway.api.updateTask:/ms/task/api/service/task}")
-    val updatePath = "/ms/task/api/service/task"
-
-    @Value("\${codeccGateway.api.checkTaskExists:/ms/task/api/service/task/exists}")
-    val existPath = "/ms/task/api/service/task/exists"
-
-    @Value("\${codeccGateway.api.deleteTask:/ms/task/api/service/task}")
-    val deletePath = "/ms/task/api/service/task"
-
-    @Value("\${codeccGateway.api.codeCheckReport:/api}")
-    val report = ""
-
-    @Value("\${codeccGateway.api.getRuleSets:/ms/defect/api/service/checker/tools/{toolName}/pipelineCheckerSets}")
-    val getRuleSetsPath = ""
+    override fun listAllProjectImages(userId: String, projectId: String, searchKey: String?): Result<ImageListResp> {
+        return Result(imageArtifactoryService.listAllProjectImages(projectId, searchKey))
+    }
 }
