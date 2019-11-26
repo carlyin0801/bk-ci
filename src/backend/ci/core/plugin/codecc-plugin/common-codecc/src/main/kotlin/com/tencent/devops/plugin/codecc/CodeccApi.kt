@@ -50,7 +50,7 @@ open class CodeccApi constructor(
     private val existPath: String = "/ms/task/api/service/task/exists",
     private val deletePath: String = "/ms/task/api/service/task",
     private val report: String = "/api",
-    private val getRuleSetsPath: String = "/ms/defect/api/service/checker/tasks/0/checkerSets"
+    private val getRuleSetsPath: String = "/ms/defect/api/service/checker/tools/{toolName}/pipelineCheckerSets"
 ) {
 
     companion object {
@@ -166,14 +166,11 @@ open class CodeccApi constructor(
             AUTH_HEADER_DEVOPS_USER_ID to userId,
             AUTH_HEADER_DEVOPS_PROJECT_ID to projectId
         )
-        val body = mapOf(
-            "toolNames" to listOf(toolName)
-        )
         val result = taskExecution(
-            body = body,
-            path = getRuleSetsPath,
+            body = mapOf(),
+            path = getRuleSetsPath.replace("{toolName}", toolName),
             headers = headers,
-            method = "POST"
+            method = "GET"
         )
         return objectMapper.readValue(result)
     }

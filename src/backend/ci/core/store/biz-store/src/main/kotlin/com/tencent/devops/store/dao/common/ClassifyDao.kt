@@ -124,7 +124,6 @@ class ClassifyDao {
 
     fun convert(record: TClassifyRecord): Classify {
         with(record) {
-//            val classifyLanName = MessageCodeUtil.getCodeLanMessage(classifyCode)
             return Classify(
                 id = id,
                 classifyCode = classifyCode,
