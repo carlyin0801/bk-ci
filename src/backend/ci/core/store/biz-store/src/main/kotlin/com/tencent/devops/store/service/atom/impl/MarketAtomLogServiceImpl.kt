@@ -70,16 +70,13 @@ class MarketAtomLogServiceImpl @Autowired constructor(
         if (validateResult.isNotOk()) {
             return Result(status = validateResult.status, message = validateResult.message, data = null)
         }
-        val logResource = client.get(ServiceLogResource::class)
-        val queryLogsResult =
-            if (queryKeywords != null && queryKeywords.isBlank()) logResource.queryLogs(
+        val queryLogsResult = client.get(ServiceLogResource::class)
+            .getInitLogs(
+                projectId = projectCode,
+                pipelineId = pipelineId,
                 buildId = buildId,
+                isAnalysis = isAnalysis,
                 queryKeywords = queryKeywords,
-                tag = tag,
-                jobId = null,
-                executeCount = executeCount
-            ) else logResource.getInitLogs(
-                buildId = buildId,
                 tag = tag,
                 jobId = null,
                 executeCount = executeCount
