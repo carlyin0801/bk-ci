@@ -36,6 +36,7 @@ import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.QUEUE_LOG_PUSH_
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.ROUTE_LOG_BATCH_BUILD_EVENT
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.ROUTE_LOG_BUILD_EVENT
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ.ROUTE_LOG_PUSH_BUILD_EVENT
+import com.tencent.devops.common.websocket.dispatch.WebSocketDispatcher
 import com.tencent.devops.log.mq.LogListener
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.core.Binding
@@ -44,6 +45,7 @@ import org.springframework.amqp.core.DirectExchange
 import org.springframework.amqp.core.Queue
 import org.springframework.amqp.rabbit.connection.ConnectionFactory
 import org.springframework.amqp.rabbit.core.RabbitAdmin
+import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer
 import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
@@ -57,7 +59,7 @@ import org.springframework.core.Ordered
 @Configuration
 @ConditionalOnWebApplication
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)
-class MQConfiguration @Autowired constructor() {
+class LogMQConfiguration @Autowired constructor() {
 
     @Bean
     fun rabbitAdmin(connectionFactory: ConnectionFactory): RabbitAdmin {
@@ -190,7 +192,10 @@ class MQConfiguration @Autowired constructor() {
         return container
     }
 
+    @Bean
+    fun webSocketDispatcher(rabbitTemplate: RabbitTemplate) = WebSocketDispatcher(rabbitTemplate)
+
     companion object {
-        private val logger = LoggerFactory.getLogger(MQConfiguration::class.java)
+        private val logger = LoggerFactory.getLogger(LogMQConfiguration::class.java)
     }
 }
