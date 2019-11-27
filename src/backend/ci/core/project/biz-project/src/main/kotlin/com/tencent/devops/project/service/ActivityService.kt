@@ -68,6 +68,7 @@ class ActivityService @Autowired constructor(
                 OPActivityVO(
                     id,
                     name,
+                    englishName,
                     link,
                     type,
                     status,
