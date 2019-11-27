@@ -39,7 +39,7 @@ import org.springframework.context.annotation.Primary
 @Configuration
 class TencentAtomConfig {
 
-    @Bean
+    @Bean("manualReviewTaskAtom")
     @Primary
     fun manualReviewTaskAtom(
         @Autowired commonConfig: CommonConfig,
