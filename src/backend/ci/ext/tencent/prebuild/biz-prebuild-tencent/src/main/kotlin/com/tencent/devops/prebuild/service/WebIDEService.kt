@@ -66,7 +66,7 @@ class WebIDEService @Autowired constructor(
 
     fun getUserProject(userId: String, accessToken: String): ProjectVO? {
         val projectInfo = client.get(ServiceTxProjectResource::class).getPreUserProject(userId, accessToken)
-        return projectInfo!!.data
+        return projectInfo.data
     }
 
     fun getUserIDEInfo(userId: String, projectId: String): List<IDEInfo> {
@@ -124,10 +124,10 @@ class WebIDEService @Autowired constructor(
             val serverInfo = ideList.find { s -> s.ip == it.ip }
             if (serverInfo != null) {
                 if (it.agentStatus == true) {
-                    serverInfo?.agentInstanceStatus = 1
+                    serverInfo.agentInstanceStatus = 1
                     logger.info("set agent status to 1, ${it.ip}")
                 } else {
-                    serverInfo?.agentInstanceStatus = 0
+                    serverInfo.agentInstanceStatus = 0
                     logger.info("set agent status to 0, ${it.ip}")
                 }
             }
@@ -152,12 +152,6 @@ class WebIDEService @Autowired constructor(
 
         logger.info("succ get agent info by ip:$ip, nodeID:${agentInfo.agentId}")
         return agentInfo
-    }
-
-    private fun updateWebIDEStatus(userID: String, ideList: List<IDEInfo>) {
-        ideList.forEach {
-            val ideURL = "http://devops.oa.com/webide/$userID/${it.ip}"
-        }
     }
 
     fun getAgentInstallLink(userId: String, projectId: String, operationSystem: String, zoneName: String?, initIp: String?): ThirdPartyAgentStaticInfo {
@@ -212,8 +206,8 @@ class WebIDEService @Autowired constructor(
         val encKey = DigestUtils.md5Hex("$token$timestamp$random")
         headerBuilder["ENCKEY"] = encKey
         headerBuilder["timeStamp"] = timestamp
-        val token = "14a0a8f272d4ebd39ea360be939a3d3c6748548c1c381cd8e887"
-        val sigContent = timestamp + token + timestamp
+        val smartGateToken = "14a0a8f272d4ebd39ea360be939a3d3c6748548c1c381cd8e887"
+        val sigContent = timestamp + smartGateToken + timestamp
         val digest = MessageDigest.getInstance("SHA-256")
         val result = toHex(digest.digest(sigContent.toByteArray()))
 
@@ -368,7 +362,7 @@ class WebIDEService @Autowired constructor(
         if (openDirInfoRecord == null) {
             return IdeDirInfo("", ip)
         } else {
-            return IdeDirInfo(openDirInfoRecord!!.path, openDirInfoRecord!!.ip)
+            return IdeDirInfo(openDirInfoRecord.path, openDirInfoRecord.ip)
         }
     }
 
