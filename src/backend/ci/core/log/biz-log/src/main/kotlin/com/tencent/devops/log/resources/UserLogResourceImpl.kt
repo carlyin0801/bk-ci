@@ -57,13 +57,15 @@ class UserLogResourceImpl @Autowired constructor(
         projectId: String,
         pipelineId: String,
         buildId: String,
+        isAnalysis: Boolean?,
+        queryKeywords: String?,
         tag: String?,
         jobId: String?,
         executeCount: Int?
     ): Result<QueryLogs> {
 
         validateAuth(userId, projectId, pipelineId, buildId)
-        return logDispatcher.getInitLogs(buildId, tag, jobId, executeCount)
+        return logDispatcher.getInitLogs(projectId, pipelineId, buildId, isAnalysis, queryKeywords, tag, jobId, executeCount)
     }
 
     override fun queryLogs(
@@ -193,6 +195,7 @@ class UserLogResourceImpl @Autowired constructor(
         tag: String,
         lineNo: Long
     ): Result<PushStatus?> {
+        validateAuth(userId, projectId, pipelineId, buildId)
         return Result(logDispatcher.getTagPushStatus(buildId, tag, lineNo))
     }
 }

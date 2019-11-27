@@ -48,7 +48,11 @@ class LogServiceDispatcher @Autowired constructor(
 ) {
 
     fun getInitLogs(
+        projectId: String,
+        pipelineId: String,
         buildId: String,
+        isAnalysis: Boolean?,
+        queryKeywords: String?,
         tag: String?,
         jobId: String?,
         executeCount: Int?
@@ -56,6 +60,8 @@ class LogServiceDispatcher @Autowired constructor(
         return Result(
             logServiceV2.queryInitLogs(
                 buildId,
+                isAnalysis ?: false,
+                queryKeywords,
                 tag,
                 jobId,
                 executeCount

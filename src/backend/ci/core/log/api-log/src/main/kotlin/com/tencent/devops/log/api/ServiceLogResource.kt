@@ -54,9 +54,21 @@ interface ServiceLogResource {
     @GET
     @Path("/{projectId}/{pipelineId}/{buildId}/")
     fun getInitLogs(
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
         @ApiParam("构建ID", required = true)
         @PathParam("buildId")
         buildId: String,
+        @ApiParam("是否请求分析日志", required = false)
+        @QueryParam("isAnalysis")
+        isAnalysis: Boolean? = false,
+        @ApiParam("搜索关键字", required = false)
+        @QueryParam("queryKeywords")
+        queryKeywords: String?,
         @ApiParam("对应elementId", required = false)
         @QueryParam("tag")
         tag: String?,
@@ -68,9 +80,9 @@ interface ServiceLogResource {
         executeCount: Int?
     ): Result<QueryLogs>
 
-    @ApiOperation("根据构建ID获取初始化所有日志")
+    @ApiOperation("根据构建ID获取初始化所有日志并返回行号")
     @GET
-    @Path("/{projectId}/{pipelineId}/{buildId}/")
+    @Path("/{projectId}/{pipelineId}/{buildId}/query")
     fun queryLogs(
         @ApiParam("构建ID", required = true)
         @PathParam("buildId")

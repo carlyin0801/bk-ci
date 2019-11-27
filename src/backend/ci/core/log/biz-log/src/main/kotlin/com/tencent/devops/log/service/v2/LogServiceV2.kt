@@ -140,6 +140,8 @@ class LogServiceV2 @Autowired constructor(
 
     fun queryInitLogs(
         buildId: String,
+        isAnalysis: Boolean,
+        keywordsStr: String?,
         tag: String?,
         jobId: String?,
         executeCount: Int?
@@ -150,8 +152,25 @@ class LogServiceV2 @Autowired constructor(
             val indexAndType = indexServiceV2.getIndexAndType(buildId)
             val index = indexAndType.index
             val type = indexAndType.type
-            val result = doQueryInitLogs(buildId, index, type, true, defaultKeywords, tag, jobId, executeCount)
-            success = logStatusSuccess(result.status)
+            if (keywordsStr == null || keywordsStr.isBlank()) {
+                val result = if (isAnalysis) {
+                    doQueryByKeywords(buildId, index, type, 1, defaultKeywords, tag, jobId, executeCount)
+                } else {
+                    doQueryInitLogs(buildId, index, type, true, defaultKeywords, tag, jobId, executeCount)
+                }
+                success = logStatusSuccess(result.status)
+                return result
+            }
+
+            val keywords =
+                Arrays.asList(*(keywordsStr.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()))
+                    .stream()
+                    .filter { k -> k.isNotBlank() }
+                    .collect(Collectors.toList())
+
+            val result = doQueryByKeywords(buildId, index, type, 1, keywords, tag, jobId, executeCount)
+            logger.info("query init logs for build($buildId): size-${result.logs.size} size-${result.status}")
+            success = true
             return result
         } finally {
             logBeanV2.query(System.currentTimeMillis() - currentEpoch, success)
@@ -953,6 +972,221 @@ class LogServiceV2 @Autowired constructor(
                 .setSize(50)
             multiSearchRequestBuilder.add(srbKeyword)
         }
+
+        val lineNoSet = java.util.TreeSet<Long>()
+
+        val highlights = HashMap<Long, String>()
+        val multiSearchResponse = multiSearchRequestBuilder.get()
+        multiSearchResponse.responses
+            .map { it.response }
+            .filter { it != null && it.hits != null }
+            .forEach { response ->
+                response.hits.forEach {
+                    // 对 No such process 作特殊处理
+                    val message = it.source["message"].toString()
+                    if (!message.isBlank() && !message.contains("No such process")) {
+                        val ln = it.getField("lineNo").getValue<Long>()
+                        lineNoSet.add(ln)
+                        if (!it.highlightFields.isEmpty()) {
+                            highlights[ln] = it.highlightFields["message"]!!.fragments[0].toString()
+                        }
+                    }
+                }
+            }
+
+        logger.info("step1 time cost($type): ${System.currentTimeMillis() - startTime}")
+        logger.info("$type line no set: $lineNoSet")
+        logger.info("$type highlights map: $highlights")
+        startTime = System.currentTimeMillis()
+
+        if (wholeQuery) {
+            lineNoSet.add(logRange.first)
+            lineNoSet.add(logRange.second)
+        } else {
+            if (!lineNoSet.isEmpty()) {
+                lineNoSet.add(lineNoSet.first() - Constants.NUM_LINES_AROUND_TAGS)
+                lineNoSet.add(lineNoSet.last() + Constants.NUM_LINES_AROUND_TAGS)
+            }
+        }
+
+        // 开始处理需要返回的行号
+        val lineRanges = if (wholeQuery) {
+            parseToLineRangesGetInitLines(
+                lineNoSet,
+                Constants.NUM_LINES_START.toLong(),
+                Constants.NUM_LINES_END.toLong(),
+                Constants.NUM_LINES_AROUND_TAGS.toLong()
+            )
+        } else {
+            parseToLineRangesGetInitLines(
+                lineNoSet,
+                Constants.NUM_LINES_AROUND_TAGS.toLong(),
+                Constants.NUM_LINES_AROUND_TAGS.toLong(),
+                Constants.NUM_LINES_AROUND_TAGS.toLong()
+            )
+        }
+
+        val logs = mutableListOf<LogLine>()
+        logger.info("$type logs lineRanges: $lineRanges")
+        if (!lineRanges.isEmpty()) {
+            val boolQueryBuilder = getQuery(buildId, tag, jobId, executeCount)
+
+            val rangeQuery = QueryBuilders.boolQuery()
+            for (lineRange in lineRanges) {
+                rangeQuery.should(
+                    QueryBuilders
+                        .rangeQuery("lineNo")
+                        .gte(lineRange.first)
+                        .lte(lineRange.second)
+                )
+            }
+            boolQueryBuilder.must(rangeQuery)
+
+            val response = client.prepareSearch(index)
+                .setTypes(type)
+                .setQuery(boolQueryBuilder)
+                .setSize(Constants.MAX_LINES)
+                .addDocValueField("lineNo")
+                .addDocValueField("timestamp")
+                .addSort("lineNo", SortOrder.ASC)
+                .get()
+            response.hits.forEach { searchHitFields ->
+                val sourceMap = searchHitFields.source
+                val ln = sourceMap["lineNo"].toString().toLong()
+                val t = sourceMap["tag"]?.toString() ?: ""
+                val jobId = sourceMap["tag"]?.toString() ?: ""
+                val logLine = LogLine(
+                    ln,
+                    sourceMap["timestamp"].toString().toLong(),
+                    if (highlights.containsKey(ln)) {
+                        highlights[ln] ?: ""
+                    } else {
+                        sourceMap["message"].toString()
+                    },
+                    Constants.DEFAULT_PRIORITY_NOT_DELETED,
+                    t,
+                    jobId,
+                    sourceMap["executeCount"]?.toString()?.toInt() ?: 1
+                )
+                logs.add(logLine)
+            }
+            val numLogs = logs.size
+
+            logger.info("step2 time cost($type): ${System.currentTimeMillis() - startTime}")
+            startTime = System.currentTimeMillis()
+
+            // 添加上线查看更多的标志日志
+            if (numLogs > 0) {
+                if (logs[0].lineNo > logRange.first) {
+                    logs.add(
+                        0, genLogMsgThereIsMore(
+                        "soda_more",
+                        java.lang.Long.MIN_VALUE,
+                        logs[0].lineNo - logRange.first,
+                        logRange.first,
+                        logs[0].lineNo - 1,
+                        tag,
+                        jobId,
+                        executeCount
+                    )
+                    )
+                }
+                if (logs[logs.size - 1].lineNo < logRange.second) {
+                    logs.add(
+                        genLogMsgThereIsMore(
+                            "soda_more",
+                            java.lang.Long.MAX_VALUE,
+                            logRange.second - logs[logs.size - 1].lineNo,
+                            logs[logs.size - 1].lineNo + 1,
+                            logRange.second,
+                            tag,
+                            jobId,
+                            executeCount
+                        )
+                    )
+                }
+            }
+
+            // 取数据
+            for (i in numLogs - 1 downTo 2) {
+                val (lineNo, timestamp) = logs[i - 1]
+                val (lineNo1) = logs[i]
+                if (lineNo1 > lineNo + 1) {
+                    logs.add(
+                        i, genLogMsgThereIsMore(
+                        "soda_more",
+                        timestamp,
+                        lineNo1 - lineNo - 1,
+                        lineNo + 1,
+                        lineNo1 - 1,
+                        tag,
+                        jobId,
+                        executeCount
+                    )
+                    )
+                }
+            }
+        }
+        logger.info("step3 time cost($type): ${System.currentTimeMillis() - startTime}")
+
+        return logs
+    }
+
+    private fun getLineNoWithWords(
+        buildId: String,
+        index: String,
+        type: String,
+        keywords: String,
+        wholeQuery: Boolean,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): List<LogLine> {
+        logger.info("[$buildId|$index|$type|$tag|$jobId|$executeCount] log params for type($type): " +
+            "index: $index, keywords: $keywords, wholeQuery: $wholeQuery, tag: $tag, tag: $jobId, executeCount: $executeCount")
+
+        val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
+        if (size == 0L) {
+            return listOf()
+        }
+
+        val multiSearchRequestBuilder = client.prepareMultiSearch()
+
+        val logRange =
+            if (tag.isNullOrBlank()) Pair(1L, size) else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
+
+        logger.info("log range for $type: (${logRange.first}, ${logRange.second}), size: $size")
+
+        var startTime = System.currentTimeMillis()
+
+        // 高亮关键字
+        // 传了tag就认为不是全量查询
+        if (wholeQuery && tag.isNullOrBlank()) {
+
+            val srbFoldStart = client.prepareSearch(index)
+                .setTypes(type)
+                .setQuery(QueryBuilders.matchQuery("logType", LogType.START.name))
+                .addDocValueField("lineNo")
+                .setSize(100)
+            val srbFoldStop = client.prepareSearch(index)
+                .setTypes(type)
+                .setQuery(QueryBuilders.prefixQuery("logType", LogType.END.name))
+                .addDocValueField("lineNo")
+                .setSize(100)
+            multiSearchRequestBuilder.add(srbFoldStart).add(srbFoldStop)
+        }
+
+        val query = getQuery(buildId, tag, jobId, executeCount)
+        val srbKeyword = client.prepareSearch(index)
+            .setTypes(type)
+            .setQuery(
+                query
+                    .must(QueryBuilders.matchQuery("message", keywords).operator(Operator.AND))
+                    .must(QueryBuilders.rangeQuery("lineNo").gte(logRange.first))
+            )
+            .addDocValueField("lineNo")
+            .setSize(50)
+        multiSearchRequestBuilder.add(srbKeyword)
 
         val lineNoSet = java.util.TreeSet<Long>()
 

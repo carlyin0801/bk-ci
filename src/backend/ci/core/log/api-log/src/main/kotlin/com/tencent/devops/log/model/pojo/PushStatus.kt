@@ -26,11 +26,17 @@
 
 package com.tencent.devops.log.model.pojo
 
+import io.swagger.annotations.ApiModel
+import io.swagger.annotations.ApiModelProperty
+
 /**
  *
  * Powered By Tencent
  */
+@ApiModel("日志推送状态模型")
 data class PushStatus(
+    @ApiModelProperty("上次Push的最后一行", required = true)
     var lastLineNum: Long = 0,
+    @ApiModelProperty("上次Push的最后时间", required = true)
     var lastPushTime: Long = 0
 )
