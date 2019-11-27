@@ -70,6 +70,12 @@ interface UserLogResource {
         @ApiParam("构建ID", required = true)
         @PathParam("buildId")
         buildId: String,
+        @ApiParam("是否请求分析日志", required = false)
+        @QueryParam("isAnalysis")
+        isAnalysis: Boolean? = false,
+        @ApiParam("搜索关键字", required = false)
+        @QueryParam("queryKeywords")
+        queryKeywords: String?,
         @ApiParam("对应elementId", required = false)
         @QueryParam("tag")
         tag: String?,
@@ -81,7 +87,7 @@ interface UserLogResource {
         executeCount: Int?
     ): Result<QueryLogs>
 
-    @ApiOperation("根据构建ID和关键字查询日志")
+    @ApiOperation("根据构建ID和关键字查询日志并返回行号")
     @GET
     @Path("/{projectId}/{pipelineId}/{buildId}/query")
     fun queryLogs(
@@ -230,10 +236,10 @@ interface UserLogResource {
         @ApiParam("构建ID", required = true)
         @PathParam("buildId")
         buildId: String,
-        @ApiParam("对应element ID", required = false)
+        @ApiParam("对应element ID", required = true)
         @QueryParam("tag")
         tag: String,
-        @ApiParam("已拉取的最后一行行号", required = false)
+        @ApiParam("已拉取的最后一行行号", required = true)
         @QueryParam("lineNo")
         lineNo: Long
     ): Result<PushStatus?>

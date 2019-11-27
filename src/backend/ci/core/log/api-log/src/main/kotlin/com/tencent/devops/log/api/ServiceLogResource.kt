@@ -80,6 +80,27 @@ interface ServiceLogResource {
         executeCount: Int?
     ): Result<QueryLogs>
 
+    @ApiOperation("根据构建ID获取初始化所有日志并返回行号")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/query")
+    fun queryLogs(
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("搜索关键字", required = false)
+        @QueryParam("queryKeywords")
+        queryKeywords: String,
+        @ApiParam("对应elementId", required = false)
+        @QueryParam("tag")
+        tag: String?,
+        @ApiParam("对应jobId", required = false)
+        @QueryParam("jobId")
+        jobId: String?,
+        @ApiParam("执行次数", required = false)
+        @QueryParam("executeCount")
+        executeCount: Int?
+    ): Result<QueryLogs>
+
     @ApiOperation("获取更多日志")
     @GET
     @Path("/{projectId}/{pipelineId}/{buildId}/more")
