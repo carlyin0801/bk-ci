@@ -179,6 +179,8 @@ class PreBuildService @Autowired constructor(
             projectId = projectId,
             pipelineId = pipelineId,
             buildId = buildId,
+            isAnalysis = false,
+            queryKeywords = null,
             tag = null,
             jobId = null,
             executeCount = null
