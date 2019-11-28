@@ -8,7 +8,6 @@ import com.tencent.bkrepo.common.api.pojo.Response
 import com.tencent.bkrepo.generic.pojo.FileDetail
 import com.tencent.bkrepo.generic.pojo.FileInfo
 import com.tencent.bkrepo.generic.pojo.FileSizeInfo
-//import com.tencent.bkrepo.generic.pojo.devops.ExternalUrlRequest
 import com.tencent.bkrepo.generic.pojo.operate.FileCopyRequest
 import com.tencent.bkrepo.generic.pojo.operate.FileMoveRequest
 import com.tencent.bkrepo.generic.pojo.operate.FileRenameRequest
@@ -422,9 +421,10 @@ class BkRepoClient @Autowired constructor(
         ttl: Int,
         directed: Boolean = false
     ): String {
-        throw OperationException("not support")
-//        logger.info("externalDownloadUrl, userId: $userId, projectId: $projectId, repoName: $repoName, path: $path, " +
-//            "downloadUser: $downloadUser, ttl: $ttl, directed: $directed")
+        logger.info("externalDownloadUrl, userId: $userId, projectId: $projectId, repoName: $repoName, path: $path, " +
+            "downloadUser: $downloadUser, ttl: $ttl, directed: $directed")
+        throw OperationException("TODO")
+        // import com.tencent.bkrepo.generic.pojo.devops.ExternalUrlRequest
 //        val url = "$BKREPO_URL/api/generic/devops/createExternalUrl"
 //        val requestData = ExternalUrlRequest(
 //            projectId = projectId,
