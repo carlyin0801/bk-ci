@@ -224,17 +224,17 @@ class BuildMonitorControl @Autowired constructor(
     }
 
     private fun logFail(buildId: String, tag: String, containerId: String, message: String) {
-        LogUtils.addFoldStartLine(
-            rabbitTemplate = rabbitTemplate,
-            buildId = buildId, tagName = tag, tag = tag, jobId = containerId, executeCount = 1
-        )
+//        LogUtils.addFoldStartLine(
+//            rabbitTemplate = rabbitTemplate,
+//            buildId = buildId, tagName = tag, tag = tag, jobId = containerId, executeCount = 1
+//        )
         LogUtils.addRedLine(
             rabbitTemplate = rabbitTemplate,
             buildId = buildId, message = message, tag = tag, jobId = containerId, executeCount = 1
         )
-        LogUtils.addFoldEndLine(
-            rabbitTemplate = rabbitTemplate,
-            buildId = buildId, tagName = tag, tag = tag, jobId = containerId, executeCount = 1
-        )
+//        LogUtils.addFoldEndLine(
+//            rabbitTemplate = rabbitTemplate,
+//            buildId = buildId, tagName = tag, tag = tag, jobId = containerId, executeCount = 1
+//        )
     }
 }

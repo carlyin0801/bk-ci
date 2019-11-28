@@ -43,7 +43,7 @@ object LogPushRedisUtlis {
     fun writePushStatusByTag(redisOperation: RedisOperation, buildId: String, tag: String, lineNo: Long) {
         redisOperation.set(
             "$LOG_PUSH_TAG_REDIS_KEY$buildId:$tag",
-            JsonUtil.toJson(PushStatus(lineNo, System.currentTimeMillis())),
+            JsonUtil.toJson(PushStatus(buildId, tag, lineNo, System.currentTimeMillis())),
             86400,
             true
         )
@@ -53,7 +53,7 @@ object LogPushRedisUtlis {
     fun writePushStatusByJobId(redisOperation: RedisOperation, buildId: String, jobId: String, lineNo: Long) {
         redisOperation.set(
             "$LOG_PUSH_JOBID_REDIS_KEY$buildId:$jobId",
-            JsonUtil.toJson(PushStatus(lineNo, System.currentTimeMillis())),
+            JsonUtil.toJson(PushStatus(buildId, jobId, lineNo, System.currentTimeMillis())),
             86400,
             true
         )
@@ -73,7 +73,15 @@ object LogPushRedisUtlis {
         else JsonUtil.to(result, PushStatus::class.java)
     }
 
-    // 获取所有和构建
+    // 获取所有Tag的PushStatus
+    fun getAllPushStatus(redisOperation: RedisOperation): Set<PushStatus> {
+        val result = redisOperation.keys(LOG_PUSH_TAG_REDIS_KEY)
+        val allStatus = setOf<PushStatus>()
+        result.forEach {
+            allStatus.plus(JsonUtil.to(it, PushStatus::class.java))
+        }
+        return allStatus
+    }
 
     // 根据tag清理pushStatus对应的记录
     fun cleanPushStatusByTag(redisOperation: RedisOperation, buildId: String, tag: String) {

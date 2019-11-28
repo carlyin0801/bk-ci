@@ -211,4 +211,8 @@ class LogServiceDispatcher @Autowired constructor(
         if (pushStatus == null) LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, tag, lineNo)
         return pushStatus
     }
+
+    fun cleanPushStatus(buildId: String, tag: String) {
+        LogPushRedisUtlis.cleanPushStatusByTag(redisOperation, buildId, tag)
+    }
 }

@@ -96,13 +96,13 @@ class LogListener constructor(
             // 对每一条插入成功的日志进行处理
             event.logs.forEach {
                 if (!it.tag.isBlank()) {
-                    // 记录该Job已插入的最后一条日志行号
-//                    BuildLogEndPoint.refreshBuildEndLineNo(event.buildId, it.tag, it.lineNo)
-                    val jobPushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, event.buildId, it.tag)
-                    if (jobPushStatus != null && it.lineNo - jobPushStatus.lastLineNum > 10) {
+                    // 记录该任务已插入的最后一条日志行号
+                    val pushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, event.buildId, it.tag)
+                    // 若最新一条
+                    if (pushStatus != null && it.lineNo - pushStatus.lastLineNum > 10) {
                         val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, it.tag, it.lineNo)
                         webSocketDispatcher.dispatch(logPush)
-                        LogPushRedisUtlis.writePushStatusByJobId(redisOperation, event.buildId, it.tag, it.lineNo)
+                        LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, it.tag, logPush.lastLineNo)
                     }
                 }
             }

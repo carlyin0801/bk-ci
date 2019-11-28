@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory
 data class TagLogWebsocketPush(
     val buildId: String,
     val tag: String,
-    val lineNo: Long,
+    var lastLineNo: Long,
     override val userId: String,
     override val pushType: WebSocketType,
     override val redisOperation: RedisOperation,
@@ -68,7 +68,7 @@ data class TagLogWebsocketPush(
         return BuildLogMessage(
             buildId = buildId,
             tagOrJobId = tag,
-            lineNo = lineNo,
+            lineNo = lastLineNo,
             notifyPost = notifyPost,
             userId = userId,
             page = page,
@@ -81,7 +81,7 @@ data class TagLogWebsocketPush(
         try {
             val queryLogs = logService.queryMoreLogsAfterLine(
                 buildId = buildId,
-                start = lineNo,
+                start = lastLineNo,
                 isAnalysis = false,
                 keywordsStr = null,
                 tag = tag,
@@ -89,6 +89,7 @@ data class TagLogWebsocketPush(
                 executeCount = null
             )
             notifyPost.message = objectMapper.writeValueAsString(queryLogs)
+            lastLineNo = queryLogs.logs[queryLogs.logs.lastIndex].lineNo
         } catch (e: Exception) {
             logger.error("BuildLogMessage:queryMoreLogsAfterLine error. message:${e.message}")
         }
