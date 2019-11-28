@@ -79,7 +79,6 @@ class SubPipelineStartUpService(
         values: Map<String, String>
     ): Result<ProjectBuildId> {
         logger.info("callPipelineStartup: $projectId | $parentPipelineId | $buildId | $callPipelineId | $taskId | $runMode")
-        logger.info("callPipelineStartup test：$projectId")
 
         // 获取构建任务
         val task = pipelineRuntimeService.getBuildTask(buildId, taskId)
