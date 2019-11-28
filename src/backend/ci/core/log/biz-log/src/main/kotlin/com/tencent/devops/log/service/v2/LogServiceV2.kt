@@ -971,7 +971,6 @@ class LogServiceV2 @Autowired constructor(
 
         val lineNoSet = java.util.TreeSet<Long>()
 
-        val highlights = HashMap<Long, String>()
         val multiSearchResponse = multiSearchRequestBuilder.get()
         multiSearchResponse.responses
             .map { it.response }
@@ -983,9 +982,6 @@ class LogServiceV2 @Autowired constructor(
                     if (!message.isBlank() && !message.contains("No such process")) {
                         val ln = it.getField("lineNo").getValue<Long>()
                         lineNoSet.add(ln)
-                        if (!it.highlightFields.isEmpty()) {
-                            highlights[ln] = it.highlightFields["message"]!!.fragments[0].toString()
-                        }
                     }
                 }
             }
