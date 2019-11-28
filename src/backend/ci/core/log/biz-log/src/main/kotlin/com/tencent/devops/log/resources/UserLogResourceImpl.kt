@@ -63,7 +63,6 @@ class UserLogResourceImpl @Autowired constructor(
         jobId: String?,
         executeCount: Int?
     ): Result<QueryLogs> {
-
         validateAuth(userId, projectId, pipelineId, buildId)
         return logDispatcher.getInitLogs(projectId, pipelineId, buildId, isAnalysis, queryKeywords, tag, jobId, executeCount)
     }
@@ -78,7 +77,6 @@ class UserLogResourceImpl @Autowired constructor(
         jobId: String?,
         executeCount: Int?
     ): Result<QueryLogs> {
-
         validateAuth(userId, projectId, pipelineId, buildId)
         return logDispatcher.queryLogsByWords(buildId, queryKeywords, tag, jobId, executeCount)
     }

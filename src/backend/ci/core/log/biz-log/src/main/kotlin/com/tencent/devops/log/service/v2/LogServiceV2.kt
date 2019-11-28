@@ -920,7 +920,7 @@ class LogServiceV2 @Autowired constructor(
         executeCount: Int?
     ): List<LogLine> {
         logger.info("[$buildId|$index|$type|$tag|$jobId|$executeCount] log params for type($type): " +
-            "index: $index, keywords: $keywords, wholeQuery: $wholeQuery, tag: $tag, tag: $jobId, executeCount: $executeCount")
+            "index: $index, keywords: $keywords, wholeQuery: $wholeQuery, tag: $tag, jobId: $jobId, executeCount: $executeCount")
 
         val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
         if (size == 0L) {
@@ -943,11 +943,14 @@ class LogServiceV2 @Autowired constructor(
             val srbFoldStart = client.prepareSearch(index)
                 .setTypes(type)
                 .setQuery(QueryBuilders.matchQuery("logType", LogType.START.name))
-                .addDocValueField("lastLineNo")
+                .addDocValueField("lineNo")
+                .setSize(100)
             val srbFoldStop = client.prepareSearch(index)
                 .setTypes(type)
                 .setQuery(QueryBuilders.prefixQuery("logType", LogType.END.name))
-                .addDocValueField("lastLineNo")
+                .addDocValueField("lineNo")
+                .setSize(100)
+
             multiSearchRequestBuilder.add(srbFoldStart).add(srbFoldStop)
         }
 
@@ -959,13 +962,9 @@ class LogServiceV2 @Autowired constructor(
                 .setQuery(
                     query
                         .must(QueryBuilders.matchQuery("message", it).operator(Operator.AND))
-                        .must(QueryBuilders.rangeQuery("lastLineNo").gte(logRange.first))
+                        .must(QueryBuilders.rangeQuery("lineNo").gte(logRange.first))
                 )
-                .highlighter(
-                    HighlightBuilder().preTags("\u001b[31m").postTags("\u001b[0m")
-                        .field("message").fragmentSize(100000)
-                )
-                .addDocValueField("lastLineNo")
+                .addDocValueField("lineNo")
                 .setSize(50)
             multiSearchRequestBuilder.add(srbKeyword)
         }
@@ -982,7 +981,7 @@ class LogServiceV2 @Autowired constructor(
                     // 对 No such process 作特殊处理
                     val message = it.source["message"].toString()
                     if (!message.isBlank() && !message.contains("No such process")) {
-                        val ln = it.getField("lastLineNo").getValue<Long>()
+                        val ln = it.getField("lineNo").getValue<Long>()
                         lineNoSet.add(ln)
                         if (!it.highlightFields.isEmpty()) {
                             highlights[ln] = it.highlightFields["message"]!!.fragments[0].toString()
@@ -1032,7 +1031,7 @@ class LogServiceV2 @Autowired constructor(
             for (lineRange in lineRanges) {
                 rangeQuery.should(
                     QueryBuilders
-                        .rangeQuery("lastLineNo")
+                        .rangeQuery("lineNo")
                         .gte(lineRange.first)
                         .lte(lineRange.second)
                 )
@@ -1043,15 +1042,15 @@ class LogServiceV2 @Autowired constructor(
                 .setTypes(type)
                 .setQuery(boolQueryBuilder)
                 .setSize(Constants.MAX_LINES)
-                .addDocValueField("lastLineNo")
+                .addDocValueField("lineNo")
                 .addDocValueField("timestamp")
-                .addSort("lastLineNo", SortOrder.ASC)
+                .addSort("lineNo", SortOrder.ASC)
                 .get()
             response.hits.forEach { searchHitFields ->
                 val sourceMap = searchHitFields.source
-                val ln = sourceMap["lastLineNo"].toString().toLong()
+                val ln = sourceMap["lineNo"].toString().toLong()
                 val t = sourceMap["tag"]?.toString() ?: ""
-                val jobId = sourceMap["tag"]?.toString() ?: ""
+                val jobId = sourceMap["jobId"]?.toString() ?: ""
                 val logLine = LogLine(
                     ln,
                     sourceMap["timestamp"].toString().toLong(),
