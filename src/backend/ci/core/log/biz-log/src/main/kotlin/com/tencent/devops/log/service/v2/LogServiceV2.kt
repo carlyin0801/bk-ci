@@ -1476,10 +1476,10 @@ class LogServiceV2 @Autowired constructor(
                     (jobId != null && hit.source["tag"] == jobId)) {
                     // 尽量取最大的区间
                     if (hit.source["logType"] == LogType.START.name) {
-                        val lineNo = hit.source["lastLineNo"].toString().toLong()
+                        val lineNo = hit.source["lineNo"].toString().toLong()
                         beginIndex = if (beginIndex == null) lineNo else min(beginIndex!!, lineNo)
                     } else if (hit.source["logType"] == LogType.END.name) {
-                        val lineNo = hit.source["lastLineNo"].toString().toLong()
+                        val lineNo = hit.source["lineNo"].toString().toLong()
                         endIndex = if (endIndex == null) lineNo else max(endIndex!!, lineNo)
                     }
                     if (beginIndex != null && endIndex != null) {
@@ -1555,7 +1555,7 @@ class LogServiceV2 @Autowired constructor(
             builder = XContentFactory.jsonBuilder()
                 .startObject()
                 .field("buildId", buildId)
-                .field("lastLineNo", logMessage.lineNo)
+                .field("lineNo", logMessage.lineNo)
                 .field("message", logMessage.message)
                 .field("timestamp", logMessage.timestamp)
                 .field("tag", logMessage.tag)
@@ -1668,7 +1668,7 @@ class LogServiceV2 @Autowired constructor(
             .startObject("properties")
             .startObject("buildId").field("type", "keyword").endObject()
             .startObject("timestamp").field("type", "long").endObject()
-            .startObject("lastLineNo").field("type", "long").endObject()
+            .startObject("lineNo").field("type", "long").endObject()
             .startObject("tag").field("type", "keyword").endObject()
             .startObject("tag").field("type", "keyword").endObject()
             .startObject("executeCount").field("type", "keyword").endObject()
