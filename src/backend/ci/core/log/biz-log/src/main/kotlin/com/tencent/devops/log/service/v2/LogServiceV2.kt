@@ -988,7 +988,6 @@ class LogServiceV2 @Autowired constructor(
 
         logger.info("step1 time cost($type): ${System.currentTimeMillis() - startTime}")
         logger.info("$type line no set: $lineNoSet")
-        logger.info("$type highlights map: $highlights")
         startTime = System.currentTimeMillis()
 
         if (wholeQuery) {
@@ -1050,11 +1049,7 @@ class LogServiceV2 @Autowired constructor(
                 val logLine = LogLine(
                     ln,
                     sourceMap["timestamp"].toString().toLong(),
-                    if (highlights.containsKey(ln)) {
-                        highlights[ln] ?: ""
-                    } else {
-                        sourceMap["message"].toString()
-                    },
+                    sourceMap["message"].toString(),
                     Constants.DEFAULT_PRIORITY_NOT_DELETED,
                     t,
                     jobId,
