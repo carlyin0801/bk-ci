@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.exception.DataConsistencyException
 import com.tencent.devops.common.api.exception.InvalidParamException
+import com.tencent.devops.common.api.pojo.MessageCodeDetail
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.JsonUtil
@@ -389,7 +390,7 @@ abstract class ImageService @Autowired constructor() {
         result.add(
             MarketImageMain(
                 key = "latest",
-                label = "最新",
+                label = MessageCodeUtil.getMessageByLocale("最新", "Latest"),
                 records = doList(
                     userId = userId,
                     userDeptList = userDeptList,
@@ -411,7 +412,7 @@ abstract class ImageService @Autowired constructor() {
         result.add(
             MarketImageMain(
                 key = "hottest",
-                label = "最热",
+                label = MessageCodeUtil.getMessageByLocale("最热", "Hottest"),
                 records = doList(
                     userId = userId,
                     userDeptList = userDeptList,
@@ -437,7 +438,7 @@ abstract class ImageService @Autowired constructor() {
                 result.add(
                     MarketImageMain(
                         key = classifyCode,
-                        label = it.classifyName,
+                        label = MessageCodeUtil.getMessageByLocale(it.classifyName, classifyCode),
                         records = doList(
                             userId = userId,
                             userDeptList = userDeptList,
