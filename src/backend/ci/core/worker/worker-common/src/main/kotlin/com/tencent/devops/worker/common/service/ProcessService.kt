@@ -69,7 +69,7 @@ object ProcessService {
         errorCode: Int? = null
     ) {
         logger.info("[ERRORCODE] completeTask <$taskId>[$errorType][$errorCode][$message] ")
-        LoggerService.addFoldEndLine("$elementName-[$elementId]")
+//        LoggerService.addFoldEndLine("$elementName-[$elementId]")
         LoggerService.flush()
         val taskResult = BuildTaskResult(
             taskId = taskId,

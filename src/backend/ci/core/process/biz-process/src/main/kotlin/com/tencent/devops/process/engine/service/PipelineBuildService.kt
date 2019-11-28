@@ -1281,7 +1281,7 @@ class PipelineBuildService(
                                 isPrepareEnv = false
                                 logger.info("Pipeline($pipelineId) build($buildId) shutdown by $userId, elementId: $taskId")
                                 LogUtils.addYellowLine(rabbitTemplate, buildId, "流水线被用户终止，操作人:$userId", taskId, containerId, 1)
-                                LogUtils.addFoldEndLine(rabbitTemplate, buildId, "${e.name}-[$taskId]", taskId, containerId, 1)
+//                                LogUtils.addFoldEndLine(rabbitTemplate, buildId, "${e.name}-[$taskId]", taskId, containerId, 1)
                             }
                         }
                     }

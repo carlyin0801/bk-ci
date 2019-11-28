@@ -182,9 +182,9 @@ class UserLogResourceImpl @Autowired constructor(
 //        pipelineId: String,
 //        buildId: String,
 //        jobId: String,
-//        lineNo: Long
+//        lastLineNo: Long
 //    ): Result<PushStatus?> {
-//        return Result(logDispatcher.getJobPushStatus(buildId, jobId, lineNo))
+//        return Result(logDispatcher.getJobPushStatus(buildId, jobId, lastLineNo))
 //    }
 
     override fun startLogPush(
@@ -197,5 +197,17 @@ class UserLogResourceImpl @Autowired constructor(
     ): Result<PushStatus?> {
         validateAuth(userId, projectId, pipelineId, buildId)
         return Result(logDispatcher.getTagPushStatus(buildId, tag, lineNo))
+    }
+
+    override fun stopLogPush(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        tag: String
+    ): Result<Boolean> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        logDispatcher.cleanPushStatus(buildId, tag)
+        return Result(true)
     }
 }

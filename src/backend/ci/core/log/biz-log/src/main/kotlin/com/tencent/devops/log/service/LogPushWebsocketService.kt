@@ -74,7 +74,7 @@ class LogPushWebsocketService @Autowired constructor(
         return TagLogWebsocketPush(
             buildId = buildId,
             tag = tag,
-            lineNo = lineNo,
+            lastLineNo = lineNo,
             userId = "",
             redisOperation = redisOperation,
             page = page,

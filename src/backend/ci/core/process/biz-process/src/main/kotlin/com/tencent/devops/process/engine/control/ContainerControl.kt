@@ -538,20 +538,20 @@ class ContainerControl @Autowired constructor(
 
     private fun logCoverUnExecTask(task: PipelineBuildTask, message: String) {
         val tagName = "${task.taskName}-[${task.taskId}]"
-        LogUtils.addFoldStartLine(
-            rabbitTemplate = rabbitTemplate,
-            buildId = task.buildId, tagName = tagName,
-            tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
-        )
+//        LogUtils.addFoldStartLine(
+//            rabbitTemplate = rabbitTemplate,
+//            buildId = task.buildId, tagName = tagName,
+//            tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
+//        )
         LogUtils.addYellowLine(
             rabbitTemplate = rabbitTemplate,
             buildId = task.buildId, message = message,
             tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
         )
-        LogUtils.addFoldEndLine(
-            rabbitTemplate = rabbitTemplate,
-            buildId = task.buildId, tagName = tagName,
-            tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
-        )
+//        LogUtils.addFoldEndLine(
+//            rabbitTemplate = rabbitTemplate,
+//            buildId = task.buildId, tagName = tagName,
+//            tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
+//        )
     }
 }
