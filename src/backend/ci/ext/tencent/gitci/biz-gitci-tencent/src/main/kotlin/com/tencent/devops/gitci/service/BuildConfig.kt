@@ -25,10 +25,10 @@ class BuildConfig {
     val registryImage: String? = null
 
     @Value("\${devCloud.cpu}")
-    val cpu: Int = 16
+    val cpu: Int = 8
 
     @Value("\${devCloud.memory}")
-    val memory: String = "32767M"
+    val memory: String = "8192M"
 
     @Value("\${devCloud.disk}")
     val disk: String = "50G"
