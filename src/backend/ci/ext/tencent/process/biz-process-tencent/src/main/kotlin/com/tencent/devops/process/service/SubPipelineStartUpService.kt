@@ -98,7 +98,7 @@ class SubPipelineStartUpService(
         values.forEach {
             startParams[it.key] = parseVariable(it.value, runVariables)
         }
-        val pipelineInfo = (pipelineRepositoryService.getPipelineInfo("wt", callPipelineId)
+        val pipelineInfo = (pipelineRepositoryService.getPipelineInfo(projectId, callPipelineId)
                 ?: return MessageCodeUtil.generateResponseDataObject(ProcessMessageCode.ERROR_NO_PIPELINE_EXISTS_BY_ID.toString(), arrayOf(buildId)))
 
         logger.info("pipelineInfo: $pipelineInfo")
@@ -106,7 +106,7 @@ class SubPipelineStartUpService(
         val existPipelines = HashSet<String>()
         existPipelines.add(parentPipelineId)
         try {
-            checkSubpipeline(atomCode, "wt", callPipelineId, existPipelines)
+            checkSubpipeline(atomCode, projectId, callPipelineId, existPipelines)
         } catch (e: OperationException) {
             return MessageCodeUtil.generateResponseDataObject(ProcessMessageCode.ERROR_SUBPIPELINE_CYCLE_CALL.toString())
         }
@@ -114,7 +114,7 @@ class SubPipelineStartUpService(
         val subBuildId = buildService.subpipelineStartup(
                 userId = runVariables.getValue(PIPELINE_START_USER_ID),
                 startType = StartType.PIPELINE,
-                projectId = "wt",
+                projectId = projectId,
                 parentPipelineId = parentPipelineId,
                 parentBuildId = buildId,
                 parentTaskId = taskId,
