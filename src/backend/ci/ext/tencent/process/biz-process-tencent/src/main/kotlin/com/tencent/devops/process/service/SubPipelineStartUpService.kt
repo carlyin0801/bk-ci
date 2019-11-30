@@ -98,7 +98,7 @@ class SubPipelineStartUpService(
         values.forEach {
             startParams[it.key] = parseVariable(it.value, runVariables)
         }
-        val pipelineInfo = (pipelineRepositoryService.getPipelineInfo(projectId, callPipelineId)
+        val pipelineInfo = (pipelineRepositoryService.getPipelineInfo("wt", callPipelineId)
                 ?: return MessageCodeUtil.generateResponseDataObject(ProcessMessageCode.ERROR_NO_PIPELINE_EXISTS_BY_ID.toString(), arrayOf(buildId)))
 
         logger.info("pipelineInfo: $pipelineInfo")
@@ -106,7 +106,7 @@ class SubPipelineStartUpService(
         val existPipelines = HashSet<String>()
         existPipelines.add(parentPipelineId)
         try {
-            checkSubpipeline(atomCode, projectId, callPipelineId, existPipelines)
+            checkSubpipeline(atomCode, "wt", callPipelineId, existPipelines)
         } catch (e: OperationException) {
             return MessageCodeUtil.generateResponseDataObject(ProcessMessageCode.ERROR_SUBPIPELINE_CYCLE_CALL.toString())
         }
@@ -114,7 +114,7 @@ class SubPipelineStartUpService(
         val subBuildId = buildService.subpipelineStartup(
                 userId = runVariables.getValue(PIPELINE_START_USER_ID),
                 startType = StartType.PIPELINE,
-                projectId = projectId,
+                projectId = "wt",
                 parentPipelineId = parentPipelineId,
                 parentBuildId = buildId,
                 parentTaskId = taskId,
@@ -185,8 +185,9 @@ class SubPipelineStartUpService(
                         val map = element.data
                         val msg = map["input"] as? Map<*, *> ?: return@element
                         val subPip = msg["subPip"]
+                        val subPro = msg["projectId"]
                         val exist = HashSet(currentExistPipelines)
-                        checkSubpipeline(atomCode, projectId, subPip as String, exist)
+                        checkSubpipeline(atomCode, subPro as String, subPip as String, exist)
                         existPipelines.addAll(exist)
                     } else if (element is SubPipelineCallElement) {
                         val exist = HashSet(currentExistPipelines)
