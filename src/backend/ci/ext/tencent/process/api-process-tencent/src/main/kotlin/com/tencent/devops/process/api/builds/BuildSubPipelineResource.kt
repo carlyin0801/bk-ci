@@ -98,7 +98,7 @@ interface BuildSubPipelineResource {
 
     @ApiOperation("从构建机启动子流水线")
     @POST
-    @Path("/pipelines/{callProjectId}/{callPipelineId}/{atomCode}/startByPipeline2")
+    @Path("/pipelines/{callProjectId}/{callPipelineId}/{atomCode}/startByPipeline")
     fun callOtherProjectPipelineStartup(
             @ApiParam(value = "项目ID", required = true)
             @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
