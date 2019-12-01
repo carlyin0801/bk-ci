@@ -30,6 +30,7 @@ import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.Tools
 import com.tencent.devops.common.service.utils.CommonUtils
 import com.tencent.devops.process.engine.listener.run.PipelineBuildStartListener
+import com.tencent.devops.process.engine.listener.run.callback.PipelineBuildCallBackListener
 import org.springframework.amqp.core.Binding
 import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.FanoutExchange
@@ -70,7 +71,7 @@ class PipelineExtendConfiguration {
     }
 
     @Bean
-    fun pipelineBuildTaskStatusQueue(): Queue {
+    fun pipelineBuildStatusChangeQueue(): Queue {
         return Queue(
             MQ.QUEUE_PIPELINE_BUILD_STATUS_CHANGE + ".${CommonUtils.getInnerIP()}.${UUID.randomUUID()}",
             false,
@@ -81,24 +82,24 @@ class PipelineExtendConfiguration {
 
     @Bean
     fun pipelineBuildStartQueueBind(
-        @Autowired pipelineBuildTaskStatusQueue: Queue,
+        @Autowired pipelineBuildStatusChangeQueue: Queue,
         @Autowired pipelineBuildStatusFanoutExchange: FanoutExchange
     ): Binding {
-        return BindingBuilder.bind(pipelineBuildTaskStatusQueue).to(pipelineBuildStatusFanoutExchange)
+        return BindingBuilder.bind(pipelineBuildStatusChangeQueue).to(pipelineBuildStatusFanoutExchange)
     }
 
     @Bean
     fun pipelineStageBuildStartListenerContainer(
         @Autowired connectionFactory: ConnectionFactory,
-        @Autowired pipelineBuildTaskStatusQueue: Queue,
+        @Autowired pipelineBuildStatusChangeQueue: Queue,
         @Autowired rabbitAdmin: RabbitAdmin,
-        @Autowired buildListener: PipelineBuildStartListener,
+        @Autowired buildListener: PipelineBuildCallBackListener,
         @Autowired messageConverter: Jackson2JsonMessageConverter
     ): SimpleMessageListenerContainer {
 
         return Tools.createSimpleMessageListenerContainer(
             connectionFactory = connectionFactory,
-            queue = pipelineBuildTaskStatusQueue,
+            queue = pipelineBuildStatusChangeQueue,
             rabbitAdmin = rabbitAdmin,
             buildListener = buildListener,
             messageConverter = messageConverter,
