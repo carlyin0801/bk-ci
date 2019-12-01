@@ -24,39 +24,44 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.process.engine.listener.run
+package com.tencent.devops.process.engine.service
 
-import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
-import com.tencent.devops.common.event.enums.ActionType
-import com.tencent.devops.common.event.listener.pipeline.BaseListener
-import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildStatusBroadCastEvent
-import com.tencent.devops.process.engine.control.BuildStartControl
-import com.tencent.devops.process.engine.control.CallBackControl
-import com.tencent.devops.process.engine.pojo.event.PipelineBuildStartEvent
+import com.tencent.devops.process.dao.ProjectPipelineCallbackDao
+import com.tencent.devops.process.pojo.ProjectPipelineCallBack
+import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 
-/**
- *  MQ实现的流水线开始构建事件
- *
- * @version 1.0
- */
-@Component
-class PipelineBuildStartListener @Autowired constructor(
-    private val buildControl: BuildStartControl,
-    private val callBackControl: CallBackControl,
-    pipelineEventDispatcher: PipelineEventDispatcher
-) : BaseListener<PipelineBuildStartEvent>(pipelineEventDispatcher) {
+@Service
+class ProjectPipelineCallBackService @Autowired constructor(
+    private val dslContext: DSLContext,
+    private val projectPipelineCallbackDao: ProjectPipelineCallbackDao
+) {
 
-    override fun run(event: PipelineBuildStartEvent) {
-        buildControl.handle(event)
-        callBackControl.callBackBuildEvent(PipelineBuildStatusBroadCastEvent(
-            source = event.source,
-            projectId = event.projectId,
-            pipelineId = event.pipelineId,
-            userId = event.userId,
-            buildId = event.buildId,
-            actionType = ActionType.START
-        ))
+    fun createCallBack(userId:String, projectPipelineCallBack: ProjectPipelineCallBack) {
+        projectPipelineCallbackDao.save(
+            dslContext = dslContext,
+            projectId = projectPipelineCallBack.projectId,
+            events = projectPipelineCallBack.events,
+            userId = userId,
+            callbackUrl = projectPipelineCallBack.callBackUrl,
+            secretToken = projectPipelineCallBack.secretToken
+        )
+    }
+
+    fun listProjectCallBack(projectId: String): List<ProjectPipelineCallBack> {
+        val list = mutableListOf<ProjectPipelineCallBack>()
+        val records = projectPipelineCallbackDao.listProjectCallback(dslContext, projectId)
+        records.forEach {
+            list.add(
+                ProjectPipelineCallBack(
+                    projectId = it.projectId,
+                    callBackUrl = it.callbackUrl,
+                    events = it.events,
+                    secretToken = it.secretToken
+                )
+            )
+        }
+        return list
     }
 }

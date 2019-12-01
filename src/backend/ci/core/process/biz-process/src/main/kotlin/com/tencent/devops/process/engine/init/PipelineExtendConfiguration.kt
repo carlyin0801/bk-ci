@@ -27,7 +27,19 @@
 package com.tencent.devops.process.engine.init
 
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
+import com.tencent.devops.common.event.dispatcher.pipeline.mq.Tools
+import com.tencent.devops.common.service.utils.CommonUtils
+import com.tencent.devops.process.engine.listener.run.PipelineBuildStartListener
+import org.springframework.amqp.core.Binding
+import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.FanoutExchange
+import org.springframework.amqp.core.Queue
+import org.springframework.amqp.core.QueueBuilder
+import org.springframework.amqp.rabbit.connection.ConnectionFactory
+import org.springframework.amqp.rabbit.core.RabbitAdmin
+import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -45,5 +57,48 @@ class PipelineExtendConfiguration {
         val fanoutExchange = FanoutExchange(MQ.EXCHANGE_PIPELINE_BUILD_FINISH_FANOUT, true, false)
         fanoutExchange.isDelayed = true
         return fanoutExchange
+    }
+
+    /**
+     * 构建构建回调广播交换机
+     */
+    @Bean
+    fun pipelineBuildTaskStatusFanoutExchange(): FanoutExchange {
+        val fanoutExchange = FanoutExchange(MQ.EXCHANGE_PIPELINE_BUILD_CALL_BACK_FANOUT, true, false)
+        fanoutExchange.isDelayed = true
+        return fanoutExchange
+    }
+
+    @Bean
+    fun pipelineBuildTaskStatusQueue() = QueueBuilder.nonDurable().autoDelete().exclusive().build()!!
+
+    @Bean
+    fun pipelineBuildStartQueueBind(
+        @Autowired pipelineBuildStartQueue: Queue,
+        @Autowired pipelineBuildTaskStatusFanoutExchange: FanoutExchange
+    ): Binding {
+        return BindingBuilder.bind(pipelineBuildStartQueue).to(pipelineBuildTaskStatusFanoutExchange)
+    }
+
+    @Bean
+    fun pipelineStageBuildStartListenerContainer(
+        @Autowired connectionFactory: ConnectionFactory,
+        @Autowired pipelineBuildTaskStatusQueue: Queue,
+        @Autowired rabbitAdmin: RabbitAdmin,
+        @Autowired buildListener: PipelineBuildStartListener,
+        @Autowired messageConverter: Jackson2JsonMessageConverter
+    ): SimpleMessageListenerContainer {
+
+        return Tools.createSimpleMessageListenerContainer(
+            connectionFactory = connectionFactory,
+            queue = pipelineBuildTaskStatusQueue,
+            rabbitAdmin = rabbitAdmin,
+            buildListener = buildListener,
+            messageConverter = messageConverter,
+            startConsumerMinInterval = 10000,
+            consecutiveActiveTrigger = 5,
+            concurrency = 1,
+            maxConcurrency = 20
+        )
     }
 }
