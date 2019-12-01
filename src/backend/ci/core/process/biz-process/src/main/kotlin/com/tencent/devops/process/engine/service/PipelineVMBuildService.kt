@@ -596,7 +596,7 @@ class PipelineVMBuildService @Autowired(required = false) constructor(
             val task = pipelineRuntimeService.getBuildTask(buildId, taskId)!!
             val buildStatus = if (success) BuildStatus.SUCCEED else BuildStatus.FAILED
             val atomCode = task.taskParams["atomCode"] as String? ?: ""
-            measureService.postTaskData(
+            measureService?.postTaskData(
                 projectId = task.projectId,
                 pipelineId = task.pipelineId,
                 taskId = taskId,
