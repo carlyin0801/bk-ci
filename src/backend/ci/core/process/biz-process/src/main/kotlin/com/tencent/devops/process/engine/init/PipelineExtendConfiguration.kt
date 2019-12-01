@@ -28,12 +28,12 @@ package com.tencent.devops.process.engine.init
 
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.Tools
+import com.tencent.devops.common.service.utils.CommonUtils
 import com.tencent.devops.process.engine.listener.run.PipelineBuildStartListener
 import org.springframework.amqp.core.Binding
 import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.FanoutExchange
 import org.springframework.amqp.core.Queue
-import org.springframework.amqp.core.QueueBuilder
 import org.springframework.amqp.rabbit.connection.ConnectionFactory
 import org.springframework.amqp.rabbit.core.RabbitAdmin
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer
@@ -41,6 +41,7 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import java.util.UUID
 
 /**
  * 流水线构建扩展配置
@@ -62,21 +63,28 @@ class PipelineExtendConfiguration {
      * 构建构建回调广播交换机
      */
     @Bean
-    fun pipelineBuildTaskStatusFanoutExchange(): FanoutExchange {
+    fun pipelineBuildStatusFanoutExchange(): FanoutExchange {
         val fanoutExchange = FanoutExchange(MQ.EXCHANGE_PIPELINE_BUILD_CALL_BACK_FANOUT, true, false)
         fanoutExchange.isDelayed = true
         return fanoutExchange
     }
 
     @Bean
-    fun pipelineBuildTaskStatusQueue() = QueueBuilder.nonDurable().autoDelete().exclusive().build()!!
+    fun pipelineBuildTaskStatusQueue(): Queue {
+        return Queue(
+            MQ.QUEUE_PIPELINE_BUILD_STATUS_CHANGE + ".${CommonUtils.getInnerIP()}.${UUID.randomUUID()}",
+            false,
+            true,
+            true
+        )
+    }
 
     @Bean
     fun pipelineBuildStartQueueBind(
-        @Autowired pipelineBuildStartQueue: Queue,
-        @Autowired pipelineBuildTaskStatusFanoutExchange: FanoutExchange
+        @Autowired pipelineBuildTaskStatusQueue: Queue,
+        @Autowired pipelineBuildStatusFanoutExchange: FanoutExchange
     ): Binding {
-        return BindingBuilder.bind(pipelineBuildStartQueue).to(pipelineBuildTaskStatusFanoutExchange)
+        return BindingBuilder.bind(pipelineBuildTaskStatusQueue).to(pipelineBuildStatusFanoutExchange)
     }
 
     @Bean
