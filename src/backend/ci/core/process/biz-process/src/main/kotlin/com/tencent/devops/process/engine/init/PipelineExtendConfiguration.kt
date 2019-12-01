@@ -29,7 +29,6 @@ package com.tencent.devops.process.engine.init
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.Tools
 import com.tencent.devops.common.service.utils.CommonUtils
-import com.tencent.devops.process.engine.listener.run.PipelineBuildStartListener
 import com.tencent.devops.process.engine.listener.run.callback.PipelineBuildCallBackListener
 import org.springframework.amqp.core.Binding
 import org.springframework.amqp.core.BindingBuilder
@@ -81,7 +80,7 @@ class PipelineExtendConfiguration {
     }
 
     @Bean
-    fun pipelineBuildStartQueueBind(
+    fun pipelineBuildStatusChangeQueueBind(
         @Autowired pipelineBuildStatusChangeQueue: Queue,
         @Autowired pipelineBuildStatusFanoutExchange: FanoutExchange
     ): Binding {
@@ -89,7 +88,7 @@ class PipelineExtendConfiguration {
     }
 
     @Bean
-    fun pipelineStageBuildStartListenerContainer(
+    fun pipelineBuildStatusChangeListenerContainer(
         @Autowired connectionFactory: ConnectionFactory,
         @Autowired pipelineBuildStatusChangeQueue: Queue,
         @Autowired rabbitAdmin: RabbitAdmin,
