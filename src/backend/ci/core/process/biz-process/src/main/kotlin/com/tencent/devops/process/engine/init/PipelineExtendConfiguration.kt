@@ -28,7 +28,6 @@ package com.tencent.devops.process.engine.init
 
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.Tools
-import com.tencent.devops.common.service.utils.CommonUtils
 import com.tencent.devops.process.engine.listener.run.PipelineBuildStartListener
 import org.springframework.amqp.core.Binding
 import org.springframework.amqp.core.BindingBuilder

@@ -35,8 +35,8 @@ import com.tencent.devops.common.pipeline.container.Container
 import com.tencent.devops.common.pipeline.container.Stage
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.event.BuildEvent
-import com.tencent.devops.common.pipeline.event.CallBackEvent
 import com.tencent.devops.common.pipeline.event.CallBackData
+import com.tencent.devops.common.pipeline.event.CallBackEvent
 import com.tencent.devops.common.pipeline.event.PipelineEvent
 import com.tencent.devops.common.pipeline.event.SimpleJob
 import com.tencent.devops.common.pipeline.event.SimpleModel
@@ -152,7 +152,7 @@ class CallBackControl @Autowired constructor(
         }
     }
 
-    private fun send(callBack: ProjectPipelineCallBack, requestBody: String, executeCount:Int = 1) {
+    private fun send(callBack: ProjectPipelineCallBack, requestBody: String, executeCount: Int = 1) {
         if (executeCount > 3) {
             logger.error("[${callBack.projectId}]|CALL_BACK|url=${callBack.callBackUrl}| retry fail!")
         }
@@ -165,10 +165,9 @@ class CallBackControl @Autowired constructor(
         OkhttpUtils.doHttp(request).use { response ->
             if (response.code() != 200) {
                 logger.warn("[${callBack.projectId}]|CALL_BACK|url=${callBack.callBackUrl}| code=${response.code()}")
-                Thread.sleep(executeCount * executeCount *  1000L)
+                Thread.sleep(executeCount * executeCount * 1000L)
                 send(callBack, requestBody, executeCount + 1)
-            }
-            else {
+            } else {
                 logger.info("[${callBack.projectId}]|CALL_BACK|url=${callBack.callBackUrl}| code=${response.code()}")
             }
         }

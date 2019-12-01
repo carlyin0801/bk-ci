@@ -38,7 +38,7 @@ class ProjectPipelineCallBackService @Autowired constructor(
     private val projectPipelineCallbackDao: ProjectPipelineCallbackDao
 ) {
 
-    fun createCallBack(userId:String, projectPipelineCallBack: ProjectPipelineCallBack) {
+    fun createCallBack(userId: String, projectPipelineCallBack: ProjectPipelineCallBack) {
         projectPipelineCallbackDao.save(
             dslContext = dslContext,
             projectId = projectPipelineCallBack.projectId,
