@@ -59,6 +59,7 @@ object Runner {
             val retryCount = buildVariables.variables[PIPELINE_RETRY_COUNT] ?: "0"
             LoggerService.executeCount = retryCount.toInt() + 1
             LoggerService.jobId = buildVariables.containerId
+            LoggerService.addNormalLine("buildVariables: $buildVariables")
 
             Heartbeat.start()
             // 开始轮询
