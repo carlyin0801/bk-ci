@@ -24,43 +24,71 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.process.api.service
+package com.tencent.devops.store.api.common
 
-import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
-import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.store.pojo.common.BusinessConfigRequest
+import com.tencent.devops.store.pojo.common.BusinessConfigResponse
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
-import javax.ws.rs.HeaderParam
+import javax.ws.rs.DELETE
+import javax.ws.rs.GET
+import javax.ws.rs.POST
 import javax.ws.rs.PUT
 import javax.ws.rs.Path
 import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
+import javax.ws.rs.QueryParam
 import javax.ws.rs.core.MediaType
 
-@Api(tags = ["SERVICE_BUILD"], description = "服务-构建资源权限鉴权")
-@Path("/service/builds")
+@Api(tags = ["OP_STORE_BUSINESS_CONFIG"], description = "OP-STORE-业务配置")
+@Path("/op/store/businessConfig")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-interface ServiceBuildPermissionResource {
+interface OpBusinessConfigResource {
 
-    @ApiOperation("检查相应构建是否有读权限")
+    @ApiOperation("添加业务配置")
+    @POST
+    @Path("/")
+    fun add(
+        @ApiParam(value = "业务配置信息请求报文体", required = true)
+        businessConfigRequest: BusinessConfigRequest
+    ): Result<Boolean>
+
+    @ApiOperation("更新业务配置信息")
     @PUT
-    @Path("/projects/{projectId}/pipelines/{pipelineId}/builds/{buildId}/permission/view")
-    fun checkViewPermission(
-        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-        @HeaderParam(AUTH_HEADER_USER_ID)
-        userId: String,
-        @ApiParam("项目ID", required = true)
-        @PathParam("projectId")
-        projectId: String,
-        @ApiParam("流水线ID", required = true)
-        @PathParam("pipelineId")
-        pipelineId: String,
-        @ApiParam("构建ID", required = true)
-        @PathParam("buildId")
-        buildId: String
+    @Path("/ids/{id}")
+    fun update(
+        @ApiParam("业务配置ID", required = true)
+        @PathParam("id")
+        id: String,
+        @ApiParam(value = "业务配置信息请求报文体", required = true)
+        businessConfigRequest: BusinessConfigRequest
+    ): Result<Int>
+
+    @ApiOperation("获取所有业务配置信息")
+    @GET
+    @Path("/list")
+    fun listAllBusinessConfigs(
+    ): Result<List<BusinessConfigResponse>?>
+
+    @ApiOperation("根据ID获取业务配置信息")
+    @GET
+    @Path("/{id}")
+    fun getBusinessConfigById(
+        @ApiParam("业务配置ID", required = true)
+        @QueryParam("id")
+        id: Int
+    ): Result<BusinessConfigResponse?>
+
+    @ApiOperation("根据ID删除业务配置信息")
+    @DELETE
+    @Path("/{id}")
+    fun deleteBusinessConfigById(
+        @ApiParam("业务配置ID", required = true)
+        @PathParam("id")
+        id: Int
     ): Result<Boolean>
 }

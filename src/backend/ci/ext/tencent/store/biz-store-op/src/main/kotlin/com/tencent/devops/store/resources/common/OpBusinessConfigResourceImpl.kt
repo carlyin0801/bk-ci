@@ -23,23 +23,39 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.tencent.devops.lambda.listener
 
-import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
-import com.tencent.devops.common.event.listener.pipeline.BaseListener
-import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildElementFinishBroadCastEvent
-import com.tencent.devops.lambda.service.PipelineBuildService
+package com.tencent.devops.store.resources.common
+
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.store.api.common.OpBusinessConfigResource
+import com.tencent.devops.store.pojo.common.BusinessConfigRequest
+import com.tencent.devops.store.pojo.common.BusinessConfigResponse
+import com.tencent.devops.store.service.common.BusinessConfigService
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Component
 
-@Component
-class BuildElementFinishListener @Autowired constructor(
-    private val pipelineBuildService: PipelineBuildService,
-    pipelineEventDispatcher: PipelineEventDispatcher
-) : BaseListener<PipelineBuildElementFinishBroadCastEvent>(pipelineEventDispatcher) {
+@RestResource
+class OpBusinessConfigResourceImpl @Autowired constructor(
+    private val businessConfigService: BusinessConfigService
+) : OpBusinessConfigResource {
 
-    override fun run(event: PipelineBuildElementFinishBroadCastEvent) {
-        logger.info("[${event.projectId}|${event.pipelineId}|${event.buildId}] Receive build element finish event - ($event)")
-        pipelineBuildService.onBuildElementFinish(event)
+    override fun add(businessConfigRequest: BusinessConfigRequest): Result<Boolean> {
+        return Result(businessConfigService.add(businessConfigRequest))
+    }
+
+    override fun update(id: String, businessConfigRequest: BusinessConfigRequest): Result<Int> {
+        return Result(businessConfigService.update(id, businessConfigRequest))
+    }
+
+    override fun listAllBusinessConfigs(): Result<List<BusinessConfigResponse>?> {
+        return Result(businessConfigService.listAllBusinessConfigs())
+    }
+
+    override fun getBusinessConfigById(id: Int): Result<BusinessConfigResponse?> {
+        return Result(businessConfigService.getBusinessConfigById(id))
+    }
+
+    override fun deleteBusinessConfigById(id: Int): Result<Boolean> {
+        return Result(businessConfigService.deleteBusinessConfigById(id))
     }
 }

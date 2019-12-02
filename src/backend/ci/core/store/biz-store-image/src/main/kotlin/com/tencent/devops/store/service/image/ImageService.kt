@@ -15,6 +15,7 @@ import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.model.store.tables.records.TImageRecord
 import com.tencent.devops.project.api.service.ServiceProjectResource
 import com.tencent.devops.store.constant.StoreMessageCode
+import com.tencent.devops.store.dao.common.BusinessConfigDao
 import com.tencent.devops.store.dao.common.CategoryDao
 import com.tencent.devops.store.dao.common.ClassifyDao
 import com.tencent.devops.store.dao.common.StoreMemberDao
@@ -65,6 +66,9 @@ import com.tencent.devops.store.exception.image.ImageNotExistException
 import com.tencent.devops.store.pojo.common.MarketItem
 import com.tencent.devops.store.pojo.common.STORE_IMAGE_STATUS
 import com.tencent.devops.store.pojo.common.VersionInfo
+import com.tencent.devops.store.pojo.common.enums.BusinessEnum
+import com.tencent.devops.store.pojo.common.enums.BusinessFeatureEnum
+import com.tencent.devops.store.pojo.common.enums.BusinessFeatureValueEnum
 import com.tencent.devops.store.pojo.common.enums.ReleaseTypeEnum
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.pojo.image.enums.CategoryTypeEnum
@@ -112,6 +116,8 @@ abstract class ImageService @Autowired constructor() {
     lateinit var classifyDao: ClassifyDao
     @Autowired
     lateinit var categoryDao: CategoryDao
+    @Autowired
+    lateinit var businessConfigDao: BusinessConfigDao
     @Autowired
     lateinit var imageFeatureDao: ImageFeatureDao
     @Autowired
@@ -193,6 +199,33 @@ abstract class ImageService @Autowired constructor() {
         visibleList: MutableList<Int>?,
         userDeptList: List<Int>
     ): Boolean
+
+    @Suppress("UNCHECKED_CAST")
+    fun count(
+        userId: String,
+        userDeptList: List<Int>,
+        imageName: String?,
+        classifyCodeList: List<String>?,
+        categoryCodeList: List<String>?,
+        rdType: ImageRDTypeEnum?,
+        labelCode: String?,
+        score: Int?,
+        imageSourceType: ImageType?,
+        interfaceName: String? = "Anon interface"
+    ): Int {
+        // 获取镜像
+        val labelCodeList = if (labelCode.isNullOrEmpty()) listOf() else labelCode?.split(",")
+        return marketImageDao.count(
+            dslContext = dslContext,
+            imageName = imageName,
+            classifyCodeList = classifyCodeList,
+            categoryCodeList = categoryCodeList,
+            rdType = rdType,
+            labelCodeList = labelCodeList,
+            score = score,
+            imageSourceType = imageSourceType
+        )
+    }
 
     @Suppress("UNCHECKED_CAST")
     fun doList(
@@ -301,6 +334,19 @@ abstract class ImageService @Autowired constructor() {
 
     abstract fun batchGetVisibleDept(imageCodeList: List<String>, image: StoreTypeEnum): HashMap<String, MutableList<Int>>?
 
+    private fun getDefaultDescTypeBySortType(sortType: MarketImageSortTypeEnum?): Boolean {
+        return when (sortType) {
+            //名称与发布者升序
+            MarketImageSortTypeEnum.NAME, MarketImageSortTypeEnum.PUBLISHER -> {
+                false
+            }
+            //其他含数量意义的指标降序
+            else -> {
+                true
+            }
+        }
+    }
+
     /**
      * 镜像市场搜索镜像
      */
@@ -313,7 +359,7 @@ abstract class ImageService @Autowired constructor() {
         rdType: ImageRDTypeEnum?,
         labelCode: String?,
         score: Int?,
-        sortType: String?,
+        sortType: MarketImageSortTypeEnum?,
         page: Int?,
         pageSize: Int?,
         interfaceName: String? = "Anon interface"
@@ -323,7 +369,17 @@ abstract class ImageService @Autowired constructor() {
         val userDeptList = storeUserService.getUserDeptList(userId)
         logger.info("$interfaceName:searchImage:Inner:userDeptList=$userDeptList")
         val result = MarketImageResp(
-            count = 0,
+            count = count(
+                userId = userId,
+                userDeptList = userDeptList,
+                imageName = imageName,
+                classifyCodeList = if (null != classifyCode) listOf(classifyCode) else null,
+                categoryCodeList = if (null != categoryCode) listOf(categoryCode) else null,
+                rdType = rdType,
+                labelCode = labelCode,
+                score = score,
+                imageSourceType = imageSourceType
+            ),
             page = page,
             pageSize = pageSize,
             records = doList(
@@ -336,8 +392,8 @@ abstract class ImageService @Autowired constructor() {
                 labelCode = labelCode,
                 score = score,
                 imageSourceType = imageSourceType,
-                sortType = MarketImageSortTypeEnum.NAME,
-                desc = false,
+                sortType = sortType,
+                desc = getDefaultDescTypeBySortType(sortType),
                 page = page,
                 pageSize = pageSize,
                 interfaceName = interfaceName
@@ -448,8 +504,8 @@ abstract class ImageService @Autowired constructor() {
                             labelCode = null,
                             score = null,
                             imageSourceType = null,
-                            sortType = MarketImageSortTypeEnum.NAME,
-                            desc = false,
+                            sortType = MarketImageSortTypeEnum.DOWNLOAD_COUNT,
+                            desc = true,
                             page = page,
                             pageSize = pageSize,
                             interfaceName = interfaceName
@@ -767,6 +823,14 @@ abstract class ImageService @Autowired constructor() {
         } else {
             null
         }
+        val needAgentTypeCategorys = businessConfigDao.list(
+            dslContext = dslContext,
+            business = BusinessEnum.CATEGORY.name,
+            feature = BusinessFeatureEnum.NEED_AGENT_TYPE.name,
+            configValue = BusinessFeatureValueEnum.NEED_AGENT_TYPE_TRUE.name
+        )?.map {
+            it.businessValue
+        }?.toList() ?: emptyList()
         // 组装返回
         return ImageDetail(
             imageId = imageId,
@@ -796,6 +860,7 @@ abstract class ImageService @Autowired constructor() {
             imageStatus = ImageStatusEnum.getImageStatus(imageRecord.imageStatus.toInt()),
             description = imageRecord.description ?: "",
             labelList = labelList,
+            needAgentTypeCategorys = needAgentTypeCategorys,
             category = category?.categoryCode ?: "",
             categoryName = category?.categoryName ?: "",
             latestFlag = imageRecord.latestFlag,
@@ -1038,7 +1103,7 @@ abstract class ImageService @Autowired constructor() {
                 imageBaseInfoUpdateRequest = imageBaseInfoUpdateRequest
             )
             // 更新标签信息
-            val labelIdList = imageBaseInfoUpdateRequest.labelList
+            val labelIdList = imageBaseInfoUpdateRequest.labelIdList
             if (null != labelIdList) {
                 imageIdList.forEach {
                     imageLabelRelDao.deleteByImageId(context, it)

@@ -166,7 +166,7 @@ class GitCIBuildService @Autowired constructor(
                     }
                 }
                 val containerPool = if (job.job.pool?.container == null) {
-                    Pool(buildConfig.registryImage, Credential(buildConfig.registryUserName!!, buildConfig.registryPassword!!))
+                    Pool(buildConfig.registryImage, null)
                 } else {
                     // TODO password decrypt
 

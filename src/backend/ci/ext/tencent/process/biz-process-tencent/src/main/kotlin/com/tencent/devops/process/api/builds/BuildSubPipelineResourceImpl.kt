@@ -40,6 +40,18 @@ class BuildSubPipelineResourceImpl @Autowired constructor(
     private val subPipeService: SubPipelineStartUpService,
     private val buildService: PipelineBuildService
 ) : BuildSubPipelineResource {
+    override fun callOtherProjectPipelineStartup(projectId: String,
+                                                 parentPipelineId: String,
+                                                 buildId: String,
+                                                 callProjectId: String,
+                                                 callPipelineId: String,
+                                                 atomCode: String,
+                                                 taskId: String,
+                                                 runMode: String,
+                                                 values: Map<String, String>): Result<ProjectBuildId> {
+        return subPipeService.callPipelineStartup(callProjectId, parentPipelineId, buildId, callPipelineId, atomCode, taskId, runMode, values)
+    }
+
     override fun callPipelineStartup(
         projectId: String,
         parentPipelineId: String,

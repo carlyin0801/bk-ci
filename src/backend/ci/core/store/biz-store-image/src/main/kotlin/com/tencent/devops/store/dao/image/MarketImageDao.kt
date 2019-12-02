@@ -267,10 +267,18 @@ class MarketImageDao @Autowired constructor(
             }
 
             // 排序字段
-            val realSortType = if (sortType == MarketImageSortTypeEnum.DOWNLOAD_COUNT) {
-                DSL.field(MarketImageSortTypeEnum.getSortType(sortType.name))
-            } else {
-                tImage.field(MarketImageSortTypeEnum.getSortType(sortType.name))
+            val realSortType = when (sortType) {
+                MarketImageSortTypeEnum.DOWNLOAD_COUNT -> {
+                    DSL.field(MarketImageSortTypeEnum.getSortType(sortType.name))
+                }
+                MarketImageSortTypeEnum.CREATE_TIME -> {
+                    //创建时间按照tImageFeature表计算
+                    tImageFeature.field(MarketImageSortTypeEnum.getSortType(sortType.name))
+                }
+                else -> {
+                    //更新时间按照tImage表计算
+                    tImage.field(MarketImageSortTypeEnum.getSortType(sortType.name))
+                }
             }
 
             // 排序
@@ -283,11 +291,79 @@ class MarketImageDao @Autowired constructor(
             baseStep.where(conditions)
         }
         // 分页
-        return if (page != null && page > 0 && pageSize != null && pageSize > 0) {
-            baseStep.limit((page - 1) * pageSize, pageSize).fetch()
+        val finalStep = if (page != null && page > 0 && pageSize != null && pageSize > 0) {
+            baseStep.limit((page - 1) * pageSize, pageSize)
         } else {
-            baseStep.fetch()
+            baseStep
         }
+        logger.info(finalStep.getSQL(true))
+        return finalStep.fetch()
+    }
+
+    fun count(
+        dslContext: DSLContext,
+        // 镜像名称，模糊匹配
+        imageName: String?,
+        // 分类代码，精确匹配
+        classifyCodeList: List<String>?,
+        // 标签，精确匹配
+        labelCodeList: List<String>?,
+        // 范畴：精确匹配
+        categoryCodeList: List<String>?,
+        // 研发来源：精确匹配
+        rdType: ImageRDTypeEnum?,
+        // 评分大于等于score的镜像
+        score: Int?,
+        // 来源，精确匹配
+        imageSourceType: ImageType?
+    ): Int {
+        val (tImage, tImageFeature, conditions) = formatConditions(
+            imageName = imageName,
+            imageSourceType = imageSourceType,
+            classifyCodeList = classifyCodeList,
+            rdType = rdType,
+            dslContext = dslContext
+        )
+        //查的是最近已发布版本，一个imageCode只有一条记录
+        val baseStep = dslContext.select(
+            tImage.ID.count()
+        ).from(tImage).leftJoin(tImageFeature).on(tImage.IMAGE_CODE.eq(tImageFeature.IMAGE_CODE))
+
+        // 根据功能标签筛选
+        if (labelCodeList != null && labelCodeList.isNotEmpty()) {
+            val c = TLabel.T_LABEL.`as`("c")
+            val labelIdList = dslContext.select(c.ID)
+                .from(c)
+                .where(c.LABEL_CODE.`in`(labelCodeList)).and(c.TYPE.eq(StoreTypeEnum.IMAGE.type.toByte()))
+                .fetch().map { it["ID"] as String }
+            val tilr = TImageLabelRel.T_IMAGE_LABEL_REL.`as`("tilr")
+            baseStep.leftJoin(tilr).on(tImage.ID.eq(tilr.IMAGE_ID))
+            conditions.add(tilr.LABEL_ID.`in`(labelIdList))
+        }
+        // 根据范畴标签筛选
+        if (categoryCodeList != null && categoryCodeList.isNotEmpty()) {
+            val c = TCategory.T_CATEGORY.`as`("c")
+            val categoryIdList = dslContext.select(c.ID)
+                .from(c)
+                .where(c.CATEGORY_CODE.`in`(categoryCodeList)).and(c.TYPE.eq(StoreTypeEnum.IMAGE.type.toByte()))
+                .fetch().map { it["ID"] as String }
+            val ticr = TImageCategoryRel.T_IMAGE_CATEGORY_REL.`as`("ticr")
+            baseStep.leftJoin(ticr).on(tImage.ID.eq(ticr.IMAGE_ID))
+            conditions.add(ticr.CATEGORY_ID.`in`(categoryIdList))
+        }
+        if (score != null) {
+            val tas = TStoreStatisticsTotal.T_STORE_STATISTICS_TOTAL.`as`("tas")
+            val t = dslContext.select(
+                tas.STORE_CODE,
+                tas.DOWNLOADS.`as`(MarketImageSortTypeEnum.DOWNLOAD_COUNT.name),
+                tas.SCORE_AVERAGE
+            ).from(tas).asTable("t")
+            baseStep.leftJoin(t).on(tImage.IMAGE_CODE.eq(t.field("STORE_CODE", String::class.java)))
+            conditions.add(t.field("SCORE_AVERAGE", BigDecimal::class.java).ge(BigDecimal.valueOf(score.toLong())))
+        }
+        baseStep.where(conditions)
+        logger.info(baseStep.getSQL(true))
+        return baseStep.fetchOne(0, Int::class.java)!!
     }
 
     fun addMarketImage(

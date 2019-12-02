@@ -79,14 +79,13 @@ class SubPipelineStartUpService(
         values: Map<String, String>
     ): Result<ProjectBuildId> {
         logger.info("callPipelineStartup: $projectId | $parentPipelineId | $buildId | $callPipelineId | $taskId | $runMode")
-        logger.info("callPipelineStartup 测试：$projectId")
 
         // 获取构建任务
         val task = pipelineRuntimeService.getBuildTask(buildId, taskId)
                 ?: return MessageCodeUtil.generateResponseDataObject(ProcessMessageCode.ERROR_NO_BUILD_EXISTS_BY_ID.toString(), arrayOf(buildId))
 
         logger.info("task: $task")
-
+        logger.info("callPipelineStartup: 提交ID：$projectId task提供ID：${task.projectId}")
         logger.info("callPipelineStartup: ${task.projectId} | $parentPipelineId | $buildId | $callPipelineId | $taskId | $runMode")
 
         // 通过 runVariables获取 userId 和 channelCode
@@ -186,8 +185,9 @@ class SubPipelineStartUpService(
                         val map = element.data
                         val msg = map["input"] as? Map<*, *> ?: return@element
                         val subPip = msg["subPip"]
+                        val subPro = msg["projectId"]
                         val exist = HashSet(currentExistPipelines)
-                        checkSubpipeline(atomCode, projectId, subPip as String, exist)
+                        checkSubpipeline(atomCode, subPro as String, subPip as String, exist)
                         existPipelines.addAll(exist)
                     } else if (element is SubPipelineCallElement) {
                         val exist = HashSet(currentExistPipelines)

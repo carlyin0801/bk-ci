@@ -23,26 +23,23 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+package com.tencent.devops.lambda.listener
 
-package com.tencent.devops.common.pipeline.event
+import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
+import com.tencent.devops.common.event.listener.pipeline.BaseListener
+import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildTaskFinishBroadCastEvent
+import com.tencent.devops.lambda.service.PipelineBuildService
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-import com.tencent.devops.common.event.annotation.Event
-import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
-import com.tencent.devops.common.event.enums.ActionType
-import com.tencent.devops.common.event.pojo.pipeline.IPipelineEvent
+@Component
+class BuildTaskFinishListener @Autowired constructor(
+    private val pipelineBuildService: PipelineBuildService,
+    pipelineEventDispatcher: PipelineEventDispatcher
+) : BaseListener<PipelineBuildTaskFinishBroadCastEvent>(pipelineEventDispatcher) {
 
-/**
- * 流水线Setting变化事件
- *
- * @version 1.0
- */
-@Event(exchange = MQ.EXCHANGE_PIPELINE_SETTING_CHANGE_FANOUT)
-data class PipelineSettingChangeEvent(
-    override val source: String,
-    override val projectId: String,
-    override val pipelineId: String,
-    override val userId: String,
-    override var actionType: ActionType = ActionType.REFRESH,
-    override var delayMills: Int = 0,
-    val pipelineName: String
-) : IPipelineEvent(actionType, source, projectId, pipelineId, userId, delayMills)
+    override fun run(event: PipelineBuildTaskFinishBroadCastEvent) {
+        logger.info("[${event.projectId}|${event.pipelineId}|${event.buildId}] Receive build element finish event - ($event)")
+        pipelineBuildService.onBuildTaskFinish(event)
+    }
+}
