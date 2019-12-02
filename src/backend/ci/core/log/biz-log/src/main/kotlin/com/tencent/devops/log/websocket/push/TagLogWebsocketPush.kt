@@ -45,12 +45,11 @@ data class TagLogWebsocketPush(
     val tag: String,
     var lastLineNo: Long,
     override val userId: String,
-    override val pushType: WebSocketType,
     override val redisOperation: RedisOperation,
     override val objectMapper: ObjectMapper,
     override var page: String?,
     override var notifyPost: NotifyPost
-) : WebsocketPush(userId, pushType, redisOperation, objectMapper, page, notifyPost) {
+) : WebsocketPush(userId, redisOperation, objectMapper, page, notifyPost) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(this::class.java)
