@@ -69,24 +69,6 @@ class LogServiceDispatcher @Autowired constructor(
         )
     }
 
-    fun queryLogsByWords(
-        buildId: String,
-        queryKeywords: String,
-        tag: String?,
-        jobId: String?,
-        executeCount: Int?
-    ): Result<QueryLogs> {
-        return Result(
-            logServiceV2.queryLogsByKeywords(
-                buildId,
-                queryKeywords,
-                tag,
-                jobId,
-                executeCount
-            )
-        )
-    }
-
     fun getInitLogsPage(
         userId: String,
         projectId: String,

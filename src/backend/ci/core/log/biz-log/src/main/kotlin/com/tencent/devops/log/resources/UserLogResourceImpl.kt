@@ -67,20 +67,6 @@ class UserLogResourceImpl @Autowired constructor(
         return logDispatcher.getInitLogs(projectId, pipelineId, buildId, isAnalysis, queryKeywords, tag, jobId, executeCount)
     }
 
-    override fun queryLogs(
-        userId: String,
-        projectId: String,
-        pipelineId: String,
-        buildId: String,
-        queryKeywords: String,
-        tag: String?,
-        jobId: String?,
-        executeCount: Int?
-    ): Result<QueryLogs> {
-        validateAuth(userId, projectId, pipelineId, buildId)
-        return logDispatcher.queryLogsByWords(buildId, queryKeywords, tag, jobId, executeCount)
-    }
-
     override fun getMoreLogs(
         userId: String,
         projectId: String,
