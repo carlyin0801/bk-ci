@@ -127,7 +127,7 @@ class MQPipelineCreateListener @Autowired constructor(
                                 )
                         ),
                         code = WebsocketCode.WEBHOOK_ADD_ERROR,
-                        webSocketType = WebSocketType.changWebType(WebSocketType.WEBHOOK),
+                        webSocketType = WebSocketType.NAV.name,
                         page = null
                 )
                 websocketDispatch(post, event)
@@ -143,7 +143,6 @@ class MQPipelineCreateListener @Autowired constructor(
                         pipelineId = event.pipelineId,
                         projectId = event.projectId,
                         userId = event.userId,
-                        pushType = WebSocketType.WEBHOOK,
                         redisOperation = redisOperation,
                         page = notifyPost.dealUrl,
                         objectMapper = objectMapper,

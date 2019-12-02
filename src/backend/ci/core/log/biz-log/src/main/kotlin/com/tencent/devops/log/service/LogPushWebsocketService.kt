@@ -54,7 +54,6 @@ class LogPushWebsocketService @Autowired constructor(
             userId = "",
             redisOperation = redisOperation,
             page = page,
-            pushType = WebSocketType.BUILD_LOG,
             objectMapper = objectMapper,
             notifyPost = NotifyPost(
                 module = "log",
@@ -62,7 +61,7 @@ class LogPushWebsocketService @Autowired constructor(
                 message = "",
                 dealUrl = null,
                 code = 200,
-                webSocketType = WebSocketType.changWebType(WebSocketType.BUILD_LOG),
+                webSocketType = WebSocketType.IFRAMEDIALOG.name,
                 page = page
             )
         )
@@ -78,7 +77,6 @@ class LogPushWebsocketService @Autowired constructor(
             userId = "",
             redisOperation = redisOperation,
             page = page,
-            pushType = WebSocketType.BUILD_LOG,
             objectMapper = objectMapper,
             notifyPost = NotifyPost(
                 module = "log",
@@ -86,7 +84,7 @@ class LogPushWebsocketService @Autowired constructor(
                 message = "",
                 dealUrl = null,
                 code = 200,
-                webSocketType = WebSocketType.changWebType(WebSocketType.BUILD_LOG),
+                webSocketType = WebSocketType.IFRAMEDIALOG.name,
                 page = page
             )
         )
