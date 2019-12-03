@@ -287,7 +287,7 @@ open class CodeccApi constructor(
             if (!phpcsToolSetId.isNullOrBlank()) map["PHPCS"] = phpcsToolSetId!!
             if (!sensitiveToolSetId.isNullOrBlank()) map["SENSITIVE"] = sensitiveToolSetId!!
             if (!occheckToolSetId.isNullOrBlank()) map["OCCHECK"] = occheckToolSetId!!
-            if (!gociLintToolSetId.isNullOrBlank()) map["GOCILINT"] = gociLintToolSetId!!
+            if (!ripsToolSetId.isNullOrBlank()) map["RIPS"] = ripsToolSetId!!
             if (!woodpeckerToolSetId.isNullOrBlank()) map["WOODPECKER_SENSITIVE"] = woodpeckerToolSetId!!
             if (!horuspyToolSetId.isNullOrBlank()) map["HORUSPY"] = horuspyToolSetId!!
         }
