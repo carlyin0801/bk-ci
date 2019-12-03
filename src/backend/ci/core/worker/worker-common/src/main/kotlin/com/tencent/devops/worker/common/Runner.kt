@@ -89,7 +89,7 @@ object Runner {
                             val taskDaemon = TaskDaemon(task, buildTask, buildVariables, workspacePathFile)
                             try {
                                 LoggerService.elementId = buildTask.elementId!!
-                                LoggerService.addNormalLine("")
+//                                LoggerService.addNormalLine("")
 //                                LoggerService.addFoldStartLine("${buildTask.elementName}-[${buildTask.elementId}]")
 //                                LoggerService.addNormalLine(Ansi().bold().a("Start Element").reset().toString())
 
