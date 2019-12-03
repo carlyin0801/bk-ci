@@ -149,12 +149,12 @@ object LoggerService {
 
     fun addNormalLine(message: String) {
         val logMessage = LogMessage(
-            message,
-            System.currentTimeMillis(),
-            elementId,
-            jobId,
-            LogType.LOG,
-            executeCount
+            message = message,
+            timestamp = System.currentTimeMillis(),
+            tag = elementId,
+            jobId = jobId,
+            logType = LogType.LOG,
+            executeCount = executeCount
         )
         logger.info(logMessage.toString())
         try {

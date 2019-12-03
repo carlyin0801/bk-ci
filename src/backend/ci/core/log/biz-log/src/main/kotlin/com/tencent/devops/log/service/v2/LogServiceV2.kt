@@ -315,8 +315,10 @@ class LogServiceV2 @Autowired constructor(
                         ).removeSuffix("\u001b[m"),
                         Constants.DEFAULT_PRIORITY_NOT_DELETED
                     )
+                    val sJobId = sourceMap["jobId"]
+                    val sTag = sourceMap["tag"]
                     val dateTime = sdf.format(Date(logLine.timestamp))
-                    val str = "$dateTime : ${logLine.message}" + System.lineSeparator()
+                    val str = "$dateTime[$sJobId][$sTag] : ${logLine.message}" + System.lineSeparator()
                     sb.append(str)
                 }
                 output.write(sb.toString().toByteArray())
@@ -1017,17 +1019,17 @@ class LogServiceV2 @Autowired constructor(
                 val t = sourceMap["tag"]?.toString() ?: ""
                 val jobId = sourceMap["jobId"]?.toString() ?: ""
                 val logLine = LogLine(
-                    ln,
-                    sourceMap["timestamp"].toString().toLong(),
-                    if (highlights.containsKey(ln)) {
+                    lineNo = ln,
+                    timestamp = sourceMap["timestamp"].toString().toLong(),
+                    message = if (highlights.containsKey(ln)) {
                         highlights[ln] ?: ""
                     } else {
                         sourceMap["message"].toString()
                     },
-                    Constants.DEFAULT_PRIORITY_NOT_DELETED,
-                    t,
-                    jobId,
-                    sourceMap["executeCount"]?.toString()?.toInt() ?: 1
+                    priority = Constants.DEFAULT_PRIORITY_NOT_DELETED,
+                    tag = t,
+                    jobId = jobId,
+                    executeCount = sourceMap["executeCount"]?.toString()?.toInt() ?: 1
                 )
                 logs.add(logLine)
             }
