@@ -301,7 +301,6 @@ class PreBuildService @Autowired constructor(
                 }
             }
         }
-        logs.filter { it.message.contains("Start Element") }
         return QueryLogs(buildId, finished, logs)
     }
 

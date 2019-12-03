@@ -84,9 +84,6 @@ object Runner {
                             val taskDaemon = TaskDaemon(task, buildTask, buildVariables, workspacePathFile)
                             try {
                                 LoggerService.elementId = buildTask.elementId!!
-                                LoggerService.addNormalLine("")
-//                                LoggerService.addFoldStartLine("${buildTask.elementName}-[${buildTask.elementId}]")
-                                LoggerService.addNormalLine(Ansi().bold().a("Start Element").reset().toString())
 
                                 // 开始Task执行
                                 taskDaemon.run()
@@ -193,13 +190,13 @@ object Runner {
      */
     private fun showMachineLog(vmName: String) {
         LoggerService.addNormalLine("")
-//        LoggerService.addFoldStartLine("env_machine")
+        LoggerService.addFoldStartLine("env_machine")
         LoggerService.addNormalLine(Ansi().bold().a("Get build machine properties").reset().toString())
         LoggerService.addNormalLine(Ansi().bold().a("machine.current: ").reset().a(vmName).toString())
         System.getProperties().forEach { k, v ->
             LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v.toString()).toString())
         }
-//        LoggerService.addFoldEndLine("env_machine")
+        LoggerService.addFoldEndLine("env_machine")
     }
 
     /**
@@ -207,13 +204,13 @@ object Runner {
      */
     private fun showSystemLog() {
         LoggerService.addNormalLine("")
-//        LoggerService.addFoldStartLine("env_system")
+        LoggerService.addFoldStartLine("env_system")
         LoggerService.addNormalLine(Ansi().bold().a("Get build system properties").reset().toString())
         val envs = System.getenv()
         envs.forEach { (k, v) ->
             LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v).toString())
         }
-//        LoggerService.addFoldEndLine("env_system")
+        LoggerService.addFoldEndLine("env_system")
     }
 
     /**
@@ -221,11 +218,11 @@ object Runner {
      */
     private fun showRuntimeEnvs(variables: Map<String, String>) {
         LoggerService.addNormalLine("")
-//        LoggerService.addFoldStartLine("env_user")
+        LoggerService.addFoldStartLine("env_user")
         LoggerService.addNormalLine(Ansi().bold().a("Resolve the construction process parameter variable table").reset().toString())
         variables.forEach { (k, v) ->
             LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v).toString())
         }
-//        LoggerService.addFoldEndLine("env_user")
+        LoggerService.addFoldEndLine("env_user")
     }
 }

@@ -141,18 +141,18 @@ class BuildMonitorControl @Autowired constructor(
 
         interval = (timeoutMills - usedTimeMills).toInt()
         if (interval <= 0) {
-            val tag = if (containerType == "normal") {
-                "TIME_OUT_Job#$containerId(N)"
-            } else {
-                "TIME_OUT_Job#$containerId"
-            }
+            val tag = "j-$containerId"
             val errorInfo = MessageCodeUtil.generateResponseDataObject<String>(
                 messageCode = ERROR_TIMEOUT_IN_RUNNING.toString(),
                 params = arrayOf("Job", "$minute")
             )
-            logFail(
-                buildId = buildId, tag = tag, containerId = containerId,
-                message = errorInfo.message ?: "Job运行达到($minute)分钟，超时结束运行!"
+            LogUtils.addRedLine(
+                rabbitTemplate = rabbitTemplate,
+                buildId = buildId,
+                message = errorInfo.message ?: "Job运行达到($minute)分钟，超时结束运行!",
+                tag = tag,
+                jobId = containerId,
+                executeCount = 1
             )
             logger.warn("[$buildId]|monitor_container_timeout|container=$containerId")
             // 终止当前容器下的任务
@@ -182,9 +182,13 @@ class BuildMonitorControl @Autowired constructor(
                 messageCode = ERROR_TIMEOUT_IN_BUILD_QUEUE.toString(),
                 params = arrayOf(event.buildId)
             )
-            logFail(
-                buildId = event.buildId, tag = "QUEUE_TIME_OUT", containerId = "",
-                message = errorInfo.message ?: "排队超时，取消运行! [${event.buildId}]"
+            LogUtils.addRedLine(
+                rabbitTemplate = rabbitTemplate,
+                buildId = event.buildId,
+                message = errorInfo.message ?: "排队超时，取消运行! [${event.buildId}]",
+                tag = "QUEUE_TIME_OUT",
+                jobId = "",
+                executeCount = 1
             )
             pipelineEventDispatcher.dispatch(
                 PipelineBuildFinishEvent(
@@ -221,20 +225,5 @@ class BuildMonitorControl @Autowired constructor(
         }
 
         return true
-    }
-
-    private fun logFail(buildId: String, tag: String, containerId: String, message: String) {
-//        LogUtils.addFoldStartLine(
-//            rabbitTemplate = rabbitTemplate,
-//            buildId = buildId, tagName = tag, tag = tag, jobId = containerId, executeCount = 1
-//        )
-        LogUtils.addRedLine(
-            rabbitTemplate = rabbitTemplate,
-            buildId = buildId, message = message, tag = tag, jobId = containerId, executeCount = 1
-        )
-//        LogUtils.addFoldEndLine(
-//            rabbitTemplate = rabbitTemplate,
-//            buildId = buildId, tagName = tag, tag = tag, jobId = containerId, executeCount = 1
-//        )
     }
 }

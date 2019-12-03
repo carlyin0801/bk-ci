@@ -68,11 +68,6 @@ class TaskAtomService @Autowired(required = false) constructor(
             pipelineRuntimeService.updateTaskStatus(task.buildId, task.taskId, task.starter, BuildStatus.RUNNING)
             pipelineBuildDetailService.taskStart(task.buildId, task.taskId)
             val executeCount = task.executeCount ?: 1
-//            LogUtils.addFoldStartLine(rabbitTemplate, task.buildId, logTagName, task.taskId, task.containerHashId, executeCount)
-            LogUtils.addLine(
-                rabbitTemplate, task.buildId, Ansi().bold()
-                    .a("Start Element").reset().toString(), task.taskId, task.containerHashId, executeCount
-            )
             val runVariables = pipelineRuntimeService.getAllVariable(task.buildId)
 
             atomResponse = if (task.isSkip(runVariables)) { // 跳过
@@ -165,10 +160,6 @@ class TaskAtomService @Autowired(required = false) constructor(
                 errorCode = errorCode,
                 errorMsg = errorMsg
             )
-//            LogUtils.addFoldEndLine(
-//                rabbitTemplate, task.buildId, logTagName,
-//                task.taskId, task.containerHashId, task.executeCount ?: 1
-//            )
             if (BuildStatus.isFailure(status)) {
                 jmxElements.fail(elementType)
             }

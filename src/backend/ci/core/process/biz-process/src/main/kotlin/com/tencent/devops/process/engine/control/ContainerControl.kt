@@ -375,7 +375,14 @@ class ContainerControl @Autowired constructor(
                 )
 //                containerFinalStatus = BuildStatus.SKIP
 
-                logCoverUnExecTask(task, "插件[${task.taskName}]被禁用")
+                LogUtils.addYellowLine(
+                    rabbitTemplate = rabbitTemplate,
+                    buildId = task.buildId,
+                    message = "插件[${task.taskName}]被禁用",
+                    tag = task.taskId,
+                    jobId = task.containerHashId,
+                    executeCount = task.executeCount ?: 1
+                )
 
                 return@nextOne
             }
@@ -412,7 +419,15 @@ class ContainerControl @Autowired constructor(
                     )
                     waitToDoTask = null
 
-                    logCoverUnExecTask(task, "插件[${task.taskName}]被跳过")
+                    LogUtils.addYellowLine(
+                        rabbitTemplate = rabbitTemplate,
+                        buildId = task.buildId,
+                        message = "插件[${task.taskName}]被跳过",
+                        tag = task.taskId,
+                        jobId = task.containerHashId,
+                        executeCount = task.executeCount ?: 1
+                    )
+                    
                     return@nextOne
                 } else {
                     containerFinalStatus = BuildStatus.RUNNING
@@ -534,24 +549,5 @@ class ContainerControl @Autowired constructor(
                 delayMills = 10000 // 延时10秒钟
             )
         )
-    }
-
-    private fun logCoverUnExecTask(task: PipelineBuildTask, message: String) {
-        val tagName = "${task.taskName}-[${task.taskId}]"
-//        LogUtils.addFoldStartLine(
-//            rabbitTemplate = rabbitTemplate,
-//            buildId = task.buildId, tagName = tagName,
-//            tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
-//        )
-        LogUtils.addYellowLine(
-            rabbitTemplate = rabbitTemplate,
-            buildId = task.buildId, message = message,
-            tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
-        )
-//        LogUtils.addFoldEndLine(
-//            rabbitTemplate = rabbitTemplate,
-//            buildId = task.buildId, tagName = tagName,
-//            tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
-//        )
     }
 }
