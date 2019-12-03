@@ -34,7 +34,6 @@ import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_C
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_DEPARTMENT
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.exception.OperationException
-import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.common.api.util.OkhttpUtils
 import com.tencent.devops.common.auth.api.BSAuthProjectApi
 import com.tencent.devops.common.auth.api.BkAuthProperties
@@ -50,7 +49,6 @@ import com.tencent.devops.common.web.mq.EXCHANGE_PAASCC_PROJECT_UPDATE_LOGO
 import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_CREATE
 import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_UPDATE
 import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_UPDATE_LOGO
-import com.tencent.devops.model.project.tables.records.TProjectRecord
 import com.tencent.devops.project.constant.ProjectMessageCode
 import com.tencent.devops.project.dao.ProjectDao
 import com.tencent.devops.project.jmx.api.ProjectJmxApi
@@ -752,18 +750,18 @@ class ProjectLocalService @Autowired constructor(
         }
 
         val projectCreateInfo = ProjectCreateInfo(
-                projectCode,
-                projectCode,
-                ProjectTypeEnum.SUPPORT_PRODUCT.index,
-                "git ci project for git projectId: $gitProjectId",
-                0L,
-                "",
-                0L,
-                "",
-                0L,
-                "",
-                false,
-                0
+            projectName = projectCode,
+            englishName = projectCode,
+            projectType = ProjectTypeEnum.SUPPORT_PRODUCT.index,
+            description = "git ci project for git projectId: $gitProjectId",
+            bgId = 0L,
+            bgName = "",
+            deptId = 0L,
+            deptName = "",
+            centerId = 0L,
+            centerName = "",
+            secrecy = false,
+            kind = 0
         )
 
         try {
