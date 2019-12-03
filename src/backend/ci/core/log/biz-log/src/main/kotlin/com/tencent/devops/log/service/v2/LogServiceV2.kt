@@ -570,7 +570,7 @@ class LogServiceV2 @Autowired constructor(
 
             if (wholeQuery) {
                 val startQuery = getQuery(buildId, tag, jobId, executeCount)
-                    .must(QueryBuilders.matchQuery("logType", LogType.START.name))
+//                    .must(QueryBuilders.matchQuery("logType", LogType.START.name))
                     .must(QueryBuilders.rangeQuery("lineNo").from(start))
                 val srbFoldStart = client.prepareSearch(index)
                     .setTypes(type)
@@ -579,7 +579,7 @@ class LogServiceV2 @Autowired constructor(
                     .setSize(100)
 
                 val stopQuery = getQuery(buildId, tag, jobId, executeCount)
-                    .must(QueryBuilders.matchQuery("logType", LogType.END.name))
+//                    .must(QueryBuilders.matchQuery("logType", LogType.END.name))
                     .must(QueryBuilders.rangeQuery("lineNo").from(start))
                 val srbFoldStop = client.prepareSearch(index)
                     .setTypes(type)
@@ -895,10 +895,10 @@ class LogServiceV2 @Autowired constructor(
 
         val multiSearchRequestBuilder = client.prepareMultiSearch()
 
-        val logRange =
-            if (tag.isNullOrBlank()) Pair(1L, size) else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
-
-        logger.info("log range for $type: (${logRange.first}, ${logRange.second}), size: $size")
+//        val logRange =
+//            if (tag.isNullOrBlank()) Pair(1L, size) else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
+//
+//        logger.info("log range for $type: (${logRange.first}, ${logRange.second}), size: $size")
 
         var startTime = System.currentTimeMillis()
 
@@ -908,12 +908,12 @@ class LogServiceV2 @Autowired constructor(
 
             val srbFoldStart = client.prepareSearch(index)
                 .setTypes(type)
-                .setQuery(QueryBuilders.matchQuery("logType", LogType.START.name))
+//                .setQuery(QueryBuilders.matchQuery("logType", LogType.START.name))
                 .addDocValueField("lineNo")
                 .setSize(100)
             val srbFoldStop = client.prepareSearch(index)
                 .setTypes(type)
-                .setQuery(QueryBuilders.prefixQuery("logType", LogType.END.name))
+//                .setQuery(QueryBuilders.prefixQuery("logType", LogType.END.name))
                 .addDocValueField("lineNo")
                 .setSize(100)
 
@@ -928,7 +928,7 @@ class LogServiceV2 @Autowired constructor(
                 .setQuery(
                     query
                         .must(QueryBuilders.matchQuery("message", it).operator(Operator.AND))
-                        .must(QueryBuilders.rangeQuery("lineNo").gte(logRange.first))
+//                        .must(QueryBuilders.rangeQuery("lineNo").gte(logRange.first))
                 )
                 .highlighter(
                     HighlightBuilder().preTags("\u001b[31m").postTags("\u001b[0m")
@@ -965,14 +965,9 @@ class LogServiceV2 @Autowired constructor(
         logger.info("$type highlights map: $highlights")
         startTime = System.currentTimeMillis()
 
-        if (wholeQuery) {
-            lineNoSet.add(logRange.first)
-            lineNoSet.add(logRange.second)
-        } else {
-            if (!lineNoSet.isEmpty()) {
-                lineNoSet.add(lineNoSet.first() - Constants.NUM_LINES_AROUND_TAGS)
-                lineNoSet.add(lineNoSet.last() + Constants.NUM_LINES_AROUND_TAGS)
-            }
+        if (!wholeQuery && !lineNoSet.isEmpty()) {
+            lineNoSet.add(lineNoSet.first() - Constants.NUM_LINES_AROUND_TAGS)
+            lineNoSet.add(lineNoSet.last() + Constants.NUM_LINES_AROUND_TAGS)
         }
 
         // 开始处理需要返回的行号
@@ -1206,18 +1201,18 @@ class LogServiceV2 @Autowired constructor(
         size: Long
     ): Pair<Long, Long> {
 
-        val q = getQuery(buildId, tag, jobId, executeCount)
-            .must(
-                QueryBuilders.boolQuery()
-                    .should(QueryBuilders.matchQuery("logType", LogType.START.name).operator(Operator.OR))
-                    .should(QueryBuilders.matchQuery("logType", LogType.END.name).operator(Operator.OR))
-            )
+//        val q = getQuery(buildId, tag, jobId, executeCount)
+//            .must(
+//                QueryBuilders.boolQuery()
+//                    .should(QueryBuilders.matchQuery("logType", LogType.START.name).operator(Operator.OR))
+//                    .should(QueryBuilders.matchQuery("logType", LogType.END.name).operator(Operator.OR))
+//            )
 
-        logger.info("[$index|$type|$tag|$jobId|$executeCount|$size] Get log range with query ($q)")
+//        logger.info("[$index|$type|$tag|$jobId|$executeCount|$size] Get log range with query ($q)")
 
         val hits = client.prepareSearch(index)
             .setTypes(type)
-            .setQuery(q)
+//            .setQuery(q)
             .addDocValueField("lineNo")
             .setSize(200)
             .addSort("lineNo", SortOrder.ASC)

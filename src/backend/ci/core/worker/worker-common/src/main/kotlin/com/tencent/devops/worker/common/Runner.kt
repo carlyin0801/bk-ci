@@ -90,7 +90,7 @@ object Runner {
                                 LoggerService.elementId = buildTask.elementId!!
                                 LoggerService.addNormalLine("")
 //                                LoggerService.addFoldStartLine("${buildTask.elementName}-[${buildTask.elementId}]")
-                                LoggerService.addNormalLine(Ansi().bold().a("Start Element").reset().toString())
+//                                LoggerService.addNormalLine(Ansi().bold().a("Start Element").reset().toString())
 
                                 // 开始Task执行
                                 taskDaemon.run()
