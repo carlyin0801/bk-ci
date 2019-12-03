@@ -112,8 +112,8 @@ class ArchiveResourceApi : AbstractBuildResourceApi(), ArchiveSDKApi {
                     result.add(jfrogFile.uri)
                 }
             }
-            return result
         }
+        return result
     }
 
     private fun uploadJfrogCustomize(file: File, destPath: String, buildVariables: BuildVariables) {
