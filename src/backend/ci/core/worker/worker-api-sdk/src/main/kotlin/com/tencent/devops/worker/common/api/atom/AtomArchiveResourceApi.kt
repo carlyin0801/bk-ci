@@ -125,11 +125,12 @@ class AtomArchiveResourceApi : AbstractBuildResourceApi(), AtomArchiveSDKApi {
 
         val url = StringBuilder("/ms/artifactory/build/atom/result/$path")
         with(buildVariables) {
+            val variablesMap = variables.map { it.key to it.value }.toMap()
             url.append(";$ARCHIVE_PROPS_PROJECT_ID=${encodeProperty(projectId)}")
             url.append(";$ARCHIVE_PROPS_PIPELINE_ID=${encodeProperty(pipelineId)}")
             url.append(";$ARCHIVE_PROPS_BUILD_ID=${encodeProperty(buildId)}")
-            url.append(";$ARCHIVE_PROPS_USER_ID=${encodeProperty(variables[PIPELINE_START_USER_ID] ?: "")}")
-            url.append(";$ARCHIVE_PROPS_BUILD_NO=${encodeProperty(variables[PIPELINE_BUILD_NUM] ?: "")}")
+            url.append(";$ARCHIVE_PROPS_USER_ID=${encodeProperty(variablesMap[PIPELINE_START_USER_ID] ?: "")}")
+            url.append(";$ARCHIVE_PROPS_BUILD_NO=${encodeProperty(variablesMap[PIPELINE_BUILD_NUM] ?: "")}")
             url.append(";$ARCHIVE_PROPS_SOURCE=pipeline")
         }
 
