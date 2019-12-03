@@ -439,10 +439,12 @@ abstract class ImageService @Autowired constructor() {
         val userDeptList = storeUserService.getUserDeptList(userId)
         logger.info("$interfaceName:mainPageList:Inner:userDeptList=$userDeptList")
 
+        val latestLabel = MessageCodeUtil.getMessageByLocale("最新", "Latest")
+        val hottestLabel = MessageCodeUtil.getMessageByLocale("最热", "Hottest")
         result.add(
             MarketImageMain(
                 key = "latest",
-                label = MessageCodeUtil.getMessageByLocale("最新", "Latest"),
+                label = latestLabel,
                 records = doList(
                     userId = userId,
                     userDeptList = userDeptList,
@@ -464,7 +466,7 @@ abstract class ImageService @Autowired constructor() {
         result.add(
             MarketImageMain(
                 key = "hottest",
-                label = MessageCodeUtil.getMessageByLocale("最热", "Hottest"),
+                label = hottestLabel,
                 records = doList(
                     userId = userId,
                     userDeptList = userDeptList,
