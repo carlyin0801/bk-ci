@@ -174,10 +174,6 @@ class TaskAtomService @Autowired(required = false) constructor(
                 errorCode = errorCode,
                 errorMsg = errorMsg
             )
-//            LogUtils.addFoldEndLine(
-//                rabbitTemplate, task.buildId, logTagName,
-//                task.taskId, task.containerHashId, task.executeCount ?: 1
-//            )
             if (BuildStatus.isFailure(status)) {
                 jmxElements.fail(elementType)
             }

@@ -221,13 +221,13 @@ object Runner {
      */
     private fun showMachineLog(vmName: String) {
         LoggerService.addNormalLine("")
-//        LoggerService.addFoldStartLine("env_machine")
+        LoggerService.addFoldStartLine("env_machine")
         LoggerService.addNormalLine(Ansi().bold().a("Get build machine properties").reset().toString())
         LoggerService.addNormalLine(Ansi().bold().a("machine.current: ").reset().a(vmName).toString())
         System.getProperties().forEach { k, v ->
             LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v.toString()).toString())
         }
-//        LoggerService.addFoldEndLine("env_machine")
+        LoggerService.addFoldEndLine("env_machine")
     }
 
     /**
@@ -235,13 +235,13 @@ object Runner {
      */
     private fun showSystemLog() {
         LoggerService.addNormalLine("")
-//        LoggerService.addFoldStartLine("env_system")
+        LoggerService.addFoldStartLine("env_system")
         LoggerService.addNormalLine(Ansi().bold().a("Get build system properties").reset().toString())
         val envs = System.getenv()
         envs.forEach { (k, v) ->
             LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v).toString())
         }
-//        LoggerService.addFoldEndLine("env_system")
+        LoggerService.addFoldEndLine("env_system")
     }
 
     /**
@@ -249,7 +249,7 @@ object Runner {
      */
     private fun showRuntimeEnvs(variables: List<BuildParameters>) {
         LoggerService.addNormalLine("")
-//        LoggerService.addFoldStartLine("env_user")
+        LoggerService.addFoldStartLine("env_user")
         LoggerService.addNormalLine(Ansi().bold().a("Resolve the construction process parameter variable table").reset().toString())
         variables.forEach { v ->
             if (v.valueType == BuildFormPropertyType.PASSWORD) {
@@ -258,6 +258,6 @@ object Runner {
                 LoggerService.addNormalLine(Ansi().bold().a("${v.key}: ").reset().a(v.value.toString()).toString())
             }
         }
-//        LoggerService.addFoldEndLine("env_user")
+        LoggerService.addFoldEndLine("env_user")
     }
 }

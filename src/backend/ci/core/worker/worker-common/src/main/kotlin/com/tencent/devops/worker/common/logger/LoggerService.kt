@@ -172,7 +172,7 @@ object LoggerService {
 
     fun addFoldStartLine(tagName: String) {
         val logMessage = LogMessage(
-            "soda_fold:start:$tagName",
+            "##[group] $tagName",
             System.currentTimeMillis(),
             elementId,
             jobId,
@@ -184,7 +184,7 @@ object LoggerService {
 
     fun addFoldEndLine(tagName: String) {
         val logMessage = LogMessage(
-            "soda_fold:end:$tagName",
+            "##[endgroup] $tagName",
             System.currentTimeMillis(),
             elementId,
             jobId,
