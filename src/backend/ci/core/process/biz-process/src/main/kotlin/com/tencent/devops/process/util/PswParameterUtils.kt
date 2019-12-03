@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 @Component
 class PswParameterUtils {
 
-    // @Value("\${parameter.password.pswKey}")
+    @Value("\${parameter.password.pswKey}")
     private val pswKey: String = ""
 
     private val logger = LoggerFactory.getLogger(PswParameterUtils::class.java)
