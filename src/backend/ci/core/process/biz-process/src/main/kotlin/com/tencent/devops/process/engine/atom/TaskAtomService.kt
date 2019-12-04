@@ -29,9 +29,8 @@ package com.tencent.devops.process.engine.atom
 import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
 import com.tencent.devops.common.event.enums.ActionType
-import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildTaskFinishBroadCastEvent
 import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildStatusBroadCastEvent
-import com.tencent.devops.common.log.Ansi
+import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildTaskFinishBroadCastEvent
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.utils.SkipElementUtils
 import com.tencent.devops.common.service.utils.SpringContextUtil
@@ -42,6 +41,7 @@ import com.tencent.devops.process.engine.service.PipelineBuildDetailService
 import com.tencent.devops.process.engine.service.PipelineRuntimeService
 import com.tencent.devops.process.engine.service.measure.MeasureService
 import com.tencent.devops.process.jmx.elements.JmxElements
+import com.tencent.devops.process.pojo.AtomErrorCode
 import com.tencent.devops.process.pojo.ErrorType
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.core.RabbitTemplate
@@ -80,8 +80,7 @@ class TaskAtomService @Autowired(required = false) constructor(
             atomResponse = if (task.isSkip(runVariables)) { // 跳过
                 AtomResponse(BuildStatus.SKIP)
             } else {
-                val atomTaskDaemon = AtomTaskDaemon(task, runVariables)
-                atomTaskDaemon.call()
+                SpringContextUtil.getBean(IAtomTask::class.java, task.taskAtom).execute(task, runVariables)
             }
         } catch (t: BuildTaskException) {
             LogUtils.addRedLine(
@@ -93,6 +92,12 @@ class TaskAtomService @Autowired(required = false) constructor(
                 executeCount = task.executeCount ?: 1
             )
             logger.warn("[${task.buildId}]|Fail to execute the task [${task.taskName}]", t)
+            atomResponse = AtomResponse(
+                buildStatus = BuildStatus.FAILED,
+                errorType = ErrorType.SYSTEM,
+                errorCode = AtomErrorCode.SYSTEM_DAEMON_INTERRUPTED,
+                errorMsg = "守护进程启动出错"
+            )
         } catch (t: Throwable) {
             LogUtils.addRedLine(
                 rabbitTemplate = rabbitTemplate,
@@ -103,6 +108,12 @@ class TaskAtomService @Autowired(required = false) constructor(
                 executeCount = task.executeCount ?: 1
             )
             logger.warn("[${task.buildId}]|Fail to execute the task [${task.taskName}]", t)
+            atomResponse = AtomResponse(
+                buildStatus = BuildStatus.FAILED,
+                errorType = ErrorType.SYSTEM,
+                errorCode = AtomErrorCode.SYSTEM_DAEMON_INTERRUPTED,
+                errorMsg = "守护进程启动出错"
+            )
         } finally {
             // 存储变量
             if (atomResponse.outputVars != null && atomResponse.outputVars!!.isNotEmpty()) {
