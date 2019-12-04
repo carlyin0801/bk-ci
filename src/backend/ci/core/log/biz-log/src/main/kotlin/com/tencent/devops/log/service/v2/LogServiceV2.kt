@@ -299,7 +299,7 @@ class LogServiceV2 @Autowired constructor(
             .setScroll(TimeValue(1000 * 32))
             .setSize(10000)
             .get()
-
+        val times = 0
         val logStream = StreamingOutput { output ->
             do {
                 val sb = StringBuilder()
@@ -321,14 +321,14 @@ class LogServiceV2 @Autowired constructor(
                 }
                 output.write(sb.toString().toByteArray())
                 output.flush()
+                logger.info("The $times times query es.")
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
             } while (scrollResp.hits.hits.isNotEmpty())
         }
 
         return Response
-            .ok(logStream, MediaType.APPLICATION_JSON)
-            .header("content-disposition", "attachment;")
+            .ok(logStream, MediaType.APPLICATION_OCTET_STREAM_TYPE)
             .header("Cache-Control", "no-cache")
             .build()
     }
