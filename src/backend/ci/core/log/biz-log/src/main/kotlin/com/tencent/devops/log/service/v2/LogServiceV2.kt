@@ -285,6 +285,7 @@ class LogServiceV2 @Autowired constructor(
     }
 
     fun loadInitLogs(pipelineId: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): Response {
+        logger.info("[$buildId|$tag] loadInitLogs query start.")
 
         val indexAndType = indexServiceV2.getIndexAndType(buildId)
         val query = getQuery(buildId, tag, jobId, executeCount)
@@ -297,7 +298,7 @@ class LogServiceV2 @Autowired constructor(
             .addDocValueField("timestamp")
             .addSort("lineNo", SortOrder.ASC)
             .setScroll(TimeValue(1000 * 32))
-            .setSize(10000)
+            .setSize(4000)
             .get()
         val times = 0
         val logStream = StreamingOutput { output ->
@@ -321,11 +322,12 @@ class LogServiceV2 @Autowired constructor(
                 }
                 output.write(sb.toString().toByteArray())
                 output.flush()
-                logger.info("The $times times query es.")
+                logger.info("[$buildId|$tag] The $times times query es.")
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
             } while (scrollResp.hits.hits.isNotEmpty())
         }
+        logger.info("[$buildId|$tag] loadInitLogs query end.")
 
         return Response
             .ok(logStream, MediaType.APPLICATION_OCTET_STREAM_TYPE)
