@@ -67,6 +67,19 @@ class UserLogResourceImpl @Autowired constructor(
         return logDispatcher.getInitLogs(projectId, pipelineId, buildId, isAnalysis, queryKeywords, tag, jobId, executeCount)
     }
 
+    override fun loadInitLogs(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Response {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        return logDispatcher.loadInitLogs(projectId, pipelineId, buildId, tag ?: "", jobId, executeCount)
+    }
+
     override fun getMoreLogs(
         userId: String,
         projectId: String,

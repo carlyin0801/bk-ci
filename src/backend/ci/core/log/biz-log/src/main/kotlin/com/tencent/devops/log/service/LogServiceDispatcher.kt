@@ -96,6 +96,17 @@ class LogServiceDispatcher @Autowired constructor(
             )
     }
 
+    fun loadInitLogs(
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Response {
+        return logServiceV2.loadInitLogs(pipelineId, buildId, tag, jobId, executeCount)
+    }
+
     fun getMoreLogs(
         projectId: String,
         pipelineId: String,
