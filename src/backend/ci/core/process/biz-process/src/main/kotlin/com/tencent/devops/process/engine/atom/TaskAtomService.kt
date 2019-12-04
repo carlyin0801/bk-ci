@@ -98,12 +98,6 @@ class TaskAtomService @Autowired(required = false) constructor(
                 errorMsg = "后台服务任务执行出错"
             )
             logger.warn("[${task.buildId}]|Fail to execute the task [${task.taskName}]", t)
-            atomResponse = AtomResponse(
-                buildStatus = BuildStatus.FAILED,
-                errorType = ErrorType.SYSTEM,
-                errorCode = AtomErrorCode.SYSTEM_DAEMON_INTERRUPTED,
-                errorMsg = "守护进程启动出错"
-            )
         } catch (t: Throwable) {
             LogUtils.addRedLine(
                 rabbitTemplate = rabbitTemplate,
@@ -120,12 +114,6 @@ class TaskAtomService @Autowired(required = false) constructor(
                 errorMsg = "后台服务运行出错"
             )
             logger.warn("[${task.buildId}]|Fail to execute the task [${task.taskName}]", t)
-            atomResponse = AtomResponse(
-                buildStatus = BuildStatus.FAILED,
-                errorType = ErrorType.SYSTEM,
-                errorCode = AtomErrorCode.SYSTEM_DAEMON_INTERRUPTED,
-                errorMsg = "守护进程启动出错"
-            )
         } finally {
             // 存储变量
             if (atomResponse.outputVars != null && atomResponse.outputVars!!.isNotEmpty()) {
