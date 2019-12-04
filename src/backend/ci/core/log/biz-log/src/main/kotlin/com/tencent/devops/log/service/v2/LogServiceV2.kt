@@ -323,7 +323,7 @@ class LogServiceV2 @Autowired constructor(
                 }
                 output.write(sb.toString().toByteArray())
                 output.flush()
-                logger.info("[$buildId|$tag] The $times times query es.")
+                logger.info("[$buildId|$tag] The ${++times} times query es.")
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
             } while (scrollResp.hits.hits.isNotEmpty())
