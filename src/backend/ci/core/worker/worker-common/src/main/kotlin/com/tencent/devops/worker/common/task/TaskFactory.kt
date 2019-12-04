@@ -83,7 +83,7 @@ object TaskFactory {
 
     private fun register(classType: String, taskClass: KClass<out ITask>) {
         taskMap[classType] = taskClass
-        LoggerService.addNormalLine("Add Task $taskClass for type $classType")
+//        LoggerService.addNormalLine("Add Task $taskClass for type $classType")
     }
 
     fun create(type: String): ITask {

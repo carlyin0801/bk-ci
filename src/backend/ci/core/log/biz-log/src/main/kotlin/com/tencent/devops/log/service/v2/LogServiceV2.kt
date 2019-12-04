@@ -45,6 +45,8 @@ import com.tencent.devops.log.model.pojo.enums.LogStatus
 import com.tencent.devops.log.model.pojo.enums.LogType
 import com.tencent.devops.log.util.Constants
 import com.tencent.devops.log.utils.LogDispatcher
+import okhttp3.ResponseBody
+import okio.BufferedSink
 import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.Settings
@@ -280,6 +282,55 @@ class LogServiceV2 @Autowired constructor(
         } finally {
             logBeanV2.query(System.currentTimeMillis() - startEpoch, success)
         }
+    }
+
+    fun loadInitLogs(pipelineId: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): Response {
+
+        val indexAndType = indexServiceV2.getIndexAndType(buildId)
+        val query = getQuery(buildId, tag, jobId, executeCount)
+            .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
+
+        var scrollResp = client.prepareSearch(indexAndType.index)
+            .setTypes(indexAndType.type)
+            .setQuery(query)
+            .addDocValueField("lineNo")
+            .addDocValueField("timestamp")
+            .addSort("lineNo", SortOrder.ASC)
+            .setScroll(TimeValue(1000 * 32))
+            .setSize(10000)
+            .get()
+
+        val logStream = StreamingOutput { output ->
+            do {
+                val sb = StringBuilder()
+                val logs = mutableListOf<LogLine>()
+                scrollResp.hits.hits.forEach { searchHit ->
+                    val sourceMap = searchHit.source
+
+                    val logLine = LogLine(
+                        sourceMap["lineNo"].toString().toLong(),
+                        sourceMap["timestamp"].toString().toLong(),
+                        sourceMap["message"].toString(),
+                        Constants.DEFAULT_PRIORITY_NOT_DELETED,
+                        sourceMap["tag"].toString() ?: "",
+                        sourceMap["jobId"].toString() ?: "",
+                        sourceMap["executeCount"]?.toString()?.toInt() ?: 1
+                    )
+                    logs.add(logLine)
+                    sb.append(logs)
+                }
+                output.write(sb.toString().toByteArray())
+                output.flush()
+                scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
+                    .setScroll(TimeValue(1000 * 32)).execute().actionGet()
+            } while (scrollResp.hits.hits.isNotEmpty())
+        }
+
+        return Response
+            .ok(logStream, MediaType.APPLICATION_JSON)
+            .header("content-disposition", "attachment;")
+            .header("Cache-Control", "no-cache")
+            .build()
     }
 
     fun downloadLogs(pipelineId: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): Response {
