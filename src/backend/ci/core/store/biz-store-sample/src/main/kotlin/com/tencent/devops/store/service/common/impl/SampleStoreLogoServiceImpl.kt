@@ -24,10 +24,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.artifactory.service.pojo
+package com.tencent.devops.store.service.common.impl
 
-data class JFrogFileInfoList(
-    val uri: String,
-    val created: String,
-    val files: List<JFrogFileInfo>
-)
+import com.tencent.devops.artifactory.api.service.ServiceFileResource
+import com.tencent.devops.artifactory.pojo.enums.FileChannelTypeEnum
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.service.utils.CommonUtils
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
+import java.io.File
+
+@Service
+class SampleStoreLogoServiceImpl : StoreLogoServiceImpl() {
+
+    override fun uploadStoreLogo(userId: String, file: File): Result<String?> {
+        val serviceUrlPrefix = client.getServiceUrl(ServiceFileResource::class)
+        return CommonUtils.serviceUploadFile(userId, serviceUrlPrefix, file, FileChannelTypeEnum.WEB_SHOW.name)
+    }
+}

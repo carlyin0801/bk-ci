@@ -24,15 +24,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.support.model.image
+package com.tencent.devops.artifactory
 
-import io.swagger.annotations.ApiModel
-import io.swagger.annotations.ApiModelProperty
+import com.tencent.devops.common.service.MicroService
+import com.tencent.devops.common.service.MicroServiceApplication
 
-@ApiModel("上传图片请求报文体")
-data class UploadImageRequest(
-    @ApiModelProperty("图片类型")
-    val imageType: String,
-    @ApiModelProperty("图片内容")
-    val imageContentStr: String
-)
+@MicroService
+class Application
+
+fun main(args: Array<String>) {
+    MicroServiceApplication.run(Application::class, args)
+}
