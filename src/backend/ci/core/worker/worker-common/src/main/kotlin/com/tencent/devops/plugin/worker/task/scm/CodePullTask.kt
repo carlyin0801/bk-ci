@@ -24,10 +24,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.plugin.worker.task
+package com.tencent.devops.plugin.worker.task.scm
 
 import com.tencent.devops.common.api.enums.ScmType
-import com.tencent.devops.plugin.worker.task.scm.SCM
 import com.tencent.devops.process.pojo.BuildTask
 import com.tencent.devops.process.pojo.BuildVariables
 import com.tencent.devops.worker.common.task.ITask
