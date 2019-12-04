@@ -193,6 +193,7 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
         }.forEach { path ->
             if (isRepoGray) {
                 val fileList = matchBkRepoFile(path, projectId, pipelineId, buildId, isCustom)
+                LogUtils.addLine(rabbitTemplate, buildId, "fileList: $fileList", taskId, containerId, executeCount)
                 val repoName = if (isCustom) "custom" else "pipeline"
                 fileList.forEach { bkrepoFile ->
                     LogUtils.addLine(rabbitTemplate, buildId, "匹配到文件：(${bkrepoFile.displayPath})", taskId, containerId, executeCount)
