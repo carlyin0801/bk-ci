@@ -27,10 +27,12 @@ package com.tencent.devops.common.notify.utils
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.tencent.devops.common.api.util.OkhttpUtils
 import com.tencent.devops.common.notify.DesUtil
 import com.tencent.devops.common.notify.enums.EnumEmailType
 import com.tencent.devops.common.notify.pojo.EmailNotifyPost
+import io.netty.handler.codec.base64.Base64Decoder
 import okhttp3.Headers
 import okhttp3.MediaType
 import okhttp3.MultipartBody
@@ -40,7 +42,9 @@ import okhttp3.RequestBody
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import sun.misc.BASE64Decoder
 import java.io.File
+import java.util.Base64
 import java.util.Random
 
 @Service
@@ -59,6 +63,7 @@ class TOFService @Autowired constructor(
 
     private val okHttpClient = OkHttpClient()
     private val random = Random()
+    private val decoder = BASE64Decoder()
 
     fun post(url: String, postData: Any, tofConf: Map<String, String>): TOFResult {
 
@@ -105,7 +110,7 @@ class TOFService @Autowired constructor(
         }
     }
 
-    fun postEmailFormData(url: String, postData: EmailNotifyPost, tofConf: Map<String, String>): TOFResult {
+    fun postCodeccEmailFormData(url: String, postData: EmailNotifyPost, tofConf: Map<String, String>): TOFResult {
         val headers = generateHeaders(tofConf["sys-id"] ?: "", tofConf["app-key"] ?: "")
         if (headers == null) {
             logger.error(String.format("TOF error, generate signature failure, url: %s", url))
@@ -122,8 +127,6 @@ class TOFService @Autowired constructor(
             "Priority" to postData.priority,
             "BodyFormat" to postData.bodyFormat.toString())
 
-        val file = File.createTempFile("tof-email-", postData.attachFile)
-        file.writeText(postData.attachFileContent ?: "")
         val taskBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("EmailType", params["EmailType"]!!)
@@ -135,15 +138,18 @@ class TOFService @Autowired constructor(
             .addFormDataPart("Title", params["Title"]!!)
             .addFormDataPart("Priority", params["Priority"]!!)
             .addFormDataPart("BodyFormat", params["BodyFormat"]!!)
-            .addFormDataPart("file",postData.attachFile, RequestBody.create(MultipartBody.FORM, file))
-            .build()
+
+        postData.codeccAttachFileContent!!.forEach { key, value ->
+            val fileBody = RequestBody.create(MultipartBody.FORM, decoder.decodeBuffer(value))
+            taskBody.addFormDataPart("file", key, fileBody)
+        }
 
         var responseBody = ""
         try {
              val taskRequest = Request.Builder()
                 .url(String.format("%s%s", tofConf["host"], "/api/v1/Message/SendMail"))
                 .headers(headers)
-                .post(taskBody)
+                .post(taskBody.build())
                 .build()
             OkhttpUtils.doHttp(taskRequest).use { response ->
                 responseBody = response.body()!!.string()
@@ -161,8 +167,6 @@ class TOFService @Autowired constructor(
         } catch (e: Throwable) {
             logger.error(String.format("TOF error, server response serialize failure, url: %s, response: %s", url, responseBody), e)
             return TOFResult("TOF error, server response serialize failure")
-        } finally {
-            if (file.exists()) file.delete()
         }
 
     }
