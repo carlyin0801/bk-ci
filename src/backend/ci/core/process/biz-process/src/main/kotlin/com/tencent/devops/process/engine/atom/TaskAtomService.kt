@@ -91,6 +91,12 @@ class TaskAtomService @Autowired(required = false) constructor(
                 jobId = task.containerHashId,
                 executeCount = task.executeCount ?: 1
             )
+            atomResponse = AtomResponse(
+                buildStatus = BuildStatus.FAILED,
+                errorType = t.errorType,
+                errorCode = t.errorCode,
+                errorMsg = "后台服务任务执行出错"
+            )
             logger.warn("[${task.buildId}]|Fail to execute the task [${task.taskName}]", t)
             atomResponse = AtomResponse(
                 buildStatus = BuildStatus.FAILED,
@@ -106,6 +112,12 @@ class TaskAtomService @Autowired(required = false) constructor(
                 tag = task.taskId,
                 jobId = task.containerHashId,
                 executeCount = task.executeCount ?: 1
+            )
+            atomResponse = AtomResponse(
+                buildStatus = BuildStatus.FAILED,
+                errorType = ErrorType.SYSTEM,
+                errorCode = AtomErrorCode.SYSTEM_DAEMON_INTERRUPTED,
+                errorMsg = "后台服务运行出错"
             )
             logger.warn("[${task.buildId}]|Fail to execute the task [${task.taskName}]", t)
             atomResponse = AtomResponse(
