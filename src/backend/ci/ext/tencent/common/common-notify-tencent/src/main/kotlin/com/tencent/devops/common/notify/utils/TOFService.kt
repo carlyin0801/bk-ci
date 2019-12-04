@@ -141,7 +141,7 @@ class TOFService @Autowired constructor(
         var responseBody = ""
         try {
              val taskRequest = Request.Builder()
-                .url("http://api.tof.oa.com/api/v1/Message/SendMail")
+                .url(String.format("%s%s", tofConf["host"], "/api/v1/Message/SendMail"))
                 .headers(headers)
                 .post(taskBody)
                 .build()
