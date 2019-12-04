@@ -317,8 +317,9 @@ class LogServiceV2 @Autowired constructor(
                         sourceMap["jobId"].toString() ?: "",
                         sourceMap["executeCount"]?.toString()?.toInt() ?: 1
                     )
-                    logs.add(logLine)
-                    sb.append(logs)
+//                    logs.add(logLine)
+//                    sb.append(logs)
+                    sb.append(logLine.message + System.lineSeparator())
                 }
                 output.write(sb.toString().toByteArray())
                 output.flush()
