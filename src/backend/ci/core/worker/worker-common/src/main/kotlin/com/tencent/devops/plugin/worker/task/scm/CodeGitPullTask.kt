@@ -24,11 +24,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.plugin.worker.task
+package com.tencent.devops.plugin.worker.task.scm
 
 import com.tencent.devops.common.api.enums.ScmType
-import com.tencent.devops.common.pipeline.pojo.element.agent.CodeSvnElement
+import com.tencent.devops.common.pipeline.pojo.element.agent.CodeGitElement
 import com.tencent.devops.worker.common.task.TaskClassType
 
-@TaskClassType(classTypes = [CodeSvnElement.classType])
-class CodeSvnPullTask : CodePullTask(ScmType.CODE_SVN)
+@TaskClassType(classTypes = [CodeGitElement.classType])
+class CodeGitPullTask : CodePullTask(ScmType.CODE_GIT)
