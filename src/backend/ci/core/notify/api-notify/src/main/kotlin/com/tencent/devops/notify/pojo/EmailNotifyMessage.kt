@@ -55,6 +55,10 @@ open class EmailNotifyMessage : BaseMessage() {
     var priority: EnumNotifyPriority = EnumNotifyPriority.HIGH
     @ApiModelProperty("通知来源", allowableValues = "0,1", dataType = "int")
     var source: EnumNotifySource = EnumNotifySource.BUSINESS_LOGIC
+    @ApiModelProperty("邮件附件")
+    var attachFile: String? = ""
+    @ApiModelProperty("邮件附件内容")
+    var attachFileContent: String? = ""
 
     fun addReceiver(receiver: String) {
         receivers.add(receiver)

@@ -77,8 +77,9 @@ class EmailServiceImpl @Autowired constructor(
         val retryCount = emailNotifyMessageWithOperation.retryCount
         val id = emailNotifyMessageWithOperation.id ?: UUIDUtil.generate()
         val tofConfs = configuration.getConfigurations(emailNotifyMessageWithOperation.tofSysId)
-        val result = tofService.post(
-            EMAIL_URL, emailNotifyPost, tofConfs!!)
+        val result = if (emailNotifyPost.attachFile != null) tofService.postEmailFormData(EMAIL_URL, emailNotifyPost, tofConfs!!)
+        else tofService.post(EMAIL_URL, emailNotifyPost, tofConfs!!)
+
         if (result.Ret == 0) {
             // 成功
             emailNotifyDao.insertOrUpdateEmailNotifyRecord(
@@ -216,6 +217,8 @@ class EmailServiceImpl @Autowired constructor(
             frequencyLimit = emailNotifyMessage.frequencyLimit
             tofSysId = emailNotifyMessage.tofSysId
             fromSysId = emailNotifyMessage.fromSysId
+            attachFile = emailNotifyMessage.attachFile
+            attachFileContent = emailNotifyMessage.attachFileContent
         }
 
         return post
