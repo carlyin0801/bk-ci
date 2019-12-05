@@ -241,17 +241,8 @@ class PreBuildService @Autowired constructor(
 
     fun getInitLogs(userId: String, pipelineId: String, buildId: String): QueryLogs {
         val projectId = getUserProjectId(userId)
-        val originLog = client.get(UserLogResource::class).getInitLogs(
-            userId = userId,
-            projectId = projectId,
-            pipelineId = pipelineId,
-            buildId = buildId,
-            isAnalysis = false,
-            queryKeywords = null,
-            tag = null,
-            jobId = null,
-            executeCount = null
-        ).data!!
+        val originLog = client.get(UserLogResource::class).getInitLogs(userId, projectId, pipelineId, buildId,
+                false, null, null, null, null).data!!
         val cleanLogs = mutableListOf<LogLine>()
         cleanLogs.addAll(originLog.logs.filterNot { it.message.contains("soda_fold") })
         return QueryLogs(originLog.buildId, originLog.finished, cleanLogs, originLog.timeUsed, originLog.status)
@@ -264,42 +255,6 @@ class PreBuildService @Autowired constructor(
         cleanLogs.addAll(originLog.logs.filterNot { it.message.contains("soda_fold") })
         return QueryLogs(originLog.buildId, originLog.finished, cleanLogs, originLog.timeUsed, originLog.status)
     }
-
-//    fun getTaskLogs(userId: String, preProjectId: String, buildId: String): QueryLogs {
-//        val prebuildProjRecord = getPreProjectInfo(preProjectId, userId)
-//        val model = client.get(ServicePipelineResource::class).get(userId, prebuildProjRecord.projectId, prebuildProjRecord.pipelineId, channelCode).data!!
-//        val logs: MutableList<LogLine> = mutableListOf()
-//        var finished = true
-//        run outer@{
-//            model.stages.forEach { s ->
-//                s.containers.forEach { c ->
-//                    if (c is VMBuildContainer) {
-//                        c.elements.forEach { e ->
-//                            val queryLogs = client.get(UserLogResource::class).getInitLogs(
-//                                userId = userId,
-//                                projectId = prebuildProjRecord.projectId,
-//                                pipelineId = prebuildProjRecord.pipelineId,
-//                                buildId = buildId,
-//                                isAnalysis = false,
-//                                queryKeywords = null,
-//                                tag = e.id,
-//                                jobId = null,
-//                                executeCount = null
-//                            ).data!!
-//                            if (queryLogs.status == LogStatus.SUCCEED) {
-//                                logs.addAll(queryLogs.logs.filterNot { it.message.contains("soda_fold") })
-//                            }
-//                            if (!queryLogs.finished) {
-//                                finished = false
-//                                return@outer
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        return QueryLogs(buildId, finished, logs)
-//    }
 
     private fun getPreProjectInfo(preProjectId: String, userId: String): TPrebuildProjectRecord {
         val preProjectRecord = prebuildProjectDao.get(dslContext, preProjectId, userId)

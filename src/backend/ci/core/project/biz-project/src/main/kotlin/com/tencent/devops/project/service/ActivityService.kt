@@ -32,9 +32,9 @@ import com.tencent.devops.project.constant.ProjectMessageCode
 import com.tencent.devops.project.dao.ActivityDao
 import com.tencent.devops.project.pojo.ActivityInfo
 import com.tencent.devops.project.pojo.ActivityStatus
+import com.tencent.devops.project.pojo.OPActivityUpdate
 import com.tencent.devops.project.pojo.OPActivityVO
 import com.tencent.devops.project.pojo.Result
-import com.tencent.devops.project.pojo.OPActivityUpdate
 import com.tencent.devops.project.pojo.enums.ActivityType
 import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
@@ -68,16 +68,15 @@ class ActivityService @Autowired constructor(
         val tActivityRecord = activityDao.get(dslContext, activityId)
 
         if (tActivityRecord != null) {
-            return Result(with(tActivityRecord) {
+            return Result(tActivityRecord.let {
                 OPActivityVO(
-                    id,
-                    name,
-                    englishName,
-                    link,
-                    type,
-                    status,
-                    creator,
-                    DateTimeUtil.toDateTime(createTime)
+                    id = it.id,
+                    name = it.name,
+                    englishName = it.englishName,
+                    link = it.link,
+                    type = it.type,
+                    status = it.status,
+                    creator = it.creator, createTime = DateTimeUtil.toDateTime(it.createTime)
                 )
             })
         }

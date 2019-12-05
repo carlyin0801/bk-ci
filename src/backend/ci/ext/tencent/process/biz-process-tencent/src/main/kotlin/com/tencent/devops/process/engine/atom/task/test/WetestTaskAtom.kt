@@ -41,9 +41,9 @@ import com.tencent.devops.common.service.utils.HomeHostUtil
 import com.tencent.devops.log.utils.LogUtils
 import com.tencent.devops.plugin.pojo.wetest.WetestAutoTestRequest
 import com.tencent.devops.plugin.pojo.wetest.WetestEmailGroup
+import com.tencent.devops.plugin.pojo.wetest.WetestInstStatus
 import com.tencent.devops.plugin.pojo.wetest.WetestTask
 import com.tencent.devops.plugin.pojo.wetest.WetestTaskInst
-import com.tencent.devops.plugin.pojo.wetest.WetestInstStatus
 import com.tencent.devops.process.engine.atom.AtomResponse
 import com.tencent.devops.process.engine.atom.IAtomTask
 import com.tencent.devops.process.engine.pojo.PipelineBuildTask
