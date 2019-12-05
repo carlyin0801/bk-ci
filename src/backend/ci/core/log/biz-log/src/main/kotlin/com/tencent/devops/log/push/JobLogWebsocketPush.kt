@@ -24,7 +24,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.log.websocket.push
+package com.tencent.devops.log.push
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tencent.devops.common.event.annotation.Event
@@ -40,10 +40,10 @@ import com.tencent.devops.log.service.v2.LogServiceV2
 import org.slf4j.LoggerFactory
 
 @Event(exchange = MQ.EXCHANGE_WEBSOCKET_TMP_FANOUT, routeKey = MQ.ROUTE_WEBSOCKET_TMP_EVENT)
-data class TagLogWebsocketPush(
+data class JobLogWebsocketPush(
     val buildId: String,
-    val tag: String,
-    var lastLineNo: Long,
+    val jobId: String,
+    val lineNo: Long,
     override val userId: String,
     override val pushType: WebSocketType,
     override val redisOperation: RedisOperation,
@@ -67,8 +67,8 @@ data class TagLogWebsocketPush(
     override fun buildMqMessage(): SendMessage? {
         return BuildLogMessage(
             buildId = buildId,
-            tagOrJobId = tag,
-            lineNo = lastLineNo,
+            tagOrJobId = jobId,
+            lineNo = lineNo,
             notifyPost = notifyPost,
             userId = userId,
             page = page,
@@ -81,15 +81,14 @@ data class TagLogWebsocketPush(
         try {
             val queryLogs = logService.queryMoreLogsAfterLine(
                 buildId = buildId,
-                start = lastLineNo,
+                start = lineNo,
                 isAnalysis = false,
                 keywordsStr = null,
-                tag = tag,
-                jobId = null,
+                tag = null,
+                jobId = jobId,
                 executeCount = null
             )
             notifyPost.message = objectMapper.writeValueAsString(queryLogs)
-            lastLineNo = queryLogs.logs[queryLogs.logs.lastIndex].lineNo
         } catch (e: Exception) {
             logger.error("BuildLogMessage:queryMoreLogsAfterLine error. message:${e.message}")
         }

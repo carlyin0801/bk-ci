@@ -45,8 +45,6 @@ import com.tencent.devops.log.model.pojo.enums.LogStatus
 import com.tencent.devops.log.model.pojo.enums.LogType
 import com.tencent.devops.log.util.Constants
 import com.tencent.devops.log.utils.LogDispatcher
-import okhttp3.ResponseBody
-import okio.BufferedSink
 import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.Settings

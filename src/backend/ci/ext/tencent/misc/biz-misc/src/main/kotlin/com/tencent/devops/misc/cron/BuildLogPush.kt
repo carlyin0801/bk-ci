@@ -26,19 +26,21 @@
 
 package com.tencent.devops.misc.cron
 
-import com.tencent.devops.common.redis.RedisLock
 import com.tencent.devops.common.redis.RedisOperation
-import com.tencent.devops.log.utils.LogPushRedisUtlis
-import com.tencent.devops.misc.service.AgentUpgradeService
+import com.tencent.devops.log.model.pojo.LogPushEvent
+import com.tencent.devops.log.utils.LogDispatcher
+import com.tencent.devops.log.websocket.BuildLogPageBuild
+import com.tencent.devops.log.websocket.LogPushRedisUtlis
 import org.slf4j.LoggerFactory
+import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
 @Component
 class BuildLogPush @Autowired constructor(
-    private val redisOperation: RedisOperation,
-    private val updateService: AgentUpgradeService
+    private val rabbitTemplate: RabbitTemplate,
+    private val redisOperation: RedisOperation
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BuildLogPush::class.java)
@@ -49,7 +51,20 @@ class BuildLogPush @Autowired constructor(
     fun excuteAllNewLogPush() {
         val pushStatus = LogPushRedisUtlis.getAllTagPushStatus(redisOperation)
         pushStatus.forEach {
-            it.buildId
+            with(it) {
+                val page = BuildLogPageBuild().buildTagPage(buildId, id)
+                logger.info("Job build log websocket: page[$page], buildId:[$buildId],tag:[$id]")
+                // 发送该Tag的一个空log事件
+                LogDispatcher.dispatch(
+                    rabbitTemplate = rabbitTemplate,
+                    event = LogPushEvent(
+                        buildId = buildId,
+                        logs = listOf(),
+                        id = id,
+                        lineNo = lastLineNum
+                    ))
+                LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, id, lastLineNum)
+            }
         }
     }
 }

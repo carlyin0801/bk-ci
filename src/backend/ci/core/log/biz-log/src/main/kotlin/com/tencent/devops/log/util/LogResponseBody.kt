@@ -6,7 +6,7 @@ import okio.BufferedSource
 
 class LogResponseBody : ResponseBody() {
     override fun contentLength(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
     }
 
     override fun contentType(): MediaType? {
@@ -14,7 +14,6 @@ class LogResponseBody : ResponseBody() {
     }
 
     override fun source(): BufferedSource {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
     }
 }
-
