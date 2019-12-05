@@ -43,20 +43,28 @@ class WebIDEStatusDao {
         ideVersion: String,
         serverCreateTime: Long,
         pipelineId: String,
-        ideLastUpdate: Long
+        ideLastUpdate: Long,
+        diskGB: String,
+        cpuCore: String,
+        memoryGB: String,
+        serverRegionName: String
     ) {
         with(TWebideIdeinfo.T_WEBIDE_IDEINFO) {
             dslContext.insertInto(
-            this,
-            OWNER,
-            IP,
-            SERVER_TYPE,
-            AGENT_STATUS,
-            IDE_STATUS,
-            IDE_VERSION,
-            SERVER_CREATE_TIME,
-            PIPELINE_ID,
-            IDE_LAST_UPDATE
+                    this,
+                    OWNER,
+                    IP,
+                    SERVER_TYPE,
+                    AGENT_STATUS,
+                    IDE_STATUS,
+                    IDE_VERSION,
+                    SERVER_CREATE_TIME,
+                    PIPELINE_ID,
+                    IDE_LAST_UPDATE,
+                    DISK_GB,
+                    CPU_CORE,
+                    MEMORY_GB,
+                    SERVER_REGION_NAME
             ).values(
                     owner,
                     ip,
@@ -66,7 +74,11 @@ class WebIDEStatusDao {
                     ideVersion,
                     serverCreateTime,
                     pipelineId,
-                    ideLastUpdate
+                    ideLastUpdate,
+                    diskGB,
+                    cpuCore,
+                    memoryGB,
+                    serverRegionName
             ).execute()
         }
     }
