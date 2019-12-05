@@ -142,6 +142,10 @@ class RedisOperation(private val redisTemplate: RedisTemplate<String, String>) {
         return redisTemplate.opsForHash<String, String>().values(key)
     }
 
+    fun hmaps(key: String): MutableMap<String, String>? {
+        return redisTemplate.opsForHash<String, String>().entries(key)
+    }
+
     fun <T> execute(action: RedisCallback<T>): T {
         return redisTemplate.execute(action)
     }

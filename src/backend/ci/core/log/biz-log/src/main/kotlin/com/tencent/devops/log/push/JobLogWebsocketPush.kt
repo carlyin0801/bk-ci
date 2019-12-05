@@ -24,7 +24,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.log.websocket.push
+package com.tencent.devops.log.push
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tencent.devops.common.event.annotation.Event
