@@ -33,10 +33,6 @@ import redis.clients.jedis.ScanParams
 import redis.clients.jedis.MultiKeyCommands
 import redis.clients.jedis.JedisCommands
 
-/**
- * deng
- * 2019-04-19
- */
 class RedisOperation(private val redisTemplate: RedisTemplate<String, String>) {
 
     // max expire time is 30 days

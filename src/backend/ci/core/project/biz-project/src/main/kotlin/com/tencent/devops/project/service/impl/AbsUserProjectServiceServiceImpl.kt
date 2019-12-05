@@ -62,23 +62,24 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
         if (tServiceRecord != null) {
             return Result(
                 ServiceVO(
-                    tServiceRecord.id ?: 0,
-                    tServiceRecord.name,
-                    tServiceRecord.link,
-                    tServiceRecord.linkNew,
-                    tServiceRecord.status, tServiceRecord.injectType,
-                    tServiceRecord.iframeUrl,
-                    tServiceRecord.cssUrl,
-                    tServiceRecord.jsUrl,
-                    tServiceRecord.grayCssUrl,
-                    tServiceRecord.grayJsUrl,
-                    tServiceRecord.showProjectList,
-                    tServiceRecord.showNav,
-                    tServiceRecord.projectIdType,
-                    favoriteDao.countFavorite(dslContext, userId, tServiceRecord.id) > 0,
-                    tServiceRecord.weight ?: 0,
-                    tServiceRecord.logoUrl,
-                    tServiceRecord.webSocket
+                    id = tServiceRecord.id ?: 0,
+                    name = MessageCodeUtil.getMessageByLocale(tServiceRecord.name, tServiceRecord.englishName),
+                    link = tServiceRecord.link,
+                    linkNew = tServiceRecord.linkNew,
+                    status = tServiceRecord.status, injectType = tServiceRecord.injectType,
+                    iframeUrl = tServiceRecord.iframeUrl,
+                    grayIframeUrl = tServiceRecord.grayIframeUrl,
+                    cssUrl = tServiceRecord.cssUrl,
+                    jsUrl = tServiceRecord.jsUrl,
+                    grayCssUrl = tServiceRecord.grayCssUrl,
+                    grayJsUrl = tServiceRecord.grayJsUrl,
+                    showProjectList = tServiceRecord.showProjectList,
+                    showNav = tServiceRecord.showNav,
+                    projectIdType = tServiceRecord.projectIdType,
+                    collected = favoriteDao.countFavorite(dslContext, userId, tServiceRecord.id) > 0,
+                    weigHt = tServiceRecord.weight ?: 0,
+                    logoUrl = tServiceRecord.logoUrl,
+                    webSocket = tServiceRecord.webSocket
                 )
             )
         } else {
@@ -96,7 +97,10 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
     /**
      * 批量修改服务url
      */
-    override fun updateServiceUrlByBatch(userId: String, serviceUrlUpdateInfoList: List<ServiceUrlUpdateInfo>?): Result<Boolean> {
+    override fun updateServiceUrlByBatch(
+        userId: String,
+        serviceUrlUpdateInfoList: List<ServiceUrlUpdateInfo>?
+    ): Result<Boolean> {
         if (serviceUrlUpdateInfoList == null) {
             return Result(data = true)
         }
@@ -120,34 +124,38 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
         val tServiceList = serviceDao.getServiceList(dslContext)
         val serviceVOList = ArrayList<OPPServiceVO>()
         tServiceList.map { tServiceRecord ->
-            serviceVOList.add(
-                OPPServiceVO(
-                    tServiceRecord.id,
-                    tServiceRecord.name ?: "",
-                    tServiceRecord.serviceTypeId,
-                    tServiceRecord.showProjectList,
-                    tServiceRecord.showNav,
-                    tServiceRecord.status,
-                    tServiceRecord.link,
-                    tServiceRecord.linkNew,
-                    tServiceRecord.injectType,
-                    tServiceRecord.iframeUrl,
-                    tServiceRecord.cssUrl,
-                    tServiceRecord.jsUrl,
-                    tServiceRecord.grayCssUrl,
-                    tServiceRecord.grayJsUrl,
-                    tServiceRecord.projectIdType,
-                        tServiceRecord.logoUrl,
-                        tServiceRecord.webSocket,
-                    tServiceRecord.createdUser ?: "",
-                    DateTimeUtil.toDateTime(tServiceRecord.createdTime),
-                    tServiceRecord.updatedUser ?: "",
-                    DateTimeUtil.toDateTime(tServiceRecord.updatedTime)
-                )
-            )
+            serviceVOList.add(genServiceVO(tServiceRecord))
         }
 
         return Result(serviceVOList)
+    }
+
+    private fun genServiceVO(tServiceRecord: TServiceRecord): OPPServiceVO {
+        return OPPServiceVO(
+            id = tServiceRecord.id,
+            name = tServiceRecord.name ?: "",
+            englishName = tServiceRecord.englishName ?: "",
+            serviceTypeId = tServiceRecord.serviceTypeId,
+            showProjectList = tServiceRecord.showProjectList,
+            showNav = tServiceRecord.showNav,
+            status = tServiceRecord.status,
+            link = tServiceRecord.link,
+            linkNew = tServiceRecord.linkNew,
+            injectType = tServiceRecord.injectType,
+            iframeUrl = tServiceRecord.iframeUrl,
+            grayIframeUrl = tServiceRecord.grayIframeUrl,
+            cssUrl = tServiceRecord.cssUrl,
+            jsUrl = tServiceRecord.jsUrl,
+            grayCssUrl = tServiceRecord.grayCssUrl,
+            grayJsUrl = tServiceRecord.grayJsUrl,
+            projectIdType = tServiceRecord.projectIdType,
+            logoUrl = tServiceRecord.logoUrl,
+            webSocket = tServiceRecord.webSocket,
+            createdUser = tServiceRecord.createdUser ?: "",
+            createdTime = DateTimeUtil.toDateTime(tServiceRecord.createdTime),
+            updatedUser = tServiceRecord.updatedUser ?: "",
+            updatedTime = DateTimeUtil.toDateTime(tServiceRecord.updatedTime)
+        )
     }
 
     /**
@@ -156,31 +164,7 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
     override fun createService(userId: String, serviceCreateInfo: ServiceCreateInfo): Result<OPPServiceVO> {
         val tServiceRecord = serviceDao.create(dslContext, userId, serviceCreateInfo)
         if (tServiceRecord != null) {
-            return Result(
-                OPPServiceVO(
-                    tServiceRecord.id,
-                    tServiceRecord.name ?: "",
-                    tServiceRecord.serviceTypeId,
-                    tServiceRecord.showProjectList,
-                    tServiceRecord.showNav,
-                    tServiceRecord.status,
-                    tServiceRecord.link,
-                    tServiceRecord.linkNew,
-                    tServiceRecord.injectType,
-                    tServiceRecord.iframeUrl,
-                    tServiceRecord.cssUrl,
-                    tServiceRecord.jsUrl,
-                    tServiceRecord.grayCssUrl,
-                    tServiceRecord.grayJsUrl,
-                    tServiceRecord.projectIdType,
-                        tServiceRecord.logoUrl,
-                        tServiceRecord.webSocket,
-                    tServiceRecord.createdUser ?: "",
-                    DateTimeUtil.toDateTime(tServiceRecord.createdTime),
-                    tServiceRecord.updatedUser ?: "",
-                    DateTimeUtil.toDateTime(tServiceRecord.updatedTime)
-                )
-            )
+            return Result(genServiceVO(tServiceRecord))
         }
         return Result(500, "服务添加失败")
     }
@@ -191,11 +175,21 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
     override fun updateCollected(userId: String, serviceId: Long, collector: Boolean): Result<Boolean> {
         if (collector) {
             if (favoriteDao.create(dslContext, userId, serviceId) > 0) {
-                return Result(0, MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.COLLECTION_SUCC), "", true)
+                return Result(
+                    status = 0,
+                    message = MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.COLLECTION_SUCC),
+                    requestId = "",
+                    result = true
+                )
             }
         } else {
             if (favoriteDao.delete(dslContext, userId, serviceId) > 0) {
-                return Result(0, MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.COLLECTION_CANCEL_SUCC), "", true)
+                return Result(
+                    status = 0,
+                    message = MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.COLLECTION_CANCEL_SUCC),
+                    requestId = "",
+                    result = true
+                )
             }
         }
         return Result(false)
@@ -215,7 +209,7 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
 
             serviceTypeMap.forEach { serviceType ->
                 val typeId = serviceType.id
-                val typeName = serviceType.title
+                val typeName = MessageCodeUtil.getMessageByLocale(serviceType.title, serviceType.englishTitle)
                 val services = ArrayList<ServiceVO>()
 
                 val s = groupService[typeId]
@@ -225,65 +219,58 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
                     val favor = favorServices.contains(it.id)
                     services.add(
                         ServiceVO(
-                            it.id,
-                            it.name ?: "",
-                            it.link ?: "",
-                            it.linkNew ?: "",
-                            status,
-                            it.injectType ?: "",
-                            it.iframeUrl ?: "",
-                            getCSSUrl(it, projectId),
-                            getJSUrl(it, projectId),
-                            it.grayCssUrl ?: "",
-                            it.grayJsUrl ?: "",
-                            it.showProjectList ?: false,
-                            it.showNav ?: false,
-                            it.projectIdType ?: "",
-                            favor,
-                            it.weight ?: 0,
-                            it.logoUrl,
-                            it.webSocket
+                            id = it.id,
+                            name = MessageCodeUtil.getMessageByLocale(it.name, it.englishName),
+                            link = it.link ?: "",
+                            linkNew = it.linkNew ?: "",
+                            status = status,
+                            injectType = it.injectType ?: "",
+                            iframeUrl = genUrl(url = it.iframeUrl, grayUrl = it.grayIframeUrl, projectId = projectId),
+                            grayIframeUrl = it.grayIframeUrl ?: "",
+                            cssUrl = genUrl(url = it.cssUrl, grayUrl = it.grayCssUrl, projectId = projectId),
+                            jsUrl = genUrl(url = it.jsUrl, grayUrl = it.grayJsUrl, projectId = projectId),
+                            grayCssUrl = it.grayCssUrl ?: "",
+                            grayJsUrl = it.grayJsUrl ?: "",
+                            showProjectList = it.showProjectList ?: false,
+                            showNav = it.showNav ?: false,
+                            projectIdType = it.projectIdType ?: "",
+                            collected = favor,
+                            weigHt = it.weight ?: 0,
+                            logoUrl = it.logoUrl,
+                            webSocket = it.webSocket
                         )
                     )
                 }
 
                 serviceListVO.add(
                     ServiceListVO(
-                        typeName,
-                        serviceType.weight ?: 0,
-                        services.sortedByDescending { it.weigHt })
+                        title = typeName,
+                        weigHt = serviceType.weight ?: 0,
+                        children = services.sortedByDescending { it.weigHt })
                 )
             }
 
-            return Result(0, "OK", serviceListVO)
+            return Result(code = 0, message = "OK", data = serviceListVO)
         } finally {
             logger.info("It took ${System.currentTimeMillis() - startEpoch}ms to list services")
         }
     }
 
-    // 获取CSS URL，包括灰度的
-    private fun getCSSUrl(record: TServiceRecord, projectId: String?): String {
+    /**
+     * 判断所在项目是灰度还是生产，并给出链接
+     * @param url 生产链接
+     * @param grayUrl 灰度链接
+     * @param projectId 项目id
+     */
+    private fun genUrl(url: String?, grayUrl: String?, projectId: String?): String {
         return if (gray.isGray() && !projectId.isNullOrBlank()) {
-            if (redisOperation.isMember(gray.getGrayRedisKey(), projectId!!)) {
-                record.grayCssUrl ?: record.cssUrl
+            if (gray.isGrayMatchProject(projectId!!, redisOperation)) {
+                grayUrl ?: url
             } else {
-                record.cssUrl
+                url
             }
         } else {
-            record.cssUrl
-        } ?: ""
-    }
-
-    // 获取 JS URL， 包括灰度的
-    private fun getJSUrl(record: TServiceRecord, projectId: String?): String {
-        return if (gray.isGray() && !projectId.isNullOrBlank()) {
-            if (redisOperation.isMember(gray.getGrayRedisKey(), projectId!!)) {
-                record.grayJsUrl ?: record.jsUrl
-            } else {
-                record.jsUrl
-            }
-        } else {
-            record.jsUrl
+            url
         } ?: ""
     }
 
@@ -299,7 +286,11 @@ abstract class AbsUserProjectServiceServiceImpl @Autowired constructor(
         }
     }
 
-    override fun updateServiceUrls(userId: String, name: String, serviceUpdateUrls: ServiceUpdateUrls): Result<Boolean> {
+    override fun updateServiceUrls(
+        userId: String,
+        name: String,
+        serviceUpdateUrls: ServiceUpdateUrls
+    ): Result<Boolean> {
         return Result(serviceDao.updateUrls(dslContext, userId, name, serviceUpdateUrls))
     }
 
