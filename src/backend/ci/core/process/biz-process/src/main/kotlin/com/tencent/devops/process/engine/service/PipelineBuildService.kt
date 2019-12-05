@@ -122,7 +122,7 @@ class PipelineBuildService(
     private val pipelinePermissionService: PipelinePermissionService,
     private val buildStartupParamService: BuildStartupParamService,
     private val paramService: ParamService,
-    private val parameterUtils: PswParameterUtils
+    private val parameterUtils: PswParameterUtils,
     private val pipelineBuildQualityService: PipelineBuildQualityService,
     private val rabbitTemplate: RabbitTemplate
 ) {
@@ -1408,23 +1408,6 @@ class PipelineBuildService(
             // 如果指定了版本号，则设置指定的版本号
             readyToBuildPipelineInfo.version = signPipelineVersion ?: readyToBuildPipelineInfo.version
 
-            val fullModel = pipelineBuildQualityService.fillingRuleInOutElement(
-                projectId = readyToBuildPipelineInfo.projectId,
-                pipelineId = readyToBuildPipelineInfo.pipelineId,
-                startParams = startParams,
-                model = model
-            )
-
-            val interceptResult = pipelineInterceptorChain.filter(
-                InterceptData(readyToBuildPipelineInfo, fullModel, startType)
-            )
-
-            if (interceptResult.isNotOk()) {
-                // 发送排队失败的事件
-                logger.error("[${readyToBuildPipelineInfo.pipelineId}]|START_PIPELINE_$startType|流水线启动失败:[${interceptResult.message}]")
-                throw OperationException("流水线启动失败![${interceptResult.message}]")
-            }
-
             val paramsWithType = startParamsWithType.plus(
                 BuildParameters(
                     PIPELINE_VERSION,
@@ -1495,8 +1478,26 @@ class PipelineBuildService(
                     }
                 )
 
-            val buildId = pipelineRuntimeService.startBuild(readyToBuildPipelineInfo, fullModel, paramsWithType)
             val startParams = paramsWithType.map { it.key to it.value }.toMap()
+
+            val fullModel = pipelineBuildQualityService.fillingRuleInOutElement(
+                projectId = readyToBuildPipelineInfo.projectId,
+                pipelineId = readyToBuildPipelineInfo.pipelineId,
+                startParams = startParams,
+                model = model
+            )
+
+            val interceptResult = pipelineInterceptorChain.filter(
+                InterceptData(readyToBuildPipelineInfo, fullModel, startType)
+            )
+
+            if (interceptResult.isNotOk()) {
+                // 发送排队失败的事件
+                logger.error("[${readyToBuildPipelineInfo.pipelineId}]|START_PIPELINE_$startType|流水线启动失败:[${interceptResult.message}]")
+                throw OperationException("流水线启动失败![${interceptResult.message}]")
+            }
+
+            val buildId = pipelineRuntimeService.startBuild(readyToBuildPipelineInfo, fullModel, paramsWithType)
             if (startParams.isNotEmpty()) {
                 buildStartupParamService.addParam(
                     projectId = readyToBuildPipelineInfo.projectId,
