@@ -49,7 +49,7 @@ class QualityControlPointDao {
                 .fetch()
             val filterResult = mutableListOf<TQualityControlPointRecord>()
             // 获取生产跑的，或者测试项目对应的
-            result.groupBy { it.elementType }.forEach { elementType, list ->
+            result?.groupBy { it.elementType }?.forEach { elementType, list ->
                 val testControlPoint = list.firstOrNull { it.testProject == projectId }
                 val prodControlPoint = list.firstOrNull { it.testProject.isNullOrBlank() }
                 if (testControlPoint != null) filterResult.add(testControlPoint)
