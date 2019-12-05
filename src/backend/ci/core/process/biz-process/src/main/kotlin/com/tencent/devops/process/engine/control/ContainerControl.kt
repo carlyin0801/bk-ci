@@ -427,7 +427,7 @@ class ContainerControl @Autowired constructor(
                         jobId = task.containerHashId,
                         executeCount = task.executeCount ?: 1
                     )
-                    
+
                     return@nextOne
                 } else {
                     containerFinalStatus = BuildStatus.RUNNING

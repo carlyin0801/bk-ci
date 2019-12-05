@@ -24,7 +24,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.log.websocket.page
+package com.tencent.devops.log.websocket
 
 class BuildLogPageBuild {
 

@@ -36,7 +36,7 @@ import com.tencent.devops.log.model.pojo.PageQueryLogs
 import com.tencent.devops.log.model.pojo.QueryLogs
 import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.service.v2.LogServiceV2
-import com.tencent.devops.log.utils.LogPushRedisUtlis
+import com.tencent.devops.log.websocket.LogPushRedisUtlis
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import javax.ws.rs.core.Response

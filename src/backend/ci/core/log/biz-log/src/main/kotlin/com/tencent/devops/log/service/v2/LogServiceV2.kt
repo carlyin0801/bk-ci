@@ -45,8 +45,6 @@ import com.tencent.devops.log.model.pojo.enums.LogStatus
 import com.tencent.devops.log.model.pojo.enums.LogType
 import com.tencent.devops.log.util.Constants
 import com.tencent.devops.log.utils.LogDispatcher
-import okhttp3.ResponseBody
-import okio.BufferedSink
 import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.Settings
@@ -300,7 +298,7 @@ class LogServiceV2 @Autowired constructor(
             .setScroll(TimeValue(1000 * 32))
             .setSize(4000)
             .get()
-        val times = 0
+        var times = 0
         val logStream = StreamingOutput { output ->
             do {
                 val sb = StringBuilder()
