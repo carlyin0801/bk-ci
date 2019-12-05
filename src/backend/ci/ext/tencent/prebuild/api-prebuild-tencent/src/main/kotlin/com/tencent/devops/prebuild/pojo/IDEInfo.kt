@@ -18,7 +18,15 @@ data class IDEInfo(
     @ApiModelProperty("机器类型")
     val serverType: String,
     @ApiModelProperty("服务器创建时间")
-    val serverCreateTime: Long
+    val serverCreateTime: Long,
+    @ApiModelProperty("服务器CPU核数")
+    val serverCpu: String,
+    @ApiModelProperty("服务器内存GB")
+    val serverMemory: String,
+    @ApiModelProperty("服务器磁盘GB")
+    val serverDisk: String,
+    @ApiModelProperty("服务器所在地区")
+    val serverRegionName: String
 )
 
 @ApiModel("IDEAgent请求")

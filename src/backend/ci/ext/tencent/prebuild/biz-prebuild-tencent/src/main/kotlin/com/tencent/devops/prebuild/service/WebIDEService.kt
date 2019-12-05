@@ -84,7 +84,19 @@ class WebIDEService @Autowired constructor(
 
                 var ideStatus = if (Math.abs(currTimeStamp - it.ideLastUpdate) < 13000) 1 else 0
                 // var ideStatus = if(Math.abs(currTimeStamp - 0) < 13000) 1 else 0
-                val info = IDEInfo(ideStatus, it.agentStatus, it.ip, ideUrl, it.ideVersion, it.serverType, it.serverCreateTime)
+                val info = IDEInfo(
+                        ideStatus,
+                        it.agentStatus,
+                        it.ip,
+                        ideUrl,
+                        it.ideVersion,
+                        it.serverType,
+                        it.serverCreateTime,
+                        it.cpuCore,
+                        it.memoryGb,
+                        it.diskGb,
+                        it.serverRegionName
+                )
                 ideList.add(info)
             } else {
                 webIDEStatusDao.del(dslContext, userId, it.ip)
@@ -97,7 +109,19 @@ class WebIDEService @Autowired constructor(
             devcloudInfo.forEach {
                 val date = SimpleDateFormat("yyyy-MM-dd hh:mm:ss").parse(it.value.createdAt)
                 val ideUrl = "http://dev.devgw.devops.oa.com/webide/$userId/${it.value.ip}/"
-                val info = IDEInfo(0, 0, it.value.ip, ideUrl, "0", it.value.res_type, date.time)
+                val info = IDEInfo(
+                        0,
+                        0,
+                        it.value.ip,
+                        ideUrl,
+                        "0",
+                        it.value.res_type,
+                        date.time,
+                        it.value.cpu,
+                        it.value.memory,
+                        it.value.disk,
+                        it.value.regionName
+                )
                 ideList.add(info)
                 addNewInfo(userId, info)
             }
@@ -243,7 +267,11 @@ class WebIDEService @Autowired constructor(
                 newItem.ideVersion,
                 newItem.serverCreateTime,
                 "",
-                0)
+                0,
+                newItem.serverDisk,
+                newItem.serverCpu,
+                newItem.serverMemory,
+                newItem.serverRegionName)
     }
 
     fun setupAgent(userId: String, projectId: String, ip: String): BuildId {
