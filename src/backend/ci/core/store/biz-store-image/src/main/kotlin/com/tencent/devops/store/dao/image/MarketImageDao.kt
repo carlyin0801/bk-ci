@@ -273,11 +273,11 @@ class MarketImageDao @Autowired constructor(
                     DSL.field(MarketImageSortTypeEnum.getSortType(sortType.name))
                 }
                 MarketImageSortTypeEnum.CREATE_TIME -> {
-                    //创建时间按照tImageFeature表计算
+                    // 创建时间按照tImageFeature表计算
                     tImageFeature.field(MarketImageSortTypeEnum.getSortType(sortType.name))
                 }
                 else -> {
-                    //更新时间按照tImage表计算
+                    // 更新时间按照tImage表计算
                     tImage.field(MarketImageSortTypeEnum.getSortType(sortType.name))
                 }
             }
@@ -325,7 +325,7 @@ class MarketImageDao @Autowired constructor(
             rdType = rdType,
             dslContext = dslContext
         )
-        //查的是最近已发布版本，一个imageCode只有一条记录
+        // 查的是最近已发布版本，一个imageCode只有一条记录
         val baseStep = dslContext.select(
             tImage.ID.count()
         ).from(tImage).leftJoin(tImageFeature).on(tImage.IMAGE_CODE.eq(tImageFeature.IMAGE_CODE))
@@ -1183,7 +1183,7 @@ class MarketImageDao @Autowired constructor(
         }
         // 隐含条件：已发布的镜像中最晚的一个
         val latestReleasedImage = dslContext.select(
-            tImage.ID.`as`(KEY_IMAGE_ID),
+            tImage.IMAGE_CODE.`as`(KEY_IMAGE_CODE),
             tImage.CREATE_TIME.max().`as`(KEY_CREATE_TIME)
         ).from(tImage).where(
             tImage.IMAGE_STATUS.eq(ImageStatusEnum.RELEASED.status.toByte())
@@ -1215,7 +1215,7 @@ class MarketImageDao @Autowired constructor(
             .leftJoin(tCategory).on(tImageCategoryRel.IMAGE_ID.eq(tCategory.ID))
             .leftJoin(tImageAgentType).on(tImage.IMAGE_CODE.eq(tImageAgentType.IMAGE_CODE))
             .join(latestReleasedImage).on(
-                tImage.ID.eq(latestReleasedImage.field(KEY_IMAGE_ID, String::class.java)).and(
+                tImage.IMAGE_CODE.eq(latestReleasedImage.field(KEY_IMAGE_CODE, String::class.java)).and(
                     tImage.CREATE_TIME.eq(latestReleasedImage.field(KEY_CREATE_TIME, LocalDateTime::class.java))
                 )
             )
@@ -1265,7 +1265,7 @@ class MarketImageDao @Autowired constructor(
         }
         // 隐含条件：已发布的镜像中最晚的一个
         val latestReleasedImage = dslContext.select(
-            tImage.ID.`as`(KEY_IMAGE_ID),
+            tImage.IMAGE_CODE.`as`(KEY_IMAGE_CODE),
             tImage.CREATE_TIME.max().`as`(KEY_CREATE_TIME)
         ).from(tImage).where(
             tImage.IMAGE_STATUS.eq(ImageStatusEnum.RELEASED.status.toByte())
@@ -1278,7 +1278,7 @@ class MarketImageDao @Autowired constructor(
             .leftJoin(tCategory).on(tImageCategoryRel.IMAGE_ID.eq(tCategory.ID))
             .leftJoin(tImageAgentType).on(tImage.IMAGE_CODE.eq(tImageAgentType.IMAGE_CODE))
             .join(latestReleasedImage).on(
-                tImage.ID.eq(latestReleasedImage.field(KEY_IMAGE_ID, String::class.java)).and(
+                tImage.IMAGE_CODE.eq(latestReleasedImage.field(KEY_IMAGE_CODE, String::class.java)).and(
                     tImage.CREATE_TIME.eq(latestReleasedImage.field(KEY_CREATE_TIME, LocalDateTime::class.java))
                 )
             )
