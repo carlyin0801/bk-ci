@@ -1169,7 +1169,7 @@ class LogServiceV2 @Autowired constructor(
         val logs = mutableListOf<LogLine>()
         val boolQueryBuilder = getQuery(buildId, tag, jobId, executeCount)
         logger.info("Get the query builder: $boolQueryBuilder")
-        var times = 0
+
         val response = client.prepareSearch(index)
             .setTypes(type)
             .setQuery(boolQueryBuilder)
@@ -1191,7 +1191,6 @@ class LogServiceV2 @Autowired constructor(
                 jobId = sourceMap["jobId"]?.toString() ?: "",
                 executeCount = sourceMap["executeCount"]?.toString()?.toInt() ?: 1
             )
-            logger.info("[$buildId|$tag] It is ${++times} times init log query.")
             logs.add(logLine)
         }
         logger.info("logs query time cost($type): ${System.currentTimeMillis() - startTime}")
