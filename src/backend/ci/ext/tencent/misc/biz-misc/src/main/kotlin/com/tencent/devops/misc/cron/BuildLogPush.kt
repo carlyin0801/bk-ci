@@ -24,19 +24,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-dependencies {
-    compile project(":core:common:common-web")
-    compile project(":core:common:common-db")
-    compile project(":core:common:common-environment-thirdpartyagent")
-    compile project(":core:common:common-client")
-    compile project(":core:common:common-auth:common-auth-api")
-    compile project(":core:environment:model-environment")
-    compile project(":core:environment:api-environment")
-    compile project(":core:artifactory:api-artifactory")
-    compile project(":core:notify:api-notify")
-    compile project(":core:image:api-image")
-    compile project(":core:project:api-project")
-    compile project(":core:log:api-log")
-    compile project(":ext:tencent:misc:api-misc")
-    compile ("org.json:json")
+package com.tencent.devops.misc.cron
+
+import com.tencent.devops.common.redis.RedisLock
+import com.tencent.devops.common.redis.RedisOperation
+import com.tencent.devops.log.utils.LogPushRedisUtlis
+import com.tencent.devops.misc.service.AgentUpgradeService
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
+
+@Component
+class BuildLogPush @Autowired constructor(
+    private val redisOperation: RedisOperation,
+    private val updateService: AgentUpgradeService
+) {
+    companion object {
+        private val logger = LoggerFactory.getLogger(BuildLogPush::class.java)
+        private const val LOCK_KEY = "env_cron_updateCanUpgradeAgentList"
+    }
+
+    @Scheduled(fixedDelay = 3000)
+    fun excuteAllNewLogPush() {
+        val pushStatus = LogPushRedisUtlis.getAllTagPushStatus(redisOperation)
+        pushStatus.forEach {
+            it.buildId
+        }
+    }
 }

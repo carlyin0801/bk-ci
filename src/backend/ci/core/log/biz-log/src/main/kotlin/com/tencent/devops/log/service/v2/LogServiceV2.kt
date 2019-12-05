@@ -285,6 +285,7 @@ class LogServiceV2 @Autowired constructor(
     }
 
     fun loadInitLogs(pipelineId: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): Response {
+        logger.info("[$buildId|$tag] loadInitLogs query start.")
 
         val indexAndType = indexServiceV2.getIndexAndType(buildId)
         val query = getQuery(buildId, tag, jobId, executeCount)
@@ -297,9 +298,9 @@ class LogServiceV2 @Autowired constructor(
             .addDocValueField("timestamp")
             .addSort("lineNo", SortOrder.ASC)
             .setScroll(TimeValue(1000 * 32))
-            .setSize(10000)
+            .setSize(4000)
             .get()
-
+        var times = 0
         val logStream = StreamingOutput { output ->
             do {
                 val sb = StringBuilder()
@@ -316,19 +317,21 @@ class LogServiceV2 @Autowired constructor(
                         sourceMap["jobId"].toString() ?: "",
                         sourceMap["executeCount"]?.toString()?.toInt() ?: 1
                     )
-                    logs.add(logLine)
-                    sb.append(logs)
+//                    logs.add(logLine)
+//                    sb.append(logs)
+                    sb.append(logLine.message + System.lineSeparator())
                 }
                 output.write(sb.toString().toByteArray())
                 output.flush()
+                logger.info("[$buildId|$tag] The ${++times} times query es.")
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
             } while (scrollResp.hits.hits.isNotEmpty())
         }
+        logger.info("[$buildId|$tag] loadInitLogs query end.")
 
         return Response
-            .ok(logStream, MediaType.APPLICATION_JSON)
-            .header("content-disposition", "attachment;")
+            .ok(logStream, MediaType.APPLICATION_OCTET_STREAM_TYPE)
             .header("Cache-Control", "no-cache")
             .build()
     }
