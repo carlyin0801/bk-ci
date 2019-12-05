@@ -798,7 +798,7 @@ class RepositoryService @Autowired constructor(
         projectId: String,
         scmType: ScmType?
     ): List<RepositoryInfoWithPermission> {
-        val dbRecords = repositoryDao.listByProject(dslContext, setOf(projectId), scmType, null, 0, 9999)
+        val dbRecords = repositoryDao.listByProject(dslContext, projectId, scmType)
         val gitRepoIds = dbRecords.filter { it.type == "CODE_GIT" }.map { it.repositoryId }.toSet()
         val gitAuthMap = repositoryCodeGitDao.list(dslContext, gitRepoIds)?.map { it.repositoryId to it }?.toMap()
 

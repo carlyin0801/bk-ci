@@ -45,6 +45,7 @@ class BuildCommitResourceImpl @Autowired constructor(
     }
 
     override fun getLatestCommit(
+        projectId: String,
         pipelineId: String,
         elementId: String,
         repositoryId: String,
@@ -52,7 +53,17 @@ class BuildCommitResourceImpl @Autowired constructor(
         page: Int?,
         pageSize: Int?
     ): Result<List<CommitData>> {
-        return Result(commitService.getLatestCommit(pipelineId, elementId, repositoryId, repositoryType, page, pageSize))
+        return Result(
+            commitService.getLatestCommit(
+                projectId = projectId,
+                pipelineId = pipelineId,
+                elementId = elementId,
+                repositoryId = repositoryId,
+                repositoryType = repositoryType,
+                page = page,
+                pageSize = pageSize
+            )
+        )
     }
 
     override fun getCommitsByBuildId(buildId: String, agentId: String): Result<List<CommitResponse>> {

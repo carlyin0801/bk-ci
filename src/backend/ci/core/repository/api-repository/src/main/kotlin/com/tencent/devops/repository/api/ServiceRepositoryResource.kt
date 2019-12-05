@@ -151,7 +151,7 @@ interface ServiceRepositoryResource {
         pageSize: Int?
     ): Result<Page<RepositoryInfo>>
 
-    @ApiOperation("获取项目代码库列表")
+    @ApiOperation("获取多个项目代码库列表")
     @POST
     @Path("/listByProjects")
     fun listByProjects(
@@ -163,6 +163,4 @@ interface ServiceRepositoryResource {
         @QueryParam("pageSize")
         pageSize: Int?
     ): Result<Page<RepositoryInfo>>
-
-
 }

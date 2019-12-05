@@ -1,3 +1,29 @@
+/*
+ * Tencent is pleased to support the open source community by making BK-CI 蓝鲸持续集成平台 available.
+ *
+ * Copyright (C) 2019 THL A29 Limited, a Tencent company.  All rights reserved.
+ *
+ * BK-CI 蓝鲸持续集成平台 is licensed under the MIT license.
+ *
+ * A copy of the MIT License is included in this file.
+ *
+ *
+ * Terms of the MIT License:
+ * ---------------------------------------------------
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+ * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+ * NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package com.tencent.devops.prebuild.service
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -84,7 +110,19 @@ class WebIDEService @Autowired constructor(
 
                 var ideStatus = if (Math.abs(currTimeStamp - it.ideLastUpdate) < 13000) 1 else 0
                 // var ideStatus = if(Math.abs(currTimeStamp - 0) < 13000) 1 else 0
-                val info = IDEInfo(ideStatus, it.agentStatus, it.ip, ideUrl, it.ideVersion, it.serverType, it.serverCreateTime)
+                val info = IDEInfo(
+                        ideStatus,
+                        it.agentStatus,
+                        it.ip,
+                        ideUrl,
+                        it.ideVersion,
+                        it.serverType,
+                        it.serverCreateTime,
+                        it.cpuCore,
+                        it.memoryGb,
+                        it.diskGb,
+                        it.serverRegionName
+                )
                 ideList.add(info)
             } else {
                 webIDEStatusDao.del(dslContext, userId, it.ip)
@@ -97,7 +135,19 @@ class WebIDEService @Autowired constructor(
             devcloudInfo.forEach {
                 val date = SimpleDateFormat("yyyy-MM-dd hh:mm:ss").parse(it.value.createdAt)
                 val ideUrl = "http://dev.devgw.devops.oa.com/webide/$userId/${it.value.ip}/"
-                val info = IDEInfo(0, 0, it.value.ip, ideUrl, "0", it.value.res_type, date.time)
+                val info = IDEInfo(
+                        0,
+                        0,
+                        it.value.ip,
+                        ideUrl,
+                        "0",
+                        it.value.res_type,
+                        date.time,
+                        it.value.cpu,
+                        it.value.memory,
+                        it.value.disk,
+                        it.value.regionName
+                )
                 ideList.add(info)
                 addNewInfo(userId, info)
             }
@@ -243,7 +293,11 @@ class WebIDEService @Autowired constructor(
                 newItem.ideVersion,
                 newItem.serverCreateTime,
                 "",
-                0)
+                0,
+                newItem.serverDisk,
+                newItem.serverCpu,
+                newItem.serverMemory,
+                newItem.serverRegionName)
     }
 
     fun setupAgent(userId: String, projectId: String, ip: String): BuildId {

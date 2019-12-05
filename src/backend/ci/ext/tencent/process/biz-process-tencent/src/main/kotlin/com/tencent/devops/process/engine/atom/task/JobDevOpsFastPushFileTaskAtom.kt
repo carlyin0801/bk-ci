@@ -97,7 +97,6 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
         runVariables: Map<String, String>,
         force: Boolean
     ): AtomResponse {
-
         val taskInstanceId = task.taskParams[JOB_TASK_ID]?.toString()?.toLong()
             ?: return if (force) defaultFailAtomResponse else AtomResponse(task.status)
 
@@ -607,15 +606,19 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
     ): List<BkRepoFile> {
         val result = mutableListOf<BkRepoFile>()
         val bkRepoData = getAllBkRepoFiles(projectId, pipelineId, buildId, isCustom)
+        logger.info("bkRepoData: $bkRepoData")
+        logger.info("srcPath: $srcPath")
         val matcher = FileSystems.getDefault().getPathMatcher("glob:$srcPath")
-        val pipelinePathPrefix = "/$pipelineId/$buildId"
-        bkRepoData.data?.forEach { bkrepoFile ->
+        val pipelinePathPrefix = "/$pipelineId/$buildId/"
+        bkRepoData.data.forEach { bkrepoFile ->
             val repoPath = if (isCustom) {
                 bkrepoFile.fullPath.removePrefix("/")
             } else {
                 bkrepoFile.fullPath.removePrefix(pipelinePathPrefix)
             }
+            logger.info("match: repoPath: $repoPath, Paths.get(repoPath) ${Paths.get(repoPath)}")
             if (matcher.matches(Paths.get(repoPath))) {
+                logger.info("matchFile: $bkrepoFile")
                 bkrepoFile.displayPath = repoPath
                 result.add(bkrepoFile)
             }
