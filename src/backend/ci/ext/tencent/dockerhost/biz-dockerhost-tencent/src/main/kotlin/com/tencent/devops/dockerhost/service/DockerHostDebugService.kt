@@ -227,7 +227,6 @@ class DockerHostDebugService(
     }
 
     fun stopContainer(containerInfo: ContainerInfo) {
-//        val dockerCli = CommonUtils.getDockerDefaultClient(dockerHostConfig)
         try {
             // docker stop
             val inspectInfo = dockerCli.inspectContainerCmd(containerInfo.containerId).exec()
@@ -248,7 +247,6 @@ class DockerHostDebugService(
 
     fun getContainerNum(): Int {
         try {
-//            val dockerCli = CommonUtils.getDockerDefaultClient(dockerHostConfig)
             val dockerInfo = dockerCli.infoCmd().exec()
             return dockerInfo.containersRunning ?: 0
         } catch (e: Throwable) {

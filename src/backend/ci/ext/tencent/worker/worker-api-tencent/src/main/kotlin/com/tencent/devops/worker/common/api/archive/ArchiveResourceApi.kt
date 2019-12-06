@@ -103,7 +103,6 @@ class ArchiveResourceApi : AbstractBuildResourceApi(), ArchiveSDKApi {
             } else {
                 jfrogResourceApi.getAllFiles(buildId, pipelineId, buildId)
             }
-
             LoggerService.addNormalLine("scan file($customFilePath) in repo...")
             val matcher = FileSystems.getDefault()
                 .getPathMatcher("glob:" + customFilePath)
