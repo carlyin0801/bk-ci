@@ -1571,7 +1571,8 @@ class PipelineBuildService(
                 stageId = stageId!!,
                 containerId = vmSeqId,
                 containerType = containerType,
-                actionType = ActionType.TERMINATE
+                actionType = ActionType.TERMINATE,
+                reason = errorMsg
             )
         )
     }
