@@ -53,6 +53,7 @@ import com.tencent.devops.prebuild.dao.WebIDEOpenDirDao
 import com.tencent.devops.prebuild.dao.WebIDEStatusDao
 import com.tencent.devops.prebuild.pojo.DevcloudUserRes
 import com.tencent.devops.prebuild.pojo.IDEInfo
+import com.tencent.devops.prebuild.pojo.SingleDevcloudUserRes
 import com.tencent.devops.prebuild.pojo.UserResItem
 import com.tencent.devops.prebuild.pojo.ide.IdeDirInfo
 import com.tencent.devops.process.api.service.ServiceBuildResource
@@ -441,13 +442,9 @@ class WebIDEService @Autowired constructor(
                 throw RuntimeException("fail to get devcloud info by ip $ip")
             }
             logger.info("get devcloud content by ip $ip: $responseContent")
-            val devCloudUserRes = jacksonObjectMapper().readValue<DevcloudUserRes>(responseContent)
+            val devCloudUserRes = jacksonObjectMapper().readValue<SingleDevcloudUserRes>(responseContent)
             if (devCloudUserRes.actionCode == 200) {
-                val listSize = devCloudUserRes.data.items.size
-                if(listSize != 1) {
-                    logger.error("unexpected, get $listSize record by devcloud ip")
-                }
-                val userResItem = devCloudUserRes.data.items[0]
+                val userResItem = devCloudUserRes.data
                 return userResItem
             }
         }

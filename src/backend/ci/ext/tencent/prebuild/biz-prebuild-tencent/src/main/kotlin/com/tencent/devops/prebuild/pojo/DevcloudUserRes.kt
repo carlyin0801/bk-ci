@@ -50,3 +50,9 @@ data class UserResData(
     val items: ArrayList<UserResItem>,
     val total: Int
 )
+
+data class SingleDevcloudUserRes(
+    val data: UserResItem,
+    val actionMessage: String,
+    val actionCode: Int
+)
