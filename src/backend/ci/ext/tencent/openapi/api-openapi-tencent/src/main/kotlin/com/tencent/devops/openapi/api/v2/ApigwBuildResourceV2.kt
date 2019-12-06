@@ -29,6 +29,8 @@ import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_USER_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_USER_ID_DEFAULT_VALUE
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.openapi.api.external.measure.PipelineBuildResponseData
 import com.tencent.devops.process.pojo.BuildHistoryWithVars
@@ -46,6 +48,7 @@ import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
 import javax.ws.rs.QueryParam
 import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.Response
 
 @Api(tags = ["OPEN_API_V2_BUILD"], description = "OPEN-API-V2-构建资源")
 @Path("/{apigw:apigw-user|apigw-app|apigw}/v2/builds")
@@ -138,4 +141,33 @@ interface ApigwBuildResourceV2 {
         @PathParam("buildId")
         buildId: String
     ): Result<BuildHistoryWithVars>
+
+
+    @ApiOperation("下载构建日志")
+    @GET
+    @Path("/projects/{projectId}/pipelines/{pipelineId}/builds/{buildId}/download")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    fun downloadLogs(
+        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("对应element ID", required = false)
+        @QueryParam("tag")
+        tag: String?,
+        @ApiParam("对应jobId", required = false)
+        @QueryParam("jobId")
+        jobId: String?,
+        @ApiParam("执行次数", required = false)
+        @QueryParam("executeCount")
+        executeCount: Int?
+    ): Response
 }
