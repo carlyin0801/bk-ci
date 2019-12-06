@@ -141,7 +141,11 @@ class BuildMonitorControl @Autowired constructor(
 
         interval = (timeoutMills - usedTimeMills).toInt()
         if (interval <= 0) {
-            val tag = "j-$containerId"
+            val tag = if (containerType == "normal") {
+                "TIME_OUT_Job#$containerId(N)"
+            } else {
+                "TIME_OUT_Job#$containerId"
+            }
             val errorInfo = MessageCodeUtil.generateResponseDataObject<String>(
                 messageCode = ERROR_TIMEOUT_IN_RUNNING.toString(),
                 params = arrayOf("Job", "$minute")
