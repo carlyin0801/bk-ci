@@ -427,7 +427,7 @@ class WebIDEService @Autowired constructor(
         }
         return null
     }
-/*
+
     fun reportDevcloudIp(ip: String): Boolean {
         //1. 通过ip地址查询该机器的用户
         val userDevcloudInfo = getDevcloudUserByIp(ip)
@@ -436,10 +436,12 @@ class WebIDEService @Autowired constructor(
             return false
         }
 
+        logger.info("this ip$ip belongs to $userDevcloudInfo.operator")
+
         //2. 用户名注册蓝盾项目并添加管理员权限
 
         //3. 建立devcloud机器信息
-        val agentInstallLink = client.get(WebIDEResource::class).getAgentInstallLink(
+/*        val agentInstallLink = client.get(WebIDEResource::class).getAgentInstallLink(
                 userDevcloudInfo.operator,
                 "projectId",
                 "regionName",
@@ -447,7 +449,7 @@ class WebIDEService @Autowired constructor(
                 ip
         )
 
-        agentInstallLink.data.link
+        agentInstallLink.data.link*/
 
         //4. 新建agent节点，获得agentid，改写cvm内预置的agent套件（项目id，agentid）相关信息
 
@@ -456,7 +458,8 @@ class WebIDEService @Autowired constructor(
         //6. 触发流水线，部署服务
 
         //7. 检测连通情况
+        return true
     }
-    */
+
 
 }

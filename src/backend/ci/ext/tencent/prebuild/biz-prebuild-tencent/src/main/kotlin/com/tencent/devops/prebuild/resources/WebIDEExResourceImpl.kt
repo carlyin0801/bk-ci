@@ -13,6 +13,6 @@ class WebIDEExResourceImpl @Autowired constructor(private val webIDEService: Web
     }
 
     override fun devcloudIp(ip: String): Result<Boolean> {
-        return Result(false)
+        return Result(webIDEService.reportDevcloudIp(ip))
     }
 }
