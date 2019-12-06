@@ -37,6 +37,7 @@ import com.tencent.devops.process.api.service.ServicePipelineResource
 import com.tencent.devops.quality.api.v2.ServiceQualityInterceptResource
 import com.tencent.devops.quality.api.v2.pojo.enums.QualityOperation
 import com.tencent.devops.quality.constant.codeccToolUrlPathMap
+import com.tencent.devops.quality.api.v2.ServiceQualityIndicatorResource
 
 object QualityUtils {
     fun getQualityGitMrResult(client: Client, event: GitCommitCheckEvent): Pair<List<String>, MutableMap<String, MutableList<List<String>>>> {
