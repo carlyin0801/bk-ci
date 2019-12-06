@@ -34,7 +34,6 @@ import com.tencent.devops.common.service.utils.HomeHostUtil
 import com.tencent.devops.plugin.api.pojo.GitCommitCheckEvent
 import com.tencent.devops.plugin.codecc.api.ServiceCodeccElementResource
 import com.tencent.devops.process.api.service.ServicePipelineResource
-import com.tencent.devops.quality.api.v2.ServiceQualityIndicatorResource
 import com.tencent.devops.quality.api.v2.ServiceQualityInterceptResource
 import com.tencent.devops.quality.api.v2.pojo.enums.QualityOperation
 import com.tencent.devops.quality.constant.codeccToolUrlPathMap
