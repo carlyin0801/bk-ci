@@ -45,11 +45,9 @@ import com.tencent.devops.common.pipeline.pojo.element.agent.LinuxScriptElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.ManualTriggerElement
 import com.tencent.devops.common.pipeline.type.agent.AgentType
 import com.tencent.devops.common.pipeline.type.agent.ThirdPartyAgentIDDispatchType
-import com.tencent.devops.environment.api.ServiceNodeResource
+import com.tencent.devops.environment.api.UserNodeResource
 import com.tencent.devops.environment.api.thirdPartyAgent.ServicePreBuildAgentResource
-import com.tencent.devops.environment.api.thirdPartyAgent.ServiceThirdPartyAgentResource
-import com.tencent.devops.environment.pojo.enums.NodeType
-import com.tencent.devops.environment.pojo.thirdPartyAgent.ThirdPartyAgentInfo
+import com.tencent.devops.environment.pojo.NodeWithPermission
 import com.tencent.devops.environment.pojo.thirdPartyAgent.ThirdPartyAgentStaticInfo
 import com.tencent.devops.prebuild.dao.WebIDEOpenDirDao
 import com.tencent.devops.prebuild.dao.WebIDEStatusDao
@@ -161,7 +159,7 @@ class WebIDEService @Autowired constructor(
     }
 
     private fun updateAgentStatus(userID: String, projectID: String, ideList: List<IDEInfo>) {
-        val nodeInfoList = client.get(ServiceNodeResource::class).listNodeByNodeType(projectID, NodeType.THIRDPARTY)
+        val nodeInfoList = client.get(UserNodeResource::class).list(userID, projectID)
         if (nodeInfoList.isNotOk()) {
             logger.error("list user third party node failed")
             throw OperationException("list user third party node failed")
@@ -184,9 +182,10 @@ class WebIDEService @Autowired constructor(
         }
     }
 
-    private fun getAgentInfo(userId: String, projectId: String, ip: String): ThirdPartyAgentInfo {
-        // val nodeInfoList = client.get(ServiceNodeResource::class).listNodeByNodeType(projectId, NodeType.THIRDPARTY)
-        val nodeInfoList = client.get(ServiceThirdPartyAgentResource::class).listAgents(userId, projectId, OS.LINUX)
+    private fun getAgentInfo(userId: String, projectId: String, ip: String): NodeWithPermission {
+        //val nodeInfoList = client.get(ServiceNodeResource::class).listNodeByNodeType(projectId, NodeType.THIRDPARTY)
+        //val nodeInfoList = client.get(ServiceThirdPartyAgentResource::class).listAgents(userId, projectId, OS.LINUX)
+        val nodeInfoList = client.get(UserNodeResource::class).list(userId, projectId)
         if (nodeInfoList.isNotOk()) {
             logger.error("list user third party node failed")
             throw OperationException("list user third party node failed")
@@ -200,7 +199,7 @@ class WebIDEService @Autowired constructor(
             throw OperationException("can not find specific agent by projectId:$projectId and ip:$ip")
         }
 
-        logger.info("succ get agent info by ip:$ip, nodeID:${agentInfo.agentId}")
+        logger.info("succ get agent info by ip:$ip, nodeID:${agentInfo.nodeHashId}")
         return agentInfo
     }
 
@@ -302,7 +301,7 @@ class WebIDEService @Autowired constructor(
 
     fun setupAgent(userId: String, projectId: String, ip: String): BuildId {
         // 创建手动触发流水线
-        val agentId = getAgentInfo(userId, projectId, ip).agentId
+        val agentId = getAgentInfo(userId, projectId, ip).nodeHashId
         var pipelineId = isPipelineExist(userId, projectId, ip)
         if (pipelineId == "") {
             pipelineId = createAgentPipeline(userId, projectId, agentId, ip)
