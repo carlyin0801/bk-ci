@@ -23,30 +23,35 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+package com.tencent.devops.openapi.api.v2.user
 
-package com.tencent.devops.process.pojo.mq
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.store.pojo.template.InstallTemplateReq
+import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
+import io.swagger.annotations.ApiParam
+import javax.ws.rs.Consumes
+import javax.ws.rs.HeaderParam
+import javax.ws.rs.POST
+import javax.ws.rs.Path
+import javax.ws.rs.Produces
+import javax.ws.rs.core.MediaType
 
-import com.tencent.devops.common.event.annotation.Event
-import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
-import com.tencent.devops.common.event.enums.ActionType
-import com.tencent.devops.common.event.pojo.pipeline.IPipelineEvent
+@Api(tags = ["OPEN_API_MARKET"], description = "OPEN-API-研发市场资源User类接口")
+@Path("/apigw-user/v2/market")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+interface ApigwUserMarketTemplateResourceV2 {
 
-/**
- * Container事件
- *
- * @version 1.0
- */
-@Event(MQ.ENGINE_PROCESS_LISTENER_EXCHANGE, MQ.ROUTE_PIPELINE_BUILD_CONTAINER)
-data class PipelineBuildContainerEvent(
-    override val source: String,
-    override val projectId: String,
-    override val pipelineId: String,
-    override val userId: String,
-    val buildId: String,
-    val stageId: String,
-    val containerId: String,
-    val containerType: String,
-    override var actionType: ActionType,
-    override var delayMills: Int = 0,
-    val reason: String? = null
-) : IPipelineEvent(actionType, source, projectId, pipelineId, userId, delayMills)
+    @ApiOperation("安装研发商店模板到项目")
+    @POST
+    @Path("/template/installFromStore")
+    fun installTemplateFromStore(
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("安装研发商店模板到项目请求报文体", required = true)
+        installTemplateReq: InstallTemplateReq
+    ): Result<Boolean>
+}

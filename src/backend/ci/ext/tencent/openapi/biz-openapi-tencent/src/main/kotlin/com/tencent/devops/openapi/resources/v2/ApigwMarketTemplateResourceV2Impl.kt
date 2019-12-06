@@ -23,30 +23,28 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+package com.tencent.devops.openapi.resources.v2
 
-package com.tencent.devops.process.pojo.mq
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.client.Client
+import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.openapi.api.v2.ApigwMarketTemplateResourceV2
+import com.tencent.devops.store.api.template.ServiceTemplateResource
+import com.tencent.devops.store.pojo.template.InstallTemplateReq
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 
-import com.tencent.devops.common.event.annotation.Event
-import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
-import com.tencent.devops.common.event.enums.ActionType
-import com.tencent.devops.common.event.pojo.pipeline.IPipelineEvent
+@RestResource
+class ApigwMarketTemplateResourceV2Impl @Autowired constructor(
+    private val client: Client
+) : ApigwMarketTemplateResourceV2 {
 
-/**
- * Container事件
- *
- * @version 1.0
- */
-@Event(MQ.ENGINE_PROCESS_LISTENER_EXCHANGE, MQ.ROUTE_PIPELINE_BUILD_CONTAINER)
-data class PipelineBuildContainerEvent(
-    override val source: String,
-    override val projectId: String,
-    override val pipelineId: String,
-    override val userId: String,
-    val buildId: String,
-    val stageId: String,
-    val containerId: String,
-    val containerType: String,
-    override var actionType: ActionType,
-    override var delayMills: Int = 0,
-    val reason: String? = null
-) : IPipelineEvent(actionType, source, projectId, pipelineId, userId, delayMills)
+    override fun installTemplateFromStore(userId: String, installTemplateReq: InstallTemplateReq): Result<Boolean> {
+        //可见与可安装鉴权在store服务marketTemplateService中已实现
+        return client.get(ServiceTemplateResource::class).installTemplate(userId, installTemplateReq)
+    }
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(ApigwMarketTemplateResourceV2Impl::class.java)
+    }
+}
