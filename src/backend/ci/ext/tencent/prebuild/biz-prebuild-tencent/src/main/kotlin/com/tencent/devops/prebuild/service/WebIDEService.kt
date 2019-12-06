@@ -398,4 +398,66 @@ class WebIDEService @Autowired constructor(
         webIDEOpenDirDao.update(dslContext, userId, ip, path)
         return true
     }
+
+    private fun getDevcloudUserByIp(ip: String): UserResItem? {
+        val url = "http://oss.esb.oa.com/devops-dev/devcloud/api/v1/resource/info?ip=$ip"
+        val infoMap = HashMap<String, UserResItem>()
+        logger.info(url)
+        val request = Request.Builder()
+                .url(url)
+                .headers(Headers.of(makeDevCloudAPIHeaders("10004", "Eeav59x*xFki46B0")))
+                .get()
+                .build()
+        OkhttpUtils.doHttp(request).use { response ->
+            val responseContent = response.body()!!.string()
+            if (!response.isSuccessful) {
+                logger.info("response code: ${response.code()}")
+                logger.info("response: $responseContent")
+                throw RuntimeException("fail to get devcloud info by ip $ip")
+            }
+            logger.info("get devcloud content by ip $ip: $responseContent")
+            val devCloudUserRes = jacksonObjectMapper().readValue<DevcloudUserRes>(responseContent)
+            if (devCloudUserRes.actionCode == 200) {
+                val listSize = devCloudUserRes.data.items.size
+                if(listSize != 1) {
+                    logger.error("unexpected, get $listSize record by devcloud ip")
+                }
+                val userResItem = devCloudUserRes.data.items[0]
+                return userResItem
+            }
+        }
+        return null
+    }
+/*
+    fun reportDevcloudIp(ip: String): Boolean {
+        //1. 通过ip地址查询该机器的用户
+        val userDevcloudInfo = getDevcloudUserByIp(ip)
+        if(userDevcloudInfo == null) {
+            logger.error("unexpected, failed to get devcloud info by ip $ip")
+            return false
+        }
+
+        //2. 用户名注册蓝盾项目并添加管理员权限
+
+        //3. 建立devcloud机器信息
+        val agentInstallLink = client.get(WebIDEResource::class).getAgentInstallLink(
+                userDevcloudInfo.operator,
+                "projectId",
+                "regionName",
+                "operationName",
+                ip
+        )
+
+        agentInstallLink.data.link
+
+        //4. 新建agent节点，获得agentid，改写cvm内预置的agent套件（项目id，agentid）相关信息
+
+        //5. 启动agent，检测agent状态是否正常
+
+        //6. 触发流水线，部署服务
+
+        //7. 检测连通情况
+    }
+    */
+
 }
