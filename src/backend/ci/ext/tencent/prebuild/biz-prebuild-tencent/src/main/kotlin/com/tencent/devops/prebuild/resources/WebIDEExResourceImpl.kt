@@ -37,4 +37,8 @@ class WebIDEExResourceImpl @Autowired constructor(private val webIDEService: Web
     override fun heartBeat(userId: String, ip: String, version: String): Result<Boolean> {
         return Result(webIDEService.heartBeat(userId, ip, version))
     }
+
+    override fun devcloudIp(ip: String): Result<Boolean> {
+        return Result(false)
+    }
 }
