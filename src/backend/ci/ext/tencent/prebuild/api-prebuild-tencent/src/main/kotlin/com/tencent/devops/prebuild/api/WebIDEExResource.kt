@@ -59,4 +59,13 @@ interface WebIDEExResource {
         @ApiParam(value = "IDE实例的版本", required = true)
         version: String
     ): Result<Boolean>
+
+    @GET
+    @Path("/devcloudIp")
+    @ApiOperation("上报devcloud ip地址")
+    fun devcloudIp(
+            @QueryParam("ip")
+            @ApiParam(value = "devcloud ip地址", required = true)
+            ip: String
+    ): Result<Boolean>
 }

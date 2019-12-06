@@ -31,9 +31,9 @@ import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.websocket.enum.NotityLevel
 import com.tencent.devops.common.websocket.pojo.NotifyPost
 import com.tencent.devops.common.websocket.pojo.WebSocketType
-import com.tencent.devops.log.websocket.push.JobLogWebsocketPush
-import com.tencent.devops.log.websocket.page.BuildLogPageBuild
-import com.tencent.devops.log.websocket.push.TagLogWebsocketPush
+import com.tencent.devops.log.websocket.BuildLogPageBuild
+import com.tencent.devops.log.push.JobLogWebsocketPush
+import com.tencent.devops.log.push.TagLogWebsocketPush
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service

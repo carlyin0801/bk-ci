@@ -34,6 +34,8 @@ import com.tencent.devops.log.model.message.LogMessageWithLineNo
 data class LogPushEvent(
     override val buildId: String,
     val logs: List<LogMessageWithLineNo>,
+    val id: String? = null,
+    val lineNo: Long? = null,
     override val retryTime: Int = 2,
     override val delayMills: Int = 0
 ) : ILogEvent(buildId, retryTime, delayMills)

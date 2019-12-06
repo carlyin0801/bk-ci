@@ -137,7 +137,7 @@ class ServiceRepositoryResourceImpl @Autowired constructor(
         val pageSizeNotNull = pageSize ?: 20
 
         val limit = PageUtil.convertPageSizeToSQLLimit(pageNotNull, pageSizeNotNull)
-        val result = repositoryService.listByProject(projectId, repositoryType, limit.offset, limit.limit)
+        val result = repositoryService.listByProject(setOf(projectId), repositoryType, limit.offset, limit.limit)
         return Result(Page(pageNotNull, pageSizeNotNull, result.count, result.records))
     }
 

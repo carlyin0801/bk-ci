@@ -23,26 +23,35 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+package com.tencent.devops.openapi.api.v2
 
-package com.tencent.devops.quality.resources.v2
-
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.web.RestResource
-import com.tencent.devops.quality.api.v2.ServiceQualityIndicatorResource
-import com.tencent.devops.quality.api.v2.pojo.QualityIndicator
-import com.tencent.devops.quality.service.v2.QualityIndicatorService
-import org.springframework.beans.factory.annotation.Autowired
+import com.tencent.devops.store.pojo.template.InstallTemplateReq
+import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
+import io.swagger.annotations.ApiParam
+import javax.ws.rs.Consumes
+import javax.ws.rs.HeaderParam
+import javax.ws.rs.POST
+import javax.ws.rs.Path
+import javax.ws.rs.Produces
+import javax.ws.rs.core.MediaType
 
-@RestResource
-class ServiceQualityIndicatorResourceImpl @Autowired constructor(
-    private val qualityIndicatorService: QualityIndicatorService
-) : ServiceQualityIndicatorResource {
+@Api(tags = ["OPEN_API_MARKET"], description = "OPEN-API-研发市场资源")
+@Path("/{apigw:apigw-user|apigw-app|apigw}/market")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+interface ApigwMarketTemplateResourceV2 {
 
-    override fun get(projectId: String, indicatorId: String): Result<QualityIndicator> {
-        return Result(qualityIndicatorService.serviceGet(projectId, indicatorId))
-    }
-
-    override fun appendRangeByElement(elementType: String, projectIds: Collection<String>): Result<Int> {
-        return Result(qualityIndicatorService.appendRangeByElement(elementType, projectIds))
-    }
+    @ApiOperation("安装研发商店模板到项目")
+    @POST
+    @Path("/template/installFromStore")
+    fun installTemplateFromStore(
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("安装研发商店模板到项目请求报文体", required = true)
+        installTemplateReq: InstallTemplateReq
+    ): Result<Boolean>
 }
