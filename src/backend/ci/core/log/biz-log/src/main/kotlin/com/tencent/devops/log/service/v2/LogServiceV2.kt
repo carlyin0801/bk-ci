@@ -298,7 +298,7 @@ class LogServiceV2 @Autowired constructor(
             .addDocValueField("timestamp")
             .addSort("lineNo", SortOrder.ASC)
             .setScroll(TimeValue(1000 * 32))
-            .setSize(4000)
+            .setSize(Constants.MAX_LINES)
             .get()
         var times = 0
         try {
