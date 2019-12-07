@@ -78,7 +78,7 @@ class Runner @Autowired constructor(private val dockerHostBuildService: DockerHo
                         dockerHostBuildService.reportContainerId(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, containerId)
 
                         if (dockerHostBuildService.isContainerRunning(containerId)) {
-                            dockerHostBuildService.log(dockerStartBuildInfo.buildId, "构建环境启动成功，等待Agent启动...")
+                            dockerHostBuildService.log(dockerStartBuildInfo.buildId, "构建环境启动成功，等待Agent启动...", dockerStartBuildInfo.containerId)
                         } else {
                         logger.error("Create container container failed, no such image. pipelineId: ${dockerStartBuildInfo.pipelineId}, vmSeqId: ${dockerStartBuildInfo.vmSeqId}")
                             dockerHostBuildService.rollbackBuild(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, true)

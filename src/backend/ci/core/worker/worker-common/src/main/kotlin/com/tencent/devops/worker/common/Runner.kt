@@ -205,6 +205,7 @@ object Runner {
      */
     private fun showBuildStartupLog(buildId: String, vmSeqId: String) {
         LoggerService.addNormalLine("The build $buildId environment #$vmSeqId is ready")
+        LoggerService.addFoldEndLine("Job#$vmSeqId init finished")
     }
 
     /**
