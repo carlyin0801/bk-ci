@@ -35,9 +35,11 @@ import com.tencent.devops.common.auth.api.AuthResourceType
 import com.tencent.devops.common.auth.code.PipelineAuthServiceCode
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.log.api.UserLogResource
+import com.tencent.devops.log.model.pojo.LogLine
 import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.model.pojo.QueryLogs
 import com.tencent.devops.log.service.LogServiceDispatcher
+import org.glassfish.jersey.server.ChunkedOutput
 import org.springframework.beans.factory.annotation.Autowired
 import javax.ws.rs.core.Response
 
@@ -75,7 +77,7 @@ class UserLogResourceImpl @Autowired constructor(
         tag: String?,
         jobId: String?,
         executeCount: Int?
-    ): Response {
+    ): ChunkedOutput<MutableList<LogLine>> {
         validateAuth(userId, projectId, pipelineId, buildId)
         return logDispatcher.loadInitLogs(projectId, pipelineId, buildId, tag ?: "", jobId, executeCount)
     }
