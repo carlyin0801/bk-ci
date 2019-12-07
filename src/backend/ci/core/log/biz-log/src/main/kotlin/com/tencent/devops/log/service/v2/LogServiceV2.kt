@@ -323,10 +323,10 @@ class LogServiceV2 @Autowired constructor(
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
             } while (scrollResp.hits.hits.isNotEmpty())
-        } catch (e: IOException){
+        } catch (e: IOException) {
             logger.info("[$buildId|$tag] loadInitLogs query failed :$e")
         } finally {
-            output.close();
+            output.close()
             // simplified: IOException thrown from
             // this close() should be handled here...
             logger.info("[$buildId|$tag] loadInitLogs query end.")
