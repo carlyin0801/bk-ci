@@ -29,11 +29,13 @@ package com.tencent.devops.log.api
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.log.model.pojo.LogLine
 import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.model.pojo.QueryLogs
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
+import org.glassfish.jersey.server.ChunkedOutput
 import javax.ws.rs.Consumes
 import javax.ws.rs.GET
 import javax.ws.rs.HeaderParam
@@ -90,7 +92,7 @@ interface UserLogResource {
     @ApiOperation("持续加载全量日志")
     @GET
     @Path("/{projectId}/{pipelineId}/{buildId}/load")
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    @Produces(MediaType.APPLICATION_JSON)
     fun loadInitLogs(
         @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
@@ -113,7 +115,7 @@ interface UserLogResource {
         @ApiParam("执行次数", required = false)
         @QueryParam("executeCount")
         executeCount: Int?
-    ): Response
+    ): ChunkedOutput<MutableList<LogLine>>
 
     @ApiOperation("获取更多日志")
     @GET

@@ -59,6 +59,7 @@ import org.elasticsearch.indices.IndexClosedException
 import org.elasticsearch.search.SearchHits
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder
 import org.elasticsearch.search.sort.SortOrder
+import org.glassfish.jersey.server.ChunkedOutput
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
@@ -282,8 +283,9 @@ class LogServiceV2 @Autowired constructor(
         }
     }
 
-    fun loadInitLogs(pipelineId: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): Response {
+    fun loadInitLogs(pipelineId: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): ChunkedOutput<MutableList<LogLine>> {
         logger.info("[$buildId|$tag] loadInitLogs query start.")
+        val output = ChunkedOutput<MutableList<LogLine>>(mutableListOf<LogLine>().javaClass)
 
         val indexAndType = indexServiceV2.getIndexAndType(buildId)
         val query = getQuery(buildId, tag, jobId, executeCount)
@@ -299,9 +301,8 @@ class LogServiceV2 @Autowired constructor(
             .setSize(4000)
             .get()
         var times = 0
-        val logStream = StreamingOutput { output ->
+        try {
             do {
-                val sb = StringBuilder()
                 val logs = mutableListOf<LogLine>()
                 scrollResp.hits.hits.forEach { searchHit ->
                     val sourceMap = searchHit.source
@@ -315,23 +316,22 @@ class LogServiceV2 @Autowired constructor(
                         sourceMap["jobId"].toString() ?: "",
                         sourceMap["executeCount"]?.toString()?.toInt() ?: 1
                     )
-//                    logs.add(logLine)
-//                    sb.append(logs)
-                    sb.append(logLine.message + System.lineSeparator())
+                    logs.add(logLine)
                 }
-                output.write(sb.toString().toByteArray())
-                output.flush()
+                output.write(logs)
                 logger.info("[$buildId|$tag] The ${++times} times query es.")
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
             } while (scrollResp.hits.hits.isNotEmpty())
+        } catch (e: IOException){
+            logger.info("[$buildId|$tag] loadInitLogs query failed :$e")
+        } finally {
+            output.close();
+            // simplified: IOException thrown from
+            // this close() should be handled here...
+            logger.info("[$buildId|$tag] loadInitLogs query end.")
         }
-        logger.info("[$buildId|$tag] loadInitLogs query end.")
-
-        return Response
-            .ok(logStream, MediaType.APPLICATION_OCTET_STREAM_TYPE)
-            .header("Cache-Control", "no-cache")
-            .build()
+        return output
     }
 
     fun downloadLogs(pipelineId: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): Response {
