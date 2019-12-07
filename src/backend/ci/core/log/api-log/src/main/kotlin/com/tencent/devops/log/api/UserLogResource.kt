@@ -92,7 +92,7 @@ interface UserLogResource {
     @ApiOperation("持续加载全量日志")
     @GET
     @Path("/{projectId}/{pipelineId}/{buildId}/load")
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    @Produces(MediaType.APPLICATION_JSON)
     fun loadInitLogs(
         @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
