@@ -28,15 +28,10 @@ package com.tencent.devops.log.service
 
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.redis.RedisOperation
-import com.tencent.devops.log.model.pojo.EndPageQueryLogs
-import com.tencent.devops.log.model.pojo.LogBatchEvent
-import com.tencent.devops.log.model.pojo.LogEvent
-import com.tencent.devops.log.model.pojo.LogStatusEvent
-import com.tencent.devops.log.model.pojo.PageQueryLogs
-import com.tencent.devops.log.model.pojo.QueryLogs
-import com.tencent.devops.log.model.pojo.PushStatus
+import com.tencent.devops.log.model.pojo.*
 import com.tencent.devops.log.service.v2.LogServiceV2
 import com.tencent.devops.log.websocket.LogPushRedisUtlis
+import org.glassfish.jersey.server.ChunkedOutput
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import javax.ws.rs.core.Response
@@ -103,7 +98,7 @@ class LogServiceDispatcher @Autowired constructor(
         tag: String?,
         jobId: String?,
         executeCount: Int?
-    ): Response {
+    ): ChunkedOutput<MutableList<LogLine>> {
         return logServiceV2.loadInitLogs(pipelineId, buildId, tag, jobId, executeCount)
     }
 
