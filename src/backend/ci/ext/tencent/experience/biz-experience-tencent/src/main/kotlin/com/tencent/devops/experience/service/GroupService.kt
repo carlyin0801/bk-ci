@@ -28,6 +28,7 @@ package com.tencent.devops.experience.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.exception.CustomException
 import com.tencent.devops.common.api.exception.PermissionForbiddenException
 import com.tencent.devops.common.api.util.HashUtil
@@ -38,6 +39,7 @@ import com.tencent.devops.common.auth.api.BSAuthPermissionApi
 import com.tencent.devops.common.auth.api.BSAuthResourceApi
 import com.tencent.devops.common.auth.api.BSAuthProjectApi
 import com.tencent.devops.common.auth.code.BSExperienceAuthServiceCode
+import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.experience.dao.GroupDao
 import com.tencent.devops.experience.pojo.Group
 import com.tencent.devops.experience.pojo.GroupCreate
@@ -100,10 +102,13 @@ class GroupService @Autowired constructor(
         val groupAndUsersList = bsAuthProjectApi.getProjectGroupAndUserList(experienceServiceCode, projectId)
         return groupAndUsersList.map {
             ProjectGroupAndUsers(
-                    it.displayName,
-                    it.roleName,
-                    it.roleId,
-                    it.userIdList.toSet()
+                groupName = MessageCodeUtil.getCodeLanMessage(
+                    messageCode = "${CommonMessageCode.MSG_CODE_ROLE_PREFIX}${it.roleName}",
+                    defaultMessage = it.displayName
+                ),
+                groupId = it.roleName,
+                groupRoleId = it.roleId,
+                users = it.userIdList.toSet()
             )
         }
     }
