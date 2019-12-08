@@ -156,7 +156,7 @@ class BuildEndControl @Autowired constructor(
     }
 
     private fun PipelineBuildFinishEvent.fixTask(buildInfo: BuildInfo) {
-        val allBuildTask = pipelineBuildTaskService.getAllBuildTask(buildId)
+        val allBuildTask = pipelineRuntimeService.getAllBuildTask(buildId)
 
         allBuildTask.forEach {
             // 将所有还在运行中的任务全部结束掉
