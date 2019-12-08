@@ -80,14 +80,14 @@ class QualityControlPointService @Autowired constructor(
         return controlPointList.filter { it.elementType in elements }
                 .map {
             QualityControlPoint(
-                hashId = HashUtil.encodeLongId(it.id),
-                type = it.elementType,
-                name = it.name,
-                stage = it.stage,
-                availablePos = it.availablePosition.split(",").map { name -> ControlPointPosition(name) },
-                defaultPos = ControlPointPosition(it.defaultPosition),
-                enable = it.enable,
-                atomVersion = it.atomVersion
+                    HashUtil.encodeLongId(it.id),
+                    it.elementType,
+                    it.name,
+                    it.stage,
+                    it.availablePosition.split(",").map { name -> ControlPointPosition(name) },
+                    ControlPointPosition(it.defaultPosition),
+                    it.enable,
+                    it.atomVersion
             )
         }
     }
@@ -99,13 +99,13 @@ class QualityControlPointService @Autowired constructor(
     fun opList(userId: String, page: Int, pageSize: Int): Page<ControlPointData> {
         val data = controlPointDao.list(page, pageSize, dslContext).map {
             ControlPointData(
-                id = it.id,
-                elementType = it.elementType,
-                name = it.name,
-                stage = it.stage,
-                availablePosition = it.availablePosition,
-                defaultPosition = it.defaultPosition,
-                enable = it.enable
+                    it.id,
+                    it.elementType,
+                    it.name,
+                    it.stage,
+                    it.availablePosition,
+                    it.defaultPosition,
+                    it.enable
             )
         }
         val count = controlPointDao.count(dslContext)

@@ -1598,7 +1598,7 @@ class PipelineBuildService(
             )
 
             val interceptResult = pipelineInterceptorChain.filter(
-                InterceptData(readyToBuildPipelineInfo, model, startType)
+                InterceptData(readyToBuildPipelineInfo, fullModel, startType)
             )
 
             if (interceptResult.isNotOk()) {

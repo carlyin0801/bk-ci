@@ -31,12 +31,12 @@ import com.tencent.devops.common.api.util.HashUtil
 import com.tencent.devops.quality.api.v2.pojo.ControlPointPosition
 import com.tencent.devops.quality.api.v2.pojo.RuleIndicatorSet
 import com.tencent.devops.quality.api.v2.pojo.RuleTemplate
-import com.tencent.devops.quality.api.v2.pojo.op.TemplateData
-import com.tencent.devops.quality.api.v2.pojo.op.TemplateIndicatorMap
-import com.tencent.devops.quality.api.v2.pojo.op.TemplateUpdateData
 import com.tencent.devops.quality.dao.v2.QualityIndicatorDao
 import com.tencent.devops.quality.dao.v2.QualityRuleTemplateDao
 import com.tencent.devops.quality.dao.v2.QualityTemplateIndicatorMapDao
+import com.tencent.devops.quality.api.v2.pojo.op.TemplateData
+import com.tencent.devops.quality.api.v2.pojo.op.TemplateIndicatorMap
+import com.tencent.devops.quality.api.v2.pojo.op.TemplateUpdateData
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
@@ -54,15 +54,15 @@ class QualityTemplateService @Autowired constructor(
 ) {
 
     fun userListIndicatorSet(): List<RuleIndicatorSet> {
-        return ruleTemplateDao.listIndicatorSetEnable(dslContext)?.map { record ->
-            val indicatorIds = ruleTemplateIndicatorDao.queryTemplateMap(record.id, dslContext)?.map { it.indicatorId }
-                ?: listOf()
+        return ruleTemplateDao.listIndicatorSetEnable(dslContext)?.map {
+            val indicatorIds = ruleTemplateIndicatorDao.queryTemplateMap(it.id, dslContext)?.map { it.indicatorId }
+                    ?: listOf()
             val indicators = indicatorService.serviceList(indicatorIds)
             RuleIndicatorSet(
-                hashId = HashUtil.encodeLongId(record.id),
-                name = record.name,
-                desc = record.desc,
-                indicators = indicators
+                    HashUtil.encodeLongId(it.id),
+                    it.name,
+                    it.desc,
+                    indicators
             )
         } ?: listOf()
     }
@@ -76,15 +76,15 @@ class QualityTemplateService @Autowired constructor(
             val controlPoint = controlPointService.serviceGet(it.controlPoint, projectId)
             val indicators = indicatorService.serviceList(indicatorIds)
             RuleTemplate(
-                hashId = HashUtil.encodeLongId(it.id),
-                name = it.name,
-                desc = it.desc,
-                indicators = indicators,
-                stage = it.stage,
-                controlPoint = it.controlPoint,
-                controlPointName = controlPoint?.name ?: "",
-                controlPointPosition = ControlPointPosition(it.controlPointPosition),
-                availablePosition = listOf(ControlPointPosition("BEFORE"), ControlPointPosition("AFTER"))
+                    HashUtil.encodeLongId(it.id),
+                    it.name,
+                    it.desc,
+                    indicators,
+                    it.stage,
+                    it.controlPoint,
+                    controlPoint?.name ?: "",
+                    ControlPointPosition(it.controlPointPosition),
+                    listOf(ControlPointPosition("BEFORE"), ControlPointPosition("AFTER"))
             )
         } ?: listOf()
     }
@@ -103,12 +103,12 @@ class QualityTemplateService @Autowired constructor(
                     "${indicatorInst.elementName}-${indicatorInst.elementDetail}-${indicatorInst.cnName}"
                 } else null
                 TemplateIndicatorMap(
-                    id = it1.id,
-                    templateId = it1.templateId,
-                    indicatorId = it1.indicatorId,
-                    indicatorName = indicatorName,
-                    operation = it1.operation,
-                    threshold = it1.threshold
+                        it1.id,
+                        it1.templateId,
+                        it1.indicatorId,
+                        indicatorName,
+                        it1.operation,
+                        it1.threshold
                 )
             }
             TemplateData(
