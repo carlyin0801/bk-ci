@@ -59,14 +59,16 @@ class TencentMeasureConfig {
         @Autowired dslContext: DSLContext,
         @Autowired objectMapper: ObjectMapper,
         @Autowired templateService: TemplateService,
-        @Autowired measureEventDispatcher: MeasureEventDispatcher
+        @Autowired measureEventDispatcher: MeasureEventDispatcher,
+        @Autowired pipelineBuildTaskService: PipelineBuildTaskService
     ) = MeasureServiceImpl(
         pipelineRuntimeService = pipelineRuntimeService,
         pipelineBuildVarDao = pipelineBuildVarDao,
         dslContext = dslContext,
         objectMapper = objectMapper,
         measureEventDispatcher = measureEventDispatcher,
-        templateService = templateService
+        templateService = templateService,
+        pipelineBuildTaskService = pipelineBuildTaskService
     )
 
     @Value("\${queueConcurrency.measure:3}")
