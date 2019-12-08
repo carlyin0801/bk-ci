@@ -24,54 +24,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-<<<<<<< HEAD:src/backend/ci/ext/tencent/plugin/api-plugin-tencent/src/main/kotlin/com/tencent/devops/plugin/api/ServiceTcmResource.kt
-package com.tencent.devops.plugin.api
-=======
 package com.tencent.devops.process.api.builds
->>>>>>> github/master:src/backend/ci/core/process/api-process/src/main/kotlin/com/tencent/devops/process/api/builds/BuildTaskResource.kt
-
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_BUILD_ID
 import com.tencent.devops.common.api.pojo.Result
-<<<<<<< HEAD:src/backend/ci/ext/tencent/plugin/api-plugin-tencent/src/main/kotlin/com/tencent/devops/plugin/api/ServiceTcmResource.kt
-import com.tencent.devops.plugin.pojo.tcm.TcmReqParam
-=======
 import com.tencent.devops.process.pojo.task.PipelineBuildTaskInfo
->>>>>>> github/master:src/backend/ci/core/process/api-process/src/main/kotlin/com/tencent/devops/process/api/builds/BuildTaskResource.kt
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
-<<<<<<< HEAD:src/backend/ci/ext/tencent/plugin/api-plugin-tencent/src/main/kotlin/com/tencent/devops/plugin/api/ServiceTcmResource.kt
-import javax.ws.rs.POST
-=======
 import javax.ws.rs.GET
 import javax.ws.rs.HeaderParam
->>>>>>> github/master:src/backend/ci/core/process/api-process/src/main/kotlin/com/tencent/devops/process/api/builds/BuildTaskResource.kt
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 
-<<<<<<< HEAD:src/backend/ci/ext/tencent/plugin/api-plugin-tencent/src/main/kotlin/com/tencent/devops/plugin/api/ServiceTcmResource.kt
-@Api(tags = ["SERVICE_TCM"], description = "服务-TCM原子相关接口")
-@Path("/service/tcm")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
-interface ServiceTcmResource {
-
-    @ApiOperation("启动tcm任务")
-    @POST
-    @Path("/startTask")
-    fun startTask(
-        @ApiParam("tcm请求参数", required = true)
-        tcmReqParam: TcmReqParam,
-        @ApiParam("构建id", required = true)
-        @QueryParam("buildId")
-        buildId: String,
-        @ApiParam("启动用户", required = true)
-        @QueryParam("userId")
-        userId: String
-    ): Result<String>
-=======
 @Api(tags = ["BUILD_TASK"], description = "构建-任务资源")
 @Path("/build/task")
 @Produces(MediaType.APPLICATION_JSON)
@@ -86,5 +52,4 @@ interface BuildTaskResource {
         @HeaderParam(AUTH_HEADER_DEVOPS_BUILD_ID)
         buildId: String
     ): Result<List<PipelineBuildTaskInfo>>
->>>>>>> github/master:src/backend/ci/core/process/api-process/src/main/kotlin/com/tencent/devops/process/api/builds/BuildTaskResource.kt
 }
