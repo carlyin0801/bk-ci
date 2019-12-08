@@ -48,7 +48,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import com.tencent.devops.process.engine.service.PipelineBuildTaskService
 
 @Configuration
 class TencentMeasureConfig {
@@ -60,16 +59,14 @@ class TencentMeasureConfig {
         @Autowired dslContext: DSLContext,
         @Autowired objectMapper: ObjectMapper,
         @Autowired templateService: TemplateService,
-        @Autowired measureEventDispatcher: MeasureEventDispatcher,
-        @Autowired pipelineBuildTaskService: PipelineBuildTaskService
+        @Autowired measureEventDispatcher: MeasureEventDispatcher
     ) = MeasureServiceImpl(
         pipelineRuntimeService = pipelineRuntimeService,
         pipelineBuildVarDao = pipelineBuildVarDao,
         dslContext = dslContext,
         objectMapper = objectMapper,
         measureEventDispatcher = measureEventDispatcher,
-        templateService = templateService,
-        pipelineBuildTaskService = pipelineBuildTaskService
+        templateService = templateService
     )
 
     @Value("\${queueConcurrency.measure:3}")
