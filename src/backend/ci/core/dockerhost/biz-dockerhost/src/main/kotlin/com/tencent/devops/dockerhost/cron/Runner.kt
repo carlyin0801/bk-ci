@@ -75,17 +75,17 @@ class Runner @Autowired constructor(private val dockerHostBuildService: DockerHo
                     try {
                         val containerId = dockerHostBuildService.createContainer(dockerStartBuildInfo)
                         // 上报containerId给dispatch
-                        dockerHostBuildService.reportContainerId(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, containerId)
+                        dockerHostBuildService.reportContainerId(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, dockerStartBuildInfo.containerId)
 
                         if (dockerHostBuildService.isContainerRunning(containerId)) {
-                            dockerHostBuildService.log(dockerStartBuildInfo.buildId, "构建环境启动成功，等待Agent启动...")
+                            dockerHostBuildService.log(dockerStartBuildInfo.buildId, "构建环境启动成功，等待Agent启动...", dockerStartBuildInfo.containerId)
                         } else {
                         logger.error("Create container container failed, no such image. pipelineId: ${dockerStartBuildInfo.pipelineId}, vmSeqId: ${dockerStartBuildInfo.vmSeqId}")
-                            dockerHostBuildService.rollbackBuild(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, true)
+                            dockerHostBuildService.rollbackBuild(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, true, dockerStartBuildInfo.containerId)
                         }
                     } catch (e: ContainerException) {
-                        logger.error("Create container failed, rollback build. buildId: ${dockerStartBuildInfo.buildId}, vmSeqId: ${dockerStartBuildInfo.vmSeqId}")
-                        dockerHostBuildService.rollbackBuild(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, false)
+                        logger.error("Create container failed, rollback build. buildId: ${dockerStartBuildInfo.buildId}, vmSeqId: ${dockerStartBuildInfo.vmSeqId}", dockerStartBuildInfo.containerId)
+                        dockerHostBuildService.rollbackBuild(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, false, dockerStartBuildInfo.containerId)
                     }
                 }
             } else {

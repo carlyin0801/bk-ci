@@ -95,8 +95,8 @@ class JobExecuteTaskExtAtom @Autowired constructor(
             maxRunningMills = timeout,
             appId = appId,
             taskId = taskId,
-                containerHashId = task.containerHashId,
-                taskInstanceId = taskInstanceId,
+            containerHashId = task.containerHashId,
+            taskInstanceId = taskInstanceId,
             operator = operator,
             buildId = buildId,
             executeCount = executeCount
@@ -115,8 +115,8 @@ class JobExecuteTaskExtAtom @Autowired constructor(
         val appId = client.get(ServiceProjectResource::class).get(task.projectId).data?.ccAppId?.toInt()
             ?: run {
                 LogUtils.addLine(rabbitTemplate, task.buildId, "找不到绑定配置平台的业务ID/can not found CC Business ID", task.taskId,
-                task.containerHashId,
-                executeCount
+                    task.containerHashId,
+                    executeCount
                 )
                 return defaultFailAtomResponse
             }
@@ -152,7 +152,7 @@ class JobExecuteTaskExtAtom @Autowired constructor(
             maxRunningMills = timeout,
             appId = appId,
             taskId = task.taskId,
-                containerHashId = task.containerHashId,
+            containerHashId = task.containerHashId,
             taskInstanceId = taskInstanceId,
             operator = operator,
             buildId = task.buildId,
@@ -250,8 +250,8 @@ class JobExecuteTaskExtAtom @Autowired constructor(
                 buildId = buildId,
                 message = "执行超时/Job getTimeout: ${maxRunningMills / 60000} Minutes",
                 tag = taskId,
-                    jobId = containerHashId,
-                    executeCount = executeCount
+                jobId = containerHashId,
+                executeCount = executeCount
             )
             return BuildStatus.EXEC_TIMEOUT
         }
@@ -308,16 +308,16 @@ class JobExecuteTaskExtAtom @Autowired constructor(
                         buildId = task.buildId,
                         message = "执行成功/start job success, taskInstanceId: $taskInstanceId",
                         tag = task.taskId,
-                            jobId = task.containerHashId,
-                executeCount = executeCount
+                        jobId = task.containerHashId,
+                        executeCount = executeCount
                     )
                     LogUtils.addLine(
                         rabbitTemplate = rabbitTemplate,
                         buildId = task.buildId,
                         message = "Job detail: <a target='_blank' href='http://job.ied.com/?taskInstanceList&appId=$appId#taskInstanceId=$taskInstanceId'>查看详情</a>",
                         tag = task.taskId,
-                            jobId = task.containerHashId,
-                executeCount = executeCount
+                        jobId = task.containerHashId,
+                        executeCount = executeCount
                     )
 
                     return taskInstanceId
@@ -329,8 +329,8 @@ class JobExecuteTaskExtAtom @Autowired constructor(
                         buildId = task.buildId,
                         message = "执行失败/start job failed, msg: $msg",
                         tag = task.taskId,
-                            jobId = task.containerHashId,
-                executeCount = executeCount
+                        jobId = task.containerHashId,
+                        executeCount = executeCount
                     )
                     return -1
                 }
@@ -342,7 +342,7 @@ class JobExecuteTaskExtAtom @Autowired constructor(
                 buildId = task.buildId,
                 message = "执行发生异常/start job exception: ${e.message}",
                 tag = task.taskId,
-                    jobId = task.containerHashId,
+                jobId = task.containerHashId,
                 executeCount = executeCount
             )
             throw RuntimeException("start job exception")

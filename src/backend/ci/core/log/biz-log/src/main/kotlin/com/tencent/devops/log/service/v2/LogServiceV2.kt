@@ -298,7 +298,7 @@ class LogServiceV2 @Autowired constructor(
             .addDocValueField("timestamp")
             .addSort("lineNo", SortOrder.ASC)
             .setScroll(TimeValue(1000 * 32))
-            .setSize(4000)
+            .setSize(Constants.MAX_LINES)
             .get()
         var times = 0
         try {
@@ -323,12 +323,10 @@ class LogServiceV2 @Autowired constructor(
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
             } while (scrollResp.hits.hits.isNotEmpty())
-        } catch (e: IOException){
+        } catch (e: IOException) {
             logger.info("[$buildId|$tag] loadInitLogs query failed :$e")
         } finally {
-            output.close();
-            // simplified: IOException thrown from
-            // this close() should be handled here...
+            output.close()
             logger.info("[$buildId|$tag] loadInitLogs query end.")
         }
         return output

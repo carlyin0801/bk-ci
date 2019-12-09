@@ -98,6 +98,7 @@ object Runner {
 //                                LoggerService.addNormalLine(Ansi().bold().a("Start Element").reset().toString())
 
                                 // 开始Task执行
+                                LoggerService.addFoldStartLine(buildTask.elementName!!)
                                 taskDaemon.run()
 
                                 // 获取执行结果
@@ -163,6 +164,7 @@ object Runner {
                                 )
                             } finally {
                                 LoggerService.elementId = ""
+                                LoggerService.addFoldEndLine(buildTask.elementName!!)
                             }
                         }
                         BuildTaskStatus.WAIT -> {
@@ -215,6 +217,7 @@ object Runner {
      */
     private fun showBuildStartupLog(buildId: String, vmSeqId: String) {
         LoggerService.addNormalLine("The build $buildId environment #$vmSeqId is ready")
+        LoggerService.addFoldEndLine("Job#$vmSeqId init finished")
     }
 
     /**
