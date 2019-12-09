@@ -24,21 +24,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.environment
+package com.tencent.devops.environment.init
 
-import com.tencent.devops.common.service.config.CommonConfig
-import com.tencent.devops.environment.service.TencentAgentUrlServiceImpl
+import com.tencent.devops.environment.service.AgentUrlService
+import com.tencent.devops.environment.service.BluekingAgentUrlServiceImpl
+import com.tencent.devops.environment.service.slave.SlaveGatewayService
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Primary
 
 @Configuration
-class TencentServiceConfig {
+class EnvironmentConfig {
 
-    /**
-     *  下载链接服务
-     */
     @Bean
-    @Primary
-    fun agentUrlService(commonConfig: CommonConfig) = TencentAgentUrlServiceImpl(commonConfig)
+    @ConditionalOnMissingBean(AgentUrlService::class)
+    fun agentUrlService(slaveGatewayService: SlaveGatewayService) = BluekingAgentUrlServiceImpl(slaveGatewayService)
 }
