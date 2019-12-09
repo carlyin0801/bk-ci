@@ -35,7 +35,7 @@ import com.tencent.devops.log.model.pojo.LogPushEvent
 import com.tencent.devops.log.model.pojo.LogStatusEvent
 import com.tencent.devops.log.service.LogPushWebsocketService
 import com.tencent.devops.log.service.LogServiceDispatcher
-import com.tencent.devops.log.utils.LogPushRedisUtlis
+import com.tencent.devops.log.websocket.LogPushRedisUtlis
 import com.tencent.devops.log.utils.LogDispatcher
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.core.ExchangeTypes
@@ -78,6 +78,8 @@ class LogListener constructor(
         try {
             logServiceDispatcher.logBatchEvent(event)
             result = true
+            // 插入成功后发起一个推送事件
+            LogDispatcher.dispatch(rabbitTemplate, LogPushEvent(event.buildId, event.logs))
         } catch (ignored: Throwable) {
             logger.warn("Fail to add the log batch event [${event.buildId}|${event.retryTime}]", ignored)
         } finally {
@@ -93,18 +95,25 @@ class LogListener constructor(
     fun logPushEvent(event: LogPushEvent) {
         var result = false
         try {
-            // 对每一条插入成功的日志进行处理
-            event.logs.forEach {
-                if (!it.tag.isBlank()) {
-                    // 记录该任务已插入的最后一条日志行号
-                    val pushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, event.buildId, it.tag)
-                    // 若最新一条
-                    if (pushStatus != null && it.lineNo - pushStatus.lastLineNum > 10) {
-                        val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, it.tag, it.lineNo)
-                        webSocketDispatcher.dispatch(logPush)
-                        LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, it.tag, logPush.lastLineNo)
+            if (event.logs.isNotEmpty()) {
+                // 对每一条插入成功的日志进行处理
+                event.logs.forEach {
+                    if (!it.tag.isBlank()) {
+                        // 记录该任务已插入的最后一条日志行号
+                        val pushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, event.buildId, it.tag)
+                        // 若最新一条比上次推送多10行以上就触发推送
+                        if (pushStatus != null && it.lineNo - pushStatus.lastLineNum > 10) {
+                            val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, it.tag, it.lineNo)
+                            webSocketDispatcher.dispatch(logPush)
+                            LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, it.tag, logPush.lastLineNo)
+                        }
                     }
                 }
+            } else {
+                if (event.id == null || event.lineNo == null) return
+                val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, event.id!!, event.lineNo!!)
+                webSocketDispatcher.dispatch(logPush)
+                LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, event.id!!, logPush.lastLineNo)
             }
             result = true
         } catch (ignored: Throwable) {
@@ -113,7 +122,7 @@ class LogListener constructor(
             if (!result && event.retryTime >= 0) {
                 logger.warn("Retry to add log batch event [${event.buildId}|${event.retryTime}]")
                 with(event) {
-                    LogDispatcher.dispatch(rabbitTemplate, LogPushEvent(buildId, logs, retryTime - 1, DelayMills))
+                    LogDispatcher.dispatch(rabbitTemplate, LogPushEvent(buildId, logs, id, lineNo, retryTime - 1, DelayMills))
                 }
             }
         }

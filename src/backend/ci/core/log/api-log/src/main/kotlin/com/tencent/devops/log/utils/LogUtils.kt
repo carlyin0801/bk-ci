@@ -47,23 +47,23 @@ object LogUtils {
     fun addFoldStartLine(
         rabbitTemplate: RabbitTemplate,
         buildId: String,
-        tagName: String,
+        groupName: String,
         tag: String,
         jobId: String? = null,
         executeCount: Int
     ) {
-        dispatch(rabbitTemplate, genLogEvent(buildId, "soda_fold:start:$tagName", tag, jobId, LogType.START, executeCount))
+        dispatch(rabbitTemplate, genLogEvent(buildId, "##[group] $groupName", tag, jobId, LogType.START, executeCount))
     }
 
     fun addFoldEndLine(
         rabbitTemplate: RabbitTemplate,
         buildId: String,
-        tagName: String,
+        groupName: String,
         tag: String,
         jobId: String? = null,
         executeCount: Int
     ) {
-        dispatch(rabbitTemplate, genLogEvent(buildId, "soda_fold:end:$tagName", tag, jobId, LogType.END, executeCount))
+        dispatch(rabbitTemplate, genLogEvent(buildId, "##[endgroup] $groupName", tag, jobId, LogType.END, executeCount))
     }
 
     fun addYellowLine(

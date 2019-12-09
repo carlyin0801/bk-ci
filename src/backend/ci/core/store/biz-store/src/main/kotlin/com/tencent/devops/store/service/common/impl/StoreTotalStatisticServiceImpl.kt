@@ -49,7 +49,7 @@ class StoreTotalStatisticServiceImpl @Autowired constructor(
         private val logger = LoggerFactory.getLogger(StoreTotalStatisticServiceImpl::class.java)
     }
 
-    @Scheduled(cron = "0 * * * * ?") // 每分钟执行一次
+    @Scheduled(cron = "0 0 * * * ?") // 每小时执行一次
     fun stat() {
         val taskName = "StoreTotalStatisticTask"
         logger.info("$taskName:stat:start")
@@ -105,14 +105,14 @@ class StoreTotalStatisticServiceImpl @Autowired constructor(
         interfaceName: String? = "Anon"
     ) {
         statistics.forEach {
-            //下载量
+            // 下载量
             val downloads = it.value1().toInt()
-            //评论数量
+            // 评论数量
             val comments = it.value2().toInt()
-            //评论总分
+            // 评论总分
             val score = it.value3().toDouble()
             val code = it.value4().toString()
-            //评论均分
+            // 评论均分
             val scoreAverage: Double = if (score > 0 && comments > 0) score.div(comments) else 0.toDouble()
             logger.info("$interfaceName:updateStatisticData(${StoreTypeEnum.getStoreType(storeType.toInt())},$code,$downloads,$comments,$score,$scoreAverage)")
             storeStatisticTotalDao.updateStatisticData(

@@ -35,9 +35,11 @@ import com.tencent.devops.common.auth.api.AuthResourceType
 import com.tencent.devops.common.auth.code.PipelineAuthServiceCode
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.log.api.UserLogResource
+import com.tencent.devops.log.model.pojo.LogLine
 import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.model.pojo.QueryLogs
 import com.tencent.devops.log.service.LogServiceDispatcher
+import org.glassfish.jersey.server.ChunkedOutput
 import org.springframework.beans.factory.annotation.Autowired
 import javax.ws.rs.core.Response
 
@@ -67,18 +69,17 @@ class UserLogResourceImpl @Autowired constructor(
         return logDispatcher.getInitLogs(projectId, pipelineId, buildId, isAnalysis, queryKeywords, tag, jobId, executeCount)
     }
 
-    override fun queryLogs(
+    override fun loadInitLogs(
         userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String,
-        queryKeywords: String,
         tag: String?,
         jobId: String?,
         executeCount: Int?
-    ): Result<QueryLogs> {
+    ): ChunkedOutput<MutableList<LogLine>> {
         validateAuth(userId, projectId, pipelineId, buildId)
-        return logDispatcher.queryLogsByWords(buildId, queryKeywords, tag, jobId, executeCount)
+        return logDispatcher.loadInitLogs(projectId, pipelineId, buildId, tag ?: "", jobId, executeCount)
     }
 
     override fun getMoreLogs(

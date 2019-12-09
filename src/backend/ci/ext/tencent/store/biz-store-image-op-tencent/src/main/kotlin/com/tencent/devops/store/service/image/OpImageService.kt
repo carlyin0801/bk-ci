@@ -168,7 +168,7 @@ class OpImageService @Autowired constructor(
         pageSize: Int?,
         interfaceName: String? = "Anon interface"
     ): Result<OpImageResp> {
-        logger.info("$interfaceName:list:Input($userId,$imageName,$imageSourceType,$processFlag,$classifyCode,$categoryCodes,$labelCodes,$sortType,$desc,$page,$pageSize)")
+        logger.info("$interfaceName:list:Input($userId,$imageName,$imageSourceType,$processFlag,$classifyCode,${categoryCodes?.size}$categoryCodes,${labelCodes?.size}$labelCodes,$sortType,$desc,$page,$pageSize)")
         val validPage = PageUtil.getValidPage(page)
         val validPageSize = pageSize ?: -1
 
@@ -232,11 +232,18 @@ class OpImageService @Autowired constructor(
             val agentTypeScope = imageAgentTypeDao.getAgentTypeByImageCode(dslContext, imageCode)?.map {
                 ImageAgentTypeEnum.getImageAgentType(it.get(Constants.KEY_IMAGE_AGENT_TYPE) as String)!!
             } ?: emptyList()
+            val rdTypeRecord = it.get(KEY_IMAGE_RD_TYPE) as Byte?
+            var rdTypeStr: String
+            if (rdTypeRecord == null) {
+                rdTypeStr = ImageRDTypeEnum.THIRD_PARTY.name
+            } else {
+                rdTypeStr = ImageRDTypeEnum.getImageRDType(rdTypeRecord.toInt())
+            }
             OpImageItem(
                 imageId = imageId,
                 imageCode = imageCode,
                 imageName = it.get(KEY_IMAGE_NAME) as String,
-                rdType = ImageRDTypeEnum.getImageRDType((it.get(KEY_IMAGE_RD_TYPE) as Byte).toInt()),
+                rdType = rdTypeStr,
                 agentTypeScope = agentTypeScope,
                 imageType = ImageType.getType(it.get(KEY_IMAGE_SOURCE_TYPE) as String),
                 imageVersion = it.get(KEY_IMAGE_VERSION) as String,

@@ -56,22 +56,6 @@ class ServiceLogResourceImpl @Autowired constructor(
         return logDispatcher.getInitLogs(projectId, pipelineId, buildId, isAnalysis, queryKeywords, tag, jobId, executeCount)
     }
 
-    override fun queryLogs(
-        buildId: String,
-        queryKeywords: String,
-        tag: String?,
-        jobId: String?,
-        executeCount: Int?
-    ): Result<QueryLogs> {
-        return logDispatcher.queryLogsByWords(
-            buildId,
-            queryKeywords,
-            tag,
-            jobId,
-            executeCount
-        )
-    }
-
     override fun getMoreLogs(
         projectId: String,
         pipelineId: String,

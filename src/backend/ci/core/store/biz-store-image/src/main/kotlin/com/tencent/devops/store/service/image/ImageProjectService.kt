@@ -102,7 +102,7 @@ class ImageProjectService @Autowired constructor(
                 userId = userId
             )
         if (result.isNotOk()) {
-            throw ErrorCodeException(StoreMessageCode.USER_QUERY_PROJECT_PERMISSION_IS_INVALID, null)
+            throw ErrorCodeException(errorCode = StoreMessageCode.USER_QUERY_PROJECT_PERMISSION_IS_INVALID)
         }
     }
 
@@ -315,7 +315,7 @@ class ImageProjectService @Autowired constructor(
         val imageSize = it["imageSize"] as String
         val certificationFlag = it["certificationFlag"] as? Boolean
         val publicFlag = it["publicFlag"] as? Boolean
-        val imageType = it["imageType"] as Byte
+        val imageType = it["imageType"] as? Byte
         val weight = it["weight"] as? Int
         val recommendFlag = it["recommendFlag"] as? Boolean
         val labelNames = it["labelNames"] as? String
@@ -348,7 +348,7 @@ class ImageProjectService @Autowired constructor(
             imageSize = imageSize,
             certificationFlag = certificationFlag,
             publicFlag = publicFlag,
-            imageType = ImageRDTypeEnum.getImageRDType(imageType.toInt()),
+            imageType = if (null != imageType) ImageRDTypeEnum.getImageRDType(imageType.toInt()) else null,
             weight = weight,
             recommendFlag = recommendFlag,
             labelNames = labelNames,
@@ -512,8 +512,11 @@ class ImageProjectService @Autowired constructor(
         val userDeptList = storeUserService.getUserDeptList(userId)
         logger.info("$interfaceName:searchMarketImages:Inner:userDeptList=$userDeptList")
         val installImageCodes = marketImageDao.getInstalledImageCodes(dslContext, projectCode)
-        val testImageCodes = storeProjectRelDao.getTestImageCodes(dslContext, projectCode, StoreTypeEnum.IMAGE)?.map { it.value1() }
+        var testImageCodes = storeProjectRelDao.getTestImageCodes(dslContext, projectCode, StoreTypeEnum.IMAGE)?.map { it.value1() }
             ?: emptyList()
+        testImageCodes = marketImageDao.getTestingImageCodes(dslContext, testImageCodes)?.map {
+            it.value1()
+        } ?: emptyList()
         val visibleImageCodes = marketImageDao.getVisibleImageCodes(dslContext, projectCode, userDeptList)
         val agentTypeImageCodes = imageAgentTypeDao.getImageCodesByAgentType(dslContext, agentType)?.map { it.value1() }
             ?: emptyList()
@@ -897,16 +900,16 @@ class ImageProjectService @Autowired constructor(
             }
         }
         val paginator = MultiSourceDataPaginator(
-            // 类型符合的调试中镜像
-            testingCurrentAgentDataSource,
             // 已安装可选择
             installedCurrentAgentDataSource,
+            // 类型符合的调试中镜像
+            testingCurrentAgentDataSource,
+            // 类型不符合的调试中镜像
+            testingOtherAgentDataSource,
             // 可安装
             canInstallCurrentAgentDataSource,
             // 类型符合但不可见
             noVisibleCurrentAgentDataSource,
-            // 类型不符合的调试中镜像
-            testingOtherAgentDataSource,
             // 已安装类型不符
             installedOtherAgentDataSource,
             // 可安装类型不符
@@ -939,8 +942,9 @@ class ImageProjectService @Autowired constructor(
         val rdType = ImageRDTypeEnum.getImageRDType((it.get(KEY_IMAGE_RD_TYPE) as Byte).toInt())
 
         // 单独查询agentTypeScope
-        val agentTypeScopeStr = it.get(KEY_IMAGE_AGENT_TYPE_SCOPE) as String
-        val agentTypeScope = agentTypeScopeStr.split(",").map { ImageAgentTypeEnum.getImageAgentType(it)!! }.toList()
+        val agentTypeScopeStr = it.get(KEY_IMAGE_AGENT_TYPE_SCOPE) as String?
+        val agentTypeScope = agentTypeScopeStr?.split(",")?.map { ImageAgentTypeEnum.getImageAgentType(it)!! }?.toList()
+            ?: emptyList()
 
         val logoUrl = it.get(KEY_IMAGE_LOGO_URL) as String?
         val icon = it.get(KEY_IMAGE_ICON) as String?
@@ -1008,14 +1012,13 @@ class ImageProjectService @Autowired constructor(
      * 安装镜像到项目
      */
     fun installImage(
-        accessToken: String,
         userId: String,
         projectCodeList: ArrayList<String>,
         imageCode: String,
         channelCode: ChannelCode,
         interfaceName: String? = "Anon interface"
     ): Result<Boolean> {
-        logger.info("$interfaceName:installImage:Input:($accessToken,$userId,$projectCodeList,$imageCode)")
+        logger.info("$interfaceName:installImage:Input:($userId,$projectCodeList,$imageCode)")
         // 判断镜像标识是否合法
         val image = marketImageDao.getLatestImageByCode(dslContext, imageCode)
             ?: throw ImageNotExistException("imageCode=$imageCode")
@@ -1025,7 +1028,6 @@ class ImageProjectService @Autowired constructor(
             userId = userId,
             storeCode = image.imageCode,
             storeType = StoreTypeEnum.IMAGE,
-            accessToken = accessToken,
             projectCodeList = projectCodeList
         )
         if (validateInstallResult.isNotOk()) {
@@ -1033,7 +1035,6 @@ class ImageProjectService @Autowired constructor(
         }
         logger.info("$interfaceName:installImage:Inner:image.id=${image.id},imageFeature.publicFlag=${imageFeature.publicFlag}")
         return storeProjectService.installStoreComponent(
-            accessToken = accessToken,
             userId = userId,
             projectCodeList = projectCodeList,
             storeId = image.id,

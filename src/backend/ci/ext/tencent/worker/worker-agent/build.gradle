@@ -31,9 +31,8 @@ mainClassName = "com.tencent.devops.agent.ApplicationKt"
 dependencies {
     compile project(":core:worker:worker-common")
     compile project(":ext:tencent:worker:worker-api-tencent")
+    compile project(":ext:tencent:worker:worker-plugin-tencent")
     compile project(":core:worker:worker-api-sdk")
-    compile project(":core:worker:worker-plugin-scm")
-    compile project(":core:worker:worker-plugin-archive")
 
     compile project (":core:plugin:codecc-plugin:worker-plugin-codecc")
 

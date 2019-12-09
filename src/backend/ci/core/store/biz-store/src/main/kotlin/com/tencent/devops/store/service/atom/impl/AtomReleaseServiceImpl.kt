@@ -40,7 +40,7 @@ import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.model.store.tables.records.TAtomRecord
-import com.tencent.devops.quality.api.v2.ServiceQualityControlPointResource
+import com.tencent.devops.quality.api.v2.ServiceQualityControlPointMarketResource
 import com.tencent.devops.quality.api.v2.ServiceQualityIndicatorMarketResource
 import com.tencent.devops.quality.api.v2.ServiceQualityMetadataMarketResource
 import com.tencent.devops.quality.api.v2.pojo.ControlPointPosition
@@ -528,6 +528,10 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
 
                 GetAtomQualityConfigResult("0", arrayOf(""))
             } else {
+                client.get(ServiceQualityIndicatorMarketResource::class).deleteTestIndicator(atomCode)
+                client.get(ServiceQualityMetadataMarketResource::class).deleteTestMetadata(atomCode)
+                client.get(ServiceQualityControlPointMarketResource::class).deleteTestControlPoint(atomCode)
+
                 GetAtomQualityConfigResult(
                     StoreMessageCode.USER_REPOSITORY_PULL_QUALITY_JSON_FILE_FAIL,
                     arrayOf(QUALITY_JSON_NAME)
@@ -559,27 +563,26 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
         atomName: String,
         atomVersion: String,
         stage: String,
-        projectCode: String
+        projectId: String
     ) {
-        client.get(ServiceQualityControlPointResource::class).set(
+        client.get(ServiceQualityControlPointMarketResource::class).setTestControlPoint(
             userId, QualityControlPoint(
-            "",
-            atomCode,
-            atomName,
-            stage,
-            listOf(ControlPointPosition(BEFORE_POSITION), ControlPointPosition(AFTER_POSITION)),
-            ControlPointPosition(BEFORE_POSITION),
-            true,
-            atomVersion,
-            projectCode
-        )
+                "",
+                atomCode,
+                atomName,
+                stage,
+                listOf(ControlPointPosition(BEFORE_POSITION), ControlPointPosition(AFTER_POSITION)),
+                ControlPointPosition(BEFORE_POSITION),
+                true,
+                atomVersion,
+                projectId
+            )
         )
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun registerIndicator(
         userId: String,
-        projectCode: String,
+        projectId: String,
         atomCode: String,
         atomName: String,
         atomVersion: String,
@@ -606,7 +609,7 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
                 desc = map["desc"] as String?,
                 readOnly = map["readOnly"] as Boolean? ?: false,
                 stage = stage,
-                range = projectCode,
+                range = projectId,
                 tag = "IN_READY_TEST",
                 enable = true,
                 type = IndicatorType.MARKET,
@@ -616,7 +619,6 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
         client.get(ServiceQualityIndicatorMarketResource::class).setTestIndicator(userId, atomCode, indicatorsList)
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun registerMetadata(
         userId: String,
         atomCode: String,
@@ -627,15 +629,15 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
             val map = it.value as Map<String, Any>
             val type = map["type"] as String?
             QualityMetaData(
-                -1L,
-                it.key,
-                map["label"] as String,
-                atomCode,
-                atomName,
-                if (type.isNullOrBlank()) atomCode else type,
-                map["valueType"] as String? ?: "INT",
-                map["desc"] as String? ?: "",
-                "IN_READY_TEST" // 标注是正在测试中的
+                id = -1L,
+                dataId = it.key,
+                dataName = map["label"] as String,
+                elementType = atomCode,
+                elementName = atomName,
+                elementDetail = if (type.isNullOrBlank()) atomCode else type,
+                valueType = map["valueType"] as String? ?: "INT",
+                desc = map["desc"] as String? ?: "",
+                extra = "IN_READY_TEST" // 标注是正在测试中的
             )
         }
         return client.get(ServiceQualityMetadataMarketResource::class).setTestMetadata(
@@ -833,6 +835,7 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
         val atomCode = record.atomCode
         client.get(ServiceQualityIndicatorMarketResource::class).deleteTestIndicator(atomCode)
         client.get(ServiceQualityMetadataMarketResource::class).deleteTestMetadata(atomCode)
+        client.get(ServiceQualityControlPointMarketResource::class).deleteTestControlPoint(atomCode)
         return Result(true)
     }
 
@@ -904,10 +907,10 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
      */
     protected fun checkAtomVersionOptRight(userId: String, atomId: String, status: Byte): Pair<Boolean, String> {
         val record =
-            marketAtomDao.getAtomById(dslContext, atomId) ?: return Pair(false, CommonMessageCode.PARAMETER_IS_INVALID)
-        val atomCode = record["atomCode"] as String
-        val creator = record["creator"] as String
-        val recordStatus = record["atomStatus"] as Byte
+            marketAtomDao.getAtomRecordById(dslContext, atomId) ?: return Pair(false, CommonMessageCode.PARAMETER_IS_INVALID)
+        val atomCode = record.atomCode
+        val modifier = record.modifier
+        val recordStatus = record.atomStatus
 
         // 判断用户是否有权限
         if (!(storeMemberDao.isStoreAdmin(
@@ -915,7 +918,7 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
                 userId,
                 atomCode,
                 StoreTypeEnum.ATOM.type.toByte()
-            ) || creator == userId)
+            ) || modifier == userId)
         ) {
             return Pair(false, CommonMessageCode.PERMISSION_DENIED)
         }

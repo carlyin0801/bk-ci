@@ -97,7 +97,6 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
         runVariables: Map<String, String>,
         force: Boolean
     ): AtomResponse {
-
         val taskInstanceId = task.taskParams[JOB_TASK_ID]?.toString()?.toLong()
             ?: return if (force) defaultFailAtomResponse else AtomResponse(task.status)
 
@@ -193,6 +192,7 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
         }.forEach { path ->
             if (isRepoGray) {
                 val fileList = matchBkRepoFile(path, projectId, pipelineId, buildId, isCustom)
+                LogUtils.addLine(rabbitTemplate, buildId, "fileList: $fileList", taskId, containerId, executeCount)
                 val repoName = if (isCustom) "custom" else "pipeline"
                 fileList.forEach { bkrepoFile ->
                     LogUtils.addLine(rabbitTemplate, buildId, "匹配到文件：(${bkrepoFile.displayPath})", taskId, containerId, executeCount)
@@ -307,7 +307,7 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
                     LogUtils.addRedLine(rabbitTemplate, buildId, "EnvId is not init", taskId, containerId, executeCount)
                     throw BuildTaskException(
                         errorType = ErrorType.USER,
-                        errorCode = ERROR_BUILD_TASK_ENV_ID_IS_NULL,
+                        errorCode = ERROR_BUILD_TASK_ENV_ID_IS_NULL.toInt(),
                         errorMsg = "EnvId is not init"
                     )
                 }
@@ -319,7 +319,7 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
                     LogUtils.addRedLine(rabbitTemplate, buildId, "EnvId is not init", taskId, containerId, executeCount)
                     throw BuildTaskException(
                         errorType = ErrorType.USER,
-                        errorCode = ERROR_BUILD_TASK_ENV_ID_IS_NULL,
+                        errorCode = ERROR_BUILD_TASK_ENV_ID_IS_NULL.toInt(),
                         errorMsg = "EnvId is not init"
                     )
                 }
@@ -331,7 +331,7 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
                     LogUtils.addRedLine(rabbitTemplate, buildId, "EnvName is not init", taskId, containerId, executeCount)
                     throw BuildTaskException(
                         errorType = ErrorType.USER,
-                        errorCode = ERROR_BUILD_TASK_ENV_NAME_IS_NULL,
+                        errorCode = ERROR_BUILD_TASK_ENV_NAME_IS_NULL.toInt(),
                         errorMsg = "EnvName is not init"
                     )
                 }
@@ -351,7 +351,7 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
                 )
                 throw BuildTaskException(
                     errorType = ErrorType.USER,
-                    errorCode = ERROR_BUILD_TASK_TARGETENV_TYPE_IS_NULL,
+                    errorCode = ERROR_BUILD_TASK_TARGETENV_TYPE_IS_NULL.toInt(),
                     errorMsg = "Unsupported targetEnvType: $targetEnvType "
                 )
             }
@@ -489,7 +489,7 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
             LogUtils.addRedLine(rabbitTemplate, buildId, "以下这些环境名称不存在,请重新修改流水线！$noExistsEnvNames", taskId, containerId, executeCount)
             throw BuildTaskException(
                 errorType = ErrorType.USER,
-                errorCode = ERROR_BUILD_TASK_ENV_NAME_NOT_EXISTS,
+                errorCode = ERROR_BUILD_TASK_ENV_NAME_NOT_EXISTS.toInt(),
                 errorMsg = "以下这些环境名称不存在,请重新修改流水线！$noExistsEnvNames"
             )
         }
@@ -507,7 +507,7 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
             LogUtils.addRedLine(rabbitTemplate, buildId, "用户没有操作这些环境的权限！环境ID：$noAuthEnvIds", taskId, containerId, executeCount)
             throw BuildTaskException(
                 errorType = ErrorType.USER,
-                errorCode = ERROR_BUILD_TASK_USER_ENV_NO_OP_PRI,
+                errorCode = ERROR_BUILD_TASK_USER_ENV_NO_OP_PRI.toInt(),
                 errorMsg = "用户没有操作这些环境的权限！环境ID：$noAuthEnvIds"
             )
         }
@@ -544,7 +544,7 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
                 )
                 throw BuildTaskException(
                     errorType = ErrorType.USER,
-                    errorCode = ERROR_BUILD_TASK_USER_ENV_ID_NOT_EXISTS,
+                    errorCode = ERROR_BUILD_TASK_USER_ENV_ID_NOT_EXISTS.toInt(),
                     errorMsg = "以下这些环境id不存在,请重新修改流水线！id：$noExistsEnvIds"
                 )
             }
@@ -569,7 +569,7 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
                 )
                 throw BuildTaskException(
                     errorType = ErrorType.USER,
-                    errorCode = ERROR_BUILD_TASK_USER_ENV_ID_NOT_EXISTS,
+                    errorCode = ERROR_BUILD_TASK_USER_ENV_ID_NOT_EXISTS.toInt(),
                     errorMsg = "以下这些节点id不存在,请重新修改流水线！id：$noExistsNodeIds"
                 )
             }
@@ -606,15 +606,19 @@ class JobDevOpsFastPushFileTaskAtom @Autowired constructor(
     ): List<BkRepoFile> {
         val result = mutableListOf<BkRepoFile>()
         val bkRepoData = getAllBkRepoFiles(projectId, pipelineId, buildId, isCustom)
+        logger.info("bkRepoData: $bkRepoData")
+        logger.info("srcPath: $srcPath")
         val matcher = FileSystems.getDefault().getPathMatcher("glob:$srcPath")
-        val pipelinePathPrefix = "/$pipelineId/$buildId"
-        bkRepoData.data?.forEach { bkrepoFile ->
+        val pipelinePathPrefix = "/$pipelineId/$buildId/"
+        bkRepoData.data.forEach { bkrepoFile ->
             val repoPath = if (isCustom) {
                 bkrepoFile.fullPath.removePrefix("/")
             } else {
                 bkrepoFile.fullPath.removePrefix(pipelinePathPrefix)
             }
+            logger.info("match: repoPath: $repoPath, Paths.get(repoPath) ${Paths.get(repoPath)}")
             if (matcher.matches(Paths.get(repoPath))) {
+                logger.info("matchFile: $bkrepoFile")
                 bkrepoFile.displayPath = repoPath
                 result.add(bkrepoFile)
             }

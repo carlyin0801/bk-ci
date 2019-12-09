@@ -125,15 +125,15 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
         val buildId = task.buildId
         val taskId = task.taskId
 
-// 构建环境容器序号ID
+        // 构建环境容器序号ID
         val vmSeqId = task.containerId
-// 预指定VM名称列表（逗号分割）
+        // 预指定VM名称列表（逗号分割）
         val vmNames = param.vmNames.joinToString(",")
 
         val pipelineInfo = pipelineRepositoryService.getPipelineInfo(projectId, pipelineId)
             ?: throw BuildTaskException(
                 errorType = ErrorType.SYSTEM,
-                errorCode = ERROR_PIPELINE_NOT_EXISTS,
+                errorCode = ERROR_PIPELINE_NOT_EXISTS.toInt(),
                 errorMsg = "流水线不存在",
                 pipelineId = pipelineId,
                 buildId = buildId,
@@ -143,7 +143,7 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
         val model = pipelineBuildDetailService.getBuildModel(buildId)
             ?: throw BuildTaskException(
                 errorType = ErrorType.SYSTEM,
-                errorCode = ERROR_PIPELINE_MODEL_NOT_EXISTS,
+                errorCode = ERROR_PIPELINE_MODEL_NOT_EXISTS.toInt(),
                 errorMsg = "流水线模型不存在",
                 pipelineId = pipelineId,
                 buildId = buildId,
@@ -153,7 +153,7 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
         val container = model.getContainer(vmSeqId)
             ?: throw BuildTaskException(
                 errorType = ErrorType.SYSTEM,
-                errorCode = ERROR_PIPELINE_NODEL_CONTAINER_NOT_EXISTS,
+                errorCode = ERROR_PIPELINE_NODEL_CONTAINER_NOT_EXISTS.toInt(),
                 errorMsg = "流水线的模型中指定构建容器${vmNames}不存在",
                 pipelineId = pipelineId,
                 buildId = buildId,
@@ -176,6 +176,14 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
 
         dispatchType.replaceVariable(pipelineRuntimeService.getAllVariable(buildId))
 
+        LogUtils.addFoldEndLine(
+            rabbitTemplate = rabbitTemplate,
+            buildId = buildId,
+            groupName = "Job#$vmSeqId init",
+            tag = task.containerHashId ?: "",
+            jobId = task.containerHashId,
+            executeCount = task.executeCount ?: 1
+        )
         pipelineEventDispatcher.dispatch(
             PipelineAgentStartupEvent(
                 source = source,
@@ -349,7 +357,7 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
     private fun agentException(pipelineId: String, buildId: String) =
         BuildTaskException(
             errorType = ErrorType.SYSTEM,
-            errorCode = ERROR_PIPELINE_AGENT_STATUS_EXCEPTION,
+            errorCode = ERROR_PIPELINE_AGENT_STATUS_EXCEPTION.toInt(),
             errorMsg = "第三方构建机的Agent状态异常",
             pipelineId = pipelineId,
             buildId = buildId,

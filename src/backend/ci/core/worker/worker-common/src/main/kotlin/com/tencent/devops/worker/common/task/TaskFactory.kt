@@ -83,10 +83,11 @@ object TaskFactory {
 
     private fun register(classType: String, taskClass: KClass<out ITask>) {
         taskMap[classType] = taskClass
-        LoggerService.addNormalLine("Add Task $taskClass for type $classType")
+//        LoggerService.addNormalLine("Add Task $taskClass for type $classType")
     }
 
     fun create(type: String): ITask {
+        LoggerService.addNormalLine("taskMap is: $taskMap")
         val clazz = taskMap[type] ?: return EmptyTask(
             type
         )

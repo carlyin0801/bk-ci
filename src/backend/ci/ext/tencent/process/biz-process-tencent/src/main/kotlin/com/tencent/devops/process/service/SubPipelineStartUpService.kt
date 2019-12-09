@@ -72,12 +72,15 @@ class SubPipelineStartUpService(
         projectId: String,
         parentPipelineId: String,
         buildId: String,
+        callProjectId: String = "",
         callPipelineId: String,
         atomCode: String,
         taskId: String,
         runMode: String,
         values: Map<String, String>
     ): Result<ProjectBuildId> {
+        val project = if (callPipelineId.isNotEmpty()) { callProjectId } else { projectId }
+
         logger.info("callPipelineStartup: $projectId | $parentPipelineId | $buildId | $callPipelineId | $taskId | $runMode")
 
         // 获取构建任务
@@ -98,7 +101,7 @@ class SubPipelineStartUpService(
         values.forEach {
             startParams[it.key] = parseVariable(it.value, runVariables)
         }
-        val pipelineInfo = (pipelineRepositoryService.getPipelineInfo(projectId, callPipelineId)
+        val pipelineInfo = (pipelineRepositoryService.getPipelineInfo(project, callPipelineId)
                 ?: return MessageCodeUtil.generateResponseDataObject(ProcessMessageCode.ERROR_NO_PIPELINE_EXISTS_BY_ID.toString(), arrayOf(buildId)))
 
         logger.info("pipelineInfo: $pipelineInfo")
@@ -106,7 +109,7 @@ class SubPipelineStartUpService(
         val existPipelines = HashSet<String>()
         existPipelines.add(parentPipelineId)
         try {
-            checkSubpipeline(atomCode, projectId, callPipelineId, existPipelines)
+            checkSubpipeline(atomCode, project, callPipelineId, existPipelines)
         } catch (e: OperationException) {
             return MessageCodeUtil.generateResponseDataObject(ProcessMessageCode.ERROR_SUBPIPELINE_CYCLE_CALL.toString())
         }
@@ -114,7 +117,7 @@ class SubPipelineStartUpService(
         val subBuildId = buildService.subpipelineStartup(
                 userId = runVariables.getValue(PIPELINE_START_USER_ID),
                 startType = StartType.PIPELINE,
-                projectId = projectId,
+                projectId = project,
                 parentPipelineId = parentPipelineId,
                 parentBuildId = buildId,
                 parentTaskId = taskId,
@@ -125,7 +128,7 @@ class SubPipelineStartUpService(
                 isMobile = false
         )
 
-        return Result(ProjectBuildId(id = subBuildId, projectId = projectId))
+        return Result(ProjectBuildId(id = subBuildId, projectId = project))
     }
 
     /**

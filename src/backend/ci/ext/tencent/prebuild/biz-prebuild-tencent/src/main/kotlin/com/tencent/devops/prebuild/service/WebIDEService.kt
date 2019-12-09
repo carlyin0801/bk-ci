@@ -1,3 +1,29 @@
+/*
+ * Tencent is pleased to support the open source community by making BK-CI 蓝鲸持续集成平台 available.
+ *
+ * Copyright (C) 2019 THL A29 Limited, a Tencent company.  All rights reserved.
+ *
+ * BK-CI 蓝鲸持续集成平台 is licensed under the MIT license.
+ *
+ * A copy of the MIT License is included in this file.
+ *
+ *
+ * Terms of the MIT License:
+ * ---------------------------------------------------
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+ * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+ * NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package com.tencent.devops.prebuild.service
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -19,16 +45,15 @@ import com.tencent.devops.common.pipeline.pojo.element.agent.LinuxScriptElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.ManualTriggerElement
 import com.tencent.devops.common.pipeline.type.agent.AgentType
 import com.tencent.devops.common.pipeline.type.agent.ThirdPartyAgentIDDispatchType
-import com.tencent.devops.environment.api.ServiceNodeResource
+import com.tencent.devops.environment.api.UserNodeResource
 import com.tencent.devops.environment.api.thirdPartyAgent.ServicePreBuildAgentResource
-import com.tencent.devops.environment.api.thirdPartyAgent.ServiceThirdPartyAgentResource
-import com.tencent.devops.environment.pojo.enums.NodeType
-import com.tencent.devops.environment.pojo.thirdPartyAgent.ThirdPartyAgentInfo
+import com.tencent.devops.environment.pojo.NodeWithPermission
 import com.tencent.devops.environment.pojo.thirdPartyAgent.ThirdPartyAgentStaticInfo
 import com.tencent.devops.prebuild.dao.WebIDEOpenDirDao
 import com.tencent.devops.prebuild.dao.WebIDEStatusDao
 import com.tencent.devops.prebuild.pojo.DevcloudUserRes
 import com.tencent.devops.prebuild.pojo.IDEInfo
+import com.tencent.devops.prebuild.pojo.SingleDevcloudUserRes
 import com.tencent.devops.prebuild.pojo.UserResItem
 import com.tencent.devops.prebuild.pojo.ide.IdeDirInfo
 import com.tencent.devops.process.api.service.ServiceBuildResource
@@ -84,7 +109,19 @@ class WebIDEService @Autowired constructor(
 
                 var ideStatus = if (Math.abs(currTimeStamp - it.ideLastUpdate) < 13000) 1 else 0
                 // var ideStatus = if(Math.abs(currTimeStamp - 0) < 13000) 1 else 0
-                val info = IDEInfo(ideStatus, it.agentStatus, it.ip, ideUrl, it.ideVersion, it.serverType, it.serverCreateTime)
+                val info = IDEInfo(
+                        ideStatus,
+                        it.agentStatus,
+                        it.ip,
+                        ideUrl,
+                        it.ideVersion,
+                        it.serverType,
+                        it.serverCreateTime,
+                        it.cpuCore,
+                        it.memoryGb,
+                        it.diskGb,
+                        it.serverRegionName
+                )
                 ideList.add(info)
             } else {
                 webIDEStatusDao.del(dslContext, userId, it.ip)
@@ -97,7 +134,19 @@ class WebIDEService @Autowired constructor(
             devcloudInfo.forEach {
                 val date = SimpleDateFormat("yyyy-MM-dd hh:mm:ss").parse(it.value.createdAt)
                 val ideUrl = "http://dev.devgw.devops.oa.com/webide/$userId/${it.value.ip}/"
-                val info = IDEInfo(0, 0, it.value.ip, ideUrl, "0", it.value.res_type, date.time)
+                val info = IDEInfo(
+                        0,
+                        0,
+                        it.value.ip,
+                        ideUrl,
+                        "0",
+                        it.value.res_type,
+                        date.time,
+                        it.value.cpu,
+                        it.value.memory,
+                        it.value.disk,
+                        it.value.regionName
+                )
                 ideList.add(info)
                 addNewInfo(userId, info)
             }
@@ -111,7 +160,7 @@ class WebIDEService @Autowired constructor(
     }
 
     private fun updateAgentStatus(userID: String, projectID: String, ideList: List<IDEInfo>) {
-        val nodeInfoList = client.get(ServiceNodeResource::class).listNodeByNodeType(projectID, NodeType.THIRDPARTY)
+        val nodeInfoList = client.get(UserNodeResource::class).list(userID, projectID)
         if (nodeInfoList.isNotOk()) {
             logger.error("list user third party node failed")
             throw OperationException("list user third party node failed")
@@ -134,9 +183,10 @@ class WebIDEService @Autowired constructor(
         }
     }
 
-    private fun getAgentInfo(userId: String, projectId: String, ip: String): ThirdPartyAgentInfo {
-        // val nodeInfoList = client.get(ServiceNodeResource::class).listNodeByNodeType(projectId, NodeType.THIRDPARTY)
-        val nodeInfoList = client.get(ServiceThirdPartyAgentResource::class).listAgents(userId, projectId, OS.LINUX)
+    private fun getAgentInfo(userId: String, projectId: String, ip: String): NodeWithPermission {
+        //val nodeInfoList = client.get(ServiceNodeResource::class).listNodeByNodeType(projectId, NodeType.THIRDPARTY)
+        //val nodeInfoList = client.get(ServiceThirdPartyAgentResource::class).listAgents(userId, projectId, OS.LINUX)
+        val nodeInfoList = client.get(UserNodeResource::class).list(userId, projectId)
         if (nodeInfoList.isNotOk()) {
             logger.error("list user third party node failed")
             throw OperationException("list user third party node failed")
@@ -150,7 +200,7 @@ class WebIDEService @Autowired constructor(
             throw OperationException("can not find specific agent by projectId:$projectId and ip:$ip")
         }
 
-        logger.info("succ get agent info by ip:$ip, nodeID:${agentInfo.agentId}")
+        logger.info("succ get agent info by ip:$ip, nodeID:${agentInfo.nodeHashId}")
         return agentInfo
     }
 
@@ -243,12 +293,16 @@ class WebIDEService @Autowired constructor(
                 newItem.ideVersion,
                 newItem.serverCreateTime,
                 "",
-                0)
+                0,
+                newItem.serverDisk,
+                newItem.serverCpu,
+                newItem.serverMemory,
+                newItem.serverRegionName)
     }
 
     fun setupAgent(userId: String, projectId: String, ip: String): BuildId {
         // 创建手动触发流水线
-        val agentId = getAgentInfo(userId, projectId, ip).agentId
+        val agentId = getAgentInfo(userId, projectId, ip).nodeHashId
         var pipelineId = isPipelineExist(userId, projectId, ip)
         if (pipelineId == "") {
             pipelineId = createAgentPipeline(userId, projectId, agentId, ip)
@@ -370,4 +424,65 @@ class WebIDEService @Autowired constructor(
         webIDEOpenDirDao.update(dslContext, userId, ip, path)
         return true
     }
+
+    private fun getDevcloudUserByIp(ip: String): UserResItem? {
+        val url = "http://oss.esb.oa.com/devops-dev/devcloud/api/v1/resource/info?ip=$ip"
+        val infoMap = HashMap<String, UserResItem>()
+        logger.info(url)
+        val request = Request.Builder()
+                .url(url)
+                .headers(Headers.of(makeDevCloudAPIHeaders("10004", "Eeav59x*xFki46B0")))
+                .get()
+                .build()
+        OkhttpUtils.doHttp(request).use { response ->
+            val responseContent = response.body()!!.string()
+            if (!response.isSuccessful) {
+                logger.info("response code: ${response.code()}")
+                logger.info("response: $responseContent")
+                throw RuntimeException("fail to get devcloud info by ip $ip")
+            }
+            logger.info("get devcloud content by ip $ip: $responseContent")
+            val devCloudUserRes = jacksonObjectMapper().readValue<SingleDevcloudUserRes>(responseContent)
+            if (devCloudUserRes.actionCode == 200) {
+                val userResItem = devCloudUserRes.data
+                return userResItem
+            }
+        }
+        return null
+    }
+
+    fun reportDevcloudIp(ip: String): Boolean {
+        //1. 通过ip地址查询该机器的用户
+        val userDevcloudInfo = getDevcloudUserByIp(ip)
+        if(userDevcloudInfo == null) {
+            logger.error("unexpected, failed to get devcloud info by ip $ip")
+            return false
+        }
+
+        logger.info("this ip$ip belongs to $userDevcloudInfo.operator")
+
+        //2. 用户名注册蓝盾项目并添加管理员权限
+
+        //3. 建立devcloud机器信息
+/*        val agentInstallLink = client.get(WebIDEResource::class).getAgentInstallLink(
+                userDevcloudInfo.operator,
+                "projectId",
+                "regionName",
+                "operationName",
+                ip
+        )
+
+        agentInstallLink.data.link*/
+
+        //4. 新建agent节点，获得agentid，改写cvm内预置的agent套件（项目id，agentid）相关信息
+
+        //5. 启动agent，检测agent状态是否正常
+
+        //6. 触发流水线，部署服务
+
+        //7. 检测连通情况
+        return true
+    }
+
+
 }

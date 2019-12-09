@@ -34,9 +34,11 @@ import com.tencent.devops.log.model.pojo.LogEvent
 import com.tencent.devops.log.model.pojo.LogStatusEvent
 import com.tencent.devops.log.model.pojo.PageQueryLogs
 import com.tencent.devops.log.model.pojo.QueryLogs
+import com.tencent.devops.log.model.pojo.LogLine
 import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.service.v2.LogServiceV2
-import com.tencent.devops.log.utils.LogPushRedisUtlis
+import com.tencent.devops.log.websocket.LogPushRedisUtlis
+import org.glassfish.jersey.server.ChunkedOutput
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import javax.ws.rs.core.Response
@@ -61,24 +63,6 @@ class LogServiceDispatcher @Autowired constructor(
             logServiceV2.queryInitLogs(
                 buildId,
                 isAnalysis ?: false,
-                queryKeywords,
-                tag,
-                jobId,
-                executeCount
-            )
-        )
-    }
-
-    fun queryLogsByWords(
-        buildId: String,
-        queryKeywords: String,
-        tag: String?,
-        jobId: String?,
-        executeCount: Int?
-    ): Result<QueryLogs> {
-        return Result(
-            logServiceV2.queryLogsByKeywords(
-                buildId,
                 queryKeywords,
                 tag,
                 jobId,
@@ -112,6 +96,17 @@ class LogServiceDispatcher @Autowired constructor(
                     pageSize ?: -1
                 )
             )
+    }
+
+    fun loadInitLogs(
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): ChunkedOutput<MutableList<LogLine>> {
+        return logServiceV2.loadInitLogs(pipelineId, buildId, tag, jobId, executeCount)
     }
 
     fun getMoreLogs(

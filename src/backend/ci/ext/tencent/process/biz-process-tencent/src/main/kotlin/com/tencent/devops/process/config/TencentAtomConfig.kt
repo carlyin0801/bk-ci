@@ -37,7 +37,7 @@ import org.springframework.context.annotation.Primary
 @Configuration
 class TencentAtomConfig {
 
-    @Bean("manualReviewTaskAtom")
+    @Bean
     @Primary
     fun pipelineUrlBean(
         @Autowired commonConfig: CommonConfig,

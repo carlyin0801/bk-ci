@@ -29,11 +29,13 @@ package com.tencent.devops.log.api
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.log.model.pojo.LogLine
 import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.model.pojo.QueryLogs
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
+import org.glassfish.jersey.server.ChunkedOutput
 import javax.ws.rs.Consumes
 import javax.ws.rs.GET
 import javax.ws.rs.HeaderParam
@@ -87,10 +89,11 @@ interface UserLogResource {
         executeCount: Int?
     ): Result<QueryLogs>
 
-    @ApiOperation("根据构建ID和关键字查询日志并返回行号")
+    @ApiOperation("持续加载全量日志")
     @GET
-    @Path("/{projectId}/{pipelineId}/{buildId}/query")
-    fun queryLogs(
+    @Path("/{projectId}/{pipelineId}/{buildId}/load")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun loadInitLogs(
         @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
@@ -103,10 +106,7 @@ interface UserLogResource {
         @ApiParam("构建ID", required = true)
         @PathParam("buildId")
         buildId: String,
-        @ApiParam("搜索关键字", required = true)
-        @QueryParam("queryKeywords")
-        queryKeywords: String,
-        @ApiParam("对应elementId", required = false)
+        @ApiParam("对应element ID", required = false)
         @QueryParam("tag")
         tag: String?,
         @ApiParam("对应jobId", required = false)
@@ -115,7 +115,7 @@ interface UserLogResource {
         @ApiParam("执行次数", required = false)
         @QueryParam("executeCount")
         executeCount: Int?
-    ): Result<QueryLogs>
+    ): ChunkedOutput<MutableList<LogLine>>
 
     @ApiOperation("获取更多日志")
     @GET

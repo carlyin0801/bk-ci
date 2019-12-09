@@ -149,12 +149,12 @@ object LoggerService {
 
     fun addNormalLine(message: String) {
         val logMessage = LogMessage(
-            message,
-            System.currentTimeMillis(),
-            elementId,
-            jobId,
-            LogType.LOG,
-            executeCount
+            message = message,
+            timestamp = System.currentTimeMillis(),
+            tag = elementId,
+            jobId = jobId,
+            logType = LogType.LOG,
+            executeCount = executeCount
         )
         logger.info(logMessage.toString())
         try {
@@ -170,25 +170,25 @@ object LoggerService {
     fun addRedLine(message: String) =
         addNormalLine(Ansi().fgRed().a(message).reset().toString())
 
-    fun addFoldStartLine(tagName: String) {
+    fun addFoldStartLine(foldName: String) {
         val logMessage = LogMessage(
-            "soda_fold:start:$tagName",
+            "##[group] $foldName",
             System.currentTimeMillis(),
             elementId,
             jobId,
-            LogType.START,
+            LogType.LOG,
             executeCount
         )
         addLog(logMessage)
     }
 
-    fun addFoldEndLine(tagName: String) {
+    fun addFoldEndLine(foldName: String) {
         val logMessage = LogMessage(
-            "soda_fold:end:$tagName",
+            "##[endgroup] $foldName",
             System.currentTimeMillis(),
             elementId,
             jobId,
-            LogType.END,
+            LogType.LOG,
             executeCount
         )
         addLog(logMessage)

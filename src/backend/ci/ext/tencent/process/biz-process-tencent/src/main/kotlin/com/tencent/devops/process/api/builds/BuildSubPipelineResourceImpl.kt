@@ -40,16 +40,18 @@ class BuildSubPipelineResourceImpl @Autowired constructor(
     private val subPipeService: SubPipelineStartUpService,
     private val buildService: PipelineBuildService
 ) : BuildSubPipelineResource {
-    override fun callOtherProjectPipelineStartup(projectId: String,
-                                                 parentPipelineId: String,
-                                                 buildId: String,
-                                                 callProjectId: String,
-                                                 callPipelineId: String,
-                                                 atomCode: String,
-                                                 taskId: String,
-                                                 runMode: String,
-                                                 values: Map<String, String>): Result<ProjectBuildId> {
-        return subPipeService.callPipelineStartup(callProjectId, parentPipelineId, buildId, callPipelineId, atomCode, taskId, runMode, values)
+    override fun callOtherProjectPipelineStartup(
+        projectId: String,
+        parentPipelineId: String,
+        buildId: String,
+        callProjectId: String,
+        callPipelineId: String,
+        atomCode: String,
+        taskId: String,
+        runMode: String,
+        values: Map<String, String>
+    ): Result<ProjectBuildId> {
+        return subPipeService.callPipelineStartup(projectId, parentPipelineId, buildId, callProjectId, callPipelineId, atomCode, taskId, runMode, values)
     }
 
     override fun callPipelineStartup(
@@ -62,7 +64,8 @@ class BuildSubPipelineResourceImpl @Autowired constructor(
         runMode: String,
         values: Map<String, String>
     ): Result<ProjectBuildId> {
-        return subPipeService.callPipelineStartup(projectId, parentPipelineId, buildId, callPipelineId, atomCode, taskId, runMode, values)
+        return subPipeService.callPipelineStartup(projectId = projectId, parentPipelineId = parentPipelineId, buildId = buildId,
+                callPipelineId = callPipelineId, atomCode = atomCode, taskId = taskId, runMode = runMode, values = values)
     }
 
     override fun getSubPipelineStatus(projectId: String, pipelineId: String, buildId: String): Result<SubPipelineStatus> {
