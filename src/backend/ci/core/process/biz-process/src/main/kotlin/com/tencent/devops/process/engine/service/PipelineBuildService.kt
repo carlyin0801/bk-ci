@@ -29,6 +29,7 @@ package com.tencent.devops.process.engine.service
 import com.fasterxml.jackson.core.type.TypeReference
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.exception.ErrorCodeException
+import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.model.SQLPage
 import com.tencent.devops.common.api.pojo.BuildHistoryPage
 import com.tencent.devops.common.api.pojo.IdValue
@@ -120,9 +121,9 @@ class PipelineBuildService(
     private val pipelinePermissionService: PipelinePermissionService,
     private val buildStartupParamService: BuildStartupParamService,
     private val paramService: ParamService,
-    private val parameterUtils: PswParameterUtils,
     private val pipelineBuildQualityService: PipelineBuildQualityService,
-    private val rabbitTemplate: RabbitTemplate
+    private val rabbitTemplate: RabbitTemplate,
+    private val parameterUtils: PswParameterUtils
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PipelineBuildService::class.java)
@@ -523,7 +524,15 @@ class PipelineBuildService(
                 }
             }
 
-            return startPipeline(userId, readyToBuildPipelineInfo, startType, startParamsWithType, channelCode, isMobile, model)
+            return startPipeline(
+                userId = userId,
+                readyToBuildPipelineInfo = readyToBuildPipelineInfo,
+                startType = startType,
+                startParamsWithType = startParamsWithType,
+                channelCode = channelCode,
+                isMobile = isMobile,
+                model = model
+            )
         } finally {
             logger.info("It take(${System.currentTimeMillis() - startEpoch})ms to start pipeline($pipelineId)")
         }
@@ -604,8 +613,15 @@ class PipelineBuildService(
             ) }
 
             val subBuildId = startPipeline(
-                readyToBuildPipelineInfo.lastModifyUser, readyToBuildPipelineInfo,
-                startType, startParamsWithType, channelCode, isMobile, model, null, false
+                userId = readyToBuildPipelineInfo.lastModifyUser,
+                readyToBuildPipelineInfo = readyToBuildPipelineInfo,
+                startType = startType,
+                startParamsWithType = startParamsWithType,
+                channelCode = channelCode,
+                isMobile = isMobile,
+                model = model,
+                signPipelineVersion = null,
+                frequencyLimit = false
             )
             // 更新父流水线关联子流水线构建id
             pipelineRuntimeService.updateTaskSubBuildId(
@@ -670,8 +686,15 @@ class PipelineBuildService(
             ) }
 
             return startPipeline(
-                userId, readyToBuildPipelineInfo,
-                StartType.TIME_TRIGGER, startParamsWithType, readyToBuildPipelineInfo.channelCode, false, model, null, false
+                userId = userId,
+                readyToBuildPipelineInfo = readyToBuildPipelineInfo,
+                startType = StartType.TIME_TRIGGER,
+                startParamsWithType = startParamsWithType,
+                channelCode = readyToBuildPipelineInfo.channelCode,
+                isMobile = false,
+                model = model,
+                signPipelineVersion = null,
+                frequencyLimit = false
             )
         } finally {
             logger.info("Timer| It take(${System.currentTimeMillis() - startEpoch})ms to start pipeline($pipelineId)")
@@ -1467,9 +1490,23 @@ class PipelineBuildService(
                             val status = task["status"] ?: ""
                             if (taskId == e.id) {
                                 isPrepareEnv = false
-                                logger.info("Pipeline($pipelineId) build($buildId) shutdown by $userId, elementId: $taskId")
-                                LogUtils.addYellowLine(rabbitTemplate, buildId, "流水线被用户终止，操作人:$userId", taskId, containerId, 1)
-//                                LogUtils.addFoldEndLine(rabbitTemplate, buildId, "${e.name}-[$taskId]", taskId, containerId, 1)
+                                logger.info("build($buildId) shutdown by $userId, taskId: $taskId, status: $status")
+                                LogUtils.addYellowLine(
+                                    rabbitTemplate = rabbitTemplate,
+                                    buildId = buildId,
+                                    message = "流水线被用户终止，操作人:$userId",
+                                    tag = taskId,
+                                    jobId = containerId,
+                                    executeCount = 1
+                                )
+                                LogUtils.addFoldEndLine(
+                                    rabbitTemplate = rabbitTemplate,
+                                    buildId = buildId,
+                                    groupName = "${e.name}-[$taskId]",
+                                    tag = taskId,
+                                    jobId = containerId,
+                                    executeCount = 1
+                                )
                             }
                         }
                     }
@@ -1517,6 +1554,28 @@ class PipelineBuildService(
 
             // 如果指定了版本号，则设置指定的版本号
             readyToBuildPipelineInfo.version = signPipelineVersion ?: readyToBuildPipelineInfo.version
+
+            var startParams = startParamsWithType.map { it.key to it.value }.toMap()
+            val fullModel = pipelineBuildQualityService.fillingRuleInOutElement(
+                projectId = readyToBuildPipelineInfo.projectId,
+                pipelineId = readyToBuildPipelineInfo.pipelineId,
+                startParams = startParams,
+                model = model
+            )
+
+            val interceptResult = pipelineInterceptorChain.filter(
+                InterceptData(readyToBuildPipelineInfo, fullModel, startType)
+            )
+
+            if (interceptResult.isNotOk()) {
+                // 发送排队失败的事件
+                logger.error("[${readyToBuildPipelineInfo.pipelineId}]|START_PIPELINE_$startType|流水线启动失败:[${interceptResult.message}]")
+                throw ErrorCodeException(
+                    statusCode = Response.Status.NOT_FOUND.statusCode,
+                    errorCode = interceptResult.status.toString(),
+                    defaultMessage = "流水线启动失败![${interceptResult.message}]"
+                )
+            }
 
             val paramsWithType = startParamsWithType.plus(
                 BuildParameters(
@@ -1588,30 +1647,8 @@ class PipelineBuildService(
                     }
                 )
 
-            val startParams = paramsWithType.map { it.key to it.value }.toMap()
-
-            val fullModel = pipelineBuildQualityService.fillingRuleInOutElement(
-                projectId = readyToBuildPipelineInfo.projectId,
-                pipelineId = readyToBuildPipelineInfo.pipelineId,
-                startParams = startParams,
-                model = model
-            )
-
-            val interceptResult = pipelineInterceptorChain.filter(
-                InterceptData(readyToBuildPipelineInfo, fullModel, startType)
-            )
-
-            if (interceptResult.isNotOk()) {
-                // 发送排队失败的事件
-                logger.error("[${readyToBuildPipelineInfo.pipelineId}]|START_PIPELINE_$startType|流水线启动失败:[${interceptResult.message}]")
-                throw ErrorCodeException(
-                    statusCode = Response.Status.NOT_FOUND.statusCode,
-                    errorCode = interceptResult.status.toString(),
-                    defaultMessage = "流水线启动失败![${interceptResult.message}]"
-                )
-            }
-
-            val buildId = pipelineRuntimeService.startBuild(readyToBuildPipelineInfo, fullModel, paramsWithType)
+            val buildId = pipelineRuntimeService.startBuild(readyToBuildPipelineInfo, model, paramsWithType)
+            startParams = paramsWithType.map { it.key to it.value }.toMap()
             if (startParams.isNotEmpty()) {
                 buildStartupParamService.addParam(
                     projectId = readyToBuildPipelineInfo.projectId,

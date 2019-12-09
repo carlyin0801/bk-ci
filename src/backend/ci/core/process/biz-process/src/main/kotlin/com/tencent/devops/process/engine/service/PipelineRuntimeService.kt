@@ -336,7 +336,6 @@ class PipelineRuntimeService @Autowired constructor(
         return pipelineBuildVarDao.getVarsWithType(dslContext, buildId)
     }
 
-
     fun setVariable(projectId: String, pipelineId: String, buildId: String, varName: String, varValue: Any) {
         val realVarName = PipelineVarUtil.oldVarToNewVar(varName) ?: varName
         pipelineBuildVarDao.save(
@@ -411,6 +410,17 @@ class PipelineRuntimeService @Autowired constructor(
             containerId = containerId,
             statusSet = if (buildStatus != null) setOf(buildStatus) else null
         )
+        val result = mutableListOf<PipelineBuildTask>()
+        if (list.isNotEmpty()) {
+            list.forEach {
+                result.add(pipelineBuildTaskDao.convert(it)!!)
+            }
+        }
+        return result
+    }
+
+    fun getAllBuildTask(buildId: String): Collection<PipelineBuildTask> {
+        val list = pipelineBuildTaskDao.getByBuildId(dslContext, buildId)
         val result = mutableListOf<PipelineBuildTask>()
         if (list.isNotEmpty()) {
             list.forEach {

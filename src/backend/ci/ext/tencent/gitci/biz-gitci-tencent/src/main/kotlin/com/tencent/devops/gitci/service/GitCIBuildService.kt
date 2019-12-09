@@ -69,7 +69,7 @@ import com.tencent.devops.common.pipeline.container.NormalContainer
 import com.tencent.devops.common.pipeline.enums.CodePullStrategy
 import com.tencent.devops.common.pipeline.enums.GitPullModeType
 import com.tencent.devops.gitci.client.ScmClient
-import com.tencent.devops.gitci.utils.PswParameterUtils
+import com.tencent.devops.gitci.utils.GitCIParameterUtils
 import com.tencent.devops.process.api.service.ServiceBuildResource
 import com.tencent.devops.process.api.service.ServicePipelineResource
 import com.tencent.devops.process.pojo.BuildId
@@ -92,7 +92,7 @@ class GitCIBuildService @Autowired constructor(
     private val gitServicesConfDao: GitCIServicesConfDao,
     private val buildConfig: BuildConfig,
     private val objectMapper: ObjectMapper,
-    private val pswParameterUtils: PswParameterUtils
+    private val gitCIParameterUtils: GitCIParameterUtils
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(GitCIBuildService::class.java)
@@ -175,7 +175,6 @@ class GitCIBuildService @Autowired constructor(
 
         // 第二个stage，services初始化
         addServicesStage(yaml, stageList)
-
 
         // 其他的stage
         yaml.stages!!.forEachIndexed { stageIndex, stage ->
@@ -391,11 +390,12 @@ class GitCIBuildService @Autowired constructor(
     private fun createPipelineParams(gitProjectConf: GitRepositoryConf, yaml: CIBuildYaml): List<BuildFormProperty> {
         val result = mutableListOf<BuildFormProperty>()
         gitProjectConf.env?.forEach {
+            val encryptValue = gitCIParameterUtils.encrypt(it.value)
             result.add(BuildFormProperty(
                     it.name,
                     false,
-                    BuildFormPropertyType.STRING,
-                    it.value,
+                    BuildFormPropertyType.PASSWORD,
+                    encryptValue,
                     null,
                     null,
                     null,
@@ -407,12 +407,11 @@ class GitCIBuildService @Autowired constructor(
                     ))
         }
         yaml.variables?.forEach {
-            val encryptValue = pswParameterUtils.encrypt(it.value)
             result.add(BuildFormProperty(
                     it.key,
                     false,
-                    BuildFormPropertyType.PASSWORD,
-                    encryptValue,
+                    BuildFormPropertyType.STRING,
+                    it.value,
                     null,
                     null,
                     null,

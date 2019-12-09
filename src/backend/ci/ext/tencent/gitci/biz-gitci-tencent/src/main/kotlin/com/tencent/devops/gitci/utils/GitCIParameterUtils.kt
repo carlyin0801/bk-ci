@@ -1,4 +1,4 @@
-package com.tencent.devops.process.util
+package com.tencent.devops.gitci.utils
 
 import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.util.AESUtil
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
  * password参数类型工具类
  */
 @Component
-class PswParameterUtils {
+class GitCIParameterUtils {
 
     @Value("\${parameter.password.pswKey}")
     private val pswKey: String = ""
