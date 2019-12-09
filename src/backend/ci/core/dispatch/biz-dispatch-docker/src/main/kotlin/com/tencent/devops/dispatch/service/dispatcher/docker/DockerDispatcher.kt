@@ -50,7 +50,7 @@ class DockerDispatcher @Autowired constructor(
             rabbitTemplate,
             pipelineAgentStartupEvent.buildId,
             "Start docker ${dockerDispatch.dockerBuildVersion} for the build",
-            "j-${pipelineAgentStartupEvent.containerHashId}",
+            pipelineAgentStartupEvent.containerHashId ?: "",
             pipelineAgentStartupEvent.containerHashId,
             pipelineAgentStartupEvent.executeCount ?: 1
         )
