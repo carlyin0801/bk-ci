@@ -26,8 +26,8 @@
 
 package com.tencent.devops.environment
 
+import com.tencent.devops.common.service.config.CommonConfig
 import com.tencent.devops.environment.service.TencentAgentUrlServiceImpl
-import com.tencent.devops.environment.service.slave.SlaveGatewayService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
@@ -40,5 +40,5 @@ class TencentServiceConfig {
      */
     @Bean
     @Primary
-    fun agentUrlService(slaveGatewayService: SlaveGatewayService) = TencentAgentUrlServiceImpl(slaveGatewayService)
+    fun agentUrlService(commonConfig: CommonConfig) = TencentAgentUrlServiceImpl(commonConfig)
 }
