@@ -276,7 +276,7 @@ class GitCIRequestService @Autowired constructor(
             line = br.readLine()
         }
 
-        return yaml
+        return sb.toString()
     }
 
     private fun getEnvValue(env: List<EnvironmentVariables>, key: String): String? {
