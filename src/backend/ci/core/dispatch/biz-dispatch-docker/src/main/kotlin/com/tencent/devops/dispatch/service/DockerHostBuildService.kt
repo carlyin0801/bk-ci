@@ -318,7 +318,7 @@ class DockerHostBuildService @Autowired constructor(
                     secretKey = build.secretKey,
                     status = PipelineTaskStatus.RUNNING.status,
                     imageName = build.imageName,
-                    containerId = build.containerId,
+                    containerId = build.containerId ?: "",
                     wsInHost = false,
                     registryUser = build.registryUser,
                     registryPwd = build.registryPwd,
