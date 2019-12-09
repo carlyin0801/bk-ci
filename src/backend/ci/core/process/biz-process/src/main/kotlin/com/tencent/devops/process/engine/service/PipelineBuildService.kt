@@ -60,8 +60,6 @@ import com.tencent.devops.common.service.utils.HomeHostUtil
 import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.log.utils.LogUtils
 import com.tencent.devops.process.constant.ProcessMessageCode
-import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_NO_BUILD_EXISTS_BY_ID
-import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_NO_PIPELINE_EXISTS_BY_ID
 import com.tencent.devops.process.engine.control.lock.BuildIdLock
 import com.tencent.devops.process.engine.interceptor.InterceptData
 import com.tencent.devops.process.engine.interceptor.PipelineInterceptorChain
@@ -121,6 +119,7 @@ class PipelineBuildService(
     private val pipelinePermissionService: PipelinePermissionService,
     private val buildStartupParamService: BuildStartupParamService,
     private val paramService: ParamService,
+    private val pipelineBuildQualityService: PipelineBuildQualityService,
     private val rabbitTemplate: RabbitTemplate,
     private val parameterUtils: PswParameterUtils
 ) {
@@ -272,7 +271,7 @@ class PipelineBuildService(
             )
         }
 
-        val redisLock = RedisLock(redisOperation, "build:concurrency:$buildId", 30L)
+        val redisLock = BuildIdLock(redisOperation = redisOperation, buildId = buildId)
         try {
 
             redisLock.lock()
@@ -291,7 +290,7 @@ class PipelineBuildService(
                 )
             }
 
-            val model = getModel(projectId, pipelineId, buildInfo.version)
+            val model = getModel(projectId = projectId, pipelineId = pipelineId, version = buildInfo.version)
 
             val container = model.stages[0].containers[0] as TriggerContainer
 
@@ -523,7 +522,15 @@ class PipelineBuildService(
                 }
             }
 
-            return startPipeline(userId, readyToBuildPipelineInfo, startType, startParamsWithType, channelCode, isMobile, model)
+            return startPipeline(
+                userId = userId,
+                readyToBuildPipelineInfo = readyToBuildPipelineInfo,
+                startType = startType,
+                startParamsWithType = startParamsWithType,
+                channelCode = channelCode,
+                isMobile = isMobile,
+                model = model
+            )
         } finally {
             logger.info("It take(${System.currentTimeMillis() - startEpoch})ms to start pipeline($pipelineId)")
         }
@@ -1073,12 +1080,12 @@ class PipelineBuildService(
         val buildHistories = pipelineRuntimeService.getBuildHistoryByIds(setOf(buildId))
 
         if (buildHistories.isEmpty()) {
-            return MessageCodeUtil.generateResponseDataObject(ERROR_NO_BUILD_EXISTS_BY_ID.toString(), arrayOf(buildId))
+            return MessageCodeUtil.generateResponseDataObject(ProcessMessageCode.ERROR_NO_BUILD_EXISTS_BY_ID, arrayOf(buildId))
         }
 
         val pipelineInfo = pipelineRepositoryService.getPipelineInfo(projectId, pipelineId)
             ?: return MessageCodeUtil.generateResponseDataObject(
-                ERROR_NO_PIPELINE_EXISTS_BY_ID.toString(),
+                ProcessMessageCode.ERROR_NO_PIPELINE_EXISTS_BY_ID,
                 arrayOf(buildId)
             )
 
@@ -1479,7 +1486,7 @@ class PipelineBuildService(
                             val status = task["status"] ?: ""
                             if (taskId == e.id) {
                                 isPrepareEnv = false
-                                logger.info("Pipeline($pipelineId) build($buildId) shutdown by $userId, elementId: $taskId")
+                                logger.info("build($buildId) shutdown by $userId, taskId: $taskId, status: $status")
                                 LogUtils.addYellowLine(
                                     rabbitTemplate = rabbitTemplate,
                                     buildId = buildId,
@@ -1544,8 +1551,16 @@ class PipelineBuildService(
             // 如果指定了版本号，则设置指定的版本号
             readyToBuildPipelineInfo.version = signPipelineVersion ?: readyToBuildPipelineInfo.version
 
+            var startParams = startParamsWithType.map { it.key to it.value }.toMap()
+            val fullModel = pipelineBuildQualityService.fillingRuleInOutElement(
+                projectId = readyToBuildPipelineInfo.projectId,
+                pipelineId = readyToBuildPipelineInfo.pipelineId,
+                startParams = startParams,
+                model = model
+            )
+
             val interceptResult = pipelineInterceptorChain.filter(
-                InterceptData(readyToBuildPipelineInfo, model, startType)
+                InterceptData(readyToBuildPipelineInfo, fullModel, startType)
             )
 
             if (interceptResult.isNotOk()) {
@@ -1629,7 +1644,7 @@ class PipelineBuildService(
                 )
 
             val buildId = pipelineRuntimeService.startBuild(readyToBuildPipelineInfo, model, paramsWithType)
-            val startParams = paramsWithType.map { it.key to it.value }.toMap()
+            startParams = paramsWithType.map { it.key to it.value }.toMap()
             if (startParams.isNotEmpty()) {
                 buildStartupParamService.addParam(
                     projectId = readyToBuildPipelineInfo.projectId,
