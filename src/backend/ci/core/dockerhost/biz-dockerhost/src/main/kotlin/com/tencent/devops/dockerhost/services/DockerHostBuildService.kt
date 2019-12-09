@@ -174,7 +174,7 @@ class DockerHostBuildService(
             }
         } catch (t: Throwable) {
             logger.warn("Fail to pull the image $imageName of build $buildId", t)
-            log(buildId, "pull image fail，error is：${t.message}")
+            log(buildId, "pull image fail，error is：${t.message}", "null")
         }
         val dockerImageName = CommonUtils.normalizeImageName(checkImageRequest.imageName)
         // 查询镜像详细信息
