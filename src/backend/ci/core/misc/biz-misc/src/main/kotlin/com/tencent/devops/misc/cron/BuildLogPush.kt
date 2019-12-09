@@ -63,7 +63,7 @@ class BuildLogPush @Autowired constructor(
                         id = id,
                         lineNo = lastLineNum
                     ))
-                LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, id, lastLineNum)
+                LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, id, lastLineNum, "")
             }
         }
     }
