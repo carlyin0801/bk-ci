@@ -166,17 +166,6 @@ class PipelineRuntimeService @Autowired constructor(
         private val logger = LoggerFactory.getLogger(PipelineRuntimeService::class.java)
     }
 
-    fun getAllBuildTask(buildId: String): Collection<PipelineBuildTask> {
-        val list = pipelineBuildTaskDao.getByBuildId(dslContext, buildId)
-        val result = mutableListOf<PipelineBuildTask>()
-        if (list.isNotEmpty()) {
-            list.forEach {
-                result.add(pipelineBuildTaskDao.convert(it)!!)
-            }
-        }
-        return result
-    }
-
     fun createPipelineBuildSummary(projectId: String, pipelineId: String, buildNo: BuildNo?) {
         pipelineBuildSummaryDao.create(dslContext, projectId, pipelineId, buildNo)
     }
