@@ -176,7 +176,14 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
 
         dispatchType.replaceVariable(pipelineRuntimeService.getAllVariable(buildId))
 
-        LogUtils.addFoldEndLine(rabbitTemplate, buildId, "Job#$vmSeqId init", "j-${task.containerHashId}", task.containerHashId, task.executeCount ?: 1)
+        LogUtils.addFoldEndLine(
+            rabbitTemplate = rabbitTemplate,
+            buildId = buildId,
+            groupName = "Job#$vmSeqId init",
+            tag = task.containerHashId ?: "",
+            jobId = task.containerHashId,
+            executeCount = task.executeCount ?: 1
+        )
         pipelineEventDispatcher.dispatch(
             PipelineAgentStartupEvent(
                 source = source,
