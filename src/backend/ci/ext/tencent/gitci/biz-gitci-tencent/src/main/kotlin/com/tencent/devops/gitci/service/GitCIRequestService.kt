@@ -257,12 +257,14 @@ class GitCIRequestService @Autowired constructor(
         var line: String? = br.readLine()
         while (line != null) {
             val envMatches = envRegex.find(line)
-            if (null != envMatches) {
-                val envKeyPrefix = envMatches.groupValues[0]
+            envMatches?.groupValues?.forEach {
+                val envKeyPrefix = it
                 val envKey = envKeyPrefix.removePrefix("\$env:")
                 val envValue = getEnvValue(gitProjectConf.env!!, envKey)
-                if (null != envValue) {
-                    line = envRegex.replace(line, envValue)
+                line = if (null != envValue) {
+                    envRegex.replace(line!!, envValue)
+                } else {
+                    envRegex.replace(line!!, "null")
                 }
             }
 
