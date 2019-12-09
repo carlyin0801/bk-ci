@@ -247,6 +247,7 @@ class GitCIRequestService @Autowired constructor(
             return yaml
         }
         val gitProjectConf = gitCISettingDao.getSetting(dslContext, gitProjectId) ?: return yaml
+        logger.info("gitProjectConf: $gitProjectConf")
         if (null == gitProjectConf.env) {
             return yaml
         }
@@ -258,9 +259,11 @@ class GitCIRequestService @Autowired constructor(
         while (line != null) {
             val envMatches = envRegex.find(line)
             envMatches?.groupValues?.forEach {
+                logger.info("envKeyPrefix: $it")
                 val envKeyPrefix = it
                 val envKey = envKeyPrefix.removePrefix("\$env:")
                 val envValue = getEnvValue(gitProjectConf.env!!, envKey)
+                logger.info("envKey: $envKey, envValue: $envValue")
                 line = if (null != envValue) {
                     envRegex.replace(line!!, envValue)
                 } else {
