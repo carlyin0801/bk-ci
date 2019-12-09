@@ -195,19 +195,19 @@ class LogServiceDispatcher @Autowired constructor(
         logServiceV2.updateLogStatus(event)
     }
 
-    fun getJobPushStatus(buildId: String, jobId: String, lineNo: Long): PushStatus? {
+    fun getJobPushStatus(buildId: String, jobId: String, lineNo: Long, sessionId: String): PushStatus? {
         val pushStatus = LogPushRedisUtlis.getPushStatusByJobId(redisOperation, buildId, jobId)
-        if (pushStatus == null) LogPushRedisUtlis.writePushStatusByJobId(redisOperation, buildId, jobId, lineNo)
+        if (pushStatus == null) LogPushRedisUtlis.writePushStatusByJobId(redisOperation, buildId, jobId, lineNo, sessionId)
         return pushStatus
     }
 
-    fun getTagPushStatus(buildId: String, tag: String, lineNo: Long): PushStatus? {
+    fun getTagPushStatus(buildId: String, tag: String, lineNo: Long, sessionId: String): PushStatus? {
         val pushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, buildId, tag)
-        if (pushStatus == null) LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, tag, lineNo)
+        if (pushStatus == null) LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, tag, lineNo, sessionId)
         return pushStatus
     }
 
-    fun cleanPushStatus(buildId: String, tag: String) {
+    fun cleanPushStatus(buildId: String, tag: String, sessionId: String) {
         LogPushRedisUtlis.cleanPushStatusByTag(redisOperation, buildId, tag)
     }
 }

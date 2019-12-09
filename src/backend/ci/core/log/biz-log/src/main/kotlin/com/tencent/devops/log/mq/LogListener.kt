@@ -102,10 +102,20 @@ class LogListener constructor(
                         // 记录该任务已插入的最后一条日志行号
                         val pushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, event.buildId, it.tag)
                         // 若最新一条比上次推送多10行以上就触发推送
-                        if (pushStatus != null && it.lineNo - pushStatus.lastLineNum > 10) {
+                        if (pushStatus != null && it.lineNo - pushStatus.lastLineNum > 20) {
                             val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, it.tag, it.lineNo)
                             webSocketDispatcher.dispatch(logPush)
-                            LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, it.tag, logPush.lastLineNo)
+                            LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, it.tag, logPush.lastLineNo, "")
+                        }
+                    }
+                    if (!it.jobId.isBlank()) {
+                        // 记录该任务已插入的最后一条日志行号
+                        val pushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, event.buildId, it.tag)
+                        // 若最新一条比上次推送多10行以上就触发推送
+                        if (pushStatus != null && it.lineNo - pushStatus.lastLineNum > 20) {
+                            val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, it.tag, it.lineNo)
+                            webSocketDispatcher.dispatch(logPush)
+                            LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, it.tag, logPush.lastLineNo, "")
                         }
                     }
                 }
@@ -113,7 +123,7 @@ class LogListener constructor(
                 if (event.id == null || event.lineNo == null) return
                 val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, event.id!!, event.lineNo!!)
                 webSocketDispatcher.dispatch(logPush)
-                LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, event.id!!, logPush.lastLineNo)
+                LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, event.id!!, logPush.lastLineNo, "")
             }
             result = true
         } catch (ignored: Throwable) {

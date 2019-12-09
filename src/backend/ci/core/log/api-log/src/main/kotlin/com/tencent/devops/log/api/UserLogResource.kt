@@ -222,8 +222,8 @@ interface UserLogResource {
 
     @ApiOperation("开始插件的日志动态推送")
     @GET
-    @Path("/{projectId}/{pipelineId}/{buildId}/push")
-    fun startLogPush(
+    @Path("/{projectId}/{pipelineId}/{buildId}/push/tag")
+    fun startTagPush(
         @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
@@ -241,13 +241,43 @@ interface UserLogResource {
         tag: String,
         @ApiParam("已拉取的最后一行行号", required = true)
         @QueryParam("lineNo")
-        lineNo: Long
+        lineNo: Long,
+        @ApiParam("会话ID", required = true)
+        @QueryParam("sessionId")
+        sessionId: String
+    ): Result<PushStatus?>
+
+    @ApiOperation("开始Job的日志动态推送")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/push/job")
+    fun startJobPush(
+        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("对应element ID", required = true)
+        @QueryParam("jobId")
+        jobId: String,
+        @ApiParam("已拉取的最后一行行号", required = true)
+        @QueryParam("lineNo")
+        lineNo: Long,
+        @ApiParam("会话ID", required = true)
+        @QueryParam("sessionId")
+        sessionId: String
     ): Result<PushStatus?>
 
     @ApiOperation("结束插件的日志动态推送")
     @GET
-    @Path("/{projectId}/{pipelineId}/{buildId}/stop")
-    fun stopLogPush(
+    @Path("/{projectId}/{pipelineId}/{buildId}/stop/tag")
+    fun stopTagPush(
         @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
@@ -262,6 +292,33 @@ interface UserLogResource {
         buildId: String,
         @ApiParam("对应element ID", required = true)
         @QueryParam("tag")
-        tag: String
+        tag: String,
+        @ApiParam("会话ID", required = true)
+        @QueryParam("sessionId")
+        sessionId: String
+    ): Result<Boolean>
+
+    @ApiOperation("结束插件的日志动态推送")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/stop/job")
+    fun stopJobPush(
+        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("对应element ID", required = true)
+        @QueryParam("jobId")
+        jobId: String,
+        @ApiParam("会话ID", required = true)
+        @QueryParam("sessionId")
+        sessionId: String
     ): Result<Boolean>
 }
