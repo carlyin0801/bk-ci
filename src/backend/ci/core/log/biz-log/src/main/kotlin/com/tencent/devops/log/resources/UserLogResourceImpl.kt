@@ -186,27 +186,55 @@ class UserLogResourceImpl @Autowired constructor(
 //        return Result(logDispatcher.getJobPushStatus(buildId, jobId, lastLineNo))
 //    }
 
-    override fun startLogPush(
+    override fun startTagPush(
         userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String,
         tag: String,
-        lineNo: Long
+        lineNo: Long,
+        sessionId: String
     ): Result<PushStatus?> {
         validateAuth(userId, projectId, pipelineId, buildId)
-        return Result(logDispatcher.getTagPushStatus(buildId, tag, lineNo))
+        return Result(logDispatcher.getTagPushStatus(buildId, tag, lineNo, sessionId))
     }
 
-    override fun stopLogPush(
+    override fun startJobPush(
         userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String,
-        tag: String
+        jobId: String,
+        lineNo: Long,
+        sessionId: String
+    ): Result<PushStatus?> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        return Result(logDispatcher.getJobPushStatus(buildId, jobId, lineNo, sessionId))
+    }
+
+    override fun stopTagPush(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        tag: String,
+        sessionId: String
     ): Result<Boolean> {
         validateAuth(userId, projectId, pipelineId, buildId)
-        logDispatcher.cleanPushStatus(buildId, tag)
+        logDispatcher.cleanPushStatus(buildId, tag, sessionId)
+        return Result(true)
+    }
+
+    override fun stopJobPush(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        jobId: String,
+        sessionId: String
+    ): Result<Boolean> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        logDispatcher.cleanPushStatus(buildId, jobId, sessionId)
         return Result(true)
     }
 }
