@@ -327,8 +327,6 @@ class LogServiceV2 @Autowired constructor(
             logger.info("[$buildId|$tag] loadInitLogs query failed :$e")
         } finally {
             output.close()
-            // simplified: IOException thrown from
-            // this close() should be handled here...
             logger.info("[$buildId|$tag] loadInitLogs query end.")
         }
         return output

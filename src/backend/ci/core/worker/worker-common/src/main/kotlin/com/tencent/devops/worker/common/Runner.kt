@@ -90,6 +90,7 @@ object Runner {
                                 LoggerService.elementId = buildTask.elementId!!
 
                                 // 开始Task执行
+                                LoggerService.addFoldStartLine(buildTask.elementName!!)
                                 taskDaemon.run()
 
                                 // 获取执行结果
@@ -153,6 +154,7 @@ object Runner {
                                 )
                             } finally {
                                 LoggerService.elementId = ""
+                                LoggerService.addFoldEndLine(buildTask.elementName!!)
                             }
                         }
                         BuildTaskStatus.WAIT -> {
