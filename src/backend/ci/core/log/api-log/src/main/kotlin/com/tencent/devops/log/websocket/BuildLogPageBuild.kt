@@ -28,11 +28,11 @@ package com.tencent.devops.log.websocket
 
 class BuildLogPageBuild {
 
-    fun buildJobPage(buildId: String, jobId: String): String {
-        return "/log/build/$buildId/job/$jobId"
+    fun buildJobPage(buildId: String, jobId: String, sessionId: String): String {
+        return "/log/build/$buildId/job/$jobId/session/$sessionId"
     }
 
-    fun buildTagPage(buildId: String, tag: String): String {
-        return "/log/build/$buildId/tag/$tag"
+    fun buildTagPage(buildId: String, tag: String, sessionId: String): String {
+        return "/log/build/$buildId/tag/$tag/session/$sessionId"
     }
 }

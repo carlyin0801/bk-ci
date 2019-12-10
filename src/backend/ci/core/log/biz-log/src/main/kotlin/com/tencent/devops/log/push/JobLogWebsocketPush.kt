@@ -43,7 +43,8 @@ import org.slf4j.LoggerFactory
 data class JobLogWebsocketPush(
     val buildId: String,
     val jobId: String,
-    val lineNo: Long,
+    val sessionId: String,
+    var lastLineNo: Long,
     override val userId: String,
     override val redisOperation: RedisOperation,
     override val objectMapper: ObjectMapper,
@@ -67,7 +68,7 @@ data class JobLogWebsocketPush(
         return BuildLogMessage(
             buildId = buildId,
             tagOrJobId = jobId,
-            lineNo = lineNo,
+            lineNo = lastLineNo,
             notifyPost = notifyPost,
             userId = userId,
             page = page,
@@ -80,14 +81,17 @@ data class JobLogWebsocketPush(
         try {
             val queryLogs = logService.queryMoreLogsAfterLine(
                 buildId = buildId,
-                start = lineNo,
+                start = lastLineNo,
                 isAnalysis = false,
                 keywordsStr = null,
                 tag = null,
                 jobId = jobId,
                 executeCount = null
             )
+            queryLogs.hasMore = !(queryLogs.finished && queryLogs.logs.isEmpty())
             notifyPost.message = objectMapper.writeValueAsString(queryLogs)
+            logger.info("[$buildId|$jobId] new JobLogWebsocketPush with notifyPost:$notifyPost")
+            lastLineNo = queryLogs.logs[queryLogs.logs.lastIndex].lineNo
         } catch (e: Exception) {
             logger.error("BuildLogMessage:queryMoreLogsAfterLine error. message:${e.message}")
         }

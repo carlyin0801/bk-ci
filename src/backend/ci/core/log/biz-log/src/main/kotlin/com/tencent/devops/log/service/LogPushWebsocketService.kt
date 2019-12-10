@@ -44,13 +44,14 @@ class LogPushWebsocketService @Autowired constructor(
     val objectMapper: ObjectMapper
 ) {
 
-    fun buildJobWebsocketMessage(buildId: String, jobId: String, lineNo: Long): JobLogWebsocketPush {
-        val page = BuildLogPageBuild().buildJobPage(buildId, jobId)
+    fun buildJobWebsocketMessage(buildId: String, jobId: String, lineNo: Long, sessionId: String): JobLogWebsocketPush {
+        val page = BuildLogPageBuild().buildJobPage(buildId, jobId, sessionId)
         logger.info("Job build log websocket: page[$page], buildId:[$buildId],tag:[$jobId]")
         return JobLogWebsocketPush(
             buildId = buildId,
             jobId = jobId,
-            lineNo = lineNo,
+            sessionId = sessionId,
+            lastLineNo = lineNo,
             userId = "",
             redisOperation = redisOperation,
             page = page,
@@ -67,12 +68,13 @@ class LogPushWebsocketService @Autowired constructor(
         )
     }
 
-    fun buildTagWebsocketMessage(buildId: String, tag: String, lineNo: Long): TagLogWebsocketPush {
-        val page = BuildLogPageBuild().buildTagPage(buildId, tag)
+    fun buildTagWebsocketMessage(buildId: String, tag: String, lineNo: Long, sessionId: String): TagLogWebsocketPush {
+        val page = BuildLogPageBuild().buildTagPage(buildId, tag, sessionId)
         logger.info("Job build log websocket: page[$page], buildId:[$buildId],tag:[$tag]")
         return TagLogWebsocketPush(
             buildId = buildId,
             tag = tag,
+            sessionId = sessionId,
             lastLineNo = lineNo,
             userId = "",
             redisOperation = redisOperation,

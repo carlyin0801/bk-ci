@@ -28,6 +28,7 @@ package com.tencent.devops.misc.cron
 
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.log.model.pojo.LogPushEvent
+import com.tencent.devops.log.model.pojo.PushType
 import com.tencent.devops.log.utils.LogDispatcher
 import com.tencent.devops.log.websocket.BuildLogPageBuild
 import com.tencent.devops.log.websocket.LogPushRedisUtlis
@@ -48,11 +49,11 @@ class BuildLogPush @Autowired constructor(
     }
 
     @Scheduled(fixedDelay = 3000)
-    fun excuteAllNewLogPush() {
-        val pushStatus = LogPushRedisUtlis.getAllTagPushStatus(redisOperation)
-        pushStatus.forEach {
+    fun excuteTagLogPush() {
+        val pushStatus = LogPushRedisUtlis.getAllPushStatusByTag(redisOperation)
+        pushStatus?.forEach {
             with(it) {
-                val page = BuildLogPageBuild().buildTagPage(buildId, id)
+                val page = BuildLogPageBuild().buildTagPage(buildId, id, sessionId)
                 logger.info("Job build log websocket: page[$page], buildId:[$buildId],tag:[$id]")
                 // 发送该Tag的一个空log事件
                 LogDispatcher.dispatch(
@@ -60,10 +61,31 @@ class BuildLogPush @Autowired constructor(
                     event = LogPushEvent(
                         buildId = buildId,
                         logs = listOf(),
-                        id = id,
-                        lineNo = lastLineNum
+                        type = PushType.TAG,
+                        pushStatus = it
                     ))
-                LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, id, lastLineNum, "")
+                LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, id, lastLineNum, sessionId)
+            }
+        }
+    }
+
+    @Scheduled(fixedDelay = 3000)
+    fun excuteJobLogPush() {
+        val pushStatus = LogPushRedisUtlis.getAllPushStatusByJobId(redisOperation)
+        pushStatus?.forEach {
+            with(it) {
+                val page = BuildLogPageBuild().buildJobPage(buildId, id ,sessionId)
+                logger.info("Job build log websocket: page[$page], buildId:[$buildId],tag:[$id]")
+                // 发送该Job的一个空log事件
+                LogDispatcher.dispatch(
+                    rabbitTemplate = rabbitTemplate,
+                    event = LogPushEvent(
+                        buildId = buildId,
+                        logs = listOf(),
+                        type = PushType.JOB,
+                        pushStatus = it
+                    ))
+                LogPushRedisUtlis.writePushStatusByJobId(redisOperation, buildId, id, lastLineNum, sessionId)
             }
         }
     }
