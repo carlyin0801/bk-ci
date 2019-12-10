@@ -319,13 +319,13 @@ class DockerHostBuildService @Autowired constructor(
                     secretKey = build.secretKey,
                     status = PipelineTaskStatus.RUNNING.status,
                     imageName = build.imageName,
-                    containerId = build.containerId ?: "",
+                    containerId = "",
                     wsInHost = false,
                     registryUser = build.registryUser,
                     registryPwd = build.registryPwd,
                     imageType = build.imageType,
-                    imagePublicFlag = build.imagePublicFlag,
-                    imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build.imageRdType.toInt())
+                    imagePublicFlag = build?.imagePublicFlag,
+                    imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build?.imageRdType?.toInt()?:1)
                 ))
             } else {
                 // 优先取设置了IP的任务（可能是固定构建机，也可能是上次用的构建机）
@@ -360,13 +360,13 @@ class DockerHostBuildService @Autowired constructor(
                     secretKey = build.secretKey,
                     status = PipelineTaskStatus.RUNNING.status,
                     imageName = build.imageName,
-                    containerId = build.containerId ?: "",
+                    containerId = "",
                     wsInHost = false,
                     registryUser = build.registryUser,
                     registryPwd = build.registryPwd,
                     imageType = build.imageType,
                     imagePublicFlag = build?.imagePublicFlag,
-                    imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build?.imageRdType?.toInt() ?: 1)
+                    imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build?.imageRdType?.toInt()?:1)
                 ))
             }
         } finally {
@@ -451,8 +451,8 @@ class DockerHostBuildService @Autowired constructor(
                 registryUser = build.registryUser,
                 registryPwd = build.registryPwd,
                 imageType = build.imageType,
-                imagePublicFlag = build.imagePublicFlag,
-                imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build.imageRdType.toInt())
+                imagePublicFlag = build?.imagePublicFlag,
+                imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build?.imageRdType?.toInt() ?: 1)
             ))
         } finally {
             redisLock.unlock()
