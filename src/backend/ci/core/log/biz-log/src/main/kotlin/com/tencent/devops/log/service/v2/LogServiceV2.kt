@@ -336,6 +336,7 @@ class LogServiceV2 @Autowired constructor(
             output.close()
             logger.info("[$buildId|$tag] loadInitLogs query end.")
         }
+        return true
     }
 
     fun loadInitLogs(
