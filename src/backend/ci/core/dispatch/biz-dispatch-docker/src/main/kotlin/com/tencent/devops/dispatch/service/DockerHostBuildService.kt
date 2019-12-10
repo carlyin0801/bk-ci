@@ -64,6 +64,7 @@ import com.tencent.devops.process.pojo.mq.PipelineAgentStartupEvent
 import com.tencent.devops.process.pojo.mq.PipelineBuildLessDockerShutdownEvent
 import com.tencent.devops.process.pojo.mq.PipelineBuildLessDockerStartupEvent
 import com.tencent.devops.process.pojo.mq.PipelineBuildLessStartupDispatchEvent
+import com.tencent.devops.store.pojo.image.enums.ImageRDTypeEnum
 import com.tencent.devops.store.pojo.image.exception.UnknownImageType
 import com.tencent.devops.ticket.pojo.enums.CredentialType
 import org.jooq.DSLContext
@@ -318,11 +319,13 @@ class DockerHostBuildService @Autowired constructor(
                     secretKey = build.secretKey,
                     status = PipelineTaskStatus.RUNNING.status,
                     imageName = build.imageName,
-                    containerId = build.containerId ?: "",
+                    containerId = "",
                     wsInHost = false,
                     registryUser = build.registryUser,
                     registryPwd = build.registryPwd,
-                    imageType = build.imageType
+                    imageType = build.imageType,
+                    imagePublicFlag = build?.imagePublicFlag,
+                    imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build?.imageRdType?.toInt()?:1)
                 ))
             } else {
                 // 优先取设置了IP的任务（可能是固定构建机，也可能是上次用的构建机）
@@ -357,11 +360,13 @@ class DockerHostBuildService @Autowired constructor(
                     secretKey = build.secretKey,
                     status = PipelineTaskStatus.RUNNING.status,
                     imageName = build.imageName,
-                    containerId = build.containerId ?: "",
+                    containerId = "",
                     wsInHost = false,
                     registryUser = build.registryUser,
                     registryPwd = build.registryPwd,
-                    imageType = build.imageType
+                    imageType = build.imageType,
+                    imagePublicFlag = build?.imagePublicFlag,
+                    imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build?.imageRdType?.toInt()?:1)
                 ))
             }
         } finally {
@@ -445,7 +450,9 @@ class DockerHostBuildService @Autowired constructor(
                 wsInHost = false,
                 registryUser = build.registryUser,
                 registryPwd = build.registryPwd,
-                imageType = build.imageType
+                imageType = build.imageType,
+                imagePublicFlag = build?.imagePublicFlag,
+                imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build?.imageRdType?.toInt() ?: 1)
             ))
         } finally {
             redisLock.unlock()
@@ -634,7 +641,11 @@ class DockerHostBuildService @Autowired constructor(
                 imageName = dockerImage,
                 hostTag = routeKeySuffix,
                 channelCode = event.channelCode,
-                zone = if (null == event.zone) { Zone.SHENZHEN.name } else { event.zone!!.name },
+                zone = if (null == event.zone) {
+                    Zone.SHENZHEN.name
+                } else {
+                    event.zone!!.name
+                },
                 registryUser = userName,
                 registryPwd = password,
                 imageType = if (null == dispatchType.imageType) {
