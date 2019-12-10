@@ -693,7 +693,7 @@ class PipelineBuildWebhookService @Autowired constructor(
         val params = startParams.map { (PipelineVarUtil.oldVarToNewVar(it.key) ?: it.key) to it.value }.toMap()
 
         val startParamsWithType = mutableListOf<BuildParameters>()
-        startParams.forEach { t, u -> startParamsWithType.add(
+        params.forEach { t, u -> startParamsWithType.add(
             BuildParameters(
                 t,
                 u
