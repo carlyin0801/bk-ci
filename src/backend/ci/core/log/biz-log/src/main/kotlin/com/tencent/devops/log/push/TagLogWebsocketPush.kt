@@ -79,6 +79,7 @@ data class TagLogWebsocketPush(
 
     override fun buildNotifyMessage(message: SendMessage) {
         val notifyPost = message.notifyPost
+        if (notifyPost.message.isNotEmpty()) return
         try {
             val queryLogs = logService.queryMoreLogsAfterLine(
                 buildId = buildId,

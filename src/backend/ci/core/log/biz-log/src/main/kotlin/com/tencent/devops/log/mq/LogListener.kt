@@ -172,7 +172,8 @@ class LogListener constructor(
                         buildId = buildId,
                         jobId = id,
                         lineNo = lastLineNum,
-                        sessionId = sessionId
+                        sessionId = sessionId,
+                        queryLogs = null
                     )
                     webSocketDispatcher.dispatch(logPush)
                     LogPushRedisUtlis.writePushStatusByJobId(redisOperation, buildId, id, logPush.lastLineNo, sessionId)
@@ -182,7 +183,8 @@ class LogListener constructor(
                         buildId = buildId,
                         tag = id,
                         lineNo = lastLineNum,
-                        sessionId = sessionId
+                        sessionId = sessionId,
+                        queryLogs = null
                     )
                     webSocketDispatcher.dispatch(logPush)
                     LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, id, logPush.lastLineNo, sessionId)

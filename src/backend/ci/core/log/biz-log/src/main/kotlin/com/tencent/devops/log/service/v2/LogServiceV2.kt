@@ -30,19 +30,15 @@ import com.google.common.cache.CacheBuilder
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.redis.RedisLock
 import com.tencent.devops.common.redis.RedisOperation
+import com.tencent.devops.common.websocket.dispatch.WebSocketDispatcher
 import com.tencent.devops.log.jmx.v2.CreateIndexBeanV2
 import com.tencent.devops.log.jmx.v2.LogBeanV2
 import com.tencent.devops.log.model.message.LogMessage
 import com.tencent.devops.log.model.message.LogMessageWithLineNo
-import com.tencent.devops.log.model.pojo.EndPageQueryLogs
-import com.tencent.devops.log.model.pojo.LogBatchEvent
-import com.tencent.devops.log.model.pojo.LogEvent
-import com.tencent.devops.log.model.pojo.LogLine
-import com.tencent.devops.log.model.pojo.LogStatusEvent
-import com.tencent.devops.log.model.pojo.PageQueryLogs
-import com.tencent.devops.log.model.pojo.QueryLogs
+import com.tencent.devops.log.model.pojo.*
 import com.tencent.devops.log.model.pojo.enums.LogStatus
 import com.tencent.devops.log.model.pojo.enums.LogType
+import com.tencent.devops.log.service.LogPushWebsocketService
 import com.tencent.devops.log.util.Constants
 import com.tencent.devops.log.utils.LogDispatcher
 import org.elasticsearch.action.index.IndexRequestBuilder
@@ -86,7 +82,9 @@ class LogServiceV2 @Autowired constructor(
     private val createIndexBeanV2: CreateIndexBeanV2,
     private val logBeanV2: LogBeanV2,
     private val redisOperation: RedisOperation,
-    private val rabbitTemplate: RabbitTemplate
+    private val rabbitTemplate: RabbitTemplate,
+    private val logPushWebsocketService: LogPushWebsocketService,
+    private val webSocketDispatcher: WebSocketDispatcher
 ) {
 
     companion object {
@@ -283,21 +281,20 @@ class LogServiceV2 @Autowired constructor(
         }
     }
 
-    fun queryMoreLogsAfterLinePush(
-        pipelineId: String,
+    fun queryMoreLogsAfterLineByPush(
         buildId: String,
         start: Long,
+        sessionId: String,
         tag: String?,
         jobId: String?,
         executeCount: Int?
     ): Boolean {
         logger.info("[$buildId|$tag] loadInitLogs query start.")
-        val output = ChunkedOutput<MutableList<LogLine>>(mutableListOf<LogLine>().javaClass)
-
+        if ((tag == null) == (jobId == null)) return false
         val indexAndType = indexServiceV2.getIndexAndType(buildId)
         val query = getQuery(buildId, tag, jobId, executeCount)
             .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
-
+        val isfinished = getLogStatus(buildId, tag, jobId, executeCount)
         var scrollResp = client.prepareSearch(indexAndType.index)
             .setTypes(indexAndType.type)
             .setQuery(query)
@@ -325,7 +322,25 @@ class LogServiceV2 @Autowired constructor(
                     )
                     logs.add(logLine)
                 }
-                output.write(logs)
+                webSocketDispatcher.dispatch(
+                    when {
+                        tag != null -> logPushWebsocketService.buildTagWebsocketMessage(
+                            buildId = buildId,
+                            tag = tag,
+                            lineNo = 0,
+                            sessionId = sessionId,
+                            queryLogs = QueryLogs(buildId, isfinished, logs, true)
+                        )
+                        jobId != null -> logPushWebsocketService.buildJobWebsocketMessage(
+                            buildId = buildId,
+                            jobId = jobId,
+                            lineNo = 0,
+                            sessionId = sessionId,
+                            queryLogs = QueryLogs(buildId, isfinished, logs, true)
+                        )
+                        else -> return false
+                    }
+                )
                 logger.info("[$buildId|$tag] The ${++times} times query es.")
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
@@ -333,7 +348,6 @@ class LogServiceV2 @Autowired constructor(
         } catch (e: IOException) {
             logger.info("[$buildId|$tag] loadInitLogs query failed :$e")
         } finally {
-            output.close()
             logger.info("[$buildId|$tag] loadInitLogs query end.")
         }
         return true
@@ -345,10 +359,10 @@ class LogServiceV2 @Autowired constructor(
         tag: String?,
         jobId: String?,
         executeCount: Int?
-    ): ChunkedOutput<MutableList<LogLine>> {
+    ): ChunkedOutput<QueryLogs> {
         logger.info("[$buildId|$tag] loadInitLogs query start.")
-        val output = ChunkedOutput<MutableList<LogLine>>(mutableListOf<LogLine>().javaClass)
-
+        val output = ChunkedOutput<QueryLogs>(QueryLogs::class.java)
+        val isfinished = getLogStatus(buildId, tag ,jobId, executeCount)
         val indexAndType = indexServiceV2.getIndexAndType(buildId)
         val query = getQuery(buildId, tag, jobId, executeCount)
             .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
@@ -380,7 +394,7 @@ class LogServiceV2 @Autowired constructor(
                     )
                     logs.add(logLine)
                 }
-                output.write(logs)
+                output.write(QueryLogs(buildId, isfinished, logs, false))
                 logger.info("[$buildId|$tag] The ${++times} times query es.")
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
