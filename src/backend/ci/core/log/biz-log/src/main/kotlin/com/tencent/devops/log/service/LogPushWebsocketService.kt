@@ -31,6 +31,7 @@ import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.websocket.enum.NotityLevel
 import com.tencent.devops.common.websocket.pojo.NotifyPost
 import com.tencent.devops.common.websocket.pojo.WebSocketType
+import com.tencent.devops.log.model.pojo.QueryLogs
 import com.tencent.devops.log.websocket.BuildLogPageBuild
 import com.tencent.devops.log.push.JobLogWebsocketPush
 import com.tencent.devops.log.push.TagLogWebsocketPush
@@ -44,9 +45,10 @@ class LogPushWebsocketService @Autowired constructor(
     val objectMapper: ObjectMapper
 ) {
 
-    fun buildJobWebsocketMessage(buildId: String, jobId: String, lineNo: Long, sessionId: String): JobLogWebsocketPush {
+    fun buildJobWebsocketMessage(buildId: String, jobId: String, lineNo: Long, sessionId: String, queryLogs: QueryLogs?): JobLogWebsocketPush {
         val page = BuildLogPageBuild().buildJobPage(buildId, jobId, sessionId)
-        logger.info("Job build log websocket: page[$page], buildId:[$buildId],tag:[$jobId]")
+        val content = if (queryLogs != null) objectMapper.writeValueAsString(queryLogs) else ""
+        logger.info("Job build log websocket: page[$page], buildId:[$buildId],tag:[$jobId], queryLogs:$content")
         return JobLogWebsocketPush(
             buildId = buildId,
             jobId = jobId,
@@ -59,7 +61,7 @@ class LogPushWebsocketService @Autowired constructor(
             notifyPost = NotifyPost(
                 module = "log",
                 level = NotityLevel.LOW_LEVEL.getLevel(),
-                message = "",
+                message = content,
                 dealUrl = null,
                 code = 200,
                 webSocketType = WebSocketType.IFRAMEDIALOG.name,
@@ -68,9 +70,10 @@ class LogPushWebsocketService @Autowired constructor(
         )
     }
 
-    fun buildTagWebsocketMessage(buildId: String, tag: String, lineNo: Long, sessionId: String): TagLogWebsocketPush {
+    fun buildTagWebsocketMessage(buildId: String, tag: String, lineNo: Long, sessionId: String, queryLogs: QueryLogs?): TagLogWebsocketPush {
         val page = BuildLogPageBuild().buildTagPage(buildId, tag, sessionId)
-        logger.info("Job build log websocket: page[$page], buildId:[$buildId],tag:[$tag]")
+        val content = if (queryLogs != null) objectMapper.writeValueAsString(queryLogs) else ""
+        logger.info("Tag build log websocket: page[$page], buildId:[$buildId],tag:[$tag], queryLogs:$content")
         return TagLogWebsocketPush(
             buildId = buildId,
             tag = tag,
@@ -91,6 +94,7 @@ class LogPushWebsocketService @Autowired constructor(
             )
         )
     }
+
 
     companion object {
         val logger = LoggerFactory.getLogger(this::class.java)

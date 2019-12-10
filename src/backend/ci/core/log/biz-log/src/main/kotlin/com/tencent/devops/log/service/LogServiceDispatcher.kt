@@ -105,7 +105,7 @@ class LogServiceDispatcher @Autowired constructor(
         tag: String?,
         jobId: String?,
         executeCount: Int?
-    ): ChunkedOutput<MutableList<LogLine>> {
+    ): ChunkedOutput<QueryLogs> {
         return logServiceV2.loadInitLogs(pipelineId, buildId, tag, jobId, executeCount)
     }
 
@@ -157,6 +157,26 @@ class LogServiceDispatcher @Autowired constructor(
                         executeCount
                 )
             )
+    }
+
+    fun getAfterLogsWithPush(
+        buildId: String,
+        start: Long,
+        sessionId: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Result<Boolean> {
+        return Result(
+            logServiceV2.queryMoreLogsAfterLineByPush(
+                buildId,
+                start,
+                sessionId,
+                tag,
+                jobId,
+                executeCount
+            )
+        )
     }
 
     fun downloadLogs(

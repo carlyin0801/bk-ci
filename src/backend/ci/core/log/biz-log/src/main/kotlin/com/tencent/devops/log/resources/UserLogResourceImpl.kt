@@ -77,7 +77,7 @@ class UserLogResourceImpl @Autowired constructor(
         tag: String?,
         jobId: String?,
         executeCount: Int?
-    ): ChunkedOutput<MutableList<LogLine>> {
+    ): ChunkedOutput<QueryLogs> {
         validateAuth(userId, projectId, pipelineId, buildId)
         return logDispatcher.loadInitLogs(projectId, pipelineId, buildId, tag ?: "", jobId, executeCount)
     }
@@ -133,6 +133,28 @@ class UserLogResourceImpl @Autowired constructor(
                 tag,
                 jobId,
                 executeCount
+        )
+    }
+
+    override fun getAfterLogsWithPush(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        start: Long,
+        sessionId: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Result<Boolean> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        return logDispatcher.getAfterLogsWithPush(
+            buildId,
+            start,
+            sessionId,
+            tag,
+            jobId,
+            executeCount
         )
     }
 
