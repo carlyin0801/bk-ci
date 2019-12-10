@@ -345,6 +345,25 @@ class LogServiceV2 @Autowired constructor(
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
             } while (scrollResp.hits.hits.isNotEmpty())
+            webSocketDispatcher.dispatch(
+                when {
+                    tag != null -> logPushWebsocketService.buildTagWebsocketMessage(
+                        buildId = buildId,
+                        tag = tag,
+                        lineNo = 0,
+                        sessionId = sessionId,
+                        queryLogs = QueryLogs(buildId, isfinished, mutableListOf(), false)
+                    )
+                    jobId != null -> logPushWebsocketService.buildJobWebsocketMessage(
+                        buildId = buildId,
+                        jobId = jobId,
+                        lineNo = 0,
+                        sessionId = sessionId,
+                        queryLogs = QueryLogs(buildId, isfinished, mutableListOf(), false)
+                    )
+                    else -> return false
+                }
+            )
         } catch (e: IOException) {
             logger.info("[$buildId|$tag] loadInitLogs query failed :$e")
         } finally {
