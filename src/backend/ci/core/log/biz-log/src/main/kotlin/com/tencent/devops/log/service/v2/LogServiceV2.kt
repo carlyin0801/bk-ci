@@ -289,11 +289,12 @@ class LogServiceV2 @Autowired constructor(
         jobId: String?,
         executeCount: Int?
     ): Boolean {
-        logger.info("[$buildId|$tag] loadInitLogs query start.")
+        logger.info("[$buildId|$tag] queryMoreLogsAfterLineByPush query start.")
         if ((tag == null) == (jobId == null)) return false
         val indexAndType = indexServiceV2.getIndexAndType(buildId)
         val query = getQuery(buildId, tag, jobId, executeCount)
             .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
+            .must(QueryBuilders.rangeQuery("lineNo").from(start))
         val isfinished = getLogStatus(buildId, tag, jobId, executeCount)
         var scrollResp = client.prepareSearch(indexAndType.index)
             .setTypes(indexAndType.type)
@@ -308,7 +309,7 @@ class LogServiceV2 @Autowired constructor(
         try {
             do {
                 val logs = mutableListOf<LogLine>()
-                logger.info(scrollResp.hits.hits[0].source["lineNo"].toString())
+                logger.info("[$buildId|$tag] scrollResp.hits.hits[0].source ${scrollResp.hits.hits[0].source["lineNo"].toString()}")
                 scrollResp.hits.hits.forEach { searchHit ->
                     val sourceMap = searchHit.source
 
