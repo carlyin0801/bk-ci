@@ -308,6 +308,7 @@ class LogServiceV2 @Autowired constructor(
         try {
             do {
                 val logs = mutableListOf<LogLine>()
+                logger.info(scrollResp.hits.hits[0].source["lineNo"].toString())
                 scrollResp.hits.hits.forEach { searchHit ->
                     val sourceMap = searchHit.source
 
@@ -399,6 +400,7 @@ class LogServiceV2 @Autowired constructor(
         try {
             do {
                 val logs = mutableListOf<LogLine>()
+                logger.info(scrollResp.hits.hits[0].source["lineNo"].toString())
                 scrollResp.hits.hits.forEach { searchHit ->
                     val sourceMap = searchHit.source
 
