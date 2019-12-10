@@ -33,29 +33,41 @@ import com.tencent.devops.log.model.pojo.PushStatus
 object LogPushRedisUtlis {
 
     // 记录tag-pushStatus映射。 user: session = 1:1 。同一个user，可以在不同端登录，可能产生多个session
-    val LOG_PUSH_TAG_REDIS_KEY = "BK:logPush:tag:pushStatus:key"
+    val LOG_PUSH_SESSIONID_REDIS_KEY = "BK:logPush:pushStatus:key:"
+    // 记录tag-pushStatus映射。 user: session = 1:1 。同一个user，可以在不同端登录，可能产生多个session
+    val LOG_PUSH_TAG_REDIS_KEY = "BK:logPush:tag:sessionId:key:"
     // 记录jobId-pushStatus映射。 session: page = 1:1。 同一个session一次只能停留在一个页面
-    val LOG_PUSH_JOBID_REDIS_KEY = "BK:logPush:job:pushStatus:key"
+    val LOG_PUSH_JOBID_REDIS_KEY = "BK:logPush:job:sessionId:key:"
     // 记录pushStatus-timeout映射。  session : timeout = 1:1。 同一个session，超时于登录后5天
     val STATUS_TIMEOUT_REDIS_KEY = "BK:logPush:pushStatus:timeOut:key"
     // 每个PushStatus的有效时间上限
     val TIMEOUT_LIMITED: Long = 86400
 
-    // 写入tag,pushStatus映射
-    fun writePushStatusByTag(redisOperation: RedisOperation, buildId: String, tag: String, lineNo: Long) {
+    // 写入tag,sessionId,pushStatus映射
+    fun writePushStatusByTag(redisOperation: RedisOperation, buildId: String, tag: String, lineNo: Long, sessionId: String) {
+        redisOperation.set(
+            key = "$LOG_PUSH_SESSIONID_REDIS_KEY$sessionId",
+            value = JsonUtil.toJson(PushStatus(buildId, tag, lineNo, System.currentTimeMillis())),
+            expiredInSecond = TIMEOUT_LIMITED
+        )
         redisOperation.hset(
-            LOG_PUSH_TAG_REDIS_KEY,
-            "$buildId:$tag",
-            JsonUtil.toJson(PushStatus(buildId, tag, lineNo, System.currentTimeMillis()))
+            key = LOG_PUSH_TAG_REDIS_KEY,
+            hashKey = "$buildId:$tag",
+            values = sessionId
         )
     }
 
-    // 写入jobId,pushStatus映射
-    fun writePushStatusByJobId(redisOperation: RedisOperation, buildId: String, jobId: String, lineNo: Long) {
+    // 写入jobId,sessionId,pushStatus映射
+    fun writePushStatusByJobId(redisOperation: RedisOperation, buildId: String, jobId: String, lineNo: Long, sessionId: String) {
+        redisOperation.set(
+            key = "$LOG_PUSH_SESSIONID_REDIS_KEY$sessionId",
+            value = JsonUtil.toJson(PushStatus(buildId, jobId, lineNo, System.currentTimeMillis())),
+            expiredInSecond = TIMEOUT_LIMITED
+        )
         redisOperation.hset(
-            LOG_PUSH_JOBID_REDIS_KEY,
-            "$buildId:$jobId",
-            JsonUtil.toJson(PushStatus(buildId, jobId, lineNo, System.currentTimeMillis()))
+            key = LOG_PUSH_JOBID_REDIS_KEY,
+            hashKey = "$buildId:$jobId",
+            values = sessionId
         )
     }
 

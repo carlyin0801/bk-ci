@@ -74,7 +74,7 @@ interface CurrentBuildResource {
 
     @ApiOperation("根据元数据获取文件(有排序),searchProps条件为and")
     @Path("/artifactories/{gitProjectId}/search")
-    @POST
+    @GET
     fun search(
         @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
@@ -82,14 +82,18 @@ interface CurrentBuildResource {
         @ApiParam(value = "gitProjectId", required = true)
         @PathParam("gitProjectId")
         gitProjectId: Long,
+        @ApiParam("pipelineId", required = true)
+        @QueryParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("buildId", required = true)
+        @QueryParam("buildId")
+        buildId: String,
         @ApiParam("第几页", required = false, defaultValue = "1")
         @QueryParam("page")
         page: Int?,
         @ApiParam("每页多少条(不传默认全部返回)", required = false, defaultValue = "20")
         @QueryParam("pageSize")
-        pageSize: Int?,
-        @ApiParam("元数据", required = true)
-        searchProps: SearchProps
+        pageSize: Int?
     ): Result<FileInfoPage<FileInfo>>
 
     @ApiOperation("创建下载链接")

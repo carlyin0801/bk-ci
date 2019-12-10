@@ -24,44 +24,43 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.process.pojo.task
+package com.tencent.devops.artifactory.api.external
 
-import com.tencent.devops.common.pipeline.enums.BuildStatus
-import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
-import com.tencent.devops.process.pojo.ErrorType
+import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
+import io.swagger.annotations.ApiParam
+import javax.ws.rs.Consumes
+import javax.ws.rs.GET
+import javax.ws.rs.Path
+import javax.ws.rs.PathParam
+import javax.ws.rs.Produces
+import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.Response
 
-data class PipelineBuildTaskInfo(
-    val projectId: String,
-    val pipelineId: String,
-    val templateId: String? = null,
-    val buildId: String,
-    val stageId: String,
-    val containerId: String,
-    val containerHashId: String?,
-    val containerType: String,
-    val taskSeq: Int,
-    val taskId: String,
-    val taskName: String,
-    val taskType: String,
-    val taskAtom: String,
-    var status: BuildStatus,
-    val taskParams: MutableMap<String, Any>,
-    val additionalOptions: ElementAdditionalOptions?,
-    val executeCount: Int? = 1,
-    var starter: String,
-    val approver: String?,
-    var subBuildId: String?,
-    val startTime: Long? = null,
-    val endTime: Long? = null,
-    var errorType: ErrorType? = null,
-    var errorCode: Int? = null,
-    var errorMsg: String? = null
-) {
-    fun getTaskParam(paramName: String): String {
-        return if (taskParams[paramName] != null) {
-            taskParams[paramName].toString().trim()
-        } else {
-            ""
-        }
-    }
+@Api(tags = ["EXTERNAL_REPORT"], description = "版本仓库-报告目录")
+@Path("/external/reports")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+interface ExternalReportResource {
+    @ApiOperation("获取有权限目录列表")
+    // @Path("/projects/{projectId}/pipelines/{pipelineId}/builds/{buildId}/elements/{elementId}/paths/{path: .*}")
+    @Path("/{projectId}/{pipelineId}/{buildId}/{elementId}/{path: .*}")
+    @GET
+    fun get(
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("原子ID", required = true)
+        @PathParam("elementId")
+        elementId: String,
+        @ApiParam("相对路径", required = true)
+        @PathParam("path")
+        path: String
+    ): Response
 }

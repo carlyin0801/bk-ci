@@ -53,6 +53,7 @@ class WebSocketListener @Autowired constructor(
                     messagingTemplate!!.convertAndSend(
                             "/topic/bk/notify/$session",
                             objectMapper.writeValueAsString(event.notifyPost))
+                    logger.info("[sendWebsocket] session:$session, type:${event.notifyPost.webSocketType}, page:${event.notifyPost.page}")
                 }
             } else {
                 logger.info("webSocketListener sessionList is empty. page:${event.page} user:${event.userId} ")
