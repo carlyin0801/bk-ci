@@ -75,21 +75,21 @@ class Runner @Autowired constructor(private val dockerHostBuildService: DockerHo
                     try {
                         val containerId = dockerHostBuildService.createContainer(dockerStartBuildInfo)
                         // 上报containerId给dispatch
-                        dockerHostBuildService.reportContainerId(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, dockerStartBuildInfo.containerId)
+                        dockerHostBuildService.reportContainerId(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, containerId)
 
                         if (dockerHostBuildService.isContainerRunning(containerId)) {
-                            dockerHostBuildService.log(dockerStartBuildInfo.buildId, "构建环境启动成功，等待Agent启动...", dockerStartBuildInfo.containerId)
+                            dockerHostBuildService.log(dockerStartBuildInfo.buildId, "构建环境启动成功，等待Agent启动...")
                         } else {
                         logger.error("Create container container failed, no such image. pipelineId: ${dockerStartBuildInfo.pipelineId}, vmSeqId: ${dockerStartBuildInfo.vmSeqId}")
-                            dockerHostBuildService.rollbackBuild(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, true, dockerStartBuildInfo.containerId)
+                            dockerHostBuildService.rollbackBuild(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, true)
                         }
                     } catch (e: ContainerException) {
-                        logger.error("Create container failed, rollback build. buildId: ${dockerStartBuildInfo.buildId}, vmSeqId: ${dockerStartBuildInfo.vmSeqId}", dockerStartBuildInfo.containerId)
-                        dockerHostBuildService.rollbackBuild(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, false, dockerStartBuildInfo.containerId)
+                        logger.error("Create container failed, rollback build. buildId: ${dockerStartBuildInfo.buildId}, vmSeqId: ${dockerStartBuildInfo.vmSeqId}")
+                        dockerHostBuildService.rollbackBuild(dockerStartBuildInfo.buildId, dockerStartBuildInfo.vmSeqId, false)
                     }
                 }
             } else {
-                logger.info("Get empty docker start build info")
+                logger.info("Get empy docker start build info")
             }
         } catch (t: Throwable) {
             logger.error("StartBuild encounter unknown exception", t)
@@ -106,7 +106,7 @@ class Runner @Autowired constructor(private val dockerHostBuildService: DockerHo
                 return
             }
             if (dockerEndBuildInfo != null) {
-                logger.warn("dockerEndBuildInfo: $dockerEndBuildInfo")
+                logger.warn("dockerEndBuidlInfo: $dockerEndBuildInfo")
                 if (dockerEndBuildInfo.status == PipelineTaskStatus.DONE.status || dockerEndBuildInfo.status == PipelineTaskStatus.FAILURE.status) {
                     logger.warn("Stop the container, containerId: ${dockerEndBuildInfo.containerId}")
                     dockerHostBuildService.stopContainer(dockerEndBuildInfo)
