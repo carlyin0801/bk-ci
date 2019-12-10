@@ -365,8 +365,8 @@ class DockerHostBuildService @Autowired constructor(
                     registryUser = build.registryUser,
                     registryPwd = build.registryPwd,
                     imageType = build.imageType,
-                    imagePublicFlag = build.imagePublicFlag,
-                    imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build.imageRdType.toInt())
+                    imagePublicFlag = build?.imagePublicFlag,
+                    imageRDType = ImageRDTypeEnum.getImageRDTypeStr(build?.imageRdType?.toInt() ?: 1)
                 ))
             }
         } finally {
