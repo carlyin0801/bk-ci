@@ -178,8 +178,6 @@ class GitCIBuildService @Autowired constructor(
 
         // 其他的stage
         yaml.stages!!.forEachIndexed { stageIndex, stage ->
-
-            val nowStageIndex = stageIndex + stageList.size - 1
             val containerList = mutableListOf<Container>()
             stage.stage.forEachIndexed { jobIndex, job ->
                 val elementList = mutableListOf<Element>()
@@ -195,7 +193,7 @@ class GitCIBuildService @Autowired constructor(
                 }
             }
 
-            stageList.add(Stage(containerList, "stage-$nowStageIndex"))
+            stageList.add(Stage(containerList, "stage-$stageIndex"))
         }
         return Model("git_" + gitProjectConf.gitProjectId + "_" + System.currentTimeMillis(), "", stageList, emptyList(), false, event.userId)
     }
