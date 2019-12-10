@@ -33,11 +33,13 @@ import com.tencent.devops.log.model.pojo.PushStatus
 object LogPushRedisUtlis {
 
     // 记录tag-pushStatus映射。 user: session = 1:1 。同一个user，可以在不同端登录，可能产生多个session
-    val LOG_PUSH_SESSIONID_REDIS_KEY = "BK:logPush:pushStatus:key:"
+    val LOG_PUSH_TAG_STATUS_REDIS_KEY = "BK:logPush:pushStatus:key"
     // 记录tag-pushStatus映射。 user: session = 1:1 。同一个user，可以在不同端登录，可能产生多个session
-    val LOG_PUSH_TAG_REDIS_KEY = "BK:logPush:tag:sessionId:key:"
+    val LOG_PUSH_JOB_STATUS_REDIS_KEY = "BK:logPush:pushStatus:key"
+    // 记录tag-pushStatus映射。 user: session = 1:1 。同一个user，可以在不同端登录，可能产生多个session
+    val LOG_PUSH_TAG_SESSION_REDIS_KEY = "BK:logPush:tag:sessionId:key:"
     // 记录jobId-pushStatus映射。 session: page = 1:1。 同一个session一次只能停留在一个页面
-    val LOG_PUSH_JOBID_REDIS_KEY = "BK:logPush:job:sessionId:key:"
+    val LOG_PUSH_JOB_SESSION_REDIS_KEY = "BK:logPush:job:sessionId:key:"
     // 记录pushStatus-timeout映射。  session : timeout = 1:1。 同一个session，超时于登录后5天
     val STATUS_TIMEOUT_REDIS_KEY = "BK:logPush:pushStatus:timeOut:key"
     // 每个PushStatus的有效时间上限
@@ -45,61 +47,75 @@ object LogPushRedisUtlis {
 
     // 写入tag,sessionId,pushStatus映射
     fun writePushStatusByTag(redisOperation: RedisOperation, buildId: String, tag: String, lineNo: Long, sessionId: String) {
-        redisOperation.set(
-            key = "$LOG_PUSH_SESSIONID_REDIS_KEY$sessionId",
-            value = JsonUtil.toJson(PushStatus(buildId, tag, lineNo, System.currentTimeMillis())),
-            expiredInSecond = TIMEOUT_LIMITED
+        redisOperation.hset(
+            key = LOG_PUSH_TAG_STATUS_REDIS_KEY,
+            hashKey = sessionId,
+            values = JsonUtil.toJson(PushStatus(buildId, tag, sessionId, lineNo, System.currentTimeMillis()))
         )
         redisOperation.hset(
-            key = LOG_PUSH_TAG_REDIS_KEY,
-            hashKey = "$buildId:$tag",
+            key = "$LOG_PUSH_TAG_SESSION_REDIS_KEY$buildId:$tag",
+            hashKey = sessionId,
             values = sessionId
         )
     }
 
     // 写入jobId,sessionId,pushStatus映射
     fun writePushStatusByJobId(redisOperation: RedisOperation, buildId: String, jobId: String, lineNo: Long, sessionId: String) {
-        redisOperation.set(
-            key = "$LOG_PUSH_SESSIONID_REDIS_KEY$sessionId",
-            value = JsonUtil.toJson(PushStatus(buildId, jobId, lineNo, System.currentTimeMillis())),
-            expiredInSecond = TIMEOUT_LIMITED
+        redisOperation.hset(
+            key = LOG_PUSH_JOB_STATUS_REDIS_KEY,
+            hashKey = sessionId,
+            values = JsonUtil.toJson(PushStatus(buildId, jobId, sessionId, lineNo, System.currentTimeMillis()))
         )
         redisOperation.hset(
-            key = LOG_PUSH_JOBID_REDIS_KEY,
-            hashKey = "$buildId:$jobId",
+            key = "$LOG_PUSH_JOB_SESSION_REDIS_KEY$buildId:$jobId",
+            hashKey = sessionId,
             values = sessionId
         )
     }
 
-    // 获取tag对应的pushStatus
-    fun getPushStatusByTag(redisOperation: RedisOperation, buildId: String, tag: String): PushStatus? {
-        val result = redisOperation.hget(LOG_PUSH_TAG_REDIS_KEY, "$buildId:$tag")
-        return if (result == null) null
-        else JsonUtil.to(result, PushStatus::class.java)
+    // 获取tag下某个session的PushStatus
+    fun getPushStatusListByTagSession(redisOperation: RedisOperation, sessionId: String): PushStatus? {
+        val str = redisOperation.hget(LOG_PUSH_TAG_STATUS_REDIS_KEY, sessionId)
+        return if (str != null) {
+            JsonUtil.to(str, PushStatus::class.java)
+        } else null
     }
 
-    // 获取jobId对应的pushStatus
-    fun getPushStatusByJobId(redisOperation: RedisOperation, buildId: String, jobId: String): PushStatus? {
-        val result = redisOperation.hget(LOG_PUSH_JOBID_REDIS_KEY, "$buildId:$jobId")
-        return if (result == null) null
-        else JsonUtil.to(result, PushStatus::class.java)
+    // 获取Job下某个session的PushStatus
+    fun getPushStatusListByJobIdSession(redisOperation: RedisOperation, sessionId: String): PushStatus? {
+        val str = redisOperation.hget(LOG_PUSH_JOB_STATUS_REDIS_KEY, sessionId)
+        return if (str != null) {
+            JsonUtil.to(str, PushStatus::class.java)
+        } else null
     }
 
-    // 获取所有当前维护的 buildId:tag-PushStatus
-    fun getAllTagPushStatusMap(redisOperation: RedisOperation): Map<String, PushStatus> {
-        val result = redisOperation.hmaps(LOG_PUSH_TAG_REDIS_KEY)
-        val allStatusMap = mutableMapOf<String, PushStatus>()
-        result?.forEach { key, value ->
-            allStatusMap[key] = JsonUtil.to(value, PushStatus::class.java)
-        }
-        return allStatusMap
+    // 获取tag对应的所有Session
+    fun getSessionListByTag(redisOperation: RedisOperation, buildId: String, tag: String): List<String>? {
+        return redisOperation.hvalues("$LOG_PUSH_TAG_SESSION_REDIS_KEY$buildId:$tag")
     }
 
-    // 获取所有Tag的PushStatus
-    fun getAllTagPushStatus(redisOperation: RedisOperation): Set<PushStatus> {
-        val result = redisOperation.hvalues(LOG_PUSH_TAG_REDIS_KEY)
+    // 获取jobId对应的Session
+    fun getSessionListByJobId(redisOperation: RedisOperation, buildId: String, jobId: String): List<String>? {
+        return redisOperation.hvalues("$LOG_PUSH_JOB_SESSION_REDIS_KEY$buildId:$jobId")
+    }
+
+    // 获取所有Session的PushStatus
+    fun getAllPushStatusByTag(redisOperation: RedisOperation): Set<PushStatus>? {
+        val result = redisOperation.hvalues(LOG_PUSH_TAG_STATUS_REDIS_KEY)
         val allStatus = setOf<PushStatus>()
-        result?.forEach {
+        if (result == null) return null
+        result.forEach {
+            allStatus.plus(JsonUtil.to(it, PushStatus::class.java))
+        }
+        return allStatus
+    }
+
+    // 获取所有Session的PushStatus
+    fun getAllPushStatusByJobId(redisOperation: RedisOperation): Set<PushStatus>? {
+        val result = redisOperation.hvalues(LOG_PUSH_JOB_STATUS_REDIS_KEY)
+        val allStatus = setOf<PushStatus>()
+        if (result == null) return null
+        result.forEach {
             allStatus.plus(JsonUtil.to(it, PushStatus::class.java))
         }
         return allStatus
@@ -107,11 +123,29 @@ object LogPushRedisUtlis {
 
     // 根据tag清理pushStatus对应的记录
     fun cleanPushStatusByTag(redisOperation: RedisOperation, buildId: String, tag: String) {
-        redisOperation.hdelete(LOG_PUSH_TAG_REDIS_KEY, "$buildId:$tag")
+        getSessionListByTag(redisOperation, buildId, tag)?.forEach {
+            redisOperation.hdelete(
+                key = LOG_PUSH_TAG_STATUS_REDIS_KEY,
+                hashKey = it
+            )
+            redisOperation.hdelete(
+                key = "$LOG_PUSH_TAG_SESSION_REDIS_KEY$buildId:$tag",
+                hashKey = it
+            )
+        }
     }
 
     // 根据jobId清理pushStatus对应的记录
     fun cleanPushStatusByJobId(redisOperation: RedisOperation, buildId: String, jobId: String) {
-        redisOperation.hdelete(LOG_PUSH_JOBID_REDIS_KEY, "$buildId:$jobId")
+        getSessionListByJobId(redisOperation, buildId, jobId)?.forEach {
+            redisOperation.hdelete(
+                key = LOG_PUSH_JOB_STATUS_REDIS_KEY,
+                hashKey = it
+            )
+            redisOperation.hdelete(
+                key = "$LOG_PUSH_JOB_SESSION_REDIS_KEY$buildId:$jobId",
+                hashKey = it
+            )
+        }
     }
 }

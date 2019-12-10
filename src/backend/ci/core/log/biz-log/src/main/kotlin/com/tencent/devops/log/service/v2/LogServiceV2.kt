@@ -283,7 +283,68 @@ class LogServiceV2 @Autowired constructor(
         }
     }
 
-    fun loadInitLogs(pipelineId: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): ChunkedOutput<MutableList<LogLine>> {
+    fun queryMoreLogsAfterLinePush(
+        pipelineId: String,
+        buildId: String,
+        start: Long,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Boolean {
+        logger.info("[$buildId|$tag] loadInitLogs query start.")
+        val output = ChunkedOutput<MutableList<LogLine>>(mutableListOf<LogLine>().javaClass)
+
+        val indexAndType = indexServiceV2.getIndexAndType(buildId)
+        val query = getQuery(buildId, tag, jobId, executeCount)
+            .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
+
+        var scrollResp = client.prepareSearch(indexAndType.index)
+            .setTypes(indexAndType.type)
+            .setQuery(query)
+            .addDocValueField("lineNo")
+            .addDocValueField("timestamp")
+            .addSort("lineNo", SortOrder.ASC)
+            .setScroll(TimeValue(1000 * 32))
+            .setSize(Constants.MAX_LINES)
+            .get()
+        var times = 0
+        try {
+            do {
+                val logs = mutableListOf<LogLine>()
+                scrollResp.hits.hits.forEach { searchHit ->
+                    val sourceMap = searchHit.source
+
+                    val logLine = LogLine(
+                        sourceMap["lineNo"].toString().toLong(),
+                        sourceMap["timestamp"].toString().toLong(),
+                        sourceMap["message"].toString(),
+                        Constants.DEFAULT_PRIORITY_NOT_DELETED,
+                        sourceMap["tag"].toString() ?: "",
+                        sourceMap["jobId"].toString() ?: "",
+                        sourceMap["executeCount"]?.toString()?.toInt() ?: 1
+                    )
+                    logs.add(logLine)
+                }
+                output.write(logs)
+                logger.info("[$buildId|$tag] The ${++times} times query es.")
+                scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
+                    .setScroll(TimeValue(1000 * 32)).execute().actionGet()
+            } while (scrollResp.hits.hits.isNotEmpty())
+        } catch (e: IOException) {
+            logger.info("[$buildId|$tag] loadInitLogs query failed :$e")
+        } finally {
+            output.close()
+            logger.info("[$buildId|$tag] loadInitLogs query end.")
+        }
+    }
+
+    fun loadInitLogs(
+        pipelineId: String,
+        buildId: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): ChunkedOutput<MutableList<LogLine>> {
         logger.info("[$buildId|$tag] loadInitLogs query start.")
         val output = ChunkedOutput<MutableList<LogLine>>(mutableListOf<LogLine>().javaClass)
 

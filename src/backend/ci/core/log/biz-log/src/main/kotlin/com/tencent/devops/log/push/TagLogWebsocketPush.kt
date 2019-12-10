@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory
 data class TagLogWebsocketPush(
     val buildId: String,
     val tag: String,
+    val sessionId: String,
     var lastLineNo: Long,
     override val userId: String,
     override val pushType: WebSocketType,
@@ -88,7 +89,9 @@ data class TagLogWebsocketPush(
                 jobId = null,
                 executeCount = null
             )
+            queryLogs.hasMore = !(queryLogs.finished && queryLogs.logs.isEmpty())
             notifyPost.message = objectMapper.writeValueAsString(queryLogs)
+            logger.info("[$buildId|$tag] new JobLogWebsocketPush with notifyPost:$notifyPost")
             lastLineNo = queryLogs.logs[queryLogs.logs.lastIndex].lineNo
         } catch (e: Exception) {
             logger.error("BuildLogMessage:queryMoreLogsAfterLine error. message:${e.message}")

@@ -33,6 +33,8 @@ import com.tencent.devops.log.model.pojo.LogBatchEvent
 import com.tencent.devops.log.model.pojo.LogEvent
 import com.tencent.devops.log.model.pojo.LogPushEvent
 import com.tencent.devops.log.model.pojo.LogStatusEvent
+import com.tencent.devops.log.model.pojo.PushType
+import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.service.LogPushWebsocketService
 import com.tencent.devops.log.service.LogServiceDispatcher
 import com.tencent.devops.log.websocket.LogPushRedisUtlis
@@ -97,33 +99,27 @@ class LogListener constructor(
         try {
             if (event.logs.isNotEmpty()) {
                 // 对每一条插入成功的日志进行处理
-                event.logs.forEach {
-                    if (!it.tag.isBlank()) {
-                        // 记录该任务已插入的最后一条日志行号
-                        val pushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, event.buildId, it.tag)
-                        // 若最新一条比上次推送多10行以上就触发推送
-                        if (pushStatus != null && it.lineNo - pushStatus.lastLineNum > 20) {
-                            val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, it.tag, it.lineNo)
-                            webSocketDispatcher.dispatch(logPush)
-                            LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, it.tag, logPush.lastLineNo, "")
+                event.logs.forEach { log ->
+                    if (!log.tag.isBlank()) {
+                        LogPushRedisUtlis.getSessionListByTag(redisOperation, event.buildId, log.tag)?.forEach {
+                            // 若最新一条比上次推送多10行以上就触发推送
+                            val pushStatus = LogPushRedisUtlis.getPushStatusListByTagSession(redisOperation, it)
+                            if (pushStatus != null && log.lineNo - pushStatus.lastLineNum > 20)
+                                sendPushMessage(pushStatus, PushType.TAG)
                         }
                     }
-                    if (!it.jobId.isBlank()) {
-                        // 记录该任务已插入的最后一条日志行号
-                        val pushStatus = LogPushRedisUtlis.getPushStatusByTag(redisOperation, event.buildId, it.tag)
-                        // 若最新一条比上次推送多10行以上就触发推送
-                        if (pushStatus != null && it.lineNo - pushStatus.lastLineNum > 20) {
-                            val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, it.tag, it.lineNo)
-                            webSocketDispatcher.dispatch(logPush)
-                            LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, it.tag, logPush.lastLineNo, "")
+                    if (!log.jobId.isBlank()) {
+                        LogPushRedisUtlis.getSessionListByJobId(redisOperation, event.buildId, log.jobId)?.forEach {
+                            // 若最新一条比上次推送多10行以上就触发推送
+                            val pushStatus = LogPushRedisUtlis.getPushStatusListByJobIdSession(redisOperation, it)
+                            if (pushStatus != null && log.lineNo - pushStatus.lastLineNum > 20)
+                                sendPushMessage(pushStatus, PushType.JOB)
                         }
                     }
                 }
             } else {
-                if (event.id == null || event.lineNo == null) return
-                val logPush = logPushWebsocketService.buildTagWebsocketMessage(event.buildId, event.id!!, event.lineNo!!)
-                webSocketDispatcher.dispatch(logPush)
-                LogPushRedisUtlis.writePushStatusByTag(redisOperation, event.buildId, event.id!!, logPush.lastLineNo, "")
+                if (event.pushStatus != null && event.type != null)
+                    sendPushMessage(event.pushStatus!!, event.type!!)
             }
             result = true
         } catch (ignored: Throwable) {
@@ -132,7 +128,7 @@ class LogListener constructor(
             if (!result && event.retryTime >= 0) {
                 logger.warn("Retry to add log batch event [${event.buildId}|${event.retryTime}]")
                 with(event) {
-                    LogDispatcher.dispatch(rabbitTemplate, LogPushEvent(buildId, logs, id, lineNo, retryTime - 1, DelayMills))
+                    LogDispatcher.dispatch(rabbitTemplate, LogPushEvent(buildId, logs, type, pushStatus, retryTime - 1, DelayMills))
                 }
             }
         }
@@ -163,6 +159,33 @@ class LogListener constructor(
                         rabbitTemplate,
                         LogStatusEvent(buildId, finished, tag, jobId, executeCount, retryTime - 1, DelayMills)
                     )
+                }
+            }
+        }
+    }
+
+    private fun sendPushMessage(pushStatus: PushStatus, type: PushType) {
+        with(pushStatus) {
+            when (type) {
+                PushType.JOB -> {
+                    val logPush = logPushWebsocketService.buildJobWebsocketMessage(
+                        buildId = buildId,
+                        jobId = id,
+                        lineNo = lastLineNum,
+                        sessionId = sessionId
+                    )
+                    webSocketDispatcher.dispatch(logPush)
+                    LogPushRedisUtlis.writePushStatusByJobId(redisOperation, buildId, id, logPush.lastLineNo, sessionId)
+                }
+                PushType.TAG -> {
+                    val logPush = logPushWebsocketService.buildTagWebsocketMessage(
+                        buildId = buildId,
+                        tag = id,
+                        lineNo = lastLineNum,
+                        sessionId = sessionId
+                    )
+                    webSocketDispatcher.dispatch(logPush)
+                    LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, id, logPush.lastLineNo, sessionId)
                 }
             }
         }

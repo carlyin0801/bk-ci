@@ -39,6 +39,8 @@ data class PushStatus(
     var buildId: String,
     @ApiModelProperty("插件Tag或JobID", required = true)
     var id: String,
+    @ApiModelProperty("会话ID", required = true)
+    var sessionId: String,
     @ApiModelProperty("上次Push的最后一行", required = true)
     var lastLineNum: Long = 0,
     @ApiModelProperty("上次Push的最后时间", required = true)
