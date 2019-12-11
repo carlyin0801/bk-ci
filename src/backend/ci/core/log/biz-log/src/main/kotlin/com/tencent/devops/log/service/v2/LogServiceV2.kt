@@ -61,6 +61,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.io.IOException
+import java.lang.RuntimeException
 import java.sql.Date
 import java.text.SimpleDateFormat
 import java.util.Arrays
@@ -125,8 +126,13 @@ class LogServiceV2 @Autowired constructor(
 
     fun updateLogStatus(event: LogStatusEvent) {
         with(event) {
-            logger.info("[$buildId|$tag|$jobId|$executeCount|$finished] Start to update log status")
-            indexServiceV2.finish(buildId, tag, jobId, executeCount, finished)
+            try {
+                logger.info("[$buildId|$tag|$jobId|$executeCount|$finished] Start to update log status")
+                indexServiceV2.finish(buildId, tag, jobId, executeCount, finished)
+                throw RuntimeException("[$buildId|$tag|$jobId|$executeCount|$finished] debug update log status")
+            } catch (e: Exception){
+                logger.info(e.toString())
+            }
         }
     }
 
