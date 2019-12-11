@@ -310,7 +310,7 @@ class DockerHostBuildService @Autowired constructor(
                 pipelineDockerTaskDao.updateStatusAndTag(dslContext, build.buildId, build.vmSeqId, PipelineTaskStatus.RUNNING, hostTag)
                 redisUtils.setDockerBuildLastHost(build.pipelineId, build.vmSeqId.toString(), hostTag) // 将本次构建使用的主机IP写入redis，以方便下次直接用这台IP
                 return Result(0, "success", DockerHostBuildInfo(build.projectId, build.agentId, build.pipelineId, build.buildId, build.vmSeqId,
-                    build.secretKey, PipelineTaskStatus.RUNNING.status, build.imageName, "", false, build.registryUser, build.registryPwd, build.imageType))
+                    build.secretKey, PipelineTaskStatus.RUNNING.status, build.imageName, build.containerId, false, build.registryUser, build.registryPwd, build.imageType))
             } else {
                 // 优先取设置了IP的任务（可能是固定构建机，也可能是上次用的构建机）
                 var task = pipelineDockerTaskDao.getQueueTasksExcludeProj(dslContext, grayProjectSet, hostTag)
@@ -336,7 +336,7 @@ class DockerHostBuildService @Autowired constructor(
                 pipelineDockerTaskDao.updateStatusAndTag(dslContext, build.buildId, build.vmSeqId, PipelineTaskStatus.RUNNING, hostTag)
                 redisUtils.setDockerBuildLastHost(build.pipelineId, build.vmSeqId.toString(), hostTag) // 将本次构建使用的主机IP写入redis，以方便下次直接用这台IP
                 return Result(0, "success", DockerHostBuildInfo(build.projectId, build.agentId, build.pipelineId, build.buildId, build.vmSeqId,
-                    build.secretKey, PipelineTaskStatus.RUNNING.status, build.imageName, "", false, build.registryUser, build.registryPwd, build.imageType))
+                    build.secretKey, PipelineTaskStatus.RUNNING.status, build.imageName, build.containerId, false, build.registryUser, build.registryPwd, build.imageType))
             }
         } finally {
             redisLock.unlock()
