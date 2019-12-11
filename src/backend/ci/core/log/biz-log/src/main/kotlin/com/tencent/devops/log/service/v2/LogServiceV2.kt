@@ -331,14 +331,14 @@ class LogServiceV2 @Autowired constructor(
                             tag = tag,
                             lineNo = 0,
                             sessionId = sessionId,
-                            queryLogs = QueryLogs(buildId, isfinished, logs, true)
+                            queryLogs = QueryLogs(buildId, isfinished, true, logs)
                         )
                         jobId != null -> logPushWebsocketService.buildJobWebsocketMessage(
                             buildId = buildId,
                             jobId = jobId,
                             lineNo = 0,
                             sessionId = sessionId,
-                            queryLogs = QueryLogs(buildId, isfinished, logs, true)
+                            queryLogs = QueryLogs(buildId, isfinished, true, logs)
                         )
                         else -> return false
                     }
@@ -355,14 +355,14 @@ class LogServiceV2 @Autowired constructor(
                         tag = tag,
                         lineNo = 0,
                         sessionId = sessionId,
-                        queryLogs = QueryLogs(buildId, isfinished, mutableListOf(), false)
+                        queryLogs = QueryLogs(buildId, isfinished, false, mutableListOf())
                     )
                     jobId != null -> logPushWebsocketService.buildJobWebsocketMessage(
                         buildId = buildId,
                         jobId = jobId,
                         lineNo = 0,
                         sessionId = sessionId,
-                        queryLogs = QueryLogs(buildId, isfinished, mutableListOf(), false)
+                        queryLogs = QueryLogs(buildId, isfinished, false, mutableListOf())
                     )
                     else -> return false
                 }
@@ -417,7 +417,7 @@ class LogServiceV2 @Autowired constructor(
                     )
                     logs.add(logLine)
                 }
-                output.write(QueryLogs(buildId, isfinished, logs, false))
+                output.write(QueryLogs(buildId, isfinished, false, logs))
                 logger.info("[$buildId|$tag] The ${++times} times query es.")
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
@@ -711,7 +711,7 @@ class LogServiceV2 @Autowired constructor(
         executeCount: Int?
     ): QueryLogs {
         val logs = ArrayList<LogLine>()
-        val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
+        val querySize = 50000
         val moreLogs = QueryLogs(buildId, getLogStatus(buildId, tag, jobId, executeCount))
         logger.info("more logs status: $moreLogs")
 
@@ -799,7 +799,7 @@ class LogServiceV2 @Autowired constructor(
             val searchResponse = client.prepareSearch(index)
                 .setTypes(type)
                 .setQuery(query)
-                .setSize(50000)
+                .setSize(querySize)
                 .addDocValueField("lineNo")
                 .addDocValueField("timestamp")
 //                .addDocValueField("message")
@@ -838,7 +838,7 @@ class LogServiceV2 @Autowired constructor(
                 logs.add(logLine)
             }
             moreLogs.logs.addAll(logs)
-            moreLogs.hasMore = size > (start + moreLogs.logs.size - 1)
+            moreLogs.hasMore = moreLogs.logs.size < querySize
         } catch (ex: IndexNotFoundException) {
             logger.error("Query after logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             moreLogs.status = LogStatus.CLEAN
