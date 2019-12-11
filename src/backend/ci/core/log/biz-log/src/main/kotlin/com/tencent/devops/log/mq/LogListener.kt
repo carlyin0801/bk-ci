@@ -123,10 +123,10 @@ class LogListener constructor(
             }
             result = true
         } catch (ignored: Throwable) {
-            logger.warn("Fail to add the log batch event [${event.buildId}|${event.retryTime}]", ignored)
+            logger.warn("Fail to add log push event [${event.buildId}|${event.retryTime}]", ignored)
         } finally {
             if (!result && event.retryTime >= 0) {
-                logger.warn("Retry to add log batch event [${event.buildId}|${event.retryTime}]")
+                logger.warn("Retry to add log push event [${event.buildId}|${event.retryTime}]")
                 with(event) {
                     LogDispatcher.dispatch(rabbitTemplate, LogPushEvent(buildId, logs, type, pushStatus, retryTime - 1, DelayMills))
                 }
