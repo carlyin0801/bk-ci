@@ -464,10 +464,8 @@ class LogServiceV2 @Autowired constructor(
                         ).removeSuffix("\u001b[m"),
                         Constants.DEFAULT_PRIORITY_NOT_DELETED
                     )
-                    val sJobId = sourceMap["jobId"]
-                    val sTag = sourceMap["tag"]
                     val dateTime = sdf.format(Date(logLine.timestamp))
-                    val str = "$dateTime[$sJobId][$sTag] : ${logLine.message}" + System.lineSeparator()
+                    val str = "$dateTime : ${logLine.message}" + System.lineSeparator()
                     sb.append(str)
                 }
                 output.write(sb.toString().toByteArray())
@@ -713,6 +711,7 @@ class LogServiceV2 @Autowired constructor(
         executeCount: Int?
     ): QueryLogs {
         val logs = ArrayList<LogLine>()
+        val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
         val moreLogs = QueryLogs(buildId, getLogStatus(buildId, tag, jobId, executeCount))
         logger.info("more logs status: $moreLogs")
 
@@ -803,7 +802,7 @@ class LogServiceV2 @Autowired constructor(
                 .setSize(Constants.MAX_LINES)
                 .addDocValueField("lineNo")
                 .addDocValueField("timestamp")
-                //                    .addDocValueField("message")
+//                .addDocValueField("message")
                 .addSort("lineNo", SortOrder.ASC)
                 .get()
 
@@ -838,8 +837,8 @@ class LogServiceV2 @Autowired constructor(
                 )
                 logs.add(logLine)
             }
-
             moreLogs.logs.addAll(logs)
+            moreLogs.hasMore = size > (start + moreLogs.logs.size - 1)
         } catch (ex: IndexNotFoundException) {
             logger.error("Query after logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             moreLogs.status = LogStatus.CLEAN
@@ -998,6 +997,7 @@ class LogServiceV2 @Autowired constructor(
         executeCount: Int?
     ): QueryLogs {
         val logStatus = getLogStatus(buildId, tag, jobId, executeCount)
+        val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
 
         val queryLogs = QueryLogs(buildId, logStatus)
 
@@ -1005,18 +1005,22 @@ class LogServiceV2 @Autowired constructor(
             val logs = getOriginLogs(buildId, index, type, keywords, tag, jobId, executeCount)
             queryLogs.logs.addAll(logs)
             if (logs.isEmpty()) queryLogs.status = LogStatus.EMPTY
+            queryLogs.hasMore = size > logs.size
         } catch (ex: IndexNotFoundException) {
             logger.error("Query init logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             queryLogs.status = LogStatus.CLEAN
             queryLogs.finished = true
+            queryLogs.hasMore = false
         } catch (e: IndexClosedException) {
             logger.error("Query init logs failed because of IndexClosedException. buildId: $buildId", e)
             queryLogs.status = LogStatus.CLOSED
             queryLogs.finished = true
+            queryLogs.hasMore = false
         } catch (e: Exception) {
             logger.error("Query init logs failed because of ${e.javaClass}. buildId: $buildId", e)
             queryLogs.status = LogStatus.FAIL
             queryLogs.finished = true
+            queryLogs.hasMore = false
         }
         return queryLogs
     }
