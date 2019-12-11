@@ -314,13 +314,13 @@ class LogServiceV2 @Autowired constructor(
                     val sourceMap = searchHit.source
 
                     val logLine = LogLine(
-                        sourceMap["lineNo"].toString().toLong(),
-                        sourceMap["timestamp"].toString().toLong(),
-                        sourceMap["message"].toString(),
-                        Constants.DEFAULT_PRIORITY_NOT_DELETED,
-                        sourceMap["tag"].toString() ?: "",
-                        sourceMap["jobId"].toString() ?: "",
-                        sourceMap["executeCount"]?.toString()?.toInt() ?: 1
+                        lineNo = sourceMap["lineNo"].toString().toLong(),
+                        timestamp = sourceMap["timestamp"].toString().toLong(),
+                        message = sourceMap["message"].toString(),
+                        priority = Constants.DEFAULT_PRIORITY_NOT_DELETED,
+                        tag = sourceMap["tag"].toString() ?: "",
+                        jobId = sourceMap["jobId"].toString() ?: "",
+                        executeCount = sourceMap["executeCount"]?.toString()?.toInt() ?: 1
                     )
                     logs.add(logLine)
                 }
@@ -347,6 +347,7 @@ class LogServiceV2 @Autowired constructor(
                 scrollResp = client.prepareSearchScroll(scrollResp.scrollId)
                     .setScroll(TimeValue(1000 * 32)).execute().actionGet()
             } while (scrollResp.hits.hits.isNotEmpty())
+            // 告诉前端推送结束的message
             webSocketDispatcher.dispatch(
                 when {
                     tag != null -> logPushWebsocketService.buildTagWebsocketMessage(
