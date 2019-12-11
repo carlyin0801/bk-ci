@@ -34,6 +34,9 @@ data class ImageDetail(
     @ApiModelProperty("研发来源")
     val rdType: String,
 
+    @ApiModelProperty("权重")
+    val weight: Int?,
+
     @ApiModelProperty("镜像适用的Agent类型")
     var agentTypeScope: List<ImageAgentTypeEnum>,
 
@@ -57,6 +60,9 @@ data class ImageDetail(
 
     @ApiModelProperty("下载量", required = true)
     val downloads: Int,
+
+    @ApiModelProperty("所属镜像分类ID", required = true)
+    val classifyId: String,
 
     @ApiModelProperty("所属镜像分类代码", required = true)
     val classifyCode: String,
