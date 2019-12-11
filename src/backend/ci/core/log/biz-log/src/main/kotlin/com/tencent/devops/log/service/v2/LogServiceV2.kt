@@ -61,6 +61,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.io.IOException
+import java.lang.RuntimeException
 import java.sql.Date
 import java.text.SimpleDateFormat
 import java.util.Arrays
@@ -125,8 +126,13 @@ class LogServiceV2 @Autowired constructor(
 
     fun updateLogStatus(event: LogStatusEvent) {
         with(event) {
-            logger.info("[$buildId|$tag|$jobId|$executeCount|$finished] Start to update log status")
-            indexServiceV2.finish(buildId, tag, jobId, executeCount, finished)
+            try {
+                logger.info("[$buildId|$tag|$jobId|$executeCount|$finished] Start to update log status")
+                indexServiceV2.finish(buildId, tag, jobId, executeCount, finished)
+                throw RuntimeException("[$buildId|$tag|$jobId|$executeCount|$finished] debug update log status")
+            } catch (e: Exception){
+                logger.info(e.toString())
+            }
         }
     }
 
@@ -711,7 +717,6 @@ class LogServiceV2 @Autowired constructor(
         executeCount: Int?
     ): QueryLogs {
         val logs = ArrayList<LogLine>()
-        val querySize = 30000
         val moreLogs = QueryLogs(buildId, getLogStatus(buildId, tag, jobId, executeCount))
         logger.info("more logs status: $moreLogs")
 
@@ -799,7 +804,7 @@ class LogServiceV2 @Autowired constructor(
             val searchResponse = client.prepareSearch(index)
                 .setTypes(type)
                 .setQuery(query)
-                .setSize(querySize)
+                .setSize(Constants.MAX_LINES)
                 .addDocValueField("lineNo")
                 .addDocValueField("timestamp")
 //                .addDocValueField("message")
@@ -832,7 +837,7 @@ class LogServiceV2 @Autowired constructor(
                 logs.add(logLine)
             }
             moreLogs.logs.addAll(logs)
-            moreLogs.hasMore = moreLogs.logs.size >= querySize
+            moreLogs.hasMore = moreLogs.logs.size >= Constants.MAX_LINES
         } catch (ex: IndexNotFoundException) {
             logger.error("Query after logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             moreLogs.status = LogStatus.CLEAN
