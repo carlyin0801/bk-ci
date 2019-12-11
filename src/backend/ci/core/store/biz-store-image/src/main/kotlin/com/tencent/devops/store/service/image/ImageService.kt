@@ -866,6 +866,7 @@ abstract class ImageService @Autowired constructor() {
             imageRepoUrl = imageRecord.imageRepoUrl ?: "",
             imageRepoName = imageRecord.imageRepoName ?: "",
             rdType = ImageRDTypeEnum.getImageRDTypeStr(imageFeatureRecord.imageType?.toInt()),
+            weight = imageFeatureRecord.weight,
             agentTypeScope = agentTypeScope,
             ticketId = imageRecord.ticketId ?: "",
             imageTag = imageRecord.imageTag ?: "",
