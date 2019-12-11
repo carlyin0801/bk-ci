@@ -368,9 +368,9 @@ class LogServiceV2 @Autowired constructor(
                 }
             )
         } catch (e: IOException) {
-            logger.info("[$buildId|$tag] loadInitLogs query failed :$e")
+            logger.info("[$buildId|$tag] queryMoreLogsAfterLineByPush query failed :$e")
         } finally {
-            logger.info("[$buildId|$tag] loadInitLogs query end.")
+            logger.info("[$buildId|$tag] queryMoreLogsAfterLineByPush query end.")
         }
         return true
     }
