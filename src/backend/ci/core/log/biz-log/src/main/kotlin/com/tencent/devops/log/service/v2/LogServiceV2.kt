@@ -799,7 +799,7 @@ class LogServiceV2 @Autowired constructor(
             val searchResponse = client.prepareSearch(index)
                 .setTypes(type)
                 .setQuery(query)
-                .setSize(Constants.MAX_LINES)
+                .setSize(50000)
                 .addDocValueField("lineNo")
                 .addDocValueField("timestamp")
 //                .addDocValueField("message")
