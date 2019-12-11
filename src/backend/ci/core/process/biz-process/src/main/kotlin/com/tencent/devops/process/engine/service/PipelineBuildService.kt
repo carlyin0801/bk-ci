@@ -1648,7 +1648,7 @@ class PipelineBuildService(
                     }
                 )
 
-            val buildId = pipelineRuntimeService.startBuild(readyToBuildPipelineInfo, model, paramsWithType)
+            val buildId = pipelineRuntimeService.startBuild(readyToBuildPipelineInfo, fullModel, paramsWithType)
             startParams = paramsWithType.map { it.key to it.value }.toMap()
             if (startParams.isNotEmpty()) {
                 buildStartupParamService.addParam(
