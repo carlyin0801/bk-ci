@@ -315,6 +315,13 @@ class TaskAtomService @Autowired(required = false) constructor(
                 )
             }
         }
+        LogUtils.stopLog(
+            rabbitTemplate = rabbitTemplate,
+            buildId = task.buildId,
+            tag = task.taskId,
+            jobId = task.containerHashId,
+            executeCount = task.executeCount ?: 1
+        )
     }
 
     private fun PipelineBuildTask.isSkip(variables: Map<String, String>): Boolean {
