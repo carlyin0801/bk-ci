@@ -34,6 +34,8 @@ import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildTaskFinishBroa
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.utils.SkipElementUtils
 import com.tencent.devops.common.service.utils.SpringContextUtil
+import com.tencent.devops.log.model.pojo.enums.LogType
+import com.tencent.devops.log.utils.LogDispatcher
 import com.tencent.devops.log.utils.LogUtils
 import com.tencent.devops.process.engine.exception.BuildTaskException
 import com.tencent.devops.process.engine.pojo.PipelineBuildTask
@@ -70,6 +72,14 @@ class TaskAtomService @Autowired(required = false) constructor(
             pipelineRuntimeService.updateTaskStatus(task.buildId, task.taskId, task.starter, BuildStatus.RUNNING)
             pipelineBuildDetailService.taskStart(task.buildId, task.taskId)
             val executeCount = task.executeCount ?: 1
+            LogUtils.addRangeStartLine(
+                rabbitTemplate = rabbitTemplate,
+                buildId = task.buildId,
+                rangeName = logTagName,
+                tag = task.containerHashId ?: "",
+                jobId = task.containerHashId,
+                executeCount = executeCount
+            )
             LogUtils.addFoldStartLine(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
@@ -192,6 +202,14 @@ class TaskAtomService @Autowired(required = false) constructor(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
                 groupName = logTagName,
+                tag = task.containerHashId ?: "",
+                jobId = task.containerHashId,
+                executeCount = task.executeCount ?: 1
+            )
+            LogUtils.addRangeEndLine(
+                rabbitTemplate = rabbitTemplate,
+                buildId = task.buildId,
+                rangeName = logTagName,
                 tag = task.containerHashId ?: "",
                 jobId = task.containerHashId,
                 executeCount = task.executeCount ?: 1

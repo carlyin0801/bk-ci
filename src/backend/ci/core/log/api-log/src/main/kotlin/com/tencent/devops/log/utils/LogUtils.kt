@@ -66,6 +66,28 @@ object LogUtils {
         dispatch(rabbitTemplate, genLogEvent(buildId, "##[endgroup] $groupName", tag, jobId, LogType.LOG, executeCount))
     }
 
+    fun addRangeStartLine(
+        rabbitTemplate: RabbitTemplate,
+        buildId: String,
+        rangeName: String,
+        tag: String,
+        jobId: String? = null,
+        executeCount: Int
+    ) {
+        dispatch(rabbitTemplate, genLogEvent(buildId, "[START] $rangeName", tag, jobId, LogType.START, executeCount))
+    }
+
+    fun addRangeEndLine(
+        rabbitTemplate: RabbitTemplate,
+        buildId: String,
+        rangeName: String,
+        tag: String,
+        jobId: String? = null,
+        executeCount: Int
+    ) {
+        dispatch(rabbitTemplate, genLogEvent(buildId, "[END] $rangeName", tag, jobId, LogType.END, executeCount))
+    }
+
     fun addYellowLine(
         rabbitTemplate: RabbitTemplate,
         buildId: String,
