@@ -746,7 +746,7 @@ class LogServiceV2 @Autowired constructor(
     ): QueryLogs {
         val logs = ArrayList<LogLine>()
         val moreLogs = QueryLogs(buildId, getLogStatus(buildId, tag, jobId, executeCount))
-        val querySize = 50000
+        val querySize = Constants.MAX_LINES
         logger.info("more logs status: $moreLogs")
 
         try {
@@ -896,7 +896,6 @@ class LogServiceV2 @Autowired constructor(
 
     private fun getLogSize(index: String, type: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): Long {
         val query = getQuery(buildId, tag, jobId, executeCount)
-        logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] Get the log size - ($query)")
         val searchResponse = client.prepareSearch(index)
             .setTypes(type)
             .setQuery(query)
