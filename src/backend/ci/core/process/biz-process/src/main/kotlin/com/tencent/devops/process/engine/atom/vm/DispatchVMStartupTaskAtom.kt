@@ -125,9 +125,9 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
         val buildId = task.buildId
         val taskId = task.taskId
 
-// 构建环境容器序号ID
+        // 构建环境容器序号ID
         val vmSeqId = task.containerId
-// 预指定VM名称列表（逗号分割）
+        // 预指定VM名称列表（逗号分割）
         val vmNames = param.vmNames.joinToString(",")
 
         val pipelineInfo = pipelineRepositoryService.getPipelineInfo(projectId, pipelineId)
@@ -176,6 +176,22 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
 
         dispatchType.replaceVariable(pipelineRuntimeService.getAllVariable(buildId))
 
+        LogUtils.addFoldEndLine(
+            rabbitTemplate = rabbitTemplate,
+            buildId = buildId,
+            groupName = "Job#$vmSeqId init",
+            tag = task.containerHashId ?: "",
+            jobId = task.containerHashId,
+            executeCount = task.executeCount ?: 1
+        )
+        LogUtils.addRangeEndLine(
+            rabbitTemplate = rabbitTemplate,
+            buildId = buildId,
+            rangeName = "Job#$vmSeqId init",
+            tag = task.containerHashId ?: "",
+            jobId = task.containerHashId,
+            executeCount = task.executeCount ?: 1
+        )
         pipelineEventDispatcher.dispatch(
             PipelineAgentStartupEvent(
                 source = source,
