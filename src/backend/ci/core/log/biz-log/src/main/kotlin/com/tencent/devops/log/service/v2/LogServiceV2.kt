@@ -928,12 +928,13 @@ class LogServiceV2 @Autowired constructor(
         executeCount: Int?
     ): QueryLogs {
         val logStatus = getLogStatus(buildId, tag, jobId, executeCount)
-        val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
-        if (size == 0L) return QueryLogs(buildId, logStatus, false, mutableListOf())
 
         val queryLogs = QueryLogs(buildId, logStatus)
 
         try {
+            val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
+            if (size == 0L) return queryLogs
+
             val logs = getOriginLogs(buildId, index, type, keywords, tag, jobId, executeCount)
             queryLogs.logs.addAll(logs)
             if (logs.isEmpty()) queryLogs.status = LogStatus.EMPTY
