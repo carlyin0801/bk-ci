@@ -37,6 +37,7 @@ import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
 import javax.ws.rs.GET
 import javax.ws.rs.HeaderParam
+import javax.ws.rs.POST
 import javax.ws.rs.Path
 import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
@@ -46,7 +47,7 @@ import javax.ws.rs.core.MediaType
 @Path("/service/organizations")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-interface ServiceProjectOrganizationResource {
+interface ServiceTxProjectOrganizationResource {
 
     @GET
     @Path("/ids/{id}")
@@ -83,4 +84,19 @@ interface ServiceProjectOrganizationResource {
         @PathParam("level")
         level: Int
     ): Result<List<DeptInfo>>
+
+    @POST
+    @Path("projects/{projectId}/users/{userId}")
+    fun addUser2Project(
+        @ApiParam("操作用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        executeUserId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("目标用户ID", required = true)
+        @PathParam("userId")
+        userId: String
+    ): Result<Boolean>
+
 }
