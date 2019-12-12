@@ -257,10 +257,14 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
                 desc = true, page = page, pageSize = pageSize
             )
         )
-        val classifyList = classifyDao.getAllClassify(dslContext, 1)
+        val classifyList = classifyDao.getAllClassify(dslContext, StoreTypeEnum.TEMPLATE.type.toByte())
         classifyList.forEach {
             val classifyCode = it.classifyCode
-            labelInfoList.add(MarketMainItemLabel(classifyCode, it.classifyName))
+            val classifyLanName = MessageCodeUtil.getCodeLanMessage(
+                messageCode = "${StoreMessageCode.MSG_CODE_STORE_CLASSIFY_PREFIX}$classifyCode",
+                defaultMessage = it.classifyName
+            )
+            labelInfoList.add(MarketMainItemLabel(classifyCode, classifyLanName))
             futureList.add(
                 doList(
                     userId = userId,
@@ -348,7 +352,7 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
 
     private fun getTemplateDetail(templateRecord: TTemplateRecord, userId: String): Result<TemplateDetail?> {
         val templateCode = templateRecord.templateCode
-        val templateClassifyRecord = classifyDao.getClassify(dslContext, templateRecord.classifyId)
+        val templateClassify = classifyService.getClassify(templateRecord.classifyId).data
         val templateStatisticRecord = storeStatisticDao.getStatisticByStoreCode(
             dslContext = dslContext,
             storeCode = templateCode,
@@ -373,8 +377,8 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
             templateCode = templateCode,
             templateName = templateRecord.templateName,
             logoUrl = templateRecord.logoUrl,
-            classifyCode = templateClassifyRecord?.classifyCode,
-            classifyName = templateClassifyRecord?.classifyName,
+            classifyCode = templateClassify?.classifyCode,
+            classifyName = templateClassify?.classifyName,
             downloads = downloads ?: 0,
             score = String.format("%.1f", avgScore).toDouble(),
             summary = templateRecord.summary,
