@@ -35,7 +35,9 @@ import com.tencent.devops.common.auth.api.pojo.BkAuthGroupAndUserList
 import com.tencent.devops.common.auth.api.pojo.BkAuthProjectCodeAndId
 import com.tencent.devops.common.auth.api.pojo.BkAuthResponse
 import com.tencent.devops.common.auth.code.AuthServiceCode
+import okhttp3.MediaType
 import okhttp3.Request
+import okhttp3.RequestBody
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
@@ -185,6 +187,37 @@ class BSAuthProjectApi @Autowired constructor(
             }
             return projectAvailableList
         }
+    }
+
+    override fun addProjectUser(userId: String, serviceCode: AuthServiceCode, projectCode: String, role: String): Boolean {
+        var addResult = false
+        val accessToken = bsAuthTokenApi.getAccessToken(serviceCode)
+        val url = "${bkAuthProperties.url}/projects/$projectCode/roles/$role/users?access_token=$accessToken"
+        val bodyData = mutableMapOf<String, String>()
+        bodyData.put("user_type","rtx")
+        bodyData.put("user_id",userId)
+        val content = objectMapper.writeValueAsString(bodyData)
+        val mediaType = MediaType.parse("application/json; charset=utf-8")
+        val body = RequestBody.create(mediaType, content)
+        var request = Request.Builder().url(url).post(body).build()
+        OkhttpUtils.doHttp(request).use { response->
+            val responseContent = response.body()!!.string()
+            if(!response.isSuccessful){
+                logger.error("Fail to addProjectUser, projectId[$projectCode], userId[$userId], role[$role]")
+                throw RemoteServiceException("Fail to create projects user")
+            }
+            //TODO: 返回数据结构需要确定
+            val responseObject = objectMapper.readValue<BkAuthResponse<List<BkAuthGroupAndUserList>>>(responseContent)
+            if(responseObject.code != 0){
+                if (responseObject.code == HTTP_403) {
+                    bsAuthTokenApi.refreshAccessToken(serviceCode)
+                }
+                logger.error("Fail to addProjectUser: $responseObject")
+                throw RemoteServiceException("Fail to create projects user")
+            }
+            addResult = true
+        }
+        return addResult
     }
 
     companion object {

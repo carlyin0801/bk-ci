@@ -71,4 +71,6 @@ object ProjectMessageCode {
     const val LABLE_NAME_EXSIT = "2119026" // {0}已经存在，请换一个再试
     const val CALL_PEM_FAIL = "2119027" // 调用权限中心创建项目失败
     const val CALL_PEM_FAIL_PARM = "2119028" // 调用权限中心创建项目失败:{0}
+    const val CREATE_PROJECT_USER_NOT_MANANAGE = "2119029" // 添加用户到执行项目用户组失败,操作用户非管理员
+
 }
