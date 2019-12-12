@@ -896,7 +896,7 @@ class LogServiceV2 @Autowired constructor(
 
     private fun getLogSize(index: String, type: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): Long {
         val query = getQuery(buildId, tag, jobId, executeCount)
-//        logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] Get the log size - ($query)")
+        logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] Get the log size - ($query)")
         val searchResponse = client.prepareSearch(index)
             .setTypes(type)
             .setQuery(query)
@@ -927,14 +927,14 @@ class LogServiceV2 @Autowired constructor(
         jobId: String? = null,
         executeCount: Int?
     ): QueryLogs {
+        logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] doQueryInitLogs")
         val logStatus = getLogStatus(buildId, tag, jobId, executeCount)
-
         val queryLogs = QueryLogs(buildId, logStatus)
 
         try {
             val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
             if (size == 0L) return queryLogs
-
+            logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs")
             val logs = getOriginLogs(buildId, index, type, keywords, tag, jobId, executeCount)
             queryLogs.logs.addAll(logs)
             if (logs.isEmpty()) queryLogs.status = LogStatus.EMPTY
