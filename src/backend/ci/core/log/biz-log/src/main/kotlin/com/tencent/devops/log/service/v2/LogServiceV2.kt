@@ -746,6 +746,7 @@ class LogServiceV2 @Autowired constructor(
     ): QueryLogs {
         val logs = ArrayList<LogLine>()
         val moreLogs = QueryLogs(buildId, getLogStatus(buildId, tag, jobId, executeCount))
+        val querySize = 50000
         logger.info("more logs status: $moreLogs")
 
         try {
@@ -754,7 +755,7 @@ class LogServiceV2 @Autowired constructor(
             val searchResponse = client.prepareSearch(index)
                 .setTypes(type)
                 .setQuery(query)
-                .setSize(Constants.MAX_LINES)
+                .setSize(querySize)
                 .addDocValueField("lineNo")
                 .addDocValueField("timestamp")
 //                .addDocValueField("message")
@@ -781,7 +782,7 @@ class LogServiceV2 @Autowired constructor(
                 logs.add(logLine)
             }
             moreLogs.logs.addAll(logs)
-            moreLogs.hasMore = moreLogs.logs.size >= Constants.MAX_LINES
+            moreLogs.hasMore = moreLogs.logs.size >= querySize
         } catch (ex: IndexNotFoundException) {
             logger.error("Query after logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             moreLogs.status = LogStatus.CLEAN
