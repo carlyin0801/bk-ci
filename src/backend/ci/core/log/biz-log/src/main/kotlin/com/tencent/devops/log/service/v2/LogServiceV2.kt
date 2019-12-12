@@ -929,6 +929,7 @@ class LogServiceV2 @Autowired constructor(
     ): QueryLogs {
         val logStatus = getLogStatus(buildId, tag, jobId, executeCount)
         val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
+        if (size == 0L) return QueryLogs(buildId, logStatus, false, mutableListOf())
 
         val queryLogs = QueryLogs(buildId, logStatus)
 
