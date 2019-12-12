@@ -880,22 +880,6 @@ class LogServiceV2 @Autowired constructor(
 
             val logs = getLogs(buildId, index, type, keywords, false, tag, jobId, executeCount)
             initLogs.logs.addAll(logs)
-
-            //
-            if (logs.isEmpty()) {
-                initLogs.logs.add(
-                        genLogMsgThereIsMore(
-                                "soda_more",
-                                java.lang.Long.MIN_VALUE,
-                                size - start + 1,
-                                start,
-                                size,
-                                tag,
-                                jobId,
-                                executeCount
-                        )
-                )
-            }
         } catch (ex: org.elasticsearch.index.IndexNotFoundException) {
             logger.error("Query init logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             initLogs.status = LogStatus.CLEAN
