@@ -41,6 +41,7 @@ import okhttp3.RequestBody
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import java.lang.RuntimeException
 
 @Component
 class BSAuthProjectApi @Autowired constructor(
@@ -189,35 +190,37 @@ class BSAuthProjectApi @Autowired constructor(
         }
     }
 
-    override fun addProjectUser(userId: String, serviceCode: AuthServiceCode, projectCode: String, role: String): Boolean {
-        var addResult = false
+    override fun createProjectUser(
+        user: String,
+        serviceCode: AuthServiceCode,
+        projectCode: String,
+        role: String
+    ): Boolean {
+        var result = false
         val accessToken = bsAuthTokenApi.getAccessToken(serviceCode)
-        val url = "${bkAuthProperties.url}/projects/$projectCode/roles/$role/users?access_token=$accessToken"
-        val bodyData = mutableMapOf<String, String>()
-        bodyData.put("user_type","rtx")
-        bodyData.put("user_id",userId)
-        val content = objectMapper.writeValueAsString(bodyData)
+        val url = "${bkAuthProperties.url}/projects/$projectCode/roles/$role/users?accessToken=$accessToken"
+        val bodyJson = mutableMapOf<String, String>()
+        bodyJson.put("user_type", "rtx")
+        bodyJson.put("user_id", user)
+        val content = objectMapper.writeValueAsString(bodyJson)
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val body = RequestBody.create(mediaType, content)
-        var request = Request.Builder().url(url).post(body).build()
-        OkhttpUtils.doHttp(request).use { response->
+        val request = Request.Builder().url(url).post(body).build()
+
+        OkhttpUtils.doHttp(request).use{ response ->
             val responseContent = response.body()!!.string()
             if(!response.isSuccessful){
-                logger.error("Fail to addProjectUser, projectId[$projectCode], userId[$userId], role[$role]")
-                throw RemoteServiceException("Fail to create projects user")
+                logger.error("create project user fail: user[$user], projectCode[$projectCode]")
+                throw RuntimeException()
             }
-            //TODO: 返回数据结构需要确定
-            val responseObject = objectMapper.readValue<BkAuthResponse<List<BkAuthGroupAndUserList>>>(responseContent)
+            val responseObject = objectMapper.readValue<BkAuthResponse<List<BkAuthProjectCodeAndId>>>(responseContent)
             if(responseObject.code != 0){
-                if (responseObject.code == HTTP_403) {
-                    bsAuthTokenApi.refreshAccessToken(serviceCode)
-                }
-                logger.error("Fail to addProjectUser: $responseObject")
-                throw RemoteServiceException("Fail to create projects user")
+                logger.error("create project user fail: $responseObject")
+                throw RuntimeException()
             }
-            addResult = true
+            result = true
         }
-        return addResult
+        return result
     }
 
     companion object {
