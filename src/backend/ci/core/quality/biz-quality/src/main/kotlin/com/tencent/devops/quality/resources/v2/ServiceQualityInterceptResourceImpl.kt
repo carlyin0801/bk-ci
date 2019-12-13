@@ -37,11 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired
 class ServiceQualityInterceptResourceImpl @Autowired constructor(
     private val historyService: QualityHistoryService
 ) : ServiceQualityInterceptResource {
-    override fun listHistory(
-        projectId: String,
-        pipelineId: String,
-        buildId: String
-    ): Result<List<QualityRuleIntercept>> {
+    override fun listHistory(projectId: String, pipelineId: String, buildId: String): Result<List<QualityRuleIntercept>> {
         return Result(historyService.serviceListByBuildId(projectId, pipelineId, buildId))
     }
 }

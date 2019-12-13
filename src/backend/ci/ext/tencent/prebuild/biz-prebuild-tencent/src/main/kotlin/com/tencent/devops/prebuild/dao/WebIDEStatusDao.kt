@@ -42,19 +42,29 @@ class WebIDEStatusDao {
         ideStatus: Int,
         ideVersion: String,
         serverCreateTime: Long,
-        pipelineId: String
+        pipelineId: String,
+        ideLastUpdate: Long,
+        diskGB: String,
+        cpuCore: String,
+        memoryGB: String,
+        serverRegionName: String
     ) {
         with(TWebideIdeinfo.T_WEBIDE_IDEINFO) {
             dslContext.insertInto(
-            this,
-            OWNER,
-            IP,
-            SERVER_TYPE,
-            AGENT_STATUS,
-            IDE_STATUS,
-            IDE_VERSION,
-            SERVER_CREATE_TIME,
-            PIPELINE_ID
+                    this,
+                    OWNER,
+                    IP,
+                    SERVER_TYPE,
+                    AGENT_STATUS,
+                    IDE_STATUS,
+                    IDE_VERSION,
+                    SERVER_CREATE_TIME,
+                    PIPELINE_ID,
+                    IDE_LAST_UPDATE,
+                    DISK_GB,
+                    CPU_CORE,
+                    MEMORY_GB,
+                    SERVER_REGION_NAME
             ).values(
                     owner,
                     ip,
@@ -63,7 +73,12 @@ class WebIDEStatusDao {
                     ideStatus,
                     ideVersion,
                     serverCreateTime,
-                    pipelineId
+                    pipelineId,
+                    ideLastUpdate,
+                    diskGB,
+                    cpuCore,
+                    memoryGB,
+                    serverRegionName
             ).execute()
         }
     }
@@ -116,9 +131,10 @@ class WebIDEStatusDao {
         }
     }
 
-    fun updateIDEHeartBeat(dslContext: DSLContext, owner: String, ip: String) {
+    fun updateIDEHeartBeat(dslContext: DSLContext, owner: String, ip: String, version: String) {
         with(TWebideIdeinfo.T_WEBIDE_IDEINFO) {
             dslContext.update(this)
+                    .set(IDE_VERSION, version)
                     .set(IDE_LAST_UPDATE, System.currentTimeMillis())
                     .where(OWNER.eq(owner))
                     .and(IP.eq(ip))

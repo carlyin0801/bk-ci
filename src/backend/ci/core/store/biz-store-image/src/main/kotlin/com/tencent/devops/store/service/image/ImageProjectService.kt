@@ -1004,14 +1004,13 @@ class ImageProjectService @Autowired constructor(
      * 安装镜像到项目
      */
     fun installImage(
-        accessToken: String,
         userId: String,
         projectCodeList: ArrayList<String>,
         imageCode: String,
         channelCode: ChannelCode,
         interfaceName: String? = "Anon interface"
     ): Result<Boolean> {
-        logger.info("$interfaceName:installImage:Input:($accessToken,$userId,$projectCodeList,$imageCode)")
+        logger.info("$interfaceName:installImage:Input:($userId,$projectCodeList,$imageCode)")
         // 判断镜像标识是否合法
         val image = marketImageDao.getLatestImageByCode(dslContext, imageCode)
             ?: throw ImageNotExistException("imageCode=$imageCode")
@@ -1021,7 +1020,6 @@ class ImageProjectService @Autowired constructor(
             userId = userId,
             storeCode = image.imageCode,
             storeType = StoreTypeEnum.IMAGE,
-            accessToken = accessToken,
             projectCodeList = projectCodeList
         )
         if (validateInstallResult.isNotOk()) {
@@ -1029,7 +1027,6 @@ class ImageProjectService @Autowired constructor(
         }
         logger.info("$interfaceName:installImage:Inner:image.id=${image.id},imageFeature.publicFlag=${imageFeature.publicFlag}")
         return storeProjectService.installStoreComponent(
-            accessToken = accessToken,
             userId = userId,
             projectCodeList = projectCodeList,
             storeId = image.id,

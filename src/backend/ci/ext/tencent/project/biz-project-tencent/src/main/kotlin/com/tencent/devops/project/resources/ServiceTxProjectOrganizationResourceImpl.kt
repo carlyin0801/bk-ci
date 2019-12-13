@@ -29,7 +29,5 @@ class ServiceTxProjectOrganizationResourceImpl @Autowired constructor(
         return Result(tofService.getParentDeptInfo(deptId, level))
     }
 
-    override fun addUser2Project(executeUserId: String, projectId: String, userId: String): Result<Boolean> {
-        return Result(projectOrganizationServiceImpl.createProjectUser(executeUserId, projectId, BkAuthGroup.MANAGER  ,userId, BkAuthGroup.DEVELOPER))
-    }
+
 }

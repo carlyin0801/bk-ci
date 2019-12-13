@@ -36,6 +36,7 @@ import com.tencent.devops.common.pipeline.type.BuildType
 import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.model.store.tables.records.TContainerRecord
 import com.tencent.devops.store.dao.container.BuildResourceDao
+import com.tencent.devops.store.dao.container.BuildTypeOptionsDao
 import com.tencent.devops.store.dao.container.ContainerDao
 import com.tencent.devops.store.dao.container.ContainerResourceRelDao
 import com.tencent.devops.store.pojo.app.ContainerAppWithVersion
@@ -74,6 +75,8 @@ abstract class ContainerServiceImpl @Autowired constructor() : ContainerService 
     lateinit var containerAppService: ContainerAppService
     @Autowired
     lateinit var client: Client
+    @Autowired
+    lateinit var buildTypeOptionsDao: BuildTypeOptionsDao
 
     private val logger = LoggerFactory.getLogger(ContainerServiceImpl::class.java)
 
@@ -105,7 +108,8 @@ abstract class ContainerServiceImpl @Autowired constructor() : ContainerService 
         userId: String,
         projectCode: String,
         type: String?,
-        os: OS?
+        os: OS?,
+        pipelineId: String?
     ): Result<List<ContainerResp>> {
         logger.info("the get userId is :$userId,projectCode is :$projectCode, type is :$type,os is :$os")
         val dataList = mutableListOf<ContainerResp>()
@@ -136,7 +140,7 @@ abstract class ContainerServiceImpl @Autowired constructor() : ContainerService 
             val typeList = mutableListOf<ContainerBuildType>()
             BuildType.values().forEach { type ->
                 if ((containerOS == null || type.osList.contains(containerOS)) && buildTypeEnable(type, projectCode)) {
-                        typeList.add(ContainerBuildType(type.name, type.value, type.enableApp, !clickable(type, projectCode)))
+                        typeList.add(ContainerBuildType(type.name, type.value, type.enableApp, !clickable(type, projectCode, pipelineId)))
                 }
                 if (!queryAllFlag && containerOS != null) {
                     val resource = try {
@@ -176,7 +180,7 @@ abstract class ContainerServiceImpl @Autowired constructor() : ContainerService 
 
     abstract fun buildTypeEnable(buildType: BuildType, projectCode: String): Boolean
 
-    abstract fun clickable(buildType: BuildType, projectCode: String): Boolean
+    abstract fun clickable(buildType: BuildType, projectCode: String, pipelineId: String?): Boolean
 
     abstract fun getResource(
         userId: String,
@@ -308,6 +312,18 @@ abstract class ContainerServiceImpl @Autowired constructor() : ContainerService 
     override fun deletePipelineContainer(id: String): Result<Boolean> {
         logger.info("the delete id is :{}", id)
         containerDao.deletePipelineContainer(dslContext, id)
+        return Result(true)
+    }
+
+    override fun addBuildType(userId: String, projectId: String, buildType: BuildType, pipelineId: String?, osList: String?, enableApp: Boolean?, clickable: Boolean?, visable: Boolean?): Result<Boolean> {
+        logger.info("add build type: projectId: $projectId, buildType: ${buildType.name}")
+        buildTypeOptionsDao.create(dslContext, projectId, buildType.name, pipelineId, osList, enableApp, clickable, visable, userId, userId)
+        return Result(true)
+    }
+
+    override fun deleteBuildType(userId: String, projectId: String, buildType: BuildType): Result<Boolean> {
+        logger.info("delete build type: projectId: $projectId, buildType: ${buildType.name}")
+        buildTypeOptionsDao.delete(dslContext, projectId, buildType.name)
         return Result(true)
     }
 

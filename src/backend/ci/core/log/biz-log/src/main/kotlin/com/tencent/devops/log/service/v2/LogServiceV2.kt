@@ -59,12 +59,14 @@ import org.elasticsearch.indices.IndexClosedException
 import org.elasticsearch.search.SearchHits
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder
 import org.elasticsearch.search.sort.SortOrder
+import org.glassfish.jersey.server.ChunkedOutput
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import sun.rmi.runtime.Log
 import java.io.IOException
+import java.lang.RuntimeException
 import java.sql.Date
 import java.text.SimpleDateFormat
 import java.util.Arrays
@@ -719,7 +721,7 @@ class LogServiceV2 @Autowired constructor(
             }
 
             moreLogs.logs.addAll(logs)
-        } catch (ex: org.elasticsearch.index.IndexNotFoundException) {
+        } catch (ex: IndexNotFoundException) {
             logger.error("Query after logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             moreLogs.status = LogStatus.CLEAN
             moreLogs.finished = true
@@ -928,14 +930,14 @@ class LogServiceV2 @Autowired constructor(
         executeCount: Int?
     ): QueryLogs {
         logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] doQueryInitLogs")
-        val logStatus = getLogStatus(buildId, tag, jobId, executeCount)
+        val logStatus = if (tag == null && jobId != null) getLogStatus(buildId, jobId, null, executeCount)
+            else getLogStatus(buildId, tag, jobId, executeCount)
         val queryLogs = QueryLogs(buildId, logStatus)
 
         try {
             val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
             if (size == 0L) return queryLogs
-            val logRange =
-                if (tag.isNullOrBlank()) Pair(1L, size) else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
+            val logRange = getLogRange(buildId, index, type, tag, jobId, executeCount, size)
             logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
 
             val startTime = System.currentTimeMillis()

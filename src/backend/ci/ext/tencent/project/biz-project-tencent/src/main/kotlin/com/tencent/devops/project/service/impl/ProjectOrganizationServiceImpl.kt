@@ -60,14 +60,6 @@ class ProjectOrganizationServiceImpl @Autowired constructor(
         return tofService.getParentDeptInfo(deptId, level)
     }
 
-    fun createProjectUser(executeUser: String, projectCode: String, executeRole: BkAuthGroup, userId: String, role:BkAuthGroup):Boolean{
-        if(bsAuthProjectApi.isProjectUser(executeUser, bsProjectServiceCodec, projectCode, executeRole)){
-            logger.error("[createProjectUser] executeUser is not manager")
-            throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.CREATE_PROJECT_USER_NOT_MANANAGE))
-        }
-        return bsAuthProjectApi.addProjectUser(userId, bsProjectServiceCodec, projectCode, role.name)
-    }
-
     companion object{
         val logger = LoggerFactory.getLogger(this::class.java)
     }

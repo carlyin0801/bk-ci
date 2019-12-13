@@ -53,7 +53,7 @@ interface UserSubPipelineInfoResource {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID", required = false, defaultValue = "")
         @QueryParam("projectId")
         projectId: String,
         @ApiParam("流水线ID", required = false, defaultValue = "")

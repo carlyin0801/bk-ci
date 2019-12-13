@@ -26,9 +26,11 @@
 
 package com.tencent.devops.store.api.container
 
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.store.pojo.container.Container
 import com.tencent.devops.store.pojo.container.ContainerRequest
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.pipeline.type.BuildType
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
@@ -40,6 +42,8 @@ import javax.ws.rs.PUT
 import javax.ws.rs.Path
 import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
+import javax.ws.rs.HeaderParam
+import javax.ws.rs.QueryParam
 import javax.ws.rs.core.MediaType
 
 @Api(tags = ["OP_PIPELINE_CONTAINER"], description = "OP-流水线-构建容器")
@@ -88,5 +92,50 @@ interface OpContainerResource {
         @ApiParam("容器ID", required = true)
         @PathParam("id")
         id: String
+    ): Result<Boolean>
+
+    @ApiOperation("添加流水线构建容器")
+    @POST
+    @Path("/buildType/add")
+    fun addBuildType(
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "项目ID", required = true)
+        @QueryParam("projectId")
+        projectId: String,
+        @ApiParam(value = "构建机类型", required = true)
+        @QueryParam("buildType")
+        buildType: BuildType,
+        @ApiParam(value = "pipelineId", required = false)
+        @QueryParam("pipelineId")
+        pipelineId: String?,
+        @ApiParam(value = "osList", required = false)
+        @QueryParam("osList")
+        osList: String?,
+        @ApiParam(value = "enableApp", required = false)
+        @QueryParam("enableApp")
+        enableApp: Boolean?,
+        @ApiParam(value = "clickable", required = false)
+        @QueryParam("clickable")
+        clickable: Boolean?,
+        @ApiParam(value = "visable", required = false)
+        @QueryParam("visable")
+        visable: Boolean?
+    ): Result<Boolean>
+
+    @ApiOperation("添加流水线构建容器")
+    @DELETE
+    @Path("/buildType/delete")
+    fun deleteBuildType(
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "项目ID", required = true)
+        @QueryParam("projectId")
+        projectId: String,
+        @ApiParam(value = "构建机类型", required = true)
+        @QueryParam("buildType")
+        buildType: BuildType
     ): Result<Boolean>
 }

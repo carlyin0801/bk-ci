@@ -27,6 +27,7 @@
 package com.tencent.devops.store.resources.container
 
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.pipeline.type.BuildType
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.store.api.container.OpContainerResource
 import com.tencent.devops.store.pojo.container.Container
@@ -55,5 +56,13 @@ class OpContainerResourceImpl @Autowired constructor(private val containerServic
 
     override fun add(pipelineContainerRequest: ContainerRequest): Result<Boolean> {
         return containerService.savePipelineContainer(pipelineContainerRequest)
+    }
+
+    override fun addBuildType(userId: String, projectId: String, buildType: BuildType, pipelineId: String?, osList: String?, enableApp: Boolean?, clickable: Boolean?, visable: Boolean?): Result<Boolean> {
+        return containerService.addBuildType(userId, projectId, buildType, pipelineId, osList, enableApp, clickable, visable)
+    }
+
+    override fun deleteBuildType(userId: String, projectId: String, buildType: BuildType): Result<Boolean> {
+        return containerService.deleteBuildType(userId, projectId, buildType)
     }
 }

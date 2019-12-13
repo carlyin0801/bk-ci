@@ -44,12 +44,11 @@ import org.slf4j.LoggerFactory
 data class StoreWebsocketPush(
     val atomId: String,
     override val userId: String,
-    override val pushType: WebSocketType,
     override val redisOperation: RedisOperation,
     override val objectMapper: ObjectMapper,
     override var page: String?,
     override var notifyPost: NotifyPost
-) : WebsocketPush(userId, pushType, redisOperation, objectMapper, page, notifyPost) {
+) : WebsocketPush(userId, redisOperation, objectMapper, page, notifyPost) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(this::class.java)

@@ -46,15 +46,15 @@ class DockerDispatcher @Autowired constructor(
 
     override fun startUp(pipelineAgentStartupEvent: PipelineAgentStartupEvent) {
         val dockerDispatch = pipelineAgentStartupEvent.dispatchType as DockerDispatchType
+        dockerHostBuildService.dockerHostBuild(pipelineAgentStartupEvent)
         LogUtils.addLine(
             rabbitTemplate,
             pipelineAgentStartupEvent.buildId,
             "Start docker ${dockerDispatch.dockerBuildVersion} for the build",
-            "",
+            pipelineAgentStartupEvent.containerHashId ?: "",
             pipelineAgentStartupEvent.containerHashId,
             pipelineAgentStartupEvent.executeCount ?: 1
         )
-        dockerHostBuildService.dockerHostBuild(pipelineAgentStartupEvent)
     }
 
     override fun shutdown(pipelineAgentShutdownEvent: PipelineAgentShutdownEvent) {
