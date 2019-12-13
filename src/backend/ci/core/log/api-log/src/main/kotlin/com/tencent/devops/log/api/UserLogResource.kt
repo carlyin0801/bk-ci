@@ -29,10 +29,13 @@ package com.tencent.devops.log.api
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.log.model.pojo.LogLine
+import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.model.pojo.QueryLogs
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
+import org.glassfish.jersey.server.ChunkedOutput
 import javax.ws.rs.Consumes
 import javax.ws.rs.GET
 import javax.ws.rs.HeaderParam
@@ -85,6 +88,34 @@ interface UserLogResource {
         @QueryParam("executeCount")
         executeCount: Int?
     ): Result<QueryLogs>
+
+    @ApiOperation("持续加载全量日志")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/load")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun loadInitLogs(
+        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("对应element ID", required = false)
+        @QueryParam("tag")
+        tag: String?,
+        @ApiParam("对应jobId", required = false)
+        @QueryParam("jobId")
+        jobId: String?,
+        @ApiParam("执行次数", required = false)
+        @QueryParam("executeCount")
+        executeCount: Int?
+    ): ChunkedOutput<QueryLogs>
 
     @ApiOperation("获取更多日志")
     @GET
@@ -161,6 +192,39 @@ interface UserLogResource {
         executeCount: Int?
     ): Result<QueryLogs>
 
+    @ApiOperation("获取某行后的日志")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/push/after")
+    fun getAfterLogsWithPush(
+        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("起始行号", required = true)
+        @QueryParam("lineNo")
+        lineNo: Long,
+        @ApiParam("是否请求分析日志", required = true)
+        @QueryParam("sessionId")
+        sessionId: String,
+        @ApiParam("对应elementId", required = false)
+        @QueryParam("tag")
+        tag: String?,
+        @ApiParam("对应jobId", required = false)
+        @QueryParam("jobId")
+        jobId: String?,
+        @ApiParam("执行次数", required = false)
+        @QueryParam("executeCount")
+        executeCount: Int?
+    ): Result<Boolean>
+
     @ApiOperation("下载日志接口")
     @GET
     @Path("/{projectId}/{pipelineId}/{buildId}/download")
@@ -188,4 +252,106 @@ interface UserLogResource {
         @QueryParam("executeCount")
         executeCount: Int?
     ): Response
+
+    @ApiOperation("开始插件的日志动态推送")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/push/tag")
+    fun startTagPush(
+        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("对应element ID", required = true)
+        @QueryParam("tag")
+        tag: String,
+        @ApiParam("已拉取的最后一行行号", required = true)
+        @QueryParam("lineNo")
+        lineNo: Long,
+        @ApiParam("会话ID", required = true)
+        @QueryParam("sessionId")
+        sessionId: String
+    ): Result<PushStatus?>
+
+    @ApiOperation("开始Job的日志动态推送")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/push/job")
+    fun startJobPush(
+        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("对应element ID", required = true)
+        @QueryParam("jobId")
+        jobId: String,
+        @ApiParam("已拉取的最后一行行号", required = true)
+        @QueryParam("lineNo")
+        lineNo: Long,
+        @ApiParam("会话ID", required = true)
+        @QueryParam("sessionId")
+        sessionId: String
+    ): Result<PushStatus?>
+
+    @ApiOperation("结束插件的日志动态推送")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/stop/tag")
+    fun stopTagPush(
+        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("对应element ID", required = true)
+        @QueryParam("tag")
+        tag: String,
+        @ApiParam("会话ID", required = true)
+        @QueryParam("sessionId")
+        sessionId: String
+    ): Result<Boolean>
+
+    @ApiOperation("结束插件的日志动态推送")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/stop/job")
+    fun stopJobPush(
+        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("对应element ID", required = true)
+        @QueryParam("jobId")
+        jobId: String,
+        @ApiParam("会话ID", required = true)
+        @QueryParam("sessionId")
+        sessionId: String
+    ): Result<Boolean>
 }

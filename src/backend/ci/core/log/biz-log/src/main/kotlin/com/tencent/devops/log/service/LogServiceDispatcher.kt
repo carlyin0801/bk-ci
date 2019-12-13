@@ -27,20 +27,26 @@
 package com.tencent.devops.log.service
 
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.log.model.pojo.EndPageQueryLogs
 import com.tencent.devops.log.model.pojo.LogBatchEvent
 import com.tencent.devops.log.model.pojo.LogEvent
 import com.tencent.devops.log.model.pojo.LogStatusEvent
 import com.tencent.devops.log.model.pojo.PageQueryLogs
 import com.tencent.devops.log.model.pojo.QueryLogs
+import com.tencent.devops.log.model.pojo.LogLine
+import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.service.v2.LogServiceV2
+import com.tencent.devops.log.websocket.LogPushRedisUtlis
+import org.glassfish.jersey.server.ChunkedOutput
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import javax.ws.rs.core.Response
 
 @Service
 class LogServiceDispatcher @Autowired constructor(
-    private val logServiceV2: LogServiceV2
+    private val logServiceV2: LogServiceV2,
+    private val redisOperation: RedisOperation
 ) {
 
     fun getInitLogs(
@@ -92,6 +98,17 @@ class LogServiceDispatcher @Autowired constructor(
             )
     }
 
+    fun loadInitLogs(
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): ChunkedOutput<QueryLogs> {
+        return logServiceV2.loadInitLogs(pipelineId, buildId, tag, jobId, executeCount)
+    }
+
     fun getMoreLogs(
         projectId: String,
         pipelineId: String,
@@ -140,6 +157,26 @@ class LogServiceDispatcher @Autowired constructor(
             )
     }
 
+    fun getAfterLogsWithPush(
+        buildId: String,
+        start: Long,
+        sessionId: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Result<Boolean> {
+        return Result(
+            logServiceV2.queryMoreLogsAfterLineByPush(
+                buildId,
+                start,
+                sessionId,
+                tag,
+                jobId,
+                executeCount
+            )
+        )
+    }
+
     fun downloadLogs(
         projectId: String,
         pipelineId: String,
@@ -174,5 +211,25 @@ class LogServiceDispatcher @Autowired constructor(
 
     fun logStatusEvent(event: LogStatusEvent) {
         logServiceV2.updateLogStatus(event)
+    }
+
+    fun createJobPushStatus(buildId: String, jobId: String, lineNo: Long, sessionId: String): PushStatus? {
+        val pushStatus = LogPushRedisUtlis.getPushStatusListByJobIdSession(redisOperation, sessionId)
+        if (pushStatus == null) LogPushRedisUtlis.writePushStatusByJobId(redisOperation, buildId, jobId, lineNo, sessionId)
+        return pushStatus
+    }
+
+    fun createTagPushStatus(buildId: String, tag: String, lineNo: Long, sessionId: String): PushStatus? {
+        val pushStatus = LogPushRedisUtlis.getPushStatusListByTagSession(redisOperation, sessionId)
+        if (pushStatus == null) LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, tag, lineNo, sessionId)
+        return pushStatus
+    }
+
+    fun cleanJobPushStatus(buildId: String, tag: String, sessionId: String) {
+        LogPushRedisUtlis.cleanPushStatusByTag(redisOperation, buildId, tag)
+    }
+
+    fun cleanTagPushStatus(buildId: String, tag: String, sessionId: String) {
+        LogPushRedisUtlis.cleanPushStatusByJobId(redisOperation, buildId, tag)
     }
 }

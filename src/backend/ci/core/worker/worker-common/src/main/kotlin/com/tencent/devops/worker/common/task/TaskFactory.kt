@@ -86,6 +86,7 @@ object TaskFactory {
     }
 
     fun create(type: String): ITask {
+        LoggerService.addNormalLine("taskMap is: $taskMap")
         val clazz = taskMap[type] ?: return EmptyTask(
             type
         )

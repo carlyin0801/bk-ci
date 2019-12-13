@@ -124,11 +124,7 @@ class QualityIndicatorService @Autowired constructor(
                 IndicatorStageGroup.IndicatorControlPointGroup(encoder.encodeToString(controlPoint.key.toByteArray()),
                     elementType, ElementUtils.getElementCnName(elementType, projectId), detailGroups)
             }
-            IndicatorStageGroup(
-                hashId = encoder.encodeToString(stage.key.toByteArray()),
-                stage = stage.key,
-                controlPoints = stageGroup
-            )
+            IndicatorStageGroup(encoder.encodeToString(stage.key.toByteArray()), stage.key, stageGroup)
         }
     }
 
@@ -174,25 +170,10 @@ class QualityIndicatorService @Autowired constructor(
             val metadataNames = sb.toString()
 
             IndicatorData(
-                id = it.id,
-                elementType = it.elementType,
-                elementName = it.elementName,
-                elementDetail = it.elementDetail,
-                enName = it.enName,
-                cnName = it.cnName,
-                metadataIds = it.metadataIds,
-                metadataNames = metadataNames,
-                defaultOperation = it.defaultOperation,
-                operationAvailable = it.operationAvailable,
-                threshold = it.threshold,
-                thresholdType = it.thresholdType,
-                desc = it.desc,
-                readOnly = it.indicatorReadOnly,
-                stage = it.stage,
-                range = it.indicatorRange,
-                type = it.type,
-                tag = it.tag,
-                enable = it.enable
+                it.id, it.elementType, it.elementName, it.elementDetail, it.enName,
+                it.cnName, it.metadataIds, metadataNames, it.defaultOperation,
+                it.operationAvailable, it.threshold, it.thresholdType,
+                it.desc, it.indicatorReadOnly, it.stage, it.indicatorRange, it.type, it.tag, it.enable
             )
         } ?: listOf()
     }
@@ -232,30 +213,30 @@ class QualityIndicatorService @Autowired constructor(
         if (indicatorDao.update(userId, id, indicatorUpdate, dslContext) > 0) {
             return Msg(0, "更新指标数据成功", true)
         }
-        return Msg(code = -1, msg = "未知的异常，更新失败", flag = false)
+        return Msg(-1, "未知的异常，更新失败", false)
     }
 
     fun userCreate(userId: String, projectId: String, indicatorCreate: IndicatorCreate): Boolean {
         checkCustomIndicatorExist(projectId, indicatorCreate.name, indicatorCreate.cnName)
         val indicatorUpdate = IndicatorUpdate(
-            elementType = indicatorCreate.elementType,
-            elementName = ElementUtils.getElementCnName(indicatorCreate.elementType, projectId),
-            elementDetail = ElementUtils.getElementCnName(indicatorCreate.elementType, projectId),
-            elementVersion = "",
-            enName = indicatorCreate.name,
-            cnName = indicatorCreate.cnName,
-            metadataIds = "",
-            defaultOperation = indicatorCreate.operation.firstOrNull()?.name,
-            operationAvailable = indicatorCreate.operation.joinToString(","),
-            threshold = indicatorCreate.threshold,
-            thresholdType = indicatorCreate.dataType.name,
-            desc = indicatorCreate.desc,
-            readOnly = false,
-            stage = "开发",
-            range = projectId,
-            tag = null,
-            enable = true,
-            type = IndicatorType.CUSTOM
+            indicatorCreate.elementType,
+            ElementUtils.getElementCnName(indicatorCreate.elementType, projectId),
+            ElementUtils.getElementCnName(indicatorCreate.elementType, projectId),
+            "",
+            indicatorCreate.name,
+            indicatorCreate.cnName,
+            "",
+            indicatorCreate.operation.firstOrNull()?.name,
+            indicatorCreate.operation.joinToString(","),
+            indicatorCreate.threshold,
+            indicatorCreate.dataType.name,
+            indicatorCreate.desc,
+            false,
+            "开发",
+            projectId,
+            null,
+            true,
+            IndicatorType.CUSTOM
         )
         indicatorDao.create(userId, indicatorUpdate, dslContext)
         return true
@@ -265,27 +246,27 @@ class QualityIndicatorService @Autowired constructor(
         val id = HashUtil.decodeIdToLong(indicatorId)
         checkCustomIndicatorExcludeExist(id, projectId, indicatorCreate.name, indicatorCreate.cnName)
         val indicatorUpdate = IndicatorUpdate(
-            elementType = indicatorCreate.elementType,
-            elementName = ElementUtils.getElementCnName(indicatorCreate.elementType, projectId),
-            elementDetail = ElementUtils.getElementCnName(indicatorCreate.elementType, projectId),
-            elementVersion = "",
-            enName = indicatorCreate.name,
-            cnName = indicatorCreate.cnName,
-            metadataIds = "",
-            defaultOperation = indicatorCreate.operation.firstOrNull()?.name,
-            operationAvailable = indicatorCreate.operation.joinToString(","),
-            threshold = indicatorCreate.threshold,
-            thresholdType = indicatorCreate.dataType.name,
-            desc = indicatorCreate.desc,
-            readOnly = false,
-            stage = "开发",
-            range = projectId,
-            tag = "",
-            enable = true,
-            type = IndicatorType.CUSTOM
+            indicatorCreate.elementType,
+            ElementUtils.getElementCnName(indicatorCreate.elementType, projectId),
+            ElementUtils.getElementCnName(indicatorCreate.elementType, projectId),
+            "",
+            indicatorCreate.name,
+            indicatorCreate.cnName,
+            "",
+            indicatorCreate.operation.firstOrNull()?.name,
+            indicatorCreate.operation.joinToString(","),
+            indicatorCreate.threshold,
+            indicatorCreate.dataType.name,
+            indicatorCreate.desc,
+            false,
+            "开发",
+            projectId,
+            "",
+            true,
+            IndicatorType.CUSTOM
         )
         logger.info("user($userId) update the indicator($id): $indicatorUpdate")
-        indicatorDao.update(userId = userId, id = id, indicatorUpdate = indicatorUpdate, dslContext = dslContext)
+        indicatorDao.update(userId, id, indicatorUpdate, dslContext)
         return true
     }
 
@@ -332,11 +313,7 @@ class QualityIndicatorService @Autowired constructor(
             }
         }
 
-        return IndicatorListResponse(
-            scriptIndicators = scriptIndicators,
-            systemIndicators = systemIndicators,
-            marketIndicators = marketIndicators
-        )
+        return IndicatorListResponse(scriptIndicators, systemIndicators, marketIndicators)
     }
 
     fun serviceGet(projectId: String, indicatorId: String): QualityIndicator {
@@ -387,25 +364,25 @@ class QualityIndicatorService @Autowired constructor(
             testData.forEach TEST@{ testItem ->
                 if (prodItem.enName == testItem.enName) {
                     indicatorDao.update(userId, prodItem.id, IndicatorUpdate(
-                        elementType = testItem.elementType,
-                        elementName = testItem.elementName,
-                        elementDetail = testItem.elementDetail,
-                        elementVersion = null, // 刷新不需要更新插件版本
-                        enName = testItem.enName,
-                        cnName = testItem.cnName,
-                        metadataIds = metadataMap[testItem.enName], // 插件市场注册的指标enName跟基础数据的dataId是一样的
-                        defaultOperation = testItem.defaultOperation,
-                        operationAvailable = testItem.operationAvailable,
-                        threshold = testItem.threshold,
-                        thresholdType = testItem.thresholdType,
-                        desc = testItem.desc,
-                        readOnly = testItem.indicatorReadOnly,
-                        stage = testItem.stage,
-                        range = "",
-                        tag = "IN_READY_RUNNING",
-                        enable = testItem.enable,
-                        type = IndicatorType.MARKET,
-                        logPrompt = testItem.logPrompt
+                        testItem.elementType,
+                        testItem.elementName,
+                        testItem.elementDetail,
+                        null, // 刷新不需要更新插件版本
+                        testItem.enName,
+                        testItem.cnName,
+                        metadataMap[testItem.enName], // 插件市场注册的指标enName跟基础数据的dataId是一样的
+                        testItem.defaultOperation,
+                        testItem.operationAvailable,
+                        testItem.threshold,
+                        testItem.thresholdType,
+                        testItem.desc,
+                        testItem.indicatorReadOnly,
+                        testItem.stage,
+                        "",
+                        "IN_READY_RUNNING",
+                        testItem.enable,
+                        IndicatorType.MARKET,
+                        testItem.logPrompt
                     ), dslContext)
                     return@PROD
                 }
@@ -423,25 +400,25 @@ class QualityIndicatorService @Autowired constructor(
                 if (prodItem.enName == testItem.enName) return@TEST
             }
             indicatorDao.update(userId, testItem.id, IndicatorUpdate(
-                elementType = testItem.elementType,
-                elementName = testItem.elementName,
-                elementDetail = testItem.elementDetail,
-                elementVersion = testItem.atomVersion,
-                enName = testItem.enName,
-                cnName = testItem.cnName,
-                metadataIds = metadataMap[testItem.enName], // 插件市场注册的指标enName跟基础数据的dataId是一样的
-                defaultOperation = testItem.defaultOperation,
-                operationAvailable = testItem.operationAvailable,
-                threshold = testItem.threshold,
-                thresholdType = testItem.thresholdType,
-                desc = testItem.desc,
-                readOnly = testItem.indicatorReadOnly,
-                stage = testItem.stage,
-                range = "",
-                tag = "IN_READY_RUNNING",
-                enable = testItem.enable,
-                type = IndicatorType.valueOf(testItem.type),
-                logPrompt = testItem.logPrompt
+                testItem.elementType,
+                testItem.elementName,
+                testItem.elementDetail,
+                testItem.atomVersion,
+                testItem.enName,
+                testItem.cnName,
+                metadataMap[testItem.enName], // 插件市场注册的指标enName跟基础数据的dataId是一样的
+                testItem.defaultOperation,
+                testItem.operationAvailable,
+                testItem.threshold,
+                testItem.thresholdType,
+                testItem.desc,
+                testItem.indicatorReadOnly,
+                testItem.stage,
+                "",
+                "IN_READY_RUNNING",
+                testItem.enable,
+                IndicatorType.valueOf(testItem.type),
+                testItem.logPrompt
             ), dslContext)
         }
 
@@ -486,22 +463,22 @@ class QualityIndicatorService @Autowired constructor(
 
     private fun convertRecord(indicator: TQualityIndicatorRecord, metadata: List<QualityIndicator.Metadata> = listOf()): QualityIndicator {
         return QualityIndicator(
-            hashId = HashUtil.encodeLongId(indicator.id),
-            elementType = indicator.elementType,
-            elementDetail = indicator.elementDetail ?: "",
-            enName = indicator.enName,
-            cnName = indicator.cnName,
-            stage = indicator.stage ?: "",
-            operation = QualityOperation.valueOf(indicator.defaultOperation),
-            operationList = indicator.operationAvailable.split(",").map { QualityOperation.valueOf(it) },
-            threshold = indicator.threshold,
-            thresholdType = QualityDataType.valueOf(indicator.thresholdType),
-            readOnly = if (indicator.tag == "TENCENTOPEN") true else indicator.indicatorReadOnly,
-            type = indicator.type,
-            tag = indicator.tag,
-            metadataList = metadata,
-            desc = indicator.desc,
-            logPrompt = indicator.logPrompt
+            HashUtil.encodeLongId(indicator.id),
+            indicator.elementType,
+            indicator.elementDetail ?: "",
+            indicator.enName,
+            indicator.cnName,
+            indicator.stage ?: "",
+            QualityOperation.valueOf(indicator.defaultOperation),
+            indicator.operationAvailable.split(",").map { QualityOperation.valueOf(it) },
+            indicator.threshold,
+            QualityDataType.valueOf(indicator.thresholdType),
+            if (indicator.tag == "TENCENTOPEN") true else indicator.indicatorReadOnly,
+            indicator.type,
+            indicator.tag,
+            metadata,
+            indicator.desc,
+            indicator.logPrompt
         )
     }
 

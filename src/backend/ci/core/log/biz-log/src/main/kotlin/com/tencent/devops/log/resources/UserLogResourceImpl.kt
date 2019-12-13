@@ -35,8 +35,11 @@ import com.tencent.devops.common.auth.api.AuthResourceType
 import com.tencent.devops.common.auth.code.PipelineAuthServiceCode
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.log.api.UserLogResource
+import com.tencent.devops.log.model.pojo.LogLine
+import com.tencent.devops.log.model.pojo.PushStatus
 import com.tencent.devops.log.model.pojo.QueryLogs
 import com.tencent.devops.log.service.LogServiceDispatcher
+import org.glassfish.jersey.server.ChunkedOutput
 import org.springframework.beans.factory.annotation.Autowired
 import javax.ws.rs.core.Response
 
@@ -62,9 +65,21 @@ class UserLogResourceImpl @Autowired constructor(
         jobId: String?,
         executeCount: Int?
     ): Result<QueryLogs> {
-
         validateAuth(userId, projectId, pipelineId, buildId)
         return logDispatcher.getInitLogs(projectId, pipelineId, buildId, isAnalysis, queryKeywords, tag, jobId, executeCount)
+    }
+
+    override fun loadInitLogs(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): ChunkedOutput<QueryLogs> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        return logDispatcher.loadInitLogs(projectId, pipelineId, buildId, tag ?: "", jobId, executeCount)
     }
 
     override fun getMoreLogs(
@@ -121,6 +136,28 @@ class UserLogResourceImpl @Autowired constructor(
         )
     }
 
+    override fun getAfterLogsWithPush(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        start: Long,
+        sessionId: String,
+        tag: String?,
+        jobId: String?,
+        executeCount: Int?
+    ): Result<Boolean> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        return logDispatcher.getAfterLogsWithPush(
+            buildId,
+            start,
+            sessionId,
+            tag,
+            jobId,
+            executeCount
+        )
+    }
+
     override fun downloadLogs(
         userId: String,
         projectId: String,
@@ -158,5 +195,57 @@ class UserLogResourceImpl @Autowired constructor(
         ) {
             throw PermissionForbiddenException("用户($userId)无权限在工程($projectId)下查看流水线")
         }
+    }
+
+    override fun startTagPush(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        tag: String,
+        lineNo: Long,
+        sessionId: String
+    ): Result<PushStatus?> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        return Result(logDispatcher.createTagPushStatus(buildId, tag, lineNo, sessionId))
+    }
+
+    override fun startJobPush(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        jobId: String,
+        lineNo: Long,
+        sessionId: String
+    ): Result<PushStatus?> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        return Result(logDispatcher.createJobPushStatus(buildId, jobId, lineNo, sessionId))
+    }
+
+    override fun stopTagPush(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        tag: String,
+        sessionId: String
+    ): Result<Boolean> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        logDispatcher.cleanTagPushStatus(buildId, tag, sessionId)
+        return Result(true)
+    }
+
+    override fun stopJobPush(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        jobId: String,
+        sessionId: String
+    ): Result<Boolean> {
+        validateAuth(userId, projectId, pipelineId, buildId)
+        logDispatcher.cleanJobPushStatus(buildId, jobId, sessionId)
+        return Result(true)
     }
 }

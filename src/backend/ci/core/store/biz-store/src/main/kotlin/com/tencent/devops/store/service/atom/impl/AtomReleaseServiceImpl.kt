@@ -509,34 +509,22 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
                 }
 
                 // 先注册基础数据
-                val metadataResultMap = registerMetadata(
-                    userId = userId,
-                    atomCode = atomCode,
-                    atomName = atomName,
-                    indicators = indicators
-                )
+                val metadataResultMap = registerMetadata(userId, atomCode, atomName, indicators)
 
                 // 再注册指标
                 registerIndicator(
-                    userId = userId,
-                    projectId = projectCode,
-                    atomCode = atomCode,
-                    atomName = atomName,
-                    atomVersion = atomVersion,
-                    stage = stage,
-                    metadataResultMap = metadataResultMap,
-                    indicators = indicators
+                    userId,
+                    projectCode,
+                    atomCode,
+                    atomName,
+                    atomVersion,
+                    stage,
+                    metadataResultMap,
+                    indicators
                 )
 
                 // 最后注册控制点
-                registerControlPoint(
-                    userId = userId,
-                    atomCode = atomCode,
-                    atomName = atomName,
-                    atomVersion = atomVersion,
-                    stage = stage,
-                    projectId = projectCode
-                )
+                registerControlPoint(userId, atomCode, atomName, atomVersion, stage, projectCode)
 
                 GetAtomQualityConfigResult("0", arrayOf(""))
             } else {

@@ -82,11 +82,11 @@ interface AuthProjectApi {
     fun isProjectUser(user: String, serviceCode: AuthServiceCode, projectCode: String, group: BkAuthGroup?): Boolean
 
     /**
-     *  添加用户到指定项目的用户组内
-     *   @param userId 目标用户id
-     *   @param serviceCode 服务类型，比如PIPELINE
-     *   @param projectCode 项目编码
-     *   @param role 用户组
+     * 添加用户到指定项目特定分组
+     * @param user 目标用户id
+     * @param serviceCode 服务类型，比如PIPELINE
+     * @param projectCode 项目编码
+     * @param role 用户组角色
      */
-    fun addProjectUser(userId: String, serviceCode: AuthServiceCode, projectCode: String, role: String): Boolean
+    fun createProjectUser(user: String, serviceCode: AuthServiceCode, projectCode: String, role: String): Boolean
 }
