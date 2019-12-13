@@ -108,9 +108,6 @@ class BuildEndControl @Autowired constructor(
 
         logger.info("[$pipelineId]|BUILD_FINISH| finish the build[$buildId] event ($status)")
 
-        if (errorType != null)
-            logger.info("[ERRORCODE] PipelineBuildFinishEvent.fixTask buildInfo with <$buildId>[$errorType][$errorCode][$errorMsg] ")
-
         fixTask(buildInfo)
 
         // 记录本流水线最后一次构建的状态
