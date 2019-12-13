@@ -92,4 +92,8 @@ interface ContainerService {
      * 删除构建容器信息
      */
     fun deletePipelineContainer(id: String): Result<Boolean>
+
+    fun addBuildType(userId: String, projectId: String, buildType: BuildType, pipelineId: String?, osList: String?, enableApp: Boolean?, clickable: Boolean?, visable: Boolean?): Result<Boolean>
+
+    fun deleteBuildType(userId: String, projectId: String, buildType: BuildType): Result<Boolean>
 }
