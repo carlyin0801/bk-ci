@@ -37,9 +37,9 @@ enum class BuildType(
 ) {
     ESXi("蓝盾公共构建资源", listOf(OS.MACOS), true, true, true),
     MACOS("蓝盾公共构建资源(NEW)", listOf(OS.MACOS), true, true, true),
-    DOCKER("公共：Docker on Devnet 物理机", listOf(OS.LINUX), true, false, true),
-    IDC("公共：Docker on IDC CVM", listOf(OS.LINUX), true, false, true),
     PUBLIC_DEVCLOUD("公共：Docker on DevCloud", listOf(OS.LINUX), true, true, true),
+    DOCKER("公共：Docker on Devnet 物理机", listOf(OS.LINUX), true, true, true),
+    IDC("公共：Docker on IDC CVM", listOf(OS.LINUX), true, false, true),
     TSTACK("Windows构建", listOf(), false, true, true), // tstack is deleted
     THIRD_PARTY_AGENT_ID("私有：单构建机", listOf(OS.MACOS, OS.LINUX, OS.WINDOWS), false, true, true),
     THIRD_PARTY_AGENT_ENV("私有：构建集群", listOf(OS.MACOS, OS.LINUX, OS.WINDOWS), false, true, true),
