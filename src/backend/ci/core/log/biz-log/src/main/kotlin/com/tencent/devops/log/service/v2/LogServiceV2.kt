@@ -63,6 +63,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import sun.rmi.runtime.Log
 import java.io.IOException
 import java.sql.Date
 import java.text.SimpleDateFormat
@@ -936,10 +937,40 @@ class LogServiceV2 @Autowired constructor(
             val logRange =
                 if (tag.isNullOrBlank()) Pair(1L, size) else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
             logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
-            val logs = getOriginLogs(buildId, index, type, keywords, tag, jobId, executeCount)
+
+            val startTime = System.currentTimeMillis()
+            val logs = mutableListOf<LogLine>()
+            val boolQueryBuilder = getQuery(buildId, tag, jobId, executeCount)
+            logger.info("Get the query builder: $boolQueryBuilder")
+
+            val response = client.prepareSearch(index)
+                .setTypes(type)
+                .setQuery(boolQueryBuilder)
+                .setSize(Constants.MAX_LINES)
+                .addDocValueField("lineNo")
+                .addDocValueField("timestamp")
+                .addSort("lineNo", SortOrder.ASC)
+                .get()
+            response.hits.forEach { searchHitFields ->
+                val sourceMap = searchHitFields.source
+                val ln = sourceMap["lineNo"].toString().toLong()
+                val t = sourceMap["tag"]?.toString() ?: ""
+                val logLine = LogLine(
+                    lineNo = ln,
+                    timestamp = sourceMap["timestamp"].toString().toLong(),
+                    message = sourceMap["message"].toString(),
+                    priority = Constants.DEFAULT_PRIORITY_NOT_DELETED,
+                    tag = t,
+                    jobId = sourceMap["jobId"]?.toString() ?: "",
+                    executeCount = sourceMap["executeCount"]?.toString()?.toInt() ?: 1
+                )
+                logs.add(logLine)
+            }
+            logger.info("logs query time cost($type): ${System.currentTimeMillis() - startTime}")
             queryLogs.logs.addAll(logs)
             if (logs.isEmpty()) queryLogs.status = LogStatus.EMPTY
             queryLogs.hasMore = size > logs.size
+
         } catch (ex: IndexNotFoundException) {
             logger.error("Query init logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             queryLogs.status = LogStatus.CLEAN
@@ -1183,50 +1214,6 @@ class LogServiceV2 @Autowired constructor(
         }
         logger.info("step3 time cost($type): ${System.currentTimeMillis() - startTime}")
 
-        return logs
-    }
-
-    private fun getOriginLogs(
-        buildId: String,
-        index: String,
-        type: String,
-        keywords: List<String>,
-        tag: String?,
-        jobId: String?,
-        executeCount: Int?
-    ): List<LogLine> {
-        logger.info("[$buildId|$index|$type|$tag|$jobId|$executeCount] log params for type($type): " +
-            "index: $index, keywords: $keywords, tag: $tag, jobId: $jobId, executeCount: $executeCount")
-
-        val startTime = System.currentTimeMillis()
-        val logs = mutableListOf<LogLine>()
-        val boolQueryBuilder = getQuery(buildId, tag, jobId, executeCount)
-        logger.info("Get the query builder: $boolQueryBuilder")
-
-        val response = client.prepareSearch(index)
-            .setTypes(type)
-            .setQuery(boolQueryBuilder)
-            .setSize(Constants.MAX_LINES)
-            .addDocValueField("lineNo")
-            .addDocValueField("timestamp")
-            .addSort("lineNo", SortOrder.ASC)
-            .get()
-        response.hits.forEach { searchHitFields ->
-            val sourceMap = searchHitFields.source
-            val ln = sourceMap["lineNo"].toString().toLong()
-            val t = sourceMap["tag"]?.toString() ?: ""
-            val logLine = LogLine(
-                lineNo = ln,
-                timestamp = sourceMap["timestamp"].toString().toLong(),
-                message = sourceMap["message"].toString(),
-                priority = Constants.DEFAULT_PRIORITY_NOT_DELETED,
-                tag = t,
-                jobId = sourceMap["jobId"]?.toString() ?: "",
-                executeCount = sourceMap["executeCount"]?.toString()?.toInt() ?: 1
-            )
-            logs.add(logLine)
-        }
-        logger.info("logs query time cost($type): ${System.currentTimeMillis() - startTime}")
         return logs
     }
 
