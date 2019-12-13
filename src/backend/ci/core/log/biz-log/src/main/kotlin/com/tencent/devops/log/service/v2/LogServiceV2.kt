@@ -928,7 +928,8 @@ class LogServiceV2 @Autowired constructor(
         executeCount: Int?
     ): QueryLogs {
         logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] doQueryInitLogs")
-        val logStatus = getLogStatus(buildId, tag, jobId, executeCount)
+        val logStatus = if (tag == null && jobId != null) getLogStatus(buildId, jobId, null, executeCount)
+            else getLogStatus(buildId, tag, jobId, executeCount)
         val queryLogs = QueryLogs(buildId, logStatus)
 
         try {
