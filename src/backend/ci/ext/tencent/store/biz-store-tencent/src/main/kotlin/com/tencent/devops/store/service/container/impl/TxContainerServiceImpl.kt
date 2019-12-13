@@ -68,7 +68,12 @@ class TxContainerServiceImpl @Autowired constructor() : ContainerServiceImpl() {
         }
     }
 
-    override fun clickable(buildType: BuildType, projectCode: String): Boolean {
+    override fun clickable(buildType: BuildType, projectCode: String, pipelineId: String?): Boolean {
+        val buildTypeOptions = buildTypeOptionsDao.get(dslContext, projectCode, buildType.name, pipelineId)
+        if (null != buildTypeOptions && buildTypeOptions.clickable != null) {
+            return buildTypeOptions.clickable
+        }
+
         return when (buildType) {
             BuildType.IDC -> {
                 val projectVO = client.get(ServiceProjectResource::class).get(projectCode).data

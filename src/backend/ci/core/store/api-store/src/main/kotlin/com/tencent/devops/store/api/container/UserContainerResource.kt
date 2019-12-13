@@ -99,7 +99,10 @@ interface UserContainerResource {
         userId: String,
         @ApiParam("项目编码", required = true)
         @PathParam("projectCode")
-        projectCode: String
+        projectCode: String,
+        @ApiParam("流水线ID", required = false)
+        @QueryParam("pipelineId")
+        pipelineId: String?
     ): Result<List<ContainerResp>>
 
     @ApiOperation("根据容器类型获取流水线构建容器信息")

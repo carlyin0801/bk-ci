@@ -50,7 +50,7 @@ interface ContainerService {
     /**
      * 获取构建容器信息
      */
-    fun getAllContainerInfos(userId: String, projectCode: String, type: String?, os: OS?): Result<List<ContainerResp>>
+    fun getAllContainerInfos(userId: String, projectCode: String, type: String?, os: OS?, pipelineId: String?): Result<List<ContainerResp>>
 
     /**
      * 获取容器构建资源信息
