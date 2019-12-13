@@ -705,7 +705,7 @@ class PipelineBuildWebhookService @Autowired constructor(
                 userId = userId,
                 readyToBuildPipelineInfo = pipelineInfo,
                 startType = StartType.WEB_HOOK,
-                startParams = params,
+                startParamsWithType = startParamsWithType,
                 channelCode = pipelineInfo.channelCode,
                 isMobile = false,
                 model = fullModel,
