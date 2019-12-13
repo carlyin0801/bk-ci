@@ -935,8 +935,7 @@ class LogServiceV2 @Autowired constructor(
         try {
             val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
             if (size == 0L) return queryLogs
-            val logRange =
-                if (tag.isNullOrBlank()) Pair(1L, size) else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
+            val logRange = getLogRange(buildId, index, type, tag, jobId, executeCount, size)
             logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
 
             val startTime = System.currentTimeMillis()
