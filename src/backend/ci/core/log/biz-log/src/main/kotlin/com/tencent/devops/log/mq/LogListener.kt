@@ -27,17 +27,10 @@
 package com.tencent.devops.log.mq
 
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
-import com.tencent.devops.common.redis.RedisOperation
-import com.tencent.devops.common.websocket.dispatch.WebSocketDispatcher
 import com.tencent.devops.log.model.pojo.LogBatchEvent
 import com.tencent.devops.log.model.pojo.LogEvent
-import com.tencent.devops.log.model.pojo.LogPushEvent
 import com.tencent.devops.log.model.pojo.LogStatusEvent
-import com.tencent.devops.log.model.pojo.PushType
-import com.tencent.devops.log.model.pojo.PushStatus
-import com.tencent.devops.log.service.LogPushWebsocketService
 import com.tencent.devops.log.service.LogServiceDispatcher
-import com.tencent.devops.log.websocket.LogPushRedisUtlis
 import com.tencent.devops.log.utils.LogDispatcher
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.core.ExchangeTypes
@@ -51,10 +44,7 @@ import org.springframework.stereotype.Component
 @Component
 class LogListener constructor(
     private val rabbitTemplate: RabbitTemplate,
-    private val logServiceDispatcher: LogServiceDispatcher,
-    private val redisOperation: RedisOperation,
-    private val logPushWebsocketService: LogPushWebsocketService,
-    private val webSocketDispatcher: WebSocketDispatcher
+    private val logServiceDispatcher: LogServiceDispatcher
 ) {
 
     fun logEvent(event: LogEvent) {
@@ -80,8 +70,6 @@ class LogListener constructor(
         try {
             logServiceDispatcher.logBatchEvent(event)
             result = true
-            // 插入成功后发起一个推送事件
-            LogDispatcher.dispatch(rabbitTemplate, LogPushEvent(event.buildId, event.logs))
         } catch (ignored: Throwable) {
             logger.warn("Fail to add the log batch event [${event.buildId}|${event.retryTime}]", ignored)
         } finally {
@@ -89,46 +77,6 @@ class LogListener constructor(
                 logger.warn("Retry to add log batch event [${event.buildId}|${event.retryTime}]")
                 with(event) {
                     LogDispatcher.dispatch(rabbitTemplate, LogBatchEvent(buildId, logs, retryTime - 1, DelayMills))
-                }
-            }
-        }
-    }
-
-    fun logPushEvent(event: LogPushEvent) {
-        var result = false
-        try {
-            if (event.logs.isNotEmpty()) {
-                // 对每一条插入成功的日志进行处理
-                event.logs.forEach { log ->
-                    if (!log.tag.isBlank()) {
-                        LogPushRedisUtlis.getSessionListByTag(redisOperation, event.buildId, log.tag)?.forEach {
-                            // 若最新一条比上次推送多10行以上就触发推送
-                            val pushStatus = LogPushRedisUtlis.getPushStatusListByTagSession(redisOperation, it)
-                            if (pushStatus != null && log.lineNo - pushStatus.lastLineNum > 20)
-                                sendPushMessage(pushStatus, PushType.TAG)
-                        }
-                    }
-                    if (!log.jobId.isBlank()) {
-                        LogPushRedisUtlis.getSessionListByJobId(redisOperation, event.buildId, log.jobId)?.forEach {
-                            // 若最新一条比上次推送多10行以上就触发推送
-                            val pushStatus = LogPushRedisUtlis.getPushStatusListByJobIdSession(redisOperation, it)
-                            if (pushStatus != null && log.lineNo - pushStatus.lastLineNum > 20)
-                                sendPushMessage(pushStatus, PushType.JOB)
-                        }
-                    }
-                }
-            } else {
-                if (event.pushStatus != null && event.type != null)
-                    sendPushMessage(event.pushStatus!!, event.type!!)
-            }
-            result = true
-        } catch (ignored: Throwable) {
-            logger.warn("Fail to add log push event [${event.buildId}|${event.retryTime}]", ignored)
-        } finally {
-            if (!result && event.retryTime >= 0) {
-                logger.warn("Retry to add log push event [${event.buildId}|${event.retryTime}]")
-                with(event) {
-                    LogDispatcher.dispatch(rabbitTemplate, LogPushEvent(buildId, logs, type, pushStatus, retryTime - 1, DelayMills))
                 }
             }
         }
@@ -159,35 +107,6 @@ class LogListener constructor(
                         rabbitTemplate,
                         LogStatusEvent(buildId, finished, tag, jobId, executeCount, retryTime - 1, DelayMills)
                     )
-                }
-            }
-        }
-    }
-
-    private fun sendPushMessage(pushStatus: PushStatus, type: PushType) {
-        with(pushStatus) {
-            when (type) {
-                PushType.JOB -> {
-                    val logPush = logPushWebsocketService.buildJobWebsocketMessage(
-                        buildId = buildId,
-                        jobId = id,
-                        lineNo = lastLineNum,
-                        sessionId = sessionId,
-                        queryLogs = null
-                    )
-                    webSocketDispatcher.dispatch(logPush)
-                    LogPushRedisUtlis.writePushStatusByJobId(redisOperation, buildId, id, logPush.lastLineNo, sessionId)
-                }
-                PushType.TAG -> {
-                    val logPush = logPushWebsocketService.buildTagWebsocketMessage(
-                        buildId = buildId,
-                        tag = id,
-                        lineNo = lastLineNum,
-                        sessionId = sessionId,
-                        queryLogs = null
-                    )
-                    webSocketDispatcher.dispatch(logPush)
-                    LogPushRedisUtlis.writePushStatusByTag(redisOperation, buildId, id, logPush.lastLineNo, sessionId)
                 }
             }
         }
