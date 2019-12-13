@@ -91,7 +91,7 @@ class DispatchBuildLessDockerStartupTaskAtom @Autowired constructor(
             rabbitTemplate = rabbitTemplate,
             buildId = task.buildId,
             groupName = task.taskName,
-            tag = task.containerHashId ?: "",
+            tag = task.taskId ?: "",
             jobId = task.containerHashId,
             executeCount = task.executeCount ?: 1
         )
@@ -132,7 +132,7 @@ class DispatchBuildLessDockerStartupTaskAtom @Autowired constructor(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
                 groupName = task.taskName,
-                tag = task.containerHashId ?: "",
+                tag = task.taskId ?: "",
                 jobId = task.containerHashId,
                 executeCount = task.executeCount ?: 1
             )
