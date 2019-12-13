@@ -43,6 +43,7 @@ import com.tencent.devops.process.engine.pojo.PipelineBuildTask
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildAtomTaskEvent
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildStageEvent
 import com.tencent.devops.process.engine.service.PipelineBuildDetailService
+import com.tencent.devops.process.engine.service.PipelineRepositoryService
 import com.tencent.devops.process.engine.service.PipelineRuntimeService
 import com.tencent.devops.process.pojo.AtomErrorCode
 import com.tencent.devops.process.pojo.ErrorType
@@ -64,7 +65,8 @@ class ContainerControl @Autowired constructor(
     private val pipelineEventDispatcher: PipelineEventDispatcher,
     private val pipelineRuntimeService: PipelineRuntimeService,
     private val pipelineBuildDetailService: PipelineBuildDetailService,
-    private val mutexControl: MutexControl
+    private val mutexControl: MutexControl,
+    private val pipelineRepositoryService: PipelineRepositoryService
 ) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -103,6 +105,15 @@ class ContainerControl @Autowired constructor(
 
         // 仅在初次进入Container时进行跳过判断
         if (BuildStatus.isReadyToRun(container.status)) {
+            val model = pipelineRepositoryService.getModel(pipelineId)
+            model?.stages?.forEach {
+                if (it.id == stageId) it.containers.forEach { c ->
+                    if (c.id == containerId) {
+                        LogUtils.stopLog(rabbitTemplate, buildId, c.containerId!!, null, 1)
+                        LogUtils.addRangeStartLine(rabbitTemplate, buildId, c.name, "", c.containerId!!, 1)
+                    }
+                }
+            }
             if (checkIfAllSkip(
                     buildId = buildId,
                     stageId = stageId,
@@ -259,16 +270,15 @@ class ContainerControl @Autowired constructor(
                 buildId = buildId, stageId = stageId, containerId = containerId,
                 startTime = startTime, endTime = endTime, buildStatus = containerFinalStatus
             )
-//            val model = pipelineBuildDetailService.getBuildModel(buildId)
-//            model?.stages?.forEach {
-//                if (it.id == stageId)
-//                    it.containers.forEach{
-//                            container.containerId == containerId)
-//                            LogUtils.stopLog(rabbitTemplate, buildId, model.stages.get(stageId))
-//                        }
-//
-//            }
-//            LogUtils.addRangeEndLine(rabbitTemplate, buildId, "", jobId)
+            val model = pipelineRepositoryService.getModel(pipelineId)
+            model?.stages?.forEach {
+                if (it.id == stageId) it.containers.forEach { c ->
+                    if (c.id == containerId) {
+                        LogUtils.stopLog(rabbitTemplate, buildId, c.containerId!!, null, 1)
+                        LogUtils.addRangeEndLine(rabbitTemplate, buildId, c.name, "", c.containerId!!, 1)
+                    }
+                }
+            }
         }
 
         logger.info("[$buildId]|startVMFail=$startVMFail|task=${waitToDoTask?.taskName}|status=$containerFinalStatus")
