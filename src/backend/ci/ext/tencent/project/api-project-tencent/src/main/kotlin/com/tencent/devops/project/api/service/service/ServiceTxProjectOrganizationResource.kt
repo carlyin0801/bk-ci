@@ -85,18 +85,4 @@ interface ServiceTxProjectOrganizationResource {
         level: Int
     ): Result<List<DeptInfo>>
 
-    @POST
-    @Path("projects/{projectId}/users/{userId}")
-    fun addUser2Project(
-        @ApiParam("操作用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-        @HeaderParam(AUTH_HEADER_USER_ID)
-        executeUserId: String,
-        @ApiParam("项目ID", required = true)
-        @PathParam("projectId")
-        projectId: String,
-        @ApiParam("目标用户ID", required = true)
-        @PathParam("userId")
-        userId: String
-    ): Result<Boolean>
-
 }

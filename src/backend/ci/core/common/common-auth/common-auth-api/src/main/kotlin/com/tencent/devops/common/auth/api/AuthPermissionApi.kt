@@ -129,4 +129,14 @@ interface AuthPermissionApi {
         projectCode: String,
         permissions: Set<AuthPermission>
     ): Boolean
+
+    fun addResourcePermissionForUsers(
+        projectCode: String,
+        serviceCode: AuthServiceCode,
+        permission: AuthPermission,
+        resourceType: AuthResourceType,
+        resourceCode: String,
+        userIdList: List<String>,
+        supplier: (() -> List<String>)?
+    ): Boolean
 }
