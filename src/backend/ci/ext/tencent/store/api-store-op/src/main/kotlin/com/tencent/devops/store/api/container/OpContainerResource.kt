@@ -107,19 +107,19 @@ interface OpContainerResource {
         @ApiParam(value = "构建机类型", required = true)
         @QueryParam("buildType")
         buildType: BuildType,
-        @ApiParam(value = "pipelineId", required = true)
+        @ApiParam(value = "pipelineId", required = false)
         @QueryParam("pipelineId")
         pipelineId: String?,
-        @ApiParam(value = "osList", required = true)
+        @ApiParam(value = "osList", required = false)
         @QueryParam("osList")
         osList: String?,
-        @ApiParam(value = "enableApp", required = true)
+        @ApiParam(value = "enableApp", required = false)
         @QueryParam("enableApp")
         enableApp: Boolean?,
-        @ApiParam(value = "clickable", required = true)
+        @ApiParam(value = "clickable", required = false)
         @QueryParam("clickable")
         clickable: Boolean?,
-        @ApiParam(value = "visable", required = true)
+        @ApiParam(value = "visable", required = false)
         @QueryParam("visable")
         visable: Boolean?
     ): Result<Boolean>
