@@ -108,10 +108,7 @@ class ContainerControl @Autowired constructor(
             val model = pipelineRepositoryService.getModel(pipelineId)
             model?.stages?.forEach {
                 if (it.id == stageId) it.containers.forEach { c ->
-                    if (c.id == containerId) {
-                        LogUtils.stopLog(rabbitTemplate, buildId, c.containerId!!, null, 1)
-                        LogUtils.addRangeStartLine(rabbitTemplate, buildId, c.name, "", c.containerId!!, 1)
-                    }
+                    if (c.id == containerId) LogUtils.addRangeStartLine(rabbitTemplate, buildId, c.name, "", c.containerId!!, 1)
                 }
             }
             if (checkIfAllSkip(
