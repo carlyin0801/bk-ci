@@ -82,6 +82,9 @@ class TxContainerServiceImpl @Autowired constructor() : ContainerServiceImpl() {
                 } else {
                     false
                 }
+            }
+            BuildType.DOCKER -> {
+                return false
             } else -> buildType.clickable
         }
     }
