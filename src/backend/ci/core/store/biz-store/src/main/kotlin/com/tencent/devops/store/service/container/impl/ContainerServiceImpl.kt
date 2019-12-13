@@ -105,7 +105,8 @@ abstract class ContainerServiceImpl @Autowired constructor() : ContainerService 
         userId: String,
         projectCode: String,
         type: String?,
-        os: OS?
+        os: OS?,
+        pipelineId: String?
     ): Result<List<ContainerResp>> {
         logger.info("the get userId is :$userId,projectCode is :$projectCode, type is :$type,os is :$os")
         val dataList = mutableListOf<ContainerResp>()
@@ -136,7 +137,7 @@ abstract class ContainerServiceImpl @Autowired constructor() : ContainerService 
             val typeList = mutableListOf<ContainerBuildType>()
             BuildType.values().forEach { type ->
                 if ((containerOS == null || type.osList.contains(containerOS)) && buildTypeEnable(type, projectCode)) {
-                        typeList.add(ContainerBuildType(type.name, type.value, type.enableApp, !clickable(type, projectCode)))
+                        typeList.add(ContainerBuildType(type.name, type.value, type.enableApp, !clickable(type, projectCode, pipelineId)))
                 }
                 if (!queryAllFlag && containerOS != null) {
                     val resource = try {
@@ -176,7 +177,7 @@ abstract class ContainerServiceImpl @Autowired constructor() : ContainerService 
 
     abstract fun buildTypeEnable(buildType: BuildType, projectCode: String): Boolean
 
-    abstract fun clickable(buildType: BuildType, projectCode: String): Boolean
+    abstract fun clickable(buildType: BuildType, projectCode: String, pipelineId: String?): Boolean
 
     abstract fun getResource(
         userId: String,
