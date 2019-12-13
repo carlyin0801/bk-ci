@@ -26,9 +26,13 @@
 
 package com.tencent.devops.common.service.utils
 
+import org.slf4j.LoggerFactory
 import javax.servlet.http.HttpServletRequest
 
 object CookieUtil {
+
+    private val logger = LoggerFactory.getLogger(CookieUtil::class.java)
+
     fun getCookieValue(request: HttpServletRequest, name: String): String? {
 
         // cookie数组
@@ -44,14 +48,15 @@ object CookieUtil {
         var value: String? = null
         // Cookie属性中没有获取到，那么从Headers里面获取
         var cookieStr: String? = request.getHeader("Cookie")
+        logger.info("cookieStr is:$cookieStr")
         if (cookieStr != null) {
             // 去掉所有空白字符，不限于空格
             cookieStr = cookieStr.replace("\\s*".toRegex(), "")
             val cookieArr = cookieStr.split(";".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-
+            logger.info("cookieArr is:$cookieArr")
             for (cookieItem in cookieArr) {
                 val cookieItemArr = cookieItem.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                if (cookieItemArr[0] == name) {
+                if (cookieItemArr.isNotEmpty() && cookieItemArr[0] == name) {
                     value = cookieItemArr[1]
                     break
                 }

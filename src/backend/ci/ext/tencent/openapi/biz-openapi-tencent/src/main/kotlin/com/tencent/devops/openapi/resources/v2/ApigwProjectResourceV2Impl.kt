@@ -64,6 +64,22 @@ class ApigwProjectResourceV2Impl @Autowired constructor(
         ))
     }
 
+    override fun createUser2Project(
+        executeUserId: String,
+        organizationType: String,
+        organizationId: Long,
+        projectId: String,
+        userId: String
+    ): Result<Boolean> {
+        return Result(apigwProjectService.createUser2Project(
+            executeUserId = executeUserId,
+            organizationId = organizationId,
+            organizationType = organizationType,
+            projectCode = projectId,
+            userId = userId
+        ))
+    }
+
     companion object {
         private val logger = LoggerFactory.getLogger(ApigwProjectResourceV2Impl::class.java)
     }

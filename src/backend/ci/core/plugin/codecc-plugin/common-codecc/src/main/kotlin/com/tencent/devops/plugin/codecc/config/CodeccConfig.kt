@@ -53,6 +53,6 @@ class CodeccConfig {
     @Value("\${codeccGateway.api.codeCheckReport:/api}")
     val report = ""
 
-    @Value("\${codeccGateway.api.getRuleSets:/ms/defect/api/service/checker/tools/{toolName}/pipelineCheckerSets}")
+    @Value("\${codeccGateway.api.getRuleSets:/blueShield/getRuleSetsPath}")
     val getRuleSetsPath = ""
 }

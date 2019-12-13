@@ -420,12 +420,11 @@ class ContainerControl @Autowired constructor(
                     LogUtils.addYellowLine(
                         rabbitTemplate = rabbitTemplate,
                         buildId = task.buildId,
-                        message = "插件[${task.taskName}]被跳过",
+                        message = "插件[${task.taskName}]被禁用",
                         tag = task.taskId,
                         jobId = task.containerHashId,
                         executeCount = task.executeCount ?: 1
                     )
-
                     return@nextOne
                 } else {
                     containerFinalStatus = BuildStatus.RUNNING

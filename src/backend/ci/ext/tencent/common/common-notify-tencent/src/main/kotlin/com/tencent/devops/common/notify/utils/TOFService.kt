@@ -27,12 +27,9 @@ package com.tencent.devops.common.notify.utils
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.tencent.devops.common.api.util.OkhttpUtils
 import com.tencent.devops.common.notify.DesUtil
-import com.tencent.devops.common.notify.enums.EnumEmailType
 import com.tencent.devops.common.notify.pojo.EmailNotifyPost
-import io.netty.handler.codec.base64.Base64Decoder
 import okhttp3.Headers
 import okhttp3.MediaType
 import okhttp3.MultipartBody
@@ -43,8 +40,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import sun.misc.BASE64Decoder
-import java.io.File
-import java.util.Base64
 import java.util.Random
 
 @Service
@@ -146,11 +141,8 @@ class TOFService @Autowired constructor(
 
         var responseBody = ""
         try {
-             val taskRequest = Request.Builder()
-                .url(String.format("%s%s", tofConf["host"], "/api/v1/Message/SendMail"))
-                .headers(headers)
-                .post(taskBody.build())
-                .build()
+            val taskRequest = Request.Builder().url(String.format("%s%s", tofConf["host"], "/api/v1/Message/SendMail"))
+                .headers(headers).post(taskBody.build()).build()
             OkhttpUtils.doHttp(taskRequest).use { response ->
                 responseBody = response.body()!!.string()
                 if (!response.isSuccessful) {
@@ -168,7 +160,6 @@ class TOFService @Autowired constructor(
             logger.error(String.format("TOF error, server response serialize failure, url: %s, response: %s", url, responseBody), e)
             return TOFResult("TOF error, server response serialize failure")
         }
-
     }
 
     /**

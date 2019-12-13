@@ -79,7 +79,6 @@ class EmailServiceImpl @Autowired constructor(
         val tofConfs = configuration.getConfigurations(emailNotifyMessageWithOperation.tofSysId)
         val result = if (emailNotifyPost.codeccAttachFileContent != null) tofService.postCodeccEmailFormData(EMAIL_URL, emailNotifyPost, tofConfs!!)
         else tofService.post(EMAIL_URL, emailNotifyPost, tofConfs!!)
-
         if (result.Ret == 0) {
             // 成功
             emailNotifyDao.insertOrUpdateEmailNotifyRecord(

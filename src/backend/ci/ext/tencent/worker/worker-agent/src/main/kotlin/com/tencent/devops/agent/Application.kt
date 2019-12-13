@@ -82,7 +82,7 @@ fun main(args: Array<String>) {
         BuildType.MACOS.name -> {
             var startBuild:Boolean = false
             val gateyway = AgentEnv.getGateway()
-            val url = "http://$gateyway/dispatch-macos/api/gw/macos/startBuild"
+            val url = "http://$gateyway/dispatch-macos/gw/build/macos/startBuild"
             System.out.println("url:$url")
             val request = Request.Builder()
                 .url(url)
@@ -92,14 +92,12 @@ fun main(args: Array<String>) {
                 .build()
             do {
                 try {
-                    OkhttpUtils.doGet(url).use { resp ->
+                    OkhttpUtils.doHttp(request).use { resp ->
                         val resoCode = resp.code()
                         val responseStr = resp.body()!!.string()
                         System.out.println("resoCode: $resoCode;responseStr:$responseStr")
                         if(resoCode == 200) {
                             val response: Map<String, String> = jacksonObjectMapper().readValue(responseStr)
-
-                            System.out.println("response:$response")
                             // 将变量写入到property当中
                             response.forEach { (key, value) ->
                                 when(key) {
@@ -128,7 +126,7 @@ fun main(args: Array<String>) {
                     val workspace = System.getProperty("devops_workspace")
 
                     val dir = if (workspace.isNullOrBlank()) {
-                        File("/data/landun/workspace") // v1 内部版用的/data/landun/workspace 保持一致
+                        File("/Users/bkdevops/Landun/workspace") // v1 内部版用的/data/landun/workspace 保持一致
                     } else {
                         File(workspace)
                     }

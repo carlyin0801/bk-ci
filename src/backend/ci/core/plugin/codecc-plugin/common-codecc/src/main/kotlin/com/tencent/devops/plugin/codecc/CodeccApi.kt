@@ -79,6 +79,8 @@ open class CodeccApi constructor(
                     DevOpsToolParams("phpcs_standard", phpcsStandard ?: ""),
                     DevOpsToolParams("go_path", goPath ?: ""),
                     DevOpsToolParams("py_version", pyVersion ?: ""),
+                    DevOpsToolParams("ccn_threshold", ccnThreshold?.toString() ?: ""),
+                    DevOpsToolParams("needCodeContent", needCodeContent ?: ""),
                     DevOpsToolParams("eslint_rc", eslintRc ?: "")
                 )
             )
@@ -118,6 +120,8 @@ open class CodeccApi constructor(
                 DevOpsToolParams("phpcs_standard", phpcsStandard ?: ""),
                 DevOpsToolParams("go_path", goPath ?: ""),
                 DevOpsToolParams("py_version", pyVersion ?: ""),
+                DevOpsToolParams("ccn_threshold", ccnThreshold?.toString() ?: ""),
+                DevOpsToolParams("needCodeContent", needCodeContent ?: ""),
                 DevOpsToolParams("eslint_rc", eslintRc ?: "")
             )
             if (!element.projectBuildType.isNullOrBlank()) {
@@ -213,11 +217,11 @@ open class CodeccApi constructor(
         val request = builder.build()
 
         OkhttpUtils.doHttp(request).use { response ->
+            val responseBody = response.body()!!.string()
             if (!response.isSuccessful) {
-                logger.warn("Fail to execute($path) task($body) because of ${response.message()}")
+                logger.warn("Fail to execute($path) task($body) because of ${response.message()} with response: $responseBody")
                 throw RemoteServiceException("Fail to invoke codecc request")
             }
-            val responseBody = response.body()!!.string()
             logger.info("Get the task response body - $responseBody")
             return responseBody
         }

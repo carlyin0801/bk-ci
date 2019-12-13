@@ -23,38 +23,41 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+package com.tencent.devops.openapi.api.v2
 
-package com.tencent.devops.plugin.codecc.resources
-
-import com.tencent.devops.common.api.exception.ParamBlankException
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.web.RestResource
-import com.tencent.devops.plugin.api.UserBuildCodeccResource
-import com.tencent.devops.plugin.codecc.pojo.coverity.CodeccReport
-import com.tencent.devops.plugin.codecc.service.PipelineCodeccService
-import org.springframework.beans.factory.annotation.Autowired
+import com.tencent.devops.repository.pojo.AuthorizeResult
+import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
+import io.swagger.annotations.ApiParam
+import javax.ws.rs.Consumes
+import javax.ws.rs.GET
+import javax.ws.rs.HeaderParam
+import javax.ws.rs.Path
+import javax.ws.rs.Produces
+import javax.ws.rs.QueryParam
+import javax.ws.rs.core.MediaType
 
-@RestResource
-class UserBuildCodeccResourceImpl @Autowired constructor(private val pipelineCodeccService: PipelineCodeccService) :
-    UserBuildCodeccResource {
+@Api(tags = ["OPEN_API_V2_GIT"], description = "OPEN-API-V2-GIT工蜂资源")
+@Path("/{apigw:apigw-user|apigw-app|apigw}/v2/git")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+interface ApigwGitResourceV2 {
 
-    override fun getCodeccReport(userId: String, projectId: String, pipelineId: String): Result<CodeccReport> {
-        checkParam(userId, projectId, pipelineId)
-        return Result(pipelineCodeccService.getCodeccReport(userId, projectId, pipelineId))
-    }
-
-    private fun checkParam(userId: String, projectId: String, pipelineId: String) {
-        val message = when {
-            userId.isBlank() -> "Invalid userId"
-            pipelineId.isBlank() -> "Invalid pipelineId"
-            projectId.isBlank() -> "Invalid projectId"
-            else -> null
-        }
-
-        if (message.isNullOrBlank()) {
-            return
-        }
-
-        throw ParamBlankException("Invalid userId")
-    }
+    @ApiOperation("根据用户ID, 通过oauth方式获取项目")
+    @GET
+    @Path("/getProject")
+    fun getProject(
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "项目ID", required = true)
+        @QueryParam("projectId")
+        projectId: String,
+        @ApiParam(value = "repo hash iD", required = false)
+        @QueryParam("repoHashId")
+        repoHashId: String?
+    ): Result<AuthorizeResult>
 }

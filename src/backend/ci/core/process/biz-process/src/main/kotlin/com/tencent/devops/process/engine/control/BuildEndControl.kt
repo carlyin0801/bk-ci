@@ -187,9 +187,6 @@ class BuildEndControl @Autowired constructor(
                 buildInfo.errorMsg = it.errorMsg
             }
         }
-        with(buildInfo) {
-            logger.info("[ERRORCODE] PipelineBuildFinishEvent.fixTask buildInfo with <$buildId>[$errorType][$errorCode][$errorMsg] ")
-        }
     }
 
     private fun PipelineBuildFinishEvent.popNextBuild() {

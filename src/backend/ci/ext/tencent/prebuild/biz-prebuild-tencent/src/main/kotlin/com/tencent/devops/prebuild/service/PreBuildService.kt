@@ -55,7 +55,7 @@ import com.tencent.devops.log.api.UserLogResource
 import com.tencent.devops.log.model.pojo.LogLine
 import com.tencent.devops.log.model.pojo.QueryLogs
 import com.tencent.devops.model.prebuild.tables.records.TPrebuildProjectRecord
-import com.tencent.devops.plugin.codecc.api.UserCodeccResource
+import com.tencent.devops.plugin.api.UserCodeccResource
 import com.tencent.devops.prebuild.dao.PrebuildPersonalMachineDao
 import com.tencent.devops.prebuild.dao.PrebuildProjectDao
 import com.tencent.devops.prebuild.pojo.UserProject
@@ -245,7 +245,7 @@ class PreBuildService @Autowired constructor(
                 false, null, null, null, null).data!!
         val cleanLogs = mutableListOf<LogLine>()
         cleanLogs.addAll(originLog.logs.filterNot { it.message.contains("soda_fold") })
-        return QueryLogs(originLog.buildId, originLog.finished, cleanLogs, originLog.timeUsed, originLog.status)
+        return QueryLogs(originLog.buildId, originLog.finished, originLog.hasMore, cleanLogs, originLog.timeUsed, originLog.status)
     }
 
     fun getAfterLogs(userId: String, preProjectId: String, buildId: String, start: Long): QueryLogs {
@@ -253,7 +253,7 @@ class PreBuildService @Autowired constructor(
         val originLog = client.get(UserLogResource::class).getAfterLogs(userId, prebuildProjRecord.projectId, prebuildProjRecord.pipelineId, buildId, start, false, null, null, null, null).data!!
         val cleanLogs = mutableListOf<LogLine>()
         cleanLogs.addAll(originLog.logs.filterNot { it.message.contains("soda_fold") })
-        return QueryLogs(originLog.buildId, originLog.finished, cleanLogs, originLog.timeUsed, originLog.status)
+        return QueryLogs(originLog.buildId, originLog.finished, originLog.hasMore, cleanLogs, originLog.timeUsed, originLog.status)
     }
 
     private fun getPreProjectInfo(preProjectId: String, userId: String): TPrebuildProjectRecord {

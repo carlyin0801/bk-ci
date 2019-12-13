@@ -80,7 +80,7 @@ object AtomUtils {
                     rabbitTemplate = rabbitTemplate,
                     buildId = task.buildId,
                     message = "Prepare ${element.name}(${atomEnv.atomName})",
-                    tag = "j-${task.containerHashId}",
+                    tag = task.taskId,
                     jobId = task.containerHashId,
                     executeCount = task.executeCount ?: 1
                 )
