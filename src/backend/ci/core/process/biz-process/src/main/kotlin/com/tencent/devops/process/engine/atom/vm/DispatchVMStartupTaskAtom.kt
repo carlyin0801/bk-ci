@@ -184,14 +184,6 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
             jobId = task.containerHashId,
             executeCount = task.executeCount ?: 1
         )
-        LogUtils.addRangeEndLine(
-            rabbitTemplate = rabbitTemplate,
-            buildId = buildId,
-            rangeName = "Job#$vmSeqId init",
-            tag = task.containerHashId ?: "",
-            jobId = task.containerHashId,
-            executeCount = task.executeCount ?: 1
-        )
         pipelineEventDispatcher.dispatch(
             PipelineAgentStartupEvent(
                 source = source,

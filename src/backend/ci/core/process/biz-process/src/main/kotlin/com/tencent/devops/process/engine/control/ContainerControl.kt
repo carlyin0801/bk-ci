@@ -259,6 +259,16 @@ class ContainerControl @Autowired constructor(
                 buildId = buildId, stageId = stageId, containerId = containerId,
                 startTime = startTime, endTime = endTime, buildStatus = containerFinalStatus
             )
+//            val model = pipelineBuildDetailService.getBuildModel(buildId)
+//            model?.stages?.forEach {
+//                if (it.id == stageId)
+//                    it.containers.forEach{
+//                            container.containerId == containerId)
+//                            LogUtils.stopLog(rabbitTemplate, buildId, model.stages.get(stageId))
+//                        }
+//
+//            }
+//            LogUtils.addRangeEndLine(rabbitTemplate, buildId, "", jobId)
         }
 
         logger.info("[$buildId]|startVMFail=$startVMFail|task=${waitToDoTask?.taskName}|status=$containerFinalStatus")
@@ -341,6 +351,7 @@ class ContainerControl @Autowired constructor(
             if (waitToDoTask == null && BuildStatus.isRunning(task.status)) {
                 // 拿到按序号排列的第一个正在执行的插件
                 waitToDoTask = task
+                task.containerHashId
             } else if (BuildStatus.isFailure(task.status)) {
                 containerFinalStatus = task.status
                 if (waitToDoTask != null) {
