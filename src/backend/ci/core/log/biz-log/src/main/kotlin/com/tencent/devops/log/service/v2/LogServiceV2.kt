@@ -933,7 +933,9 @@ class LogServiceV2 @Autowired constructor(
         try {
             val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
             if (size == 0L) return queryLogs
-            logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs")
+            val logRange =
+                if (tag.isNullOrBlank()) Pair(1L, size) else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
+            logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
             val logs = getOriginLogs(buildId, index, type, keywords, tag, jobId, executeCount)
             queryLogs.logs.addAll(logs)
             if (logs.isEmpty()) queryLogs.status = LogStatus.EMPTY

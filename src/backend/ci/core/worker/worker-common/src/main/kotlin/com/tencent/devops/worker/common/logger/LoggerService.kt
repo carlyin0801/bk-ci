@@ -194,6 +194,30 @@ object LoggerService {
         addLog(logMessage)
     }
 
+    fun addRangeStartLine(rangeName: String) {
+        val logMessage = LogMessage(
+            "[START]  $rangeName",
+            System.currentTimeMillis(),
+            elementId,
+            jobId,
+            LogType.START,
+            executeCount
+        )
+        addLog(logMessage)
+    }
+
+    fun addRangeEndLine(rangeName: String) {
+        val logMessage = LogMessage(
+            "[END]  $rangeName",
+            System.currentTimeMillis(),
+            elementId,
+            jobId,
+            LogType.END,
+            executeCount
+        )
+        addLog(logMessage)
+    }
+
     private fun addLog(message: LogMessage) = queue.put(message)
 
     private fun sendMultiLog(logMessages: List<LogMessage>) {
