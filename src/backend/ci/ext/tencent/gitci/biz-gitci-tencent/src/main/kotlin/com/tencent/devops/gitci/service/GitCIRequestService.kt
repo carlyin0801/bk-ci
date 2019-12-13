@@ -364,7 +364,8 @@ class GitCIRequestService @Autowired constructor(
                 gitPushEvent.total_commits_count.toLong(),
                 null,
                 e,
-                ""
+                "",
+                null
         )
     }
 
@@ -384,7 +385,8 @@ class GitCIRequestService @Autowired constructor(
                 gitTagPushEvent.total_commits_count.toLong(),
                 null,
                 e,
-                ""
+                "",
+                null
         )
     }
 
@@ -402,9 +404,10 @@ class GitCIRequestService @Autowired constructor(
                 getCommitTimeStamp(latestCommit.timestamp),
                 latestCommit.author.name,
                 0,
-                gitMrEvent.object_attributes.id,
+                gitMrEvent.object_attributes.iid,
                 e,
-                ""
+                "",
+                gitMrEvent.object_attributes.title
         )
     }
 
@@ -423,7 +426,8 @@ class GitCIRequestService @Autowired constructor(
                 0,
                 null,
                 "",
-                triggerBuildReq.description
+                triggerBuildReq.description,
+                ""
         )
     }
 
