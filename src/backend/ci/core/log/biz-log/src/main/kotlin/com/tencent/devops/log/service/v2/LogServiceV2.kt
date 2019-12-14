@@ -753,7 +753,8 @@ class LogServiceV2 @Autowired constructor(
 
         try {
             val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
-            val logRange = if (tag.isNullOrBlank()) Pair(1L, size)
+            val logRange =
+                if (tag.isNullOrBlank() && jobId.isNullOrBlank()) Pair(1L, size)
                 else getLogRange(buildId, index, type, tag, jobId, executeCount, size)
             logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
 
@@ -1341,11 +1342,11 @@ class LogServiceV2 @Autowired constructor(
     ): Pair<Long, Long> {
 
         val q = getQuery(buildId, tag, jobId, executeCount)
-                .must(
-                        QueryBuilders.boolQuery()
-                                .should(QueryBuilders.matchQuery("logType", LogType.START.name).operator(Operator.OR))
-                                .should(QueryBuilders.matchQuery("logType", LogType.END.name).operator(Operator.OR))
-                )
+            .must(
+                QueryBuilders.boolQuery()
+                    .should(QueryBuilders.matchQuery("logType", LogType.START.name).operator(Operator.OR))
+                    .should(QueryBuilders.matchQuery("logType", LogType.END.name).operator(Operator.OR))
+            )
 
         logger.info("[$index|$type|$tag|$jobId|$executeCount|$size] Get log range with query ($q)")
 

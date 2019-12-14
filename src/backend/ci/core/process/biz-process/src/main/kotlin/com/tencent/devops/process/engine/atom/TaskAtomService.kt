@@ -75,7 +75,7 @@ class TaskAtomService @Autowired(required = false) constructor(
             LogUtils.addRangeStartLine(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
-                rangeName = logTagName,
+                rangeName = "$logTagName-${task.taskType}",
                 tag = task.taskId,
                 jobId = task.containerHashId,
                 executeCount = executeCount
@@ -209,7 +209,7 @@ class TaskAtomService @Autowired(required = false) constructor(
             LogUtils.addRangeEndLine(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
-                rangeName = logTagName,
+                rangeName = "$logTagName-${task.taskType}",
                 tag = task.taskId,
                 jobId = task.containerHashId,
                 executeCount = task.executeCount ?: 1
