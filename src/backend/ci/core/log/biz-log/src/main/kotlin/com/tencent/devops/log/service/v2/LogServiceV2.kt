@@ -753,11 +753,13 @@ class LogServiceV2 @Autowired constructor(
 
         try {
             val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
-            val logRange = getLogRange(buildId, index, type, tag, jobId, executeCount, size)
+            val logRange = if (tag.isNullOrBlank()) Pair(1L, size)
+                else getLogRange(buildId, index, type, tag, jobId, executeCount, size)
             logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
 
             val query = getQuery(buildId, tag, jobId, executeCount)
                 .must(QueryBuilders.rangeQuery("lineNo").gte(start))
+                .must(QueryBuilders.rangeQuery("lineNo").to(logRange.second))
 //                .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
 
             val searchResponse = client.prepareSearch(index)
@@ -942,13 +944,17 @@ class LogServiceV2 @Autowired constructor(
         try {
             val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
             if (size == 0L) return queryLogs
-            val logRange = getLogRange(buildId, index, type, tag, jobId, executeCount, size)
+            val logRange = if (tag.isNullOrBlank()) Pair(1L, size)
+            else getLogRange(buildId, index, type, tag, jobId, executeCount, size)
             logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
 
             val startTime = System.currentTimeMillis()
             val logs = mutableListOf<LogLine>()
             val boolQueryBuilder = getQuery(buildId, tag, jobId, executeCount)
+                .must(QueryBuilders.rangeQuery("lineNo").from(logRange.first))
+                .must(QueryBuilders.rangeQuery("lineNo").to(logRange.second))
 //                .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
+
 
             logger.info("Get the query builder: $boolQueryBuilder")
 
