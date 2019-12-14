@@ -792,7 +792,7 @@ class LogServiceV2 @Autowired constructor(
                 logs.add(logLine)
             }
             moreLogs.logs.addAll(logs)
-            moreLogs.hasMore = logRange.second > logs.last().lineNo
+            moreLogs.hasMore = if (logs.isEmpty()) false else logRange.second > logs.last().lineNo
         } catch (ex: IndexNotFoundException) {
             logger.error("Query after logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             moreLogs.status = LogStatus.CLEAN
@@ -944,7 +944,7 @@ class LogServiceV2 @Autowired constructor(
         try {
             val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
             if (size == 0L) return queryLogs
-            val logRange = if (tag.isNullOrBlank()) Pair(1L, size)
+            val logRange = if (tag.isNullOrBlank() && jobId.isNullOrBlank()) Pair(1L, size)
             else getLogRange(buildId, index, type, tag, jobId, executeCount, size)
             logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
 
@@ -984,8 +984,7 @@ class LogServiceV2 @Autowired constructor(
             logger.info("logs query time cost($type): ${System.currentTimeMillis() - startTime}")
             queryLogs.logs.addAll(logs)
             if (logs.isEmpty()) queryLogs.status = LogStatus.EMPTY
-            queryLogs.hasMore = logRange.second > logs.last().lineNo
-
+            queryLogs.hasMore = if (logs.isEmpty()) false else logRange.second > logs.last().lineNo
         } catch (ex: IndexNotFoundException) {
             logger.error("Query init logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             queryLogs.status = LogStatus.CLEAN
@@ -1030,7 +1029,8 @@ class LogServiceV2 @Autowired constructor(
         val multiSearchRequestBuilder = client.prepareMultiSearch()
 
         val logRange =
-                if (tag.isNullOrBlank()) Pair(1L, size) else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
+            if (tag.isNullOrBlank() && jobId.isNullOrBlank()) Pair(1L, size)
+            else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
 
         logger.info("log range for $type: (${logRange.first}, ${logRange.second}), size: $size")
 
