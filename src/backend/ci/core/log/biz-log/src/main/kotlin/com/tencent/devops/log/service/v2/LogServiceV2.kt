@@ -749,16 +749,21 @@ class LogServiceV2 @Autowired constructor(
     ): QueryLogs {
         val logs = ArrayList<LogLine>()
         val moreLogs = QueryLogs(buildId, getLogStatus(buildId, tag, jobId, executeCount))
-        val querySize = Constants.MAX_LINES
         logger.info("more logs status: $moreLogs")
 
         try {
+            val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
+            val logRange = getLogRange(buildId, index, type, tag, jobId, executeCount, size)
+            logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
+
             val query = getQuery(buildId, tag, jobId, executeCount)
                 .must(QueryBuilders.rangeQuery("lineNo").gte(start))
+//                .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
+
             val searchResponse = client.prepareSearch(index)
                 .setTypes(type)
                 .setQuery(query)
-                .setSize(querySize)
+                .setSize(Constants.MAX_LINES)
                 .addDocValueField("lineNo")
                 .addDocValueField("timestamp")
 //                .addDocValueField("message")
@@ -785,7 +790,7 @@ class LogServiceV2 @Autowired constructor(
                 logs.add(logLine)
             }
             moreLogs.logs.addAll(logs)
-            moreLogs.hasMore = moreLogs.logs.size >= querySize
+            moreLogs.hasMore = logRange.second > logs.last().lineNo
         } catch (ex: IndexNotFoundException) {
             logger.error("Query after logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             moreLogs.status = LogStatus.CLEAN
@@ -930,8 +935,7 @@ class LogServiceV2 @Autowired constructor(
         executeCount: Int?
     ): QueryLogs {
         logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] doQueryInitLogs")
-        val logStatus = if (tag == null && jobId != null) getLogStatus(buildId, jobId, null, executeCount)
-            else getLogStatus(buildId, tag, jobId, executeCount)
+        val logStatus = getLogStatus(buildId, tag, jobId, executeCount)
         val queryLogs = QueryLogs(buildId, logStatus)
 
         try {
@@ -943,6 +947,8 @@ class LogServiceV2 @Autowired constructor(
             val startTime = System.currentTimeMillis()
             val logs = mutableListOf<LogLine>()
             val boolQueryBuilder = getQuery(buildId, tag, jobId, executeCount)
+//                .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
+
             logger.info("Get the query builder: $boolQueryBuilder")
 
             val response = client.prepareSearch(index)
@@ -971,7 +977,7 @@ class LogServiceV2 @Autowired constructor(
             logger.info("logs query time cost($type): ${System.currentTimeMillis() - startTime}")
             queryLogs.logs.addAll(logs)
             if (logs.isEmpty()) queryLogs.status = LogStatus.EMPTY
-            queryLogs.hasMore = size > logs.size
+            queryLogs.hasMore = logRange.second > logs.last().lineNo
 
         } catch (ex: IndexNotFoundException) {
             logger.error("Query init logs failed because of IndexNotFoundException. buildId: $buildId", ex)
