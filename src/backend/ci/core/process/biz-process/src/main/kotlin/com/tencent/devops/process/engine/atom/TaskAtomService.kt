@@ -224,7 +224,6 @@ class TaskAtomService @Autowired(required = false) constructor(
             if (BuildStatus.isFailure(status)) {
                 jmxElements.fail(elementType)
             }
-            logger.error("post to log the task($task) end: ${task.containerHashId}")
             LogUtils.stopLog(rabbitTemplate, task.buildId, task.taskId, task.containerHashId)
         } catch (ignored: Throwable) {
             logger.error("Fail to post the task($task): ${ignored.message}")
