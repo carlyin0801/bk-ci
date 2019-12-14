@@ -760,7 +760,7 @@ class LogServiceV2 @Autowired constructor(
 
             val query = getQuery(buildId, tag, jobId, executeCount)
                 .must(QueryBuilders.rangeQuery("lineNo").gte(start))
-                .must(QueryBuilders.rangeQuery("lineNo").to(logRange.second))
+//                .must(QueryBuilders.rangeQuery("lineNo").to(logRange.second))
 //                .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
 
             val searchResponse = client.prepareSearch(index)
@@ -953,7 +953,7 @@ class LogServiceV2 @Autowired constructor(
             val logs = mutableListOf<LogLine>()
             val boolQueryBuilder = getQuery(buildId, tag, jobId, executeCount)
                 .must(QueryBuilders.rangeQuery("lineNo").from(logRange.first))
-                .must(QueryBuilders.rangeQuery("lineNo").to(logRange.second))
+//                .must(QueryBuilders.rangeQuery("lineNo").to(logRange.second))
 //                .must(QueryBuilders.matchQuery("logType", LogType.LOG.name).operator(Operator.AND))
 
 

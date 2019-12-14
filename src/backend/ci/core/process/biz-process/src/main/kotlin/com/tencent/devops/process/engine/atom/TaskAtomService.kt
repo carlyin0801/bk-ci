@@ -213,7 +213,7 @@ class TaskAtomService @Autowired(required = false) constructor(
                 executeCount = task.executeCount ?: 1
             )
 //            if(!isEnvControl)
-                LogUtils.addRangeStartLine(
+                LogUtils.addRangeEndLine(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
                 rangeName = "$logTagName-${task.taskType}",
@@ -224,6 +224,8 @@ class TaskAtomService @Autowired(required = false) constructor(
             if (BuildStatus.isFailure(status)) {
                 jmxElements.fail(elementType)
             }
+            logger.error("post to log the task($task) end: ${task.containerHashId}")
+            LogUtils.stopLog(rabbitTemplate, task.buildId, task.taskId, task.containerHashId)
         } catch (ignored: Throwable) {
             logger.error("Fail to post the task($task): ${ignored.message}")
         }
@@ -249,7 +251,6 @@ class TaskAtomService @Autowired(required = false) constructor(
                 actionType = ActionType.END
             )
         )
-        LogUtils.stopLog(rabbitTemplate, task.buildId, task.taskId, task.containerHashId)
     }
 
     fun tryFinish(task: PipelineBuildTask, force: Boolean): AtomResponse {
