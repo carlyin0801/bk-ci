@@ -76,7 +76,7 @@ class TaskAtomService @Autowired(required = false) constructor(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
                 rangeName = logTagName,
-                tag = task.containerHashId ?: "",
+                tag = task.taskId,
                 jobId = task.containerHashId,
                 executeCount = executeCount
             )
