@@ -75,23 +75,24 @@ class TaskAtomService @Autowired(required = false) constructor(
             pipelineRuntimeService.updateTaskStatus(task.buildId, task.taskId, task.starter, BuildStatus.RUNNING)
             pipelineBuildDetailService.taskStart(task.buildId, task.taskId)
             val executeCount = task.executeCount ?: 1
-            if(!isEnvControl)
+            if(!isEnvControl) {
                 LogUtils.addRangeStartLine(
-                rabbitTemplate = rabbitTemplate,
-                buildId = task.buildId,
-                rangeName = "$logTagName-${task.taskType}",
-                tag = task.taskId,
-                jobId = task.containerHashId,
-                executeCount = executeCount
-            )
-            LogUtils.addFoldStartLine(
-                rabbitTemplate = rabbitTemplate,
-                buildId = task.buildId,
-                groupName = logTagName,
-                tag = task.taskId,
-                jobId = task.containerHashId,
-                executeCount = executeCount
-            )
+                    rabbitTemplate = rabbitTemplate,
+                    buildId = task.buildId,
+                    rangeName = "$logTagName-${task.taskType}",
+                    tag = task.taskId,
+                    jobId = task.containerHashId,
+                    executeCount = executeCount
+                )
+                LogUtils.addFoldStartLine(
+                    rabbitTemplate = rabbitTemplate,
+                    buildId = task.buildId,
+                    groupName = logTagName,
+                    tag = task.taskId,
+                    jobId = task.containerHashId,
+                    executeCount = executeCount
+                )
+            }
             val runVariables = pipelineRuntimeService.getAllVariable(task.buildId)
 
             atomResponse = if (task.isSkip(runVariables)) { // 跳过
@@ -204,23 +205,24 @@ class TaskAtomService @Autowired(required = false) constructor(
                 errorCode = errorCode,
                 errorMsg = errorMsg
             )
-            LogUtils.addFoldEndLine(
-                rabbitTemplate = rabbitTemplate,
-                buildId = task.buildId,
-                groupName = logTagName,
-                tag = task.taskId,
-                jobId = task.containerHashId,
-                executeCount = task.executeCount ?: 1
-            )
-            if(!isEnvControl)
+            if(!isEnvControl) {
+                LogUtils.addFoldEndLine(
+                    rabbitTemplate = rabbitTemplate,
+                    buildId = task.buildId,
+                    groupName = logTagName,
+                    tag = task.taskId,
+                    jobId = task.containerHashId,
+                    executeCount = task.executeCount ?: 1
+                )
                 LogUtils.addRangeEndLine(
-                rabbitTemplate = rabbitTemplate,
-                buildId = task.buildId,
-                rangeName = "$logTagName-${task.taskType}",
-                tag = task.taskId,
-                jobId = task.containerHashId,
-                executeCount = task.executeCount ?: 1
-            )
+                    rabbitTemplate = rabbitTemplate,
+                    buildId = task.buildId,
+                    rangeName = "$logTagName-${task.taskType}",
+                    tag = task.taskId,
+                    jobId = task.containerHashId,
+                    executeCount = task.executeCount ?: 1
+                )
+            }
             if (BuildStatus.isFailure(status)) {
                 jmxElements.fail(elementType)
             }
