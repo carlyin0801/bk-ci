@@ -75,7 +75,7 @@ class TaskAtomService @Autowired(required = false) constructor(
             pipelineRuntimeService.updateTaskStatus(task.buildId, task.taskId, task.starter, BuildStatus.RUNNING)
             pipelineBuildDetailService.taskStart(task.buildId, task.taskId)
             val executeCount = task.executeCount ?: 1
-//            if(!isEnvControl)
+            if(!isEnvControl)
                 LogUtils.addRangeStartLine(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
@@ -212,7 +212,7 @@ class TaskAtomService @Autowired(required = false) constructor(
                 jobId = task.containerHashId,
                 executeCount = task.executeCount ?: 1
             )
-//            if(!isEnvControl)
+            if(!isEnvControl)
                 LogUtils.addRangeEndLine(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
