@@ -84,7 +84,7 @@ class TaskAtomService @Autowired(required = false) constructor(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
                 groupName = logTagName,
-                tag = task.containerHashId ?: "",
+                tag = task.taskId,
                 jobId = task.containerHashId,
                 executeCount = executeCount
             )
@@ -202,7 +202,7 @@ class TaskAtomService @Autowired(required = false) constructor(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
                 groupName = logTagName,
-                tag = task.containerHashId ?: "",
+                tag = task.taskId,
                 jobId = task.containerHashId,
                 executeCount = task.executeCount ?: 1
             )

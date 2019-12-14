@@ -1491,7 +1491,6 @@ class LogServiceV2 @Autowired constructor(
     }
 
     private fun startLog(buildId: String, force: Boolean = false): Boolean {
-        logger.info("[$buildId|$force] Start logs")
         val indexAndType = indexServiceV2.getIndexAndType(buildId)
         return if (force || !checkIndexCreate(indexAndType.index)) {
             createIndexAndType(indexAndType.index, indexAndType.type)
