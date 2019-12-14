@@ -86,6 +86,15 @@ class DispatchBuildLessDockerStartupTaskAtom @Autowired constructor(
         param: NormalContainer,
         runVariables: Map<String, String>
     ): AtomResponse {
+        // 设置Job区间起点
+        LogUtils.addRangeStartLine(
+            rabbitTemplate = rabbitTemplate,
+            buildId = task.buildId,
+            rangeName = task.containerHashId ?: task.containerId,
+            tag = task.containerHashId ?: "",
+            jobId = task.containerHashId,
+            executeCount = task.executeCount ?: 1
+        )
         // 打印启动插件折叠起点
         LogUtils.addFoldStartLine(
             rabbitTemplate = rabbitTemplate,

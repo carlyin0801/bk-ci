@@ -32,6 +32,7 @@ import com.tencent.devops.common.event.enums.ActionType
 import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildStatusBroadCastEvent
 import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildTaskFinishBroadCastEvent
 import com.tencent.devops.common.pipeline.enums.BuildStatus
+import com.tencent.devops.common.pipeline.enums.EnvControlTaskType
 import com.tencent.devops.common.pipeline.utils.SkipElementUtils
 import com.tencent.devops.common.service.utils.SpringContextUtil
 import com.tencent.devops.log.model.pojo.enums.LogType
@@ -64,6 +65,8 @@ class TaskAtomService @Autowired(required = false) constructor(
     fun start(task: PipelineBuildTask): AtomResponse {
         val startTime = System.currentTimeMillis()
         val elementType = task.taskType
+        val isEnvControl = elementType == EnvControlTaskType.NORMAL.name || elementType == EnvControlTaskType.VM.name
+
         jmxElements.execute(elementType)
         var atomResponse = AtomResponse(BuildStatus.FAILED)
         val logTagName = task.taskName + "-[" + task.taskId + "]"
@@ -72,7 +75,7 @@ class TaskAtomService @Autowired(required = false) constructor(
             pipelineRuntimeService.updateTaskStatus(task.buildId, task.taskId, task.starter, BuildStatus.RUNNING)
             pipelineBuildDetailService.taskStart(task.buildId, task.taskId)
             val executeCount = task.executeCount ?: 1
-            LogUtils.addRangeStartLine(
+            if(!isEnvControl) LogUtils.addRangeStartLine(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
                 rangeName = "$logTagName-${task.taskType}",
@@ -165,6 +168,8 @@ class TaskAtomService @Autowired(required = false) constructor(
         errorMsg: String?
     ) {
         try {
+            val isEnvControl = elementType == EnvControlTaskType.NORMAL.name || elementType == EnvControlTaskType.VM.name
+
             // 更新状态
             pipelineRuntimeService.updateTaskStatus(
                 buildId = task.buildId,
@@ -206,7 +211,7 @@ class TaskAtomService @Autowired(required = false) constructor(
                 jobId = task.containerHashId,
                 executeCount = task.executeCount ?: 1
             )
-            LogUtils.addRangeEndLine(
+            if(!isEnvControl) LogUtils.addRangeStartLine(
                 rabbitTemplate = rabbitTemplate,
                 buildId = task.buildId,
                 rangeName = "$logTagName-${task.taskType}",
