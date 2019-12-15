@@ -212,7 +212,7 @@ object LoggerService {
             System.currentTimeMillis(),
             elementId,
             jobId,
-            LogType.LOG,
+            LogType.END,
             executeCount
         )
         addLog(logMessage)
