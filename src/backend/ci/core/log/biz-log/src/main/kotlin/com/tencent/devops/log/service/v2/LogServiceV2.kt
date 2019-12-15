@@ -1360,7 +1360,7 @@ class LogServiceV2 @Autowired constructor(
 
         logger.info("[$index|$type|$tag|$jobId|$executeCount|$size] hits 0 for build($type) with response (${hits.hits.size})")
 
-        if (hits.totalHits == 0L) return Pair(0, 0)
+        if (hits.totalHits % 2 != 0L) return Pair(0, 0)
 
         return getRangeIndex(hits, tag, jobId)
     }
