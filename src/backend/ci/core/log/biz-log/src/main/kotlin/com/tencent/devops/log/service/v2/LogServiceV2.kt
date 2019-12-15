@@ -719,7 +719,7 @@ class LogServiceV2 @Autowired constructor(
             }
 
             moreLogs.logs.addAll(logs)
-        } catch (ex: org.elasticsearch.index.IndexNotFoundException) {
+        } catch (ex: IndexNotFoundException) {
             logger.error("Query after logs failed because of IndexNotFoundException. buildId: $buildId", ex)
             moreLogs.status = LogStatus.CLEAN
             moreLogs.finished = true
@@ -935,8 +935,6 @@ class LogServiceV2 @Autowired constructor(
         try {
             val size = getLogSize(index, type, buildId, tag, jobId, executeCount)
             if (size == 0L) return queryLogs
-            val logRange = getLogRange(buildId, index, type, tag, jobId, executeCount, size)
-            logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
 
             val startTime = System.currentTimeMillis()
             val logs = mutableListOf<LogLine>()
@@ -1326,11 +1324,11 @@ class LogServiceV2 @Autowired constructor(
     ): Pair<Long, Long> {
 
         val q = getQuery(buildId, tag, jobId, executeCount)
-                .must(
-                        QueryBuilders.boolQuery()
-                                .should(QueryBuilders.matchQuery("logType", LogType.START.name).operator(Operator.OR))
-                                .should(QueryBuilders.matchQuery("logType", LogType.END.name).operator(Operator.OR))
-                )
+            .must(
+                QueryBuilders.boolQuery()
+                    .should(QueryBuilders.matchQuery("logType", LogType.START.name).operator(Operator.OR))
+                    .should(QueryBuilders.matchQuery("logType", LogType.END.name).operator(Operator.OR))
+            )
 
         logger.info("[$index|$type|$tag|$jobId|$executeCount|$size] Get log range with query ($q)")
 
@@ -1343,9 +1341,9 @@ class LogServiceV2 @Autowired constructor(
                 .get()
                 .hits
 
-        logger.info("hits 0 for build($type) with response (${hits.hits.size})")
+        logger.info("[$index|$type|$tag|$jobId|$executeCount|$size] hits 0 for build($type) with response (${hits.hits.size})")
 
-        if (hits.totalHits == 0L) return Pair(0, 0)
+        if (hits.totalHits % 2 != 0L) return Pair(0, 0)
 
         return getRangeIndex(hits, tag, jobId)
     }
