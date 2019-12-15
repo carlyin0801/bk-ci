@@ -43,6 +43,7 @@ import com.tencent.devops.process.engine.pojo.PipelineBuildTask
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildAtomTaskEvent
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildStageEvent
 import com.tencent.devops.process.engine.service.PipelineBuildDetailService
+import com.tencent.devops.process.engine.service.PipelineRepositoryService
 import com.tencent.devops.process.engine.service.PipelineRuntimeService
 import com.tencent.devops.process.pojo.AtomErrorCode
 import com.tencent.devops.process.pojo.ErrorType
@@ -341,6 +342,7 @@ class ContainerControl @Autowired constructor(
             if (waitToDoTask == null && BuildStatus.isRunning(task.status)) {
                 // 拿到按序号排列的第一个正在执行的插件
                 waitToDoTask = task
+                task.containerHashId
             } else if (BuildStatus.isFailure(task.status)) {
                 containerFinalStatus = task.status
                 if (waitToDoTask != null) {
@@ -373,7 +375,14 @@ class ContainerControl @Autowired constructor(
                 )
 //                containerFinalStatus = BuildStatus.SKIP
 
-                logCoverUnExecTask(task, "插件[${task.taskName}]被禁用")
+                LogUtils.addYellowLine(
+                    rabbitTemplate = rabbitTemplate,
+                    buildId = task.buildId,
+                    message = "插件[${task.taskName}]被禁用",
+                    tag = task.taskId,
+                    jobId = task.containerHashId,
+                    executeCount = task.executeCount ?: 1
+                )
 
                 return@nextOne
             }
@@ -410,7 +419,14 @@ class ContainerControl @Autowired constructor(
                     )
                     waitToDoTask = null
 
-                    logCoverUnExecTask(task, "插件[${task.taskName}]被跳过")
+                    LogUtils.addYellowLine(
+                        rabbitTemplate = rabbitTemplate,
+                        buildId = task.buildId,
+                        message = "插件[${task.taskName}]被禁用",
+                        tag = task.taskId,
+                        jobId = task.containerHashId,
+                        executeCount = task.executeCount ?: 1
+                    )
                     return@nextOne
                 } else {
                     containerFinalStatus = BuildStatus.RUNNING
@@ -531,25 +547,6 @@ class ContainerControl @Autowired constructor(
                 actionType = actionType,
                 delayMills = 10000 // 延时10秒钟
             )
-        )
-    }
-
-    private fun logCoverUnExecTask(task: PipelineBuildTask, message: String) {
-        val tagName = "${task.taskName}-[${task.taskId}]"
-        LogUtils.addFoldStartLine(
-            rabbitTemplate = rabbitTemplate,
-            buildId = task.buildId, tagName = tagName,
-            tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
-        )
-        LogUtils.addYellowLine(
-            rabbitTemplate = rabbitTemplate,
-            buildId = task.buildId, message = message,
-            tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
-        )
-        LogUtils.addFoldEndLine(
-            rabbitTemplate = rabbitTemplate,
-            buildId = task.buildId, tagName = tagName,
-            tag = task.taskId, jobId = task.containerHashId, executeCount = task.executeCount ?: 1
         )
     }
 }
