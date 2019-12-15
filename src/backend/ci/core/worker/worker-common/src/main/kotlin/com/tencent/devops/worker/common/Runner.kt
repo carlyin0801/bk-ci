@@ -96,6 +96,7 @@ object Runner {
                                 LoggerService.elementId = buildTask.elementId!!
 
                                 // 开始Task执行
+                                LoggerService.addFoldStartLine(taskName)
                                 taskDaemon.run()
 
                                 // 获取执行结果
@@ -160,7 +161,10 @@ object Runner {
                                     errorCode = errorCode
                                 )
                             } finally {
+                                LoggerService.addFoldEndLine(taskName)
+                                LoggerService.addRangeEndLine(taskName)
                                 LoggerService.elementId = ""
+                                LoggerService.addFoldEndLine(buildTask.elementName!!)
                             }
                         }
                         BuildTaskStatus.WAIT -> {
