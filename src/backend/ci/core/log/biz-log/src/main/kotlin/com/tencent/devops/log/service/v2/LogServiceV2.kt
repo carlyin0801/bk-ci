@@ -327,7 +327,7 @@ class LogServiceV2 @Autowired constructor(
             .setSize(4000)
             .get()
 
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS")
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
         // 一边读一边流式下载
         val fileStream = StreamingOutput { output ->
             do {
