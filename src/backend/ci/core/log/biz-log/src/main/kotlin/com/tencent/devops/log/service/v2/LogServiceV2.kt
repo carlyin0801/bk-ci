@@ -756,7 +756,7 @@ class LogServiceV2 @Autowired constructor(
             val logRange =
                 if (tag.isNullOrBlank() && jobId.isNullOrBlank()) Pair(1L, size)
                 else getLogRange(buildId, index, type, tag, jobId, executeCount, size)
-            logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
+            logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] doQueryMoreOriginLogsAfterLine with range: $logRange and size:$size")
 
             val query = getQuery(buildId, tag, jobId, executeCount)
                 .must(QueryBuilders.rangeQuery("lineNo").gte(start))
@@ -947,7 +947,7 @@ class LogServiceV2 @Autowired constructor(
             if (size == 0L) return queryLogs
             val logRange = if (tag.isNullOrBlank() && jobId.isNullOrBlank()) Pair(1L, size)
             else getLogRange(buildId, index, type, tag, jobId, executeCount, size)
-            logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] getOriginLogs with range: $logRange")
+            logger.info("[$index|$type|$buildId|$tag|$jobId|$executeCount] doQueryInitLogs with range: $logRange and size:$size")
 
             val startTime = System.currentTimeMillis()
             val logs = mutableListOf<LogLine>()
@@ -1030,8 +1030,7 @@ class LogServiceV2 @Autowired constructor(
         val multiSearchRequestBuilder = client.prepareMultiSearch()
 
         val logRange =
-            if (tag.isNullOrBlank() && jobId.isNullOrBlank()) Pair(1L, size)
-            else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
+                if (tag.isNullOrBlank()) Pair(1L, size) else getLogRange(buildId, index, type, tag!!, jobId, executeCount, size)
 
         logger.info("log range for $type: (${logRange.first}, ${logRange.second}), size: $size")
 
@@ -1359,7 +1358,7 @@ class LogServiceV2 @Autowired constructor(
                 .get()
                 .hits
 
-        logger.info("hits 0 for build($type) with response (${hits.hits.size})")
+        logger.info("[$index|$type|$tag|$jobId|$executeCount|$size] hits 0 for build($type) with response (${hits.hits.size})")
 
         if (hits.totalHits == 0L) return Pair(0, 0)
 
