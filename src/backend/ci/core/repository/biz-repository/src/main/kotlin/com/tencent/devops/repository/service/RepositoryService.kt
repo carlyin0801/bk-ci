@@ -37,10 +37,7 @@ import com.tencent.devops.common.api.exception.PermissionForbiddenException
 import com.tencent.devops.common.api.exception.RemoteServiceException
 import com.tencent.devops.common.api.model.SQLPage
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.api.util.DHUtil
-import com.tencent.devops.common.api.util.HashUtil
-import com.tencent.devops.common.api.util.timestamp
-import com.tencent.devops.common.api.util.timestampmilli
+import com.tencent.devops.common.api.util.*
 import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.service.utils.MessageCodeUtil
@@ -1347,6 +1344,28 @@ class RepositoryService @Autowired constructor(
             return false
         }
         return true
+    }
+
+    fun listRepoAndBranchAndTag(userId: String, projectId: String, buildId: String, repositoryType: ScmType?, repoPage: Int?, repoPageSize: Int?, branPage: Int?, branPageSize: Int?, tagPage: Int?, tagPageSize: Int) {
+        val limit = PageUtil.convertPageSizeToSQLLimit(repoPage, repoPageSize)
+        val repositories = userList(userId, projectId, ScmType.CODE_GIT, "", limit.offset, limit.limit)
+        repositories.first.records.forEach {
+            val token: String
+            val tokenType: String
+            token = when (it.authType) {
+                "OAUTH"->{
+                    tokenType = "OAUTH-TOKEN"
+                    getGitToken(TokenTypeEnum.OAUTH, userId).data.toString()
+                }
+                else->{
+                    tokenType = "PRIVATE-TOKEN"
+                    getGitToken(TokenTypeEnum.PRIVATE_KEY, userId).toString()
+                }
+            }
+            val header = mutableMapOf<String, String>()
+            header[tokenType] = token
+
+        }
     }
 
     companion object {
