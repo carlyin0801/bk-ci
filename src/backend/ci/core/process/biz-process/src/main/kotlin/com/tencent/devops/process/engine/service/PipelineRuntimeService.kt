@@ -885,22 +885,31 @@ class PipelineRuntimeService @Autowired constructor(
                                 if (retryStartTaskId == atomElement.id) {
                                     // 重试判断是否存在原子重试，其他保持不变
                                     val taskRecord = retryTaskContainerStatus(
-                                        lastTimeBuildTaskRecords, container, retryStartTaskId!!, atomElement
+                                        lastTimeBuildTaskRecords = lastTimeBuildTaskRecords,
+                                        container = container,
+                                        retryStartTaskId = retryStartTaskId!!,
+                                        atomElement = atomElement
                                     )
                                     if (taskRecord != null) {
                                         updateExistsRecord.add(taskRecord)
                                         needUpdateContainer = true
                                     }
                                 } else { // 重试之外的其他任务
-                                    val target =
-                                        findTaskRecord(lastTimeBuildTaskRecords, container, atomElement.id!!)
+                                    val target = findTaskRecord(
+                                            lastTimeBuildTaskRecords = lastTimeBuildTaskRecords,
+                                            container = container,
+                                            retryStartTaskId = atomElement.id!!
+                                        )
                                     // 如果当前原子之前是完成状态，则跳过
                                     if (target == null || BuildStatus.isFinish(BuildStatus.values()[target.status])) {
                                         return@nextElement
                                     }
 
                                     val taskRecord = retryTaskContainerStatus(
-                                        lastTimeBuildTaskRecords, container, atomElement.id!!, atomElement
+                                        lastTimeBuildTaskRecords = lastTimeBuildTaskRecords,
+                                        container = container,
+                                        retryStartTaskId = atomElement.id!!,
+                                        atomElement = atomElement
                                     )
                                     if (taskRecord != null) {
                                         updateExistsRecord.add(taskRecord)
@@ -914,10 +923,14 @@ class PipelineRuntimeService @Autowired constructor(
                                 }
 
                                 val taskRecord = retryTaskContainerStatus(
-                                    lastTimeBuildTaskRecords, container, atomElement.id!!, atomElement
+                                    lastTimeBuildTaskRecords = lastTimeBuildTaskRecords,
+                                    container = container,
+                                    retryStartTaskId = atomElement.id!!,
+                                    atomElement = atomElement
                                 )
                                 if (taskRecord != null) {
                                     updateExistsRecord.add(taskRecord)
+                                    needUpdateContainer = true
                                 }
                             }
                         } else {
@@ -1324,7 +1337,11 @@ class PipelineRuntimeService @Autowired constructor(
         retryStartTaskId: String,
         atomElement: Element? = null
     ): TPipelineBuildTaskRecord? {
-        val target: TPipelineBuildTaskRecord? = findTaskRecord(lastTimeBuildTaskRecords, container, retryStartTaskId)
+        val target: TPipelineBuildTaskRecord? = findTaskRecord(
+            lastTimeBuildTaskRecords = lastTimeBuildTaskRecords,
+            container = container,
+            retryStartTaskId = retryStartTaskId
+        )
 
         if (target != null) {
             container.status = null // 重置状态为空
