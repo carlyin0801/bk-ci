@@ -224,7 +224,7 @@ object Runner {
         LoggerService.addNormalLine(Ansi().bold().a("Get build machine properties").reset().toString())
         LoggerService.addNormalLine(Ansi().bold().a("machine.current: ").reset().a(vmName).toString())
         System.getProperties().forEach { k, v ->
-            LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v.toString()).toString())
+            LoggerService.addYellowLine("$k: $v")
         }
         LoggerService.addFoldEndLine("env_machine")
     }
