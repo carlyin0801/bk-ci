@@ -28,10 +28,7 @@ package com.tencent.devops.worker.common
 
 import com.tencent.devops.common.api.exception.RemoteServiceException
 import com.tencent.devops.common.log.Ansi
-import com.tencent.devops.common.pipeline.enums.BuildFormPropertyType
 import com.tencent.devops.common.pipeline.enums.BuildTaskStatus
-import com.tencent.devops.common.pipeline.pojo.BuildParameters
-import com.tencent.devops.common.pipeline.utils.ParameterUtils
 import com.tencent.devops.process.pojo.AtomErrorCode
 import com.tencent.devops.process.pojo.ErrorType
 import com.tencent.devops.process.utils.PIPELINE_RETRY_COUNT
@@ -59,11 +56,9 @@ object Runner {
 
             // 启动日志服务
             LoggerService.start()
-            val variables = buildVariables.variablesWithType
-            val retryCount = ParameterUtils.getListValueByKey(variables, PIPELINE_RETRY_COUNT) ?: "0"
+            val retryCount = buildVariables.variables[PIPELINE_RETRY_COUNT] ?: "0"
             LoggerService.executeCount = retryCount.toInt() + 1
             LoggerService.jobId = buildVariables.containerId
-            LoggerService.addNormalLine("buildVariables: $buildVariables")
 
             Heartbeat.start()
             // 开始轮询
@@ -71,9 +66,9 @@ object Runner {
                 showBuildStartupLog(buildVariables.buildId, buildVariables.vmSeqId)
                 showMachineLog(buildVariables.vmName)
                 showSystemLog()
-                showRuntimeEnvs(buildVariables.variablesWithType)
-                val variablesMap = buildVariables.variablesWithType.map { it.key to it.value.toString() }.toMap()
-                workspacePathFile = workspaceInterface.getWorkspace(variablesMap, buildVariables.pipelineId)
+                showRuntimeEnvs(buildVariables.variables)
+                workspacePathFile =
+                    workspaceInterface.getWorkspace(buildVariables.variables, buildVariables.pipelineId)
 
                 LoggerService.addNormalLine("Start the runner at workspace(${workspacePathFile.absolutePath})")
                 logger.info("Start the runner at workspace(${workspacePathFile.absolutePath})")
@@ -96,7 +91,7 @@ object Runner {
                                 LoggerService.elementId = buildTask.elementId!!
 
                                 // 开始Task执行
-                                LoggerService.addRangeStartLine(taskName)
+//                                LoggerService.addRangeStartLine(taskName)
                                 LoggerService.addFoldStartLine(taskName)
                                 taskDaemon.run()
 
@@ -163,7 +158,7 @@ object Runner {
                                 )
                             } finally {
                                 LoggerService.addFoldEndLine(taskName)
-                                LoggerService.addRangeEndLine(taskName)
+//                                LoggerService.addRangeEndLine(taskName)
                                 LoggerService.elementId = ""
                             }
                         }
@@ -217,7 +212,6 @@ object Runner {
      */
     private fun showBuildStartupLog(buildId: String, vmSeqId: String) {
         LoggerService.addNormalLine("The build $buildId environment #$vmSeqId is ready")
-        LoggerService.addFoldEndLine("Job#$vmSeqId init finished")
     }
 
     /**
@@ -230,7 +224,7 @@ object Runner {
         LoggerService.addNormalLine(Ansi().bold().a("Get build machine properties").reset().toString())
         LoggerService.addNormalLine(Ansi().bold().a("machine.current: ").reset().a(vmName).toString())
         System.getProperties().forEach { k, v ->
-            LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v.toString()).toString())
+            LoggerService.addYellowLine("$k: $v")
         }
         LoggerService.addFoldEndLine("env_machine")
     }
@@ -244,7 +238,7 @@ object Runner {
         LoggerService.addNormalLine(Ansi().bold().a("Get build system properties").reset().toString())
         val envs = System.getenv()
         envs.forEach { (k, v) ->
-            LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v).toString())
+            LoggerService.addYellowLine("$k: $v")
         }
         LoggerService.addFoldEndLine("env_system")
     }
@@ -252,16 +246,12 @@ object Runner {
     /**
      * 显示用户预定义变量
      */
-    private fun showRuntimeEnvs(variables: List<BuildParameters>) {
+    private fun showRuntimeEnvs(variables: Map<String, String>) {
         LoggerService.addNormalLine("")
         LoggerService.addFoldStartLine("env_user")
         LoggerService.addNormalLine(Ansi().bold().a("Resolve the construction process parameter variable table").reset().toString())
-        variables.forEach { v ->
-            if (v.valueType == BuildFormPropertyType.PASSWORD) {
-                LoggerService.addNormalLine(Ansi().bold().a("${v.key}: ").reset().a("******").toString())
-            } else {
-                LoggerService.addNormalLine(Ansi().bold().a("${v.key}: ").reset().a(v.value.toString()).toString())
-            }
+        variables.forEach { (k, v) ->
+            LoggerService.addYellowLine("$k: $v")
         }
         LoggerService.addFoldEndLine("env_user")
     }

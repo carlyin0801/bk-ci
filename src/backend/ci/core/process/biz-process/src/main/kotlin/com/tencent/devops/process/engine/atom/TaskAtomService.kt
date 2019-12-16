@@ -35,8 +35,6 @@ import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.EnvControlTaskType
 import com.tencent.devops.common.pipeline.utils.SkipElementUtils
 import com.tencent.devops.common.service.utils.SpringContextUtil
-import com.tencent.devops.log.model.pojo.enums.LogType
-import com.tencent.devops.log.utils.LogDispatcher
 import com.tencent.devops.log.utils.LogUtils
 import com.tencent.devops.process.engine.exception.BuildTaskException
 import com.tencent.devops.process.engine.pojo.PipelineBuildTask
@@ -75,15 +73,7 @@ class TaskAtomService @Autowired(required = false) constructor(
             pipelineRuntimeService.updateTaskStatus(task.buildId, task.taskId, task.starter, BuildStatus.RUNNING)
             pipelineBuildDetailService.taskStart(task.buildId, task.taskId)
             val executeCount = task.executeCount ?: 1
-            if(!isEnvControl) {
-                LogUtils.addRangeStartLine(
-                    rabbitTemplate = rabbitTemplate,
-                    buildId = task.buildId,
-                    rangeName = "$logTagName-${task.taskType}",
-                    tag = task.taskId,
-                    jobId = task.containerHashId,
-                    executeCount = executeCount
-                )
+            if (!isEnvControl) {
                 LogUtils.addFoldStartLine(
                     rabbitTemplate = rabbitTemplate,
                     buildId = task.buildId,
@@ -205,7 +195,7 @@ class TaskAtomService @Autowired(required = false) constructor(
                 errorCode = errorCode,
                 errorMsg = errorMsg
             )
-            if(!isEnvControl) {
+            if (!isEnvControl) {
                 LogUtils.addFoldEndLine(
                     rabbitTemplate = rabbitTemplate,
                     buildId = task.buildId,
@@ -214,19 +204,10 @@ class TaskAtomService @Autowired(required = false) constructor(
                     jobId = task.containerHashId,
                     executeCount = task.executeCount ?: 1
                 )
-                LogUtils.addRangeEndLine(
-                    rabbitTemplate = rabbitTemplate,
-                    buildId = task.buildId,
-                    rangeName = "$logTagName-${task.taskType}",
-                    tag = task.taskId,
-                    jobId = task.containerHashId,
-                    executeCount = task.executeCount ?: 1
-                )
             }
             if (BuildStatus.isFailure(status)) {
                 jmxElements.fail(elementType)
             }
-            LogUtils.stopLog(rabbitTemplate, task.buildId, task.taskId, task.containerHashId)
         } catch (ignored: Throwable) {
             logger.error("Fail to post the task($task): ${ignored.message}")
         }
@@ -252,6 +233,7 @@ class TaskAtomService @Autowired(required = false) constructor(
                 actionType = ActionType.END
             )
         )
+        LogUtils.stopLog(rabbitTemplate, task.buildId, task.taskId, task.containerHashId)
     }
 
     fun tryFinish(task: PipelineBuildTask, force: Boolean): AtomResponse {
