@@ -753,8 +753,9 @@ class PipelineRuntimeService @Autowired constructor(
     fun startBuild(pipelineInfo: PipelineInfo, fullModel: Model, startParamsWithType: List<BuildParameters>): String {
         val params = startParamsWithType.map { it.key to it.value }.toMap()
         val startBuildStatus: BuildStatus = BuildStatus.QUEUE // 默认都是排队状态
-        val buildId = // 如果不是从某个步骤重试的，则当成一个全新的, 后续看产品用户需求，是否需要仍然在当前build跑
-            if (params[PIPELINE_RETRY_START_TASK_ID] == null) {
+        val buildId =
+            // 2019-12-16 产品 rerun 需求
+            if (params[PIPELINE_RETRY_BUILD_ID] == null) {
                 buildIdGenerator.getNextId()
             } else {
                 params[PIPELINE_RETRY_BUILD_ID].toString()
