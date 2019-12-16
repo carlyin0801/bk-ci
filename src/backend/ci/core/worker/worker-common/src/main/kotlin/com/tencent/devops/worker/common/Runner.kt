@@ -238,7 +238,7 @@ object Runner {
         LoggerService.addNormalLine(Ansi().bold().a("Get build system properties").reset().toString())
         val envs = System.getenv()
         envs.forEach { (k, v) ->
-            LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v).toString())
+            LoggerService.addNormalLine(Ansi().bold().a("$k: $v").toString())
         }
         LoggerService.addFoldEndLine("env_system")
     }
