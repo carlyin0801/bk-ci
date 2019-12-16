@@ -261,6 +261,40 @@ interface UserRepositoryResource {
         @PathParam("repositoryHashId")
         repositoryHashId: String
     ): Result<Boolean>
+
+    @ApiOperation("获取代码库/分支/Tag 列表")
+    @GET
+    @Path("/project/{projectId}/build/{buildId}")
+    fun listRepoAndBranAndTag(
+            @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+            @HeaderParam(AUTH_HEADER_USER_ID)
+            userId: String,
+            @ApiParam(value = "项目ID", required = true)
+            @PathParam("projectId")
+            projectId: String,
+            @ApiParam(value = "仓库类型", required = false, defaultValue = "CODE_GIT")
+            @QueryParam("repositoryType")
+            repositoryType: ScmType?,
+            @ApiParam(value = "第几页", required = false, defaultValue = "1")
+            @QueryParam("repoPage")
+            repoPage: Int?,
+            @ApiParam("每页多少条", required = false, defaultValue = "20")
+            @QueryParam("repoPageSize")
+            repoPageSize: Int?,
+            @ApiParam(value = "", required = false, defaultValue = "1")
+            @QueryParam("branPage")
+            branPage: Int?,
+            @ApiParam(value = "", required = false, defaultValue = "20")
+            @QueryParam("branPageSize")
+            branPageSize: Int?,
+            @ApiParam(value = "", required = false, defaultValue = "1")
+            @QueryParam("tagPage")
+            tagPage: Int?,
+            @ApiParam(value = "", required = false, defaultValue = "20")
+            @QueryParam("tagPageSize")
+            tagPageSize: Int
+    ): Result<String>
+    
 //
 //
 //    @ApiOperation("是否拥有创建代码库权限")
