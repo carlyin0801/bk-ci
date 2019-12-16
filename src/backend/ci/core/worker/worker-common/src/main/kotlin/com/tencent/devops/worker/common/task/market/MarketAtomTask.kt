@@ -84,8 +84,7 @@ open class MarketAtomTask : ITask() {
         val atomVersion = taskParams["version"] as String
         val data = taskParams["data"] ?: "{}"
         val map = JsonUtil.toMutableMapSkipEmpty(data)
-        LoggerService.addNormalLine("测试：data = $data")
-        LoggerService.addNormalLine("测试：taskParams = $taskParams")
+
         logger.info("Start to execute the plugin task($atomName)($atomCode)")
         // 获取插件基本信息
         val atomEnvResult = atomApi.getAtomEnv(buildVariables.projectId, atomCode, atomVersion)
