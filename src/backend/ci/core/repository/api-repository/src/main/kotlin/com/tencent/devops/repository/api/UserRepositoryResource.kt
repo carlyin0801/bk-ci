@@ -272,9 +272,6 @@ interface UserRepositoryResource {
             @ApiParam(value = "项目ID", required = true)
             @PathParam("projectId")
             projectId: String,
-            @ApiParam(value = "构建ID", required = true)
-            @PathParam("buildId")
-            buildId: String,
             @ApiParam(value = "仓库类型", required = false, defaultValue = "CODE_GIT")
             @QueryParam("repositoryType")
             repositoryType: ScmType?,
@@ -296,7 +293,7 @@ interface UserRepositoryResource {
             @ApiParam(value = "", required = false, defaultValue = "20")
             @QueryParam("tagPageSize")
             tagPageSize: Int
-    ): Result<Object>
+    ): Result<String>
     
 //
 //

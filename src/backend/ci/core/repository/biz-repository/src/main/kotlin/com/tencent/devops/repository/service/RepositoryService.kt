@@ -1346,7 +1346,7 @@ class RepositoryService @Autowired constructor(
         return true
     }
 
-    fun listRepoAndBranchAndTag(userId: String, projectId: String, buildId: String, repositoryType: ScmType?, repoPage: Int?, repoPageSize: Int?, branPage: Int?, branPageSize: Int?, tagPage: Int?, tagPageSize: Int) {
+    fun listRepoAndBranchAndTag(userId: String, projectId: String, repositoryType: ScmType?, repoPage: Int?, repoPageSize: Int?, branPage: Int?, branPageSize: Int?, tagPage: Int?, tagPageSize: Int) {
         val limit = PageUtil.convertPageSizeToSQLLimit(repoPage, repoPageSize)
         val repositories = userList(userId, projectId, ScmType.CODE_GIT, "", limit.offset, limit.limit)
         repositories.first.records.forEach {
@@ -1364,7 +1364,8 @@ class RepositoryService @Autowired constructor(
             }
             val header = mutableMapOf<String, String>()
             header[tokenType] = token
-
+            val url = "https://git.code.oa.com/api/v3/projects/${it.repositoryHashId}/repository/branches"
+            OkhttpUtils.doGet(url, header)
         }
     }
 

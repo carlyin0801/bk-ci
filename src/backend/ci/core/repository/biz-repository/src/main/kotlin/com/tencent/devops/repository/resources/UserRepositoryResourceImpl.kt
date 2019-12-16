@@ -407,7 +407,7 @@ class UserRepositoryResourceImpl @Autowired constructor(
         return Result(true)
     }
 
-    override fun listRepoAndBranAndTag(userId: String, projectId: String, buildId: String, repositoryType: ScmType?, repoPage: Int?, repoPageSize: Int?, branPage: Int?, branPageSize: Int?, tagPage: Int?, tagPageSize: Int): Result<Object> {
+    override fun listRepoAndBranAndTag(userId: String, projectId: String, repositoryType: ScmType?, repoPage: Int?, repoPageSize: Int?, branPage: Int?, branPageSize: Int?, tagPage: Int?, tagPageSize: Int): Result<String> {
         if (userId.isBlank()) {
             throw ParamBlankException("Invalid userId")
         }
@@ -415,7 +415,8 @@ class UserRepositoryResourceImpl @Autowired constructor(
             throw ParamBlankException("Invalid projectId")
         }
 
-        repositoryService.listRepoAndBranchAndTag(userId = userId, projectId = projectId, buildId = buildId, repositoryType = repositoryType, repoPage = repoPage?:1, repoPageSize = repoPageSize?:20, branPage = branPage?:1, branPageSize = branPageSize?:20, tagPage = tagPage?:1, tagPageSize = tagPageSize?:20)
+        repositoryService.listRepoAndBranchAndTag(userId = userId, projectId = projectId, repositoryType = repositoryType, repoPage = repoPage?:1, repoPageSize = repoPageSize?:20, branPage = branPage?:1, branPageSize = branPageSize?:20, tagPage = tagPage?:1, tagPageSize = tagPageSize?:20)
+        return Result("Ok")
     }
 //
 //    override fun lockV2(userId: String, projectId: String, repositoryHashId: String): Result<Boolean> {
