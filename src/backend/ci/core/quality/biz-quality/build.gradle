@@ -42,7 +42,6 @@ dependencies {
     compile project(":core:notify:api-notify")
 
     compile project(":core:project:api-project")
-    compile project(":core:common:common-archive")
 }
 
 apply from: "$rootDir/task_deploy_to_maven.gradle"
