@@ -146,7 +146,6 @@ open class MarketAtomTask : ITask() {
                     else
                         atomParams[name] = value.toString()
                 }
-                LoggerService.addNormalLine("测试：$atomParams")
             }
         } catch (e: Throwable) {
             logger.error("plugin input illegal! ", e)
