@@ -84,7 +84,8 @@ open class MarketAtomTask : ITask() {
         val atomVersion = taskParams["version"] as String
         val data = taskParams["data"] ?: "{}"
         val map = JsonUtil.toMutableMapSkipEmpty(data)
-
+        LoggerService.addNormalLine("测试：data = $data")
+        LoggerService.addNormalLine("测试：taskParams = $taskParams")
         logger.info("Start to execute the plugin task($atomName)($atomCode)")
         // 获取插件基本信息
         val atomEnvResult = atomApi.getAtomEnv(buildVariables.projectId, atomCode, atomVersion)
@@ -135,11 +136,8 @@ open class MarketAtomTask : ITask() {
         val atomParams = mutableMapOf<String, String>()
         try {
             val inputMap = map["input"] as Map<String, Any>?
-            LoggerService.addNormalLine("测试：inputs = $inputMap")
             inputMap?.forEach { (name, value) ->
                 // 只有构建机插件才有workspace变量
-                LoggerService.addNormalLine("name: $name")
-                LoggerService.addNormalLine("value: $value")
                 if (buildTask.type == MarketBuildAtomElement.classType) {
                     atomParams[name] = EnvUtils.parseEnv(value.toString(), systemVariables)
                 } else {
