@@ -34,4 +34,5 @@ dependencies {
     compile project(":ext:tencent:common:common-auth:common-auth-tencent")
     compile project(":ext:tencent:artifactory:api-artifactory-tencent")
     compile project(":ext:tencent:environment:api-environment-tencent")
+    compile project(":core:log:api-log")
 }

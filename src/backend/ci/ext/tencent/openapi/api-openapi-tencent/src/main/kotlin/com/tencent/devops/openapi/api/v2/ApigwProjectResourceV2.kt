@@ -25,21 +25,19 @@
  */
 package com.tencent.devops.openapi.api.v2
 
+import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ACCESS_TOKEN
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_USER_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_USER_ID_DEFAULT_VALUE
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.project.pojo.ProjectVO
 import com.tencent.devops.project.pojo.Result
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
-import javax.ws.rs.Consumes
-import javax.ws.rs.GET
-import javax.ws.rs.HeaderParam
-import javax.ws.rs.Path
-import javax.ws.rs.Produces
-import javax.ws.rs.QueryParam
+import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 
 @Api(tags = ["OPEN_API_PROJECT_V2"], description = "OPEN-API-项目资源V2")
@@ -47,6 +45,20 @@ import javax.ws.rs.core.MediaType
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 interface ApigwProjectResourceV2 {
+
+    @POST
+    @Path("/newProject")
+    @ApiOperation("创建项目")
+    fun create(
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_USER_ID)
+        userId: String,
+        @ApiParam("PAAS_CC Token", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_ACCESS_TOKEN)
+        accessToken: String,
+        @ApiParam(value = "项目信息", required = true)
+        projectCreateInfo: ProjectCreateInfo
+    ): Result<String>
 
     @GET
     @Path("/getProjectByOrganizationId")
@@ -68,4 +80,24 @@ interface ApigwProjectResourceV2 {
         @QueryParam("centerName")
         centerName: String?
     ): Result<List<ProjectVO>?>
+
+	@POST
+	@Path("{projectId}/users/{userId}")
+	fun createUser2Project(
+        @ApiParam("操作用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        executeUserId: String,
+        @ApiParam("鉴权类型", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE)
+        organizationType: String,
+        @ApiParam("组织ID", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_ORGANIZATION_ID)
+        organizationId: Long,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("目标用户ID", required = true)
+        @PathParam("userId")
+        userId: String
+	):Result<Boolean>
 }

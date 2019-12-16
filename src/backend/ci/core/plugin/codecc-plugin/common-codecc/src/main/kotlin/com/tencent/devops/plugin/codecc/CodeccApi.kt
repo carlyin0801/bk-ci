@@ -50,7 +50,7 @@ open class CodeccApi constructor(
     private val existPath: String = "/ms/task/api/service/task/exists",
     private val deletePath: String = "/ms/task/api/service/task",
     private val report: String = "/api",
-    private val getRuleSetsPath: String = "/ms/task/api/service/checker/tasks/0/checkerSets"
+    private val getRuleSetsPath: String = "/ms/defect/api/service/checker/tools/{toolName}/pipelineCheckerSets"
 ) {
 
     companion object {
@@ -291,7 +291,7 @@ open class CodeccApi constructor(
             if (!phpcsToolSetId.isNullOrBlank()) map["PHPCS"] = phpcsToolSetId!!
             if (!sensitiveToolSetId.isNullOrBlank()) map["SENSITIVE"] = sensitiveToolSetId!!
             if (!occheckToolSetId.isNullOrBlank()) map["OCCHECK"] = occheckToolSetId!!
-            if (!gociLintToolSetId.isNullOrBlank()) map["GOCILINT"] = gociLintToolSetId!!
+//            if (!ripsToolSetId.isNullOrBlank()) map["RIPS"] = ripsToolSetId!!
             if (!woodpeckerToolSetId.isNullOrBlank()) map["WOODPECKER_SENSITIVE"] = woodpeckerToolSetId!!
             if (!horuspyToolSetId.isNullOrBlank()) map["HORUSPY"] = horuspyToolSetId!!
         }

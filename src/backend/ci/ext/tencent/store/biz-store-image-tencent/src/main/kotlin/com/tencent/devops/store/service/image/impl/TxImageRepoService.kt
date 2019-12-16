@@ -78,6 +78,7 @@ class TxImageRepoService @Autowired constructor(
                 }
                 imageCode = imageRecord.imageCode
                 val dockerRepoTags = dockerRepo.tags?.filter { it.tag != LATEST }
+                logger.info("getRelImageInfo dockerRepoTags is:$dockerRepoTags")
                 dockerRepoTags?.forEach {
                     val relFlag = imageDao.countReleaseImageByTag(
                         dslContext = dslContext,

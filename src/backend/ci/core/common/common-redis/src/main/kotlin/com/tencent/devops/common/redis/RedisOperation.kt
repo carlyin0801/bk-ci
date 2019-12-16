@@ -29,6 +29,9 @@ package com.tencent.devops.common.redis
 import org.springframework.data.redis.core.RedisCallback
 import org.springframework.data.redis.core.RedisTemplate
 import java.util.concurrent.TimeUnit
+import redis.clients.jedis.ScanParams
+import redis.clients.jedis.MultiKeyCommands
+import redis.clients.jedis.JedisCommands
 
 class RedisOperation(private val redisTemplate: RedisTemplate<String, String>) {
 
@@ -69,6 +72,29 @@ class RedisOperation(private val redisTemplate: RedisTemplate<String, String>) {
 
     fun keys(pattern: String): Set<String> {
         return redisTemplate.keys(pattern) ?: emptySet()
+    }
+
+    fun scan(pattern: String): Set<String> {
+        val connection = redisTemplate.connectionFactory.connection
+        val keys = hashSetOf<String>()
+
+        val commands = connection.nativeConnection as JedisCommands
+        val multiKeyCommands = commands as MultiKeyCommands
+
+        val scanParams = ScanParams()
+        scanParams.match("*$pattern*")
+        var scan = multiKeyCommands.scan("0", scanParams)
+        while (null != scan.stringCursor) {
+            keys.addAll(scan.result)
+            if (scan.stringCursor != "0") {
+                scan = multiKeyCommands.scan(scan.stringCursor, scanParams)
+                continue
+            } else {
+                break
+            }
+        }
+        val redisCallback = keys as RedisCallback<Set<String>>
+        return redisTemplate.execute(redisCallback)
     }
 
     fun addSetValue(key: String, item: String) {
@@ -114,6 +140,10 @@ class RedisOperation(private val redisTemplate: RedisTemplate<String, String>) {
 
     fun hvalues(key: String): MutableList<String>? {
         return redisTemplate.opsForHash<String, String>().values(key)
+    }
+
+    fun hmaps(key: String): MutableMap<String, String>? {
+        return redisTemplate.opsForHash<String, String>().entries(key)
     }
 
     fun <T> execute(action: RedisCallback<T>): T {

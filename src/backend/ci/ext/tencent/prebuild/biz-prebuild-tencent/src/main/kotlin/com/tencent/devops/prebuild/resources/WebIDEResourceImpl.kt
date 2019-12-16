@@ -48,8 +48,8 @@ class WebIDEResourceImpl @Autowired constructor(private val webIDEService: WebID
         return Result(webIDEService.lastOpenDir(userId, ip))
     }
 
-    override fun heartBeat(userId: String, ip: String): Result<Boolean> {
-        return Result(webIDEService.heartBeat(userId, ip))
+    override fun heartBeat(userId: String, ip: String, version: String): Result<Boolean> {
+        return Result(webIDEService.heartBeat(userId, ip, version))
     }
 
     override fun getUserProject(userId: String, accessToken: String): Result<ProjectVO?> {

@@ -27,6 +27,7 @@
 package com.tencent.devops.process.engine.service
 
 import com.fasterxml.jackson.core.type.TypeReference
+import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.model.SQLPage
@@ -64,6 +65,7 @@ import com.tencent.devops.process.engine.control.lock.BuildIdLock
 import com.tencent.devops.process.engine.interceptor.InterceptData
 import com.tencent.devops.process.engine.interceptor.PipelineInterceptorChain
 import com.tencent.devops.process.engine.pojo.PipelineInfo
+import com.tencent.devops.process.engine.utils.QualityUtils
 import com.tencent.devops.process.jmx.api.ProcessJmxApi
 import com.tencent.devops.process.permission.PipelinePermissionService
 import com.tencent.devops.process.pojo.BuildBasicInfo
@@ -543,7 +545,9 @@ class PipelineBuildService(
         try {
             return File(path).name
         } catch (e: Exception) {
-            throw OperationException("仓库参数($paramKey)不合法")
+            throw ErrorCodeException(defaultMessage = "仓库参数($paramKey)不合法",
+                errorCode = CommonMessageCode.ERROR_INVALID_PARAM_,
+                params = arrayOf(paramKey))
         }
     }
 

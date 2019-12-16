@@ -103,13 +103,6 @@ class CategoryDao {
         }
     }
 
-    fun countById(dslContext: DSLContext, categoryId: String, type: Byte): Int {
-        with(TCategory.T_CATEGORY) {
-            return dslContext.selectCount().from(this).where(ID.eq(categoryId).and(TYPE.eq(type)))
-                .fetchOne(0, Int::class.java)
-        }
-    }
-
     fun delete(dslContext: DSLContext, id: String) {
         with(TCategory.T_CATEGORY) {
             dslContext.deleteFrom(this)
@@ -159,6 +152,7 @@ class CategoryDao {
 
     fun convert(record: TCategoryRecord): Category {
         with(record) {
+            // 范畴信息名称没有配置国际化信息则取范畴表里面的名称
             val categoryLanName = MessageCodeUtil.getCodeLanMessage(
                 messageCode = "${StoreMessageCode.MSG_CODE_STORE_CATEGORY_PREFIX}$categoryCode",
                 defaultMessage = categoryName
@@ -166,8 +160,7 @@ class CategoryDao {
             return Category(
                 id = id,
                 categoryCode = categoryCode,
-                // 范畴信息名称没有配置国际化信息则取范畴表里面的名称
-                categoryName = if (categoryLanName == categoryCode) categoryName else categoryLanName,
+                categoryName = categoryLanName,
                 iconUrl = iconUrl,
                 categoryType = StoreTypeEnum.getStoreType(type.toInt()),
                 createTime = createTime.timestampmilli(),

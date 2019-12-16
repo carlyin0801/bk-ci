@@ -69,7 +69,6 @@ class PipelineWebsocketService @Autowired constructor(
             userId = userId,
             redisOperation = redisOperation,
             page = page,
-            pushType = WebSocketType.DETAIL,
             objectMapper = objectMapper,
             notifyPost = NotifyPost(
                 module = "process",
@@ -77,7 +76,7 @@ class PipelineWebsocketService @Autowired constructor(
                 message = "",
                 dealUrl = null,
                 code = 200,
-                webSocketType = WebSocketType.changWebType(WebSocketType.DETAIL),
+                webSocketType = WebSocketType.IFRAME.name,
                 page = page
             )
         )
@@ -105,7 +104,6 @@ class PipelineWebsocketService @Autowired constructor(
             userId = userId,
             redisOperation = redisOperation,
             page = page,
-            pushType = WebSocketType.HISTORY,
             objectMapper = objectMapper,
             notifyPost = NotifyPost(
                 module = "process",
@@ -113,7 +111,7 @@ class PipelineWebsocketService @Autowired constructor(
                 message = "",
                 dealUrl = null,
                 code = 200,
-                webSocketType = WebSocketType.changWebType(WebSocketType.HISTORY),
+                webSocketType = WebSocketType.IFRAME.name,
                 page = page
             )
         )
@@ -141,7 +139,6 @@ class PipelineWebsocketService @Autowired constructor(
             userId = userId,
             redisOperation = redisOperation,
             page = page,
-            pushType = WebSocketType.STATUS,
             objectMapper = objectMapper,
             notifyPost = NotifyPost(
                 module = "process",
@@ -149,7 +146,7 @@ class PipelineWebsocketService @Autowired constructor(
                 message = "",
                 dealUrl = null,
                 code = 200,
-                webSocketType = WebSocketType.changWebType(WebSocketType.STATUS),
+                webSocketType = WebSocketType.IFRAME.name,
                 page = page
             )
         )

@@ -29,6 +29,7 @@ import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.log.api.ServiceLogResource
 import com.tencent.devops.openapi.api.external.measure.PipelineBuildResponseData
 import com.tencent.devops.openapi.api.v2.ApigwBuildResourceV2
 import com.tencent.devops.openapi.service.v2.ApigwBuildService
@@ -38,6 +39,7 @@ import com.tencent.devops.process.pojo.BuildHistoryWithVars
 import com.tencent.devops.process.pojo.pipeline.ModelDetail
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import javax.ws.rs.core.Response
 
 @RestResource
 class ApigwBuildResourceV2Impl @Autowired constructor(
@@ -45,6 +47,17 @@ class ApigwBuildResourceV2Impl @Autowired constructor(
     private val apigwBuildService: ApigwBuildService,
     private val apigwBuildServiceV2: ApigwBuildServiceV2
 ) : ApigwBuildResourceV2 {
+    override fun downloadLogs(userId: String, projectId: String, pipelineId: String, buildId: String, tag: String?, jobId: String?, executeCount: Int?): Response {
+        return client.get(ServiceLogResource::class).downloadLogs(
+            projectId = projectId,
+            pipelineId = pipelineId,
+            buildId = buildId,
+            tag = tag,
+            jobId = jobId,
+            executeCount = executeCount
+        )
+    }
+
     override fun getBuildListByBG(
         userId: String,
         bgId: String,

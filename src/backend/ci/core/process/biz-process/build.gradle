@@ -27,6 +27,7 @@
 dependencies {
     compile project(":core:process:plugin-load")
     compile project(":core:common:common-service")
+    compile project(":core:common:common-api")
     compile project(":core:common:common-web")
     compile project(":core:common:common-client")
     compile project(":core:common:common-redis")
@@ -51,10 +52,6 @@ dependencies {
 
     compile "com.zaxxer:HikariCP"
     compile "mysql:mysql-connector-java"
-    compile "org.springframework.boot:spring-boot-starter-websocket"
-    compile group: 'javax.websocket', name: 'javax.websocket-api', version: '1.1'
-    compile "io.undertow:undertow-servlet"
-    compile "io.undertow:undertow-websockets-jsr"
     testCompile project(":core:common:common-test")
 }
 

@@ -23,64 +23,35 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-package com.tencent.devops.project.api.service.service
+package com.tencent.devops.openapi.api.v2.user
 
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
-import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
-import com.tencent.devops.project.pojo.DeptInfo
-import com.tencent.devops.project.pojo.OrganizationInfo
-import com.tencent.devops.project.pojo.Result
-import com.tencent.devops.project.pojo.enums.OrganizationType
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.store.pojo.template.InstallTemplateReq
 import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
-import javax.ws.rs.GET
 import javax.ws.rs.HeaderParam
+import javax.ws.rs.POST
 import javax.ws.rs.Path
-import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 
-@Api(tags = ["SERVICE_PROJECT_ORGANIZATION"], description = "蓝盾项目列表组织架构接口")
-@Path("/service/organizations")
+@Api(tags = ["OPEN_API_MARKET"], description = "OPEN-API-研发市场资源User类接口")
+@Path("/apigw-user/v2/market")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-interface ServiceProjectOrganizationResource {
+interface ApigwUserMarketTemplateResourceV2 {
 
-    @GET
-    @Path("/ids/{id}")
-    fun getDeptInfo(
-        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+    @ApiOperation("安装研发商店模板到项目")
+    @POST
+    @Path("/template/installFromStore")
+    fun installTemplateFromStore(
+        @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("机构ID")
-        @PathParam("id")
-        id: Int
-    ): Result<DeptInfo>
-
-    @GET
-    @Path("/types/{type}/ids/{id}")
-    fun getOrganizations(
-        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-        @HeaderParam(AUTH_HEADER_USER_ID)
-        userId: String,
-        @ApiParam("机构层级类型")
-        @PathParam("type")
-        type: OrganizationType,
-        @ApiParam("机构ID")
-        @PathParam("id")
-        id: Int
-    ): Result<List<OrganizationInfo>>
-
-    @GET
-    @Path("/parent/deptIds/{deptId}/levels/{level}")
-    fun getParentDeptInfos(
-        @ApiParam("机构ID")
-        @PathParam("deptId")
-        deptId: String,
-        @ApiParam("向上查询的层级数")
-        @PathParam("level")
-        level: Int
-    ): Result<List<DeptInfo>>
+        @ApiParam("安装研发商店模板到项目请求报文体", required = true)
+        installTemplateReq: InstallTemplateReq
+    ): Result<Boolean>
 }

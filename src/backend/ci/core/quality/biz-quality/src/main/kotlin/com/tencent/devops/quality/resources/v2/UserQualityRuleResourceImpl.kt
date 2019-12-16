@@ -70,12 +70,7 @@ class UserQualityRuleResourceImpl @Autowired constructor(
         return Result(ruleService.userCreate(userId, projectId, rule))
     }
 
-    override fun update(
-        userId: String,
-        projectId: String,
-        ruleHashId: String,
-        rule: RuleUpdateRequest
-    ): Result<Boolean> {
+    override fun update(userId: String, projectId: String, ruleHashId: String, rule: RuleUpdateRequest): Result<Boolean> {
         checkParam(userId, projectId, ruleHashId)
         ruleService.userUpdate(userId, projectId, ruleHashId, rule)
         return Result(true)
@@ -106,13 +101,7 @@ class UserQualityRuleResourceImpl @Autowired constructor(
         return Result(rule)
     }
 
-    override fun getInterceptHistory(
-        userId: String,
-        projectId: String,
-        ruleHashId: String,
-        page: Int?,
-        pageSize: Int?
-    ): Result<Page<RuleInterceptHistory>> {
+    override fun getInterceptHistory(userId: String, projectId: String, ruleHashId: String, page: Int?, pageSize: Int?): Result<Page<RuleInterceptHistory>> {
         checkParam(userId, projectId, ruleHashId)
         val pageNotNull = page ?: 0
         val pageSizeNotNull = pageSize ?: 20
@@ -121,12 +110,7 @@ class UserQualityRuleResourceImpl @Autowired constructor(
         return Result(Page(pageNotNull, pageSizeNotNull, result.first, result.second))
     }
 
-    override fun list(
-        userId: String,
-        projectId: String,
-        page: Int?,
-        pageSize: Int?
-    ): Result<Page<QualityRuleSummaryWithPermission>> {
+    override fun list(userId: String, projectId: String, page: Int?, pageSize: Int?): Result<Page<QualityRuleSummaryWithPermission>> {
         val pageNotNull = page ?: 0
         val pageSizeNotNull = pageSize ?: 20
         val limit = PageUtil.convertPageSizeToSQLLimit(pageNotNull, pageSizeNotNull)
@@ -134,21 +118,13 @@ class UserQualityRuleResourceImpl @Autowired constructor(
         return Result(Page(pageNotNull, pageSizeNotNull, result.first, result.second))
     }
 
-    override fun matchRuleList(
-        userId: String,
-        projectId: String,
-        pipelineId: String
-    ): Result<List<QualityRuleMatchTask>> {
+    override fun matchRuleList(userId: String, projectId: String, pipelineId: String): Result<List<QualityRuleMatchTask>> {
         checkParam(userId, projectId)
         val result = ruleCheckService.userGetMatchRuleList(projectId, pipelineId)
         return Result(result)
     }
 
-    override fun matchTemplateRuleList(
-        userId: String,
-        projectId: String,
-        templateId: String?
-    ): Result<List<QualityRuleMatchTask>> {
+    override fun matchTemplateRuleList(userId: String, projectId: String, templateId: String?): Result<List<QualityRuleMatchTask>> {
         return Result(ruleCheckService.userGetMatchTemplateList(projectId, templateId))
     }
 
@@ -157,44 +133,18 @@ class UserQualityRuleResourceImpl @Autowired constructor(
     }
 
     override fun listPipelineRangeDetail(request: PipelineRangeDetailRequest): Result<List<RulePipelineRange>> {
-        return Result(
-            pipelineService.userListPipelineRangeDetail(
-                request.projectId,
-                request.pipelineIds,
-                request.indicatorIds,
-                request.controlPointType
-            )
-        )
+        return Result(pipelineService.userListPipelineRangeDetail(request.projectId, request.pipelineIds, request.indicatorIds, request.controlPointType))
     }
 
     override fun listTemplateRangeDetail(request: TemplateRangeDetailRequest): Result<List<RuleTemplateRange>> {
-        return Result(
-            pipelineService.userListTemplateRangeDetail(
-                request.projectId,
-                request.templateIds,
-                request.indicatorIds,
-                request.controlPointType
-            )
-        )
+        return Result(pipelineService.userListTemplateRangeDetail(request.projectId, request.templateIds, request.indicatorIds, request.controlPointType))
     }
 
-    override fun listAtomRule(
-        userId: String,
-        projectId: String,
-        pipelineId: String,
-        atomCode: String,
-        atomVersion: String
-    ): Result<AtomRuleResponse> {
+    override fun listAtomRule(userId: String, projectId: String, pipelineId: String, atomCode: String, atomVersion: String): Result<AtomRuleResponse> {
         return Result(ruleCheckService.userListAtomRule(projectId, pipelineId, atomCode, atomVersion))
     }
 
-    override fun listTemplateAtomRule(
-        userId: String,
-        projectId: String,
-        templateId: String,
-        atomCode: String,
-        atomVersion: String
-    ): Result<AtomRuleResponse> {
+    override fun listTemplateAtomRule(userId: String, projectId: String, templateId: String, atomCode: String, atomVersion: String): Result<AtomRuleResponse> {
         return Result(ruleCheckService.userListTemplateAtomRule(projectId, templateId, atomCode, atomVersion))
     }
 

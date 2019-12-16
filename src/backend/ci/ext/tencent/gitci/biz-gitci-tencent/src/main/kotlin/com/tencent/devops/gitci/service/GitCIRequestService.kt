@@ -247,6 +247,7 @@ class GitCIRequestService @Autowired constructor(
             return yaml
         }
         val gitProjectConf = gitCISettingDao.getSetting(dslContext, gitProjectId) ?: return yaml
+        logger.info("gitProjectConf: $gitProjectConf")
         if (null == gitProjectConf.env) {
             return yaml
         }
@@ -257,20 +258,25 @@ class GitCIRequestService @Autowired constructor(
         var line: String? = br.readLine()
         while (line != null) {
             val envMatches = envRegex.find(line)
-            if (null != envMatches) {
-                val envKeyPrefix = envMatches.groupValues[0]
+            envMatches?.groupValues?.forEach {
+                logger.info("envKeyPrefix: $it")
+                val envKeyPrefix = it
                 val envKey = envKeyPrefix.removePrefix("\$env:")
                 val envValue = getEnvValue(gitProjectConf.env!!, envKey)
-                if (null != envValue) {
-                    line = envRegex.replace(line, envValue)
+                logger.info("envKey: $envKey, envValue: $envValue")
+                line = if (null != envValue) {
+                    envRegex.replace(line!!, envValue)
+                } else {
+                    envRegex.replace(line!!, "null")
                 }
+                logger.info("line: $line")
             }
 
             sb.append(line).append("\n")
             line = br.readLine()
         }
 
-        return yaml
+        return sb.toString()
     }
 
     private fun getEnvValue(env: List<EnvironmentVariables>, key: String): String? {
@@ -451,4 +457,26 @@ class GitCIRequestService @Autowired constructor(
         val eventBuild = gitRequestEventBuildDao.getByBuildId(dslContext, buildId)
         return (eventBuild?.originYaml) ?: ""
     }
+}
+
+
+fun main(args: Array<String>) {
+
+    val envRegex = Regex("\\\$env:\\w+")
+    var line = "echo \"\$env:passwordtest sssdadad\""
+    println(line)
+    val envMatches = envRegex.find(line)
+    envMatches?.groupValues?.forEach {
+        val envKeyPrefix = it
+        val envKey = envKeyPrefix.removePrefix("\$env:")
+        val envValue = "1313213123123"
+        line = if (null != envValue) {
+            envRegex.replace(line!!, envValue)
+        } else {
+            envRegex.replace(line!!, "null")
+        }
+    }
+
+
+    println(line)
 }
