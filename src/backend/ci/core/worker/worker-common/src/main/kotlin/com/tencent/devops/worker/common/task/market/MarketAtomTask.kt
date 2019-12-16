@@ -141,8 +141,13 @@ open class MarketAtomTask : ITask() {
                 if (buildTask.type == MarketBuildAtomElement.classType) {
                     atomParams[name] = EnvUtils.parseEnv(value.toString(), systemVariables)
                 } else {
-                    atomParams[name] = value.toString()
+                    if(atomCode != "subpipeline")
+                        atomParams[name] = value.toString()
+                    else if(name == "params") {
+                        atomParams[name] = JsonUtil.toJson(value)
+                    }
                 }
+                LoggerService.addNormalLine("测试：$atomParams")
             }
         } catch (e: Throwable) {
             logger.error("plugin input illegal! ", e)
