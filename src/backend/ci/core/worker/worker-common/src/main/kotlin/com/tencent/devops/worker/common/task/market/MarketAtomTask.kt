@@ -140,9 +140,6 @@ open class MarketAtomTask : ITask() {
                 if (buildTask.type == MarketBuildAtomElement.classType) {
                     atomParams[name] = EnvUtils.parseEnv(value.toString(), systemVariables)
                 } else {
-                    if(name == "params")
-                        atomParams[name] = JsonUtil.toJson(value)
-                    else
                         atomParams[name] = value.toString()
                 }
             }
