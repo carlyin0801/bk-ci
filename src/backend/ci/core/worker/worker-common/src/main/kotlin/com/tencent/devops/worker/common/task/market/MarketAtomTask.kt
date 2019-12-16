@@ -135,6 +135,7 @@ open class MarketAtomTask : ITask() {
         val atomParams = mutableMapOf<String, String>()
         try {
             val inputMap = map["input"] as Map<String, Any>?
+            LoggerService.addNormalLine("测试：inputs = $inputMap")
             inputMap?.forEach { (name, value) ->
                 // 只有构建机插件才有workspace变量
                 if (buildTask.type == MarketBuildAtomElement.classType) {
