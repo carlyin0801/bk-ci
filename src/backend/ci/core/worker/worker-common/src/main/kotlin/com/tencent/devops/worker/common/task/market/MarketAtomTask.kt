@@ -138,6 +138,8 @@ open class MarketAtomTask : ITask() {
             LoggerService.addNormalLine("测试：inputs = $inputMap")
             inputMap?.forEach { (name, value) ->
                 // 只有构建机插件才有workspace变量
+                LoggerService.addNormalLine("name: $name")
+                LoggerService.addNormalLine("value: $value")
                 if (buildTask.type == MarketBuildAtomElement.classType) {
                     atomParams[name] = EnvUtils.parseEnv(value.toString(), systemVariables)
                 } else {
