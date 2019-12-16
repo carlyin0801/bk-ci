@@ -238,7 +238,7 @@ object Runner {
         LoggerService.addNormalLine(Ansi().bold().a("Get build system properties").reset().toString())
         val envs = System.getenv()
         envs.forEach { (k, v) ->
-            LoggerService.addNormalLine(Ansi().bold().a("$k: $v").toString())
+            LoggerService.addYellowLine("$k: $v")
         }
         LoggerService.addFoldEndLine("env_system")
     }
@@ -251,7 +251,7 @@ object Runner {
         LoggerService.addFoldStartLine("env_user")
         LoggerService.addNormalLine(Ansi().bold().a("Resolve the construction process parameter variable table").reset().toString())
         variables.forEach { (k, v) ->
-            LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v).toString())
+            LoggerService.addYellowLine("$k: $v")
         }
         LoggerService.addFoldEndLine("env_user")
     }
