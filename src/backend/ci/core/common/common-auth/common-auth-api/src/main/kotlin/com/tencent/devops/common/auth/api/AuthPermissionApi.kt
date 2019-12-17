@@ -123,4 +123,5 @@ interface AuthPermissionApi {
         userIdList: List<String>,
         supplier: (() -> List<String>)?
     ): Boolean
+}
 
