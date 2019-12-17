@@ -415,7 +415,7 @@ class UserRepositoryResourceImpl @Autowired constructor(
             throw ParamBlankException("Invalid projectId")
         }
 
-        repositoryService.listRepoAndBranchAndTag(userId = userId, projectId = projectId, repositoryType = repositoryType, repoPage = repoPage?:1, repoPageSize = repoPageSize?:20, branPage = branPage?:1, branPageSize = branPageSize?:20, tagPage = tagPage?:1, tagPageSize = tagPageSize?:20)
+        repositoryService.listRepoAndBranchAndTag(userId = userId, projectId = projectId, repositoryType = repositoryType, repoPage = repoPage ?: 1, repoPageSize = repoPageSize ?: 20, branPage = branPage ?: 1, branPageSize = branPageSize ?: 20, tagPage = tagPage ?: 1, tagPageSize = tagPageSize)
         return Result("Ok")
     }
 //
