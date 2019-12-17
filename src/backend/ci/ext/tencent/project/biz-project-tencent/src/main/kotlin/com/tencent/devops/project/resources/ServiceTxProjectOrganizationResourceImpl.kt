@@ -1,6 +1,5 @@
 package com.tencent.devops.project.resources
 
-import com.tencent.devops.common.auth.api.pojo.BkAuthGroup
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.project.api.service.service.ServiceTxProjectOrganizationResource
 import com.tencent.devops.project.pojo.DeptInfo
@@ -11,7 +10,7 @@ import com.tencent.devops.project.service.impl.ProjectOrganizationServiceImpl
 import com.tencent.devops.project.service.tof.TOFService
 import org.springframework.beans.factory.annotation.Autowired
 
-@RestResource
+//@RestResource
 class ServiceTxProjectOrganizationResourceImpl @Autowired constructor(
     val tofService: TOFService,
     val projectOrganizationServiceImpl: ProjectOrganizationServiceImpl
