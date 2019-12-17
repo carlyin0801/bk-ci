@@ -26,7 +26,6 @@
 
 package com.tencent.devops.repository.service
 
-import com.fasterxml.jackson.core.type.TypeReference
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.constant.RepositoryMessageCode
 import com.tencent.devops.common.api.enums.RepositoryConfig
