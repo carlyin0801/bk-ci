@@ -150,6 +150,13 @@ class CategoryDao {
         }
     }
 
+    fun countById(dslContext: DSLContext, categoryId: String, type: Byte): Int {
+        with(TCategory.T_CATEGORY) {
+            return dslContext.selectCount().from(this).where(ID.eq(categoryId).and(TYPE.eq(type)))
+                .fetchOne(0, Int::class.java)
+        }
+    }
+
     fun convert(record: TCategoryRecord): Category {
         with(record) {
             // 范畴信息名称没有配置国际化信息则取范畴表里面的名称
