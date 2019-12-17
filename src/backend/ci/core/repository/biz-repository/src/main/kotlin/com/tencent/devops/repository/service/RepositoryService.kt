@@ -1347,8 +1347,10 @@ class RepositoryService @Autowired constructor(
     }
 
     fun listRepoAndBranchAndTag(userId: String, projectId: String, repositoryType: ScmType?, repoPage: Int?, repoPageSize: Int?, branPage: Int?, branPageSize: Int?, tagPage: Int?, tagPageSize: Int) {
+        logger.info("list Repo|branch|tag start")
         val limit = PageUtil.convertPageSizeToSQLLimit(repoPage, repoPageSize)
         val repositories = userList(userId, projectId, ScmType.CODE_GIT, "", limit.offset, limit.limit)
+        logger.info("get repo by userList: $repositories")
         repositories.first.records.forEach {
             val token: String
             val tokenType: String
@@ -1364,12 +1366,15 @@ class RepositoryService @Autowired constructor(
             }
             val header = mutableMapOf<String, String>()
             header[tokenType] = token
-            val url = "https://git.code.oa.com/api/v3/projects/${it.repositoryHashId}/repository/branches"
-            val response = OkhttpUtils.doGet(url, header)
-            val rate = response.code()
-            val bodyStr = response.body().toString()
-            logger.info("repository list response rate: $rate body: $bodyStr")
-
+            val url = "https://git.code.oa.com/api/v3/projects/${it.repositoryHashId}/repository/branches?page=$branPage&per_page=$branPageSize"
+            try {
+                val response = OkhttpUtils.doGet(url, header)
+                val rate = response.code()
+                val bodyStr = response.body().toString()
+                logger.info("repository list response rate: $rate body: $bodyStr url: $url")
+            } catch (e: Exception) {
+                logger.error("get branch failed")
+            }
         }
     }
 
