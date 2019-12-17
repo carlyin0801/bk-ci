@@ -44,29 +44,26 @@ import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.gray.Gray
 import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.common.web.mq.EXCHANGE_PAASCC_PROJECT_CREATE
-import com.tencent.devops.common.web.mq.EXCHANGE_PAASCC_PROJECT_UPDATE
-import com.tencent.devops.common.web.mq.EXCHANGE_PAASCC_PROJECT_UPDATE_LOGO
 import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_CREATE
-import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_UPDATE
-import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_UPDATE_LOGO
 import com.tencent.devops.project.constant.ProjectMessageCode
 import com.tencent.devops.project.dao.ProjectDao
+import com.tencent.devops.project.dispatch.ProjectDispatcher
 import com.tencent.devops.project.jmx.api.ProjectJmxApi
 import com.tencent.devops.project.pojo.AuthProjectForCreateResult
 import com.tencent.devops.project.pojo.AuthProjectForList
 import com.tencent.devops.project.pojo.PaasCCCreateProject
-import com.tencent.devops.project.pojo.PaasCCUpdateProject
-import com.tencent.devops.project.pojo.PaasCCUpdateProjectLogo
 import com.tencent.devops.project.pojo.ProjectCreateInfo
 import com.tencent.devops.project.pojo.ProjectLogo
 import com.tencent.devops.project.pojo.ProjectUpdateInfo
-import com.tencent.devops.project.pojo.ProjectUpdateLogoInfo
 import com.tencent.devops.project.pojo.ProjectVO
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.pojo.UserRole
 import com.tencent.devops.project.pojo.enums.ProjectChannelCode
 import com.tencent.devops.project.pojo.enums.ProjectTypeEnum
 import com.tencent.devops.project.pojo.enums.ProjectValidateType
+import com.tencent.devops.project.pojo.mq.ProjectCreateBroadCastEvent
+import com.tencent.devops.project.pojo.mq.ProjectUpdateBroadCastEvent
+import com.tencent.devops.project.pojo.mq.ProjectUpdateLogoBroadCastEvent
 import com.tencent.devops.project.pojo.tof.Response
 import com.tencent.devops.project.service.job.SynProjectService.Companion.ENGLISH_NAME_PATTERN
 import com.tencent.devops.project.service.s3.S3Service
@@ -102,6 +99,7 @@ class ProjectLocalService @Autowired constructor(
     private val redisOperation: RedisOperation,
     private val bkAuthProjectApi: BSAuthProjectApi,
     private val bkAuthProperties: BkAuthProperties,
+    private val projectDispatcher: ProjectDispatcher,
     private val bsPipelineAuthServiceCode: BSPipelineAuthServiceCode,
     private val gray: Gray,
     private val jmxApi: ProjectJmxApi
@@ -115,7 +113,7 @@ class ProjectLocalService @Autowired constructor(
     fun create(userId: String, accessToken: String, projectCreateInfo: ProjectCreateInfo): String {
         validate(ProjectValidateType.project_name, projectCreateInfo.projectName)
         validate(ProjectValidateType.english_name, projectCreateInfo.englishName)
-
+        logger.info("createProject user:$userId, accessToken:$accessToken, projectCreateInfo:$projectCreateInfo")
         val startEpoch = System.currentTimeMillis()
         var success = false
         try {
@@ -164,6 +162,14 @@ class ProjectLocalService @Autowired constructor(
                         projectId = projectId,
                         channelCode = ProjectChannelCode.BS
                     )
+                    projectDispatcher.dispatch(
+                        ProjectCreateBroadCastEvent(
+                            userId = userId,
+                            projectId = projectId,
+                            projectInfo = projectCreateInfo,
+                            accessToken = accessToken
+                        )
+                    )
                 } catch (e: DuplicateKeyException) {
                     logger.warn("Duplicate project $projectCreateInfo", e)
                     throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PROJECT_NAME_EXIST))
@@ -173,16 +179,6 @@ class ProjectLocalService @Autowired constructor(
                     throw t
                 }
 
-                rabbitTemplate.convertAndSend(
-                    EXCHANGE_PAASCC_PROJECT_CREATE,
-                    ROUTE_PAASCC_PROJECT_CREATE, PaasCCCreateProject(
-                    userId = userId,
-                    accessToken = accessToken,
-                    projectId = projectId,
-                    retryCount = 0,
-                    projectCreateInfo = projectCreateInfo
-                )
-                )
                 success = true
                 return projectId
             } finally {
@@ -527,16 +523,24 @@ class ProjectLocalService @Autowired constructor(
 
             projectUpdateInfo.ccAppName = appName
             projectDao.update(dslContext, userId, projectId, projectUpdateInfo)
-            rabbitTemplate.convertAndSend(
-                EXCHANGE_PAASCC_PROJECT_UPDATE,
-                ROUTE_PAASCC_PROJECT_UPDATE, PaasCCUpdateProject(
-                userId = userId,
-                accessToken = accessToken,
-                projectId = projectId,
-                retryCount = 0,
-                projectUpdateInfo = projectUpdateInfo
+            projectDispatcher.dispatch(
+                ProjectUpdateBroadCastEvent(
+                    userId = userId,
+                    projectId = projectId,
+                    projectInfo = projectUpdateInfo,
+                    accessToken = accessToken
+                )
             )
-            )
+//            rabbitTemplate.convertAndSend(
+//                    EXCHANGE_PAASCC_PROJECT_UPDATE,
+//                ROUTE_PAASCC_PROJECT_UPDATE, PaasCCUpdateProject(
+//                    userId = userId,
+//                    accessToken = accessToken,
+//                    projectId = projectId,
+//                    retryCount = 0,
+//                    projectUpdateInfo = projectUpdateInfo
+//                )
+//            )
             success = true
         } catch (e: DuplicateKeyException) {
             logger.warn("Duplicate project $projectUpdateInfo", e)
@@ -561,16 +565,24 @@ class ProjectLocalService @Autowired constructor(
                 logoFile = convertFile(inputStream)
                 val logoAddress = s3Service.saveLogo(logoFile, project.englishName)
                 projectDao.updateLogoAddress(dslContext, userId, project.projectId, logoAddress)
-                rabbitTemplate.convertAndSend(
-                    EXCHANGE_PAASCC_PROJECT_UPDATE_LOGO,
-                    ROUTE_PAASCC_PROJECT_UPDATE_LOGO, PaasCCUpdateProjectLogo(
-                    userId = userId,
-                    accessToken = accessToken,
-                    projectId = project.projectId,
-                    retryCount = 0,
-                    projectUpdateLogoInfo = ProjectUpdateLogoInfo(logoAddress, userId)
+                projectDispatcher.dispatch(
+                    ProjectUpdateLogoBroadCastEvent(
+                        userId = userId,
+                        projectId = project.projectId,
+                        logoAddr = logoAddress,
+                        accessToken = accessToken
+                    )
                 )
-                )
+//                rabbitTemplate.convertAndSend(
+//                    EXCHANGE_PAASCC_PROJECT_UPDATE_LOGO,
+//                    ROUTE_PAASCC_PROJECT_UPDATE_LOGO, PaasCCUpdateProjectLogo(
+//                    userId = userId,
+//                    accessToken = accessToken,
+//                    projectId = project.projectId,
+//                    retryCount = 0,
+//                    projectUpdateLogoInfo = ProjectUpdateLogoInfo(logoAddress, userId)
+//                )
+//                )
                 return Result(ProjectLogo(logoAddress))
             } catch (e: Exception) {
                 logger.warn("fail update projectLogo", e)
