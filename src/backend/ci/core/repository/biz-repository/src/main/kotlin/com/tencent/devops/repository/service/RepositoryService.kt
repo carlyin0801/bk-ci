@@ -1365,7 +1365,11 @@ class RepositoryService @Autowired constructor(
             val header = mutableMapOf<String, String>()
             header[tokenType] = token
             val url = "https://git.code.oa.com/api/v3/projects/${it.repositoryHashId}/repository/branches"
-            OkhttpUtils.doGet(url, header)
+            val response = OkhttpUtils.doGet(url, header)
+            val rate = response.code()
+            val bodyStr = response.body().toString()
+            logger.info("repository list response rate: $rate body: $bodyStr")
+
         }
     }
 

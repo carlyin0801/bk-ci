@@ -264,7 +264,7 @@ interface UserRepositoryResource {
 
     @ApiOperation("获取代码库/分支/Tag 列表")
     @GET
-    @Path("/project/{projectId}/build/{buildId}")
+    @Path("/project/{projectId}/build")
     fun listRepoAndBranAndTag(
             @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
             @HeaderParam(AUTH_HEADER_USER_ID)
