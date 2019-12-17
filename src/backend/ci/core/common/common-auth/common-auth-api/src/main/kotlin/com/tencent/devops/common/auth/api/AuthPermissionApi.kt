@@ -123,7 +123,6 @@ interface AuthPermissionApi {
         userIdList: List<String>,
         supplier: (() -> List<String>)?
     ): Boolean
-}
     /**
      * 添加用户指定权限
      * @param user 用户ID
@@ -134,9 +133,11 @@ interface AuthPermissionApi {
      * @return 是否添加成功
      */
     fun createUserPermissions(
-        user: String,
-        serviceCode: AuthServiceCode,
-        resourceType: AuthResourceType,
-        projectCode: String,
-        permissions: Set<AuthPermission>
+            user: String,
+            serviceCode: AuthServiceCode,
+            resourceType: AuthResourceType,
+            projectCode: String,
+            permissions: Set<AuthPermission>
     ): Boolean
+}
+
