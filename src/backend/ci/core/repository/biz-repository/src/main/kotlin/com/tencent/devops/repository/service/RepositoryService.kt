@@ -37,7 +37,12 @@ import com.tencent.devops.common.api.exception.PermissionForbiddenException
 import com.tencent.devops.common.api.exception.RemoteServiceException
 import com.tencent.devops.common.api.model.SQLPage
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.api.util.*
+import com.tencent.devops.common.api.util.PageUtil
+import com.tencent.devops.common.api.util.OkhttpUtils
+import com.tencent.devops.common.api.util.DHUtil
+import com.tencent.devops.common.api.util.HashUtil
+import com.tencent.devops.common.api.util.timestamp
+import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.service.utils.MessageCodeUtil
@@ -1355,11 +1360,11 @@ class RepositoryService @Autowired constructor(
             val token: String
             val tokenType: String
             token = when (it.authType) {
-                "OAUTH"->{
+                "OAUTH" -> {
                     tokenType = "OAUTH-TOKEN"
                     getGitToken(TokenTypeEnum.OAUTH, userId).data.toString()
                 }
-                else->{
+                else -> {
                     tokenType = "PRIVATE-TOKEN"
                     getGitToken(TokenTypeEnum.PRIVATE_KEY, userId).toString()
                 }
@@ -1373,7 +1378,7 @@ class RepositoryService @Autowired constructor(
                 val bodyStr = response.body().toString()
                 logger.info("repository list response rate: $rate body: $bodyStr url: $url")
             } catch (e: Exception) {
-                logger.error("get branch failed")
+                logger.error("get branch failed: ${e.stackTrace}")
             }
         }
     }
