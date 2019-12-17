@@ -27,11 +27,15 @@
 package com.tencent.devops.project.config
 
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
+import com.tencent.devops.project.listener.ProjectEventListener
 import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.FanoutExchange
 import org.springframework.amqp.core.Queue
 import org.springframework.amqp.rabbit.connection.ConnectionFactory
 import org.springframework.amqp.rabbit.core.RabbitAdmin
+import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer
+import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.AutoConfigureOrder
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
@@ -102,6 +106,61 @@ class TencentProjectMQConfiguration {
 
     @Bean
     fun projectCreateListenerContainer(
+        @Autowired connectionFactory: ConnectionFactory,
+        @Autowired projectCreateQueue: Queue,
+        @Autowired rabbitAdmin: RabbitAdmin,
+        @Autowired listener: ProjectEventListener,
+        @Autowired messageConverter: Jackson2JsonMessageConverter
+    ): SimpleMessageListenerContainer{
+        val container = SimpleMessageListenerContainer(connectionFactory)
+        container.setQueueNames(projectCreateQueue.name)
+        val concurrency = 10
+        container.setConcurrentConsumers(concurrency)
+        container.setMaxConcurrentConsumers(Math.max(5, concurrency))
+        container.setRabbitAdmin(rabbitAdmin)
+        val adapter = MessageListenerAdapter(listener, listener::execute.name)
+        adapter.setMessageConverter(messageConverter)
+        container.messageListener = adapter
+        return container
+    }
 
-    )
+    @Bean
+    fun projectUpdateListenerContainer(
+        @Autowired connectionFactory: ConnectionFactory,
+        @Autowired projectUpdateQueue: Queue,
+        @Autowired rabbitAdmin: RabbitAdmin,
+        @Autowired listener: ProjectEventListener,
+        @Autowired messageConverter: Jackson2JsonMessageConverter
+    ): SimpleMessageListenerContainer{
+        val container = SimpleMessageListenerContainer(connectionFactory)
+        container.setQueueNames(projectUpdateQueue.name)
+        val concurrency = 10
+        container.setConcurrentConsumers(concurrency)
+        container.setMaxConcurrentConsumers(Math.max(5, concurrency))
+        container.setRabbitAdmin(rabbitAdmin)
+        val adapter = MessageListenerAdapter(listener, listener::execute.name)
+        adapter.setMessageConverter(messageConverter)
+        container.messageListener = adapter
+        return container
+    }
+
+    @Bean
+    fun projectUpdateLogoListenerContainer(
+        @Autowired connectionFactory: ConnectionFactory,
+        @Autowired projectUpdateLogoQueue: Queue,
+        @Autowired rabbitAdmin: RabbitAdmin,
+        @Autowired listener: ProjectEventListener,
+        @Autowired messageConverter: Jackson2JsonMessageConverter
+    ): SimpleMessageListenerContainer{
+        val container = SimpleMessageListenerContainer(connectionFactory)
+        container.setQueueNames(projectUpdateLogoQueue.name)
+        val concurrency = 10
+        container.setConcurrentConsumers(concurrency)
+        container.setMaxConcurrentConsumers(Math.max(5, concurrency))
+        container.setRabbitAdmin(rabbitAdmin)
+        val adapter = MessageListenerAdapter(listener, listener::execute.name)
+        adapter.setMessageConverter(messageConverter)
+        container.messageListener = adapter
+        return container
+    }
 }
