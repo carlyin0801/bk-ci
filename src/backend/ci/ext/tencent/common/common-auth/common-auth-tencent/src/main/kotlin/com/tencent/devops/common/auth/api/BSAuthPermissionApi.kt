@@ -368,10 +368,9 @@ class BSAuthPermissionApi @Autowired constructor(
         logger.info("addResourcePermissionForUsers url[$url], body[$content]")
         val requestBody = RequestBody.create(mediaType, content)
         val request = Request.Builder().url(url).post(requestBody).build()
-        logger.info("addResourcePermissionForUsers before call")
         try {
             OkhttpUtils.doHttp(request).use { response ->
-                val responseContent = response.body()!!.toString()
+                val responseContent = response.body()!!.string()
                 logger.info("addResourcePermissionForUsers after call, responseContentp[$responseContent]")
                 if (!response.isSuccessful) {
                     logger.error("createUserPermissions fail : user[$userId], projectCode[$projectCode]")
@@ -387,6 +386,7 @@ class BSAuthPermissionApi @Autowired constructor(
             }
         }catch (e: Exception){
             logger.error(e.message)
+            throw e
         }
 
         return result
