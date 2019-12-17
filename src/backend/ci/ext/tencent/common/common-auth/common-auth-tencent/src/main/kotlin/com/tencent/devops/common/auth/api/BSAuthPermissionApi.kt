@@ -352,7 +352,7 @@ class BSAuthPermissionApi @Autowired constructor(
     ): Boolean {
         var result = false
         val accessToken = bsAuthTokenApi.getAccessToken(serviceCode)
-        val url = "${bkAuthProperties.url}/permission/project/service/policy/resource/users/grant?accessToken=$accessToken"
+        val url = "${bkAuthProperties.url}/permission/project/service/policy/resource/users/grant?access_token=$accessToken"
         val userList = mutableListOf<String>()
         userList.add(userId)
         val grantRequest = BkAuthPermissionsGrantRequest(
@@ -378,6 +378,7 @@ class BSAuthPermissionApi @Autowired constructor(
                 }
                 val responseObject =
                     objectMapper.readValue<BkAuthResponse<String>>(responseContent)
+                logger.info("addResourcePermissionForUsers responseObject[$responseObject]")
                 if (responseObject.code != 0) {
                     logger.error("createUserPermissions fail : user[$userId], projectCode[$projectCode], message:${responseObject}")
                     throw RuntimeException()
