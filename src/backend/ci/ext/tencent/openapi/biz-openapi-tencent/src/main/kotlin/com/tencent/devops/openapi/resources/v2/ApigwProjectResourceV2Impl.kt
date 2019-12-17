@@ -29,6 +29,7 @@ import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.openapi.api.v2.ApigwProjectResourceV2
 import com.tencent.devops.openapi.service.v2.ApigwProjectService
+import com.tencent.devops.project.api.pojo.PipelinePermissionInfo
 import com.tencent.devops.project.pojo.ProjectCreateUserDTO
 import com.tencent.devops.project.pojo.ProjectVO
 import com.tencent.devops.project.pojo.Result
@@ -77,6 +78,14 @@ class ApigwProjectResourceV2Impl @Autowired constructor(
         createInfo: ProjectCreateUserDTO
     ): Result<Boolean?> {
         return Result(apigwProjectService.createProjectUserByApp(organizationType, organizationId, createInfo))
+    }
+
+    override fun createUserPipelinePermission(
+        accessToken: String,
+        createUser: String,
+        createInfo: PipelinePermissionInfo
+    ): Result<Boolean?> {
+        return Result(apigwProjectService.createPipelinePermission(createUser, accessToken, createInfo))
     }
 
     companion object {
