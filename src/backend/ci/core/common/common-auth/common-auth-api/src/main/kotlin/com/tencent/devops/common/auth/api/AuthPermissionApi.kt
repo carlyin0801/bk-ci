@@ -131,6 +131,7 @@ interface AuthPermissionApi {
     ): Boolean
 
     fun addResourcePermissionForUsers(
+        userId: String,
         projectCode: String,
         serviceCode: AuthServiceCode,
         permission: AuthPermission,
