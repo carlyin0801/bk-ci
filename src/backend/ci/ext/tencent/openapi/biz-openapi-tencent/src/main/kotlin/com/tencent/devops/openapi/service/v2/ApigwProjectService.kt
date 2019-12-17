@@ -25,15 +25,17 @@
  */
 package com.tencent.devops.openapi.service.v2
 
-import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_BG
-import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_CENTER
-import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_DEPARTMENT
+import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_ID
+import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.project.api.service.service.ServiceTxProjectOrganizationResource
 import com.tencent.devops.project.api.service.service.ServiceTxProjectResource
+import com.tencent.devops.project.pojo.ProjectCreateUserDTO
 import com.tencent.devops.project.pojo.ProjectVO
+import io.swagger.annotations.ApiParam
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import javax.ws.rs.HeaderParam
 
 /**
  * @Description
@@ -68,60 +70,21 @@ class ApigwProjectService(
         ).data
     }
 
-    fun createUser2Project(
-        executeUserId: String,
+    fun createProjectUserByUser(
+        createUserId: String,
+        accessToken: String,
+        createInfo: ProjectCreateUserDTO
+    ): Boolean?{
+        logger.info("createProjectUserByUser:createUserId[$createUserId],accessToken[$accessToken],createInfo[$createInfo]")
+        return client.get(ServiceTxProjectResource::class).createProjectaUserByUser(createUserId, accessToken, createInfo).data
+    }
+
+    fun createProjectUserByApp(
         organizationType: String,
         organizationId: Long,
-        projectCode: String,
-        userId: String
-    ): Boolean{
-        var result = false
-        var bgId: Long? = null
-        var deptId: Long? = null
-        var centerId: Long? = null
-        when(organizationType){
-            AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_BG -> {
-                bgId = organizationId
-            }
-            AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_DEPARTMENT ->{
-                deptId = organizationId
-            }
-            AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_CENTER->{
-                centerId = organizationId
-            }
-            else -> {
-                logger.error("organizationType[$organizationType] error")
-                //TODO: 返回错误码
-                throw RuntimeException()
-            }
-        }
-        val projectList =  client.get(ServiceTxProjectResource::class).getProjectByGroupId(
-            userId = executeUserId,
-            bgId = bgId,
-            deptId = deptId,
-            centerId = centerId
-        ).data
-
-        if(projectList == null || projectList.isEmpty()){
-            logger.error("organization project is empty, organizationId[$organizationId], organizationType:$organizationType")
-            //TODO: 返回错误码
-            throw RuntimeException()
-        }
-        projectList.forEach {
-            if(it.id.equals(projectCode)){
-                result = true
-                return@forEach
-            }
-        }
-        if(!result){
-            logger.error("organization project check fail: organizationId[$organizationId], organizationType[$organizationType] not in project[$projectCode]")
-            //TODO: 返回错误码
-            throw RuntimeException()
-        }
-        return client.get(ServiceTxProjectOrganizationResource:: class).addUser2Project(
-            executeUserId = executeUserId,
-            projectId = projectCode,
-            userId = userId
-        ).data!!
+        createInfo: ProjectCreateUserDTO
+    ): Boolean?{
+        logger.info("createProjectUserByApp:organizationType[$organizationType],organizationId[$organizationId],createInfo[$createInfo]")
+        return client.get(ServiceTxProjectResource::class).createProjectaUserByApp(organizationType, organizationId, createInfo).data
     }
 }
