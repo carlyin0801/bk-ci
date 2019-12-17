@@ -86,7 +86,7 @@ class ProjectPaasCCService @Autowired constructor(
             cc_app_id = projectUpdateInfo.ccAppId,
             cc_app_name = projectUpdateInfo.ccAppName,
             kind = projectUpdateInfo.kind,
-            secrecy = projectUpdateInfo.is_secrecy
+            secrecy = projectUpdateInfo.secrecy
         )
 
         val url = "$ccUrl/update_project/$projectId?access_token=$accessToken"
