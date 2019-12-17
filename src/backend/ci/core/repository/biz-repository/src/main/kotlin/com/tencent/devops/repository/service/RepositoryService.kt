@@ -1373,7 +1373,7 @@ class RepositoryService @Autowired constructor(
                 val bodyStr = response.body().toString()
                 logger.info("repository list response rate: $rate body: $bodyStr url: $url")
             } catch (e: Exception) {
-                logger.error("get branch failed")
+                logger.error("get branch failed: ${e.stackTrace}")
             }
         }
     }
