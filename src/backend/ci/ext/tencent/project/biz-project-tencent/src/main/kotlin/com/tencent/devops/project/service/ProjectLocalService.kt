@@ -44,11 +44,7 @@ import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.gray.Gray
 import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.common.web.mq.EXCHANGE_PAASCC_PROJECT_CREATE
-import com.tencent.devops.common.web.mq.EXCHANGE_PAASCC_PROJECT_UPDATE
-import com.tencent.devops.common.web.mq.EXCHANGE_PAASCC_PROJECT_UPDATE_LOGO
 import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_CREATE
-import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_UPDATE
-import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_UPDATE_LOGO
 import com.tencent.devops.project.constant.ProjectMessageCode
 import com.tencent.devops.project.dao.ProjectDao
 import com.tencent.devops.project.dispatch.ProjectDispatcher
@@ -56,12 +52,9 @@ import com.tencent.devops.project.jmx.api.ProjectJmxApi
 import com.tencent.devops.project.pojo.AuthProjectForCreateResult
 import com.tencent.devops.project.pojo.AuthProjectForList
 import com.tencent.devops.project.pojo.PaasCCCreateProject
-import com.tencent.devops.project.pojo.PaasCCUpdateProject
-import com.tencent.devops.project.pojo.PaasCCUpdateProjectLogo
 import com.tencent.devops.project.pojo.ProjectCreateInfo
 import com.tencent.devops.project.pojo.ProjectLogo
 import com.tencent.devops.project.pojo.ProjectUpdateInfo
-import com.tencent.devops.project.pojo.ProjectUpdateLogoInfo
 import com.tencent.devops.project.pojo.ProjectVO
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.pojo.UserRole
@@ -120,7 +113,7 @@ class ProjectLocalService @Autowired constructor(
     fun create(userId: String, accessToken: String, projectCreateInfo: ProjectCreateInfo): String {
         validate(ProjectValidateType.project_name, projectCreateInfo.projectName)
         validate(ProjectValidateType.english_name, projectCreateInfo.englishName)
-
+        logger.info("createProject user:$userId, accessToken:$accessToken, projectCreateInfo:$projectCreateInfo")
         val startEpoch = System.currentTimeMillis()
         var success = false
         try {
@@ -173,7 +166,8 @@ class ProjectLocalService @Autowired constructor(
                         ProjectCreateBroadCastEvent(
                             userId = userId,
                             projectId = projectId,
-                            projectInfo = projectCreateInfo
+                            projectInfo = projectCreateInfo,
+                            accessToken = accessToken
                         )
                     )
                 } catch (e: DuplicateKeyException) {
@@ -533,7 +527,8 @@ class ProjectLocalService @Autowired constructor(
                 ProjectUpdateBroadCastEvent(
                     userId = userId,
                     projectId = projectId,
-                    projectInfo = projectUpdateInfo
+                    projectInfo = projectUpdateInfo,
+                    accessToken = accessToken
                 )
             )
 //            rabbitTemplate.convertAndSend(
@@ -574,7 +569,8 @@ class ProjectLocalService @Autowired constructor(
                     ProjectUpdateLogoBroadCastEvent(
                         userId = userId,
                         projectId = project.projectId,
-                        logoAddr = logoAddress
+                        logoAddr = logoAddress,
+                        accessToken = accessToken
                     )
                 )
 //                rabbitTemplate.convertAndSend(

@@ -165,7 +165,8 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
                     projectDispatcher.dispatch(ProjectCreateBroadCastEvent(
                         userId = userId,
                         projectId = projectId,
-                        projectInfo = projectCreateInfo
+                        projectInfo = projectCreateInfo,
+                        accessToken = ""
                     ))
                 }
             } catch (e: DuplicateKeyException) {
