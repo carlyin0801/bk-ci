@@ -34,6 +34,7 @@ import com.tencent.devops.common.auth.api.AuthResourceType
 import com.tencent.devops.common.auth.api.BSAuthPermissionApi
 import com.tencent.devops.common.auth.code.BSPipelineAuthServiceCode
 import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.project.api.pojo.PipelinePermissionInfo
 import com.tencent.devops.project.api.service.service.ServiceTxProjectResource
 import com.tencent.devops.project.pojo.AddManagerRequest
 import com.tencent.devops.project.pojo.ProjectCreateInfo
@@ -214,5 +215,13 @@ class ServiceTxProjectResourceImpl @Autowired constructor(
         createInfo: ProjectCreateUserDTO
     ): Result<Boolean> {
         return Result(projectLocalService.createUser2ProjectByApp(organizationType, organizationId, createInfo.userId, createInfo.projectId))
+    }
+
+    override fun createUserPipelinePermission(
+        accessToken: String,
+        createUser: String,
+        createInfo: PipelinePermissionInfo
+    ): Result<Boolean> {
+        return Result(projectLocalService.createPipelinePermission(createUser, createInfo.projectId, createInfo.userId, createInfo.permissionList))
     }
 }
