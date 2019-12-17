@@ -26,6 +26,7 @@
 
 package com.tencent.devops.repository.service
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.constant.RepositoryMessageCode
 import com.tencent.devops.common.api.enums.RepositoryConfig
@@ -37,12 +38,7 @@ import com.tencent.devops.common.api.exception.PermissionForbiddenException
 import com.tencent.devops.common.api.exception.RemoteServiceException
 import com.tencent.devops.common.api.model.SQLPage
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.api.util.PageUtil
-import com.tencent.devops.common.api.util.OkhttpUtils
-import com.tencent.devops.common.api.util.DHUtil
-import com.tencent.devops.common.api.util.HashUtil
-import com.tencent.devops.common.api.util.timestamp
-import com.tencent.devops.common.api.util.timestampmilli
+import com.tencent.devops.common.api.util.*
 import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.service.utils.MessageCodeUtil
@@ -1377,8 +1373,10 @@ class RepositoryService @Autowired constructor(
                 val rate = response.code()
                 val bodyStr = response.body().toString()
                 logger.info("repository list response rate: $rate body: $bodyStr url: $url")
+                val resMap = JsonUtil.to(bodyStr, mutableMapOf<String, Any>().javaClass)
+                logger.info("json map: $resMap")
             } catch (e: Exception) {
-                logger.error("get branch failed: ${e.stackTrace}")
+                logger.error("get branch failed: ${e.message}")
             }
         }
     }
