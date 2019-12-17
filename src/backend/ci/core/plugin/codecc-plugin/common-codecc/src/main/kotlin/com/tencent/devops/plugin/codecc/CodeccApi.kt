@@ -294,6 +294,7 @@ open class CodeccApi constructor(
 //            if (!ripsToolSetId.isNullOrBlank()) map["RIPS"] = ripsToolSetId!!
             if (!woodpeckerToolSetId.isNullOrBlank()) map["WOODPECKER_SENSITIVE"] = woodpeckerToolSetId!!
             if (!horuspyToolSetId.isNullOrBlank()) map["HORUSPY"] = horuspyToolSetId!!
+            if (!pinpointToolSetId.isNullOrBlank()) map["PINPOINT"] = pinpointToolSetId!!
         }
         return map
     }
