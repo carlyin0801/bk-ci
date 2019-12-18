@@ -81,6 +81,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.net.URLEncoder
 import java.time.LocalDateTime
 import java.util.Base64
 import javax.ws.rs.NotFoundException
@@ -1373,9 +1374,9 @@ class RepositoryService @Autowired constructor(
             val header = mutableMapOf<String, String>()
             header[tokenType] = token
             val id = if (it.url.startsWith("http"))
-                it.url.replace("http://git.code.oa.com/", "").replace(".git", "")
+                URLEncoder.encode(it.url.replace("http://git.code.oa.com/", "").replace(".git", ""), "utf-8")
             else
-                it.url.replace("git@git.code.oa.com:", "").replace(".git", "")
+                URLEncoder.encode(it.url.replace("git@git.code.oa.com:", "").replace(".git", ""), "utf-8")
             val url = "https://git.code.oa.com/api/v3/projects/$id/repository/branches?page=$branPage&per_page=$branPageSize"
             logger.info("it.url = ${it.url} url = $url")
             try {
