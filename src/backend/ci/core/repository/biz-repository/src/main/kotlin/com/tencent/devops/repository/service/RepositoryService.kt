@@ -1355,7 +1355,7 @@ class RepositoryService @Autowired constructor(
     fun listRepoAndBranchAndTag(userId: String, projectId: String, repositoryType: ScmType?, repoPage: Int?, repoPageSize: Int?, branPage: Int?, branPageSize: Int?, tagPage: Int?, tagPageSize: Int) {
         logger.info("list Repo|branch|tag start")
         val limit = PageUtil.convertPageSizeToSQLLimit(repoPage, repoPageSize)
-        val repositories = userList(userId, projectId, ScmType.CODE_GIT, "", limit.offset, limit.limit)
+        val repositories = userList(userId, projectId, ScmType.CODE_GIT, null, limit.offset, limit.limit)
         logger.info("get repo by userList: $repositories")
         repositories.first.records.forEach {
             val token: String
@@ -1372,7 +1372,10 @@ class RepositoryService @Autowired constructor(
             }
             val header = mutableMapOf<String, String>()
             header[tokenType] = token
-            val id = it.url.replace("http://git.code.oa.com/", "").replace(".git", "")
+            val id = if (it.url.startsWith("http"))
+                it.url.replace("http://git.code.oa.com/", "").replace(".git", "")
+            else
+                it.url.replace("git@git.code.oa.com:", "").replace(".git", "")
             val url = "https://git.code.oa.com/api/v3/projects/$id/repository/branches?page=$branPage&per_page=$branPageSize"
             logger.info("it.url = ${it.url} url = $url")
             try {
@@ -1383,7 +1386,7 @@ class RepositoryService @Autowired constructor(
                 val resMap = JsonUtil.to(bodyStr, mutableMapOf<String, Any>().javaClass)
                 logger.info("json map: $resMap")
             } catch (e: Exception) {
-                logger.error("get branch failed: ${e.message} it.url=${it.url} url=$url tokenType=$tokenType token=$token")
+                logger.error("get branch failed: header: $header ${e.message} it.url=${it.url} url=$url tokenType=$tokenType token=$token")
             }
         }
     }
