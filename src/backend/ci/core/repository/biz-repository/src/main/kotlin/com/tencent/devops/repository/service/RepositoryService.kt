@@ -1368,7 +1368,7 @@ class RepositoryService @Autowired constructor(
                 }
                 else -> {
                     tokenType = "PRIVATE-TOKEN"
-                    getGitToken(TokenTypeEnum.PRIVATE_KEY, userId).toString()
+                    getGitToken(TokenTypeEnum.PRIVATE_KEY, userId).data.toString()
                 }
             }
             val header = mutableMapOf<String, String>()
