@@ -30,6 +30,8 @@ import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.openapi.api.v2.ApigwProjectResourceV2
 import com.tencent.devops.openapi.service.v2.ApigwProjectService
 import com.tencent.devops.project.api.pojo.PipelinePermissionInfo
+import com.tencent.devops.project.api.service.service.ServiceTxProjectResource
+import com.tencent.devops.project.pojo.ProjectCreateInfo
 import com.tencent.devops.project.pojo.ProjectCreateUserDTO
 import com.tencent.devops.project.pojo.ProjectVO
 import com.tencent.devops.project.pojo.Result
@@ -87,6 +89,8 @@ class ApigwProjectResourceV2Impl @Autowired constructor(
     ): Result<Boolean?> {
         return Result(apigwProjectService.createPipelinePermission(createUser, accessToken, createInfo))
     }
+
+
 
     companion object {
         private val logger = LoggerFactory.getLogger(ApigwProjectResourceV2Impl::class.java)
