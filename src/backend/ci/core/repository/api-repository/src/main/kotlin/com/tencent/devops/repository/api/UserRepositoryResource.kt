@@ -278,19 +278,19 @@ interface UserRepositoryResource {
         @ApiParam(value = "第几页", required = false, defaultValue = "1")
         @QueryParam("repoPage")
         repoPage: Int?,
-        @ApiParam("每页多少条", required = false, defaultValue = "20")
+        @ApiParam("每页多少条", required = false, defaultValue = "5")
         @QueryParam("repoPageSize")
         repoPageSize: Int?,
         @ApiParam(value = "", required = false, defaultValue = "1")
         @QueryParam("branPage")
         branPage: Int?,
-        @ApiParam(value = "", required = false, defaultValue = "20")
+        @ApiParam(value = "", required = false, defaultValue = "5")
         @QueryParam("branPageSize")
         branPageSize: Int?,
         @ApiParam(value = "", required = false, defaultValue = "1")
         @QueryParam("tagPage")
         tagPage: Int?,
-        @ApiParam(value = "", required = false, defaultValue = "20")
+        @ApiParam(value = "", required = false, defaultValue = "5")
         @QueryParam("tagPageSize")
         tagPageSize: Int
     ): Result<String>
