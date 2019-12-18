@@ -39,7 +39,6 @@ import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildLessAto
 import com.tencent.devops.common.pipeline.pojo.element.SubPipelineCallElement
 import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.process.constant.ProcessMessageCode
-import com.tencent.devops.process.engine.pojo.PipelineBuildTask
 import com.tencent.devops.process.engine.service.PipelineBuildService
 import com.tencent.devops.process.engine.service.PipelineRepositoryService
 import com.tencent.devops.process.engine.service.PipelineRuntimeService
@@ -94,7 +93,6 @@ class SubPipelineStartUpService(
 
         if (!pipelinePermissionService.checkPipelinePermission(userId = userId, projectId = project, pipelineId = callPipelineId, permission = AuthPermission.EXECUTE))
             throw PermissionForbiddenException("用户$userId 无权在工程$project 下运行流水线$callPipelineId")
-
 
         logger.info("runVariables: $runVariables")
         val channelCode = ChannelCode.valueOf(runVariables[PIPELINE_START_CHANNEL]
@@ -191,7 +189,7 @@ class SubPipelineStartUpService(
                         val map = element.data
                         val msg = map["input"] as? Map<*, *> ?: return@element
                         val subPip = msg["subPip"]
-                        val subPro = msg["projectId"]
+                        val subPro = if (msg["projectId"].toString().isBlank())projectId else msg["projectId"]
                         val exist = HashSet(currentExistPipelines)
                         checkSubpipeline(atomCode, subPro as String, subPip as String, exist)
                         existPipelines.addAll(exist)
