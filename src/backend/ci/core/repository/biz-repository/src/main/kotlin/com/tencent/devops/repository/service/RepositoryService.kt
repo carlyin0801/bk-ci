@@ -38,7 +38,6 @@ import com.tencent.devops.common.api.exception.RemoteServiceException
 import com.tencent.devops.common.api.model.SQLPage
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.PageUtil
-import com.tencent.devops.common.api.util.OkhttpUtils
 import com.tencent.devops.common.api.util.DHUtil
 import com.tencent.devops.common.api.util.HashUtil
 import com.tencent.devops.common.api.util.timestamp
@@ -75,10 +74,8 @@ import com.tencent.devops.repository.utils.CredentialUtils
 import com.tencent.devops.scm.enums.CodeSvnRegion
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import com.tencent.devops.ticket.api.ServiceCredentialResource
-import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
@@ -1358,6 +1355,12 @@ class RepositoryService @Autowired constructor(
         return true
     }
 
+    val okHttpClient: OkHttpClient = OkHttpClient.Builder()
+            .connectTimeout(60L, TimeUnit.SECONDS)
+            .readTimeout(30L, TimeUnit.MINUTES)
+            .writeTimeout(30L, TimeUnit.MINUTES)
+            .build()
+
     fun listRepoAndBranchAndTag(userId: String, projectId: String, repositoryType: ScmType?, repoPage: Int?, repoPageSize: Int?, branPage: Int?, branPageSize: Int?, tagPage: Int?, tagPageSize: Int) {
         logger.info("list Repo|branch|tag start")
         val limit = PageUtil.convertPageSizeToSQLLimit(repoPage, repoPageSize)
@@ -1391,7 +1394,7 @@ class RepositoryService @Autowired constructor(
                         .get()
                         .build()
 
-                val response = OkhttpUtils.doHttp(request)
+                val response = okHttpClient.newCall(request).execute()
                 //val response = OkhttpUtils.doGet(url, header)
                 val rate = response.code()
                 val bodyStr = response.body().toString()
