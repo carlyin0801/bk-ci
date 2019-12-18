@@ -1387,13 +1387,12 @@ class RepositoryService @Autowired constructor(
                 URLEncoder.encode(it.url.replace("git@git.code.oa.com:", "").replace(".git", ""), "utf-8")
             val url = "http://git.code.oa.com/api/v3/projects/$id/repository/branches?page=$branPage&per_page=$branPageSize"
             logger.info("it.url = ${it.url} url = $url")
+            val request = Request.Builder()
+                    .addHeader(tokenType, token)
+                    .url(url)
+                    .get()
+                    .build()
             try {
-                val request = Request.Builder()
-                        .addHeader(tokenType, token)
-                        .url(url)
-                        .get()
-                        .build()
-
                 val response = okHttpClient.newCall(request).execute()
                 //val response = OkhttpUtils.doGet(url, header)
                 val rate = response.code()
