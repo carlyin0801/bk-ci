@@ -35,6 +35,9 @@ import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_D
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.util.OkhttpUtils
+import com.tencent.devops.common.auth.api.AuthPermission
+import com.tencent.devops.common.auth.api.AuthPermissionApi
+import com.tencent.devops.common.auth.api.AuthResourceType
 import com.tencent.devops.common.auth.api.BSAuthProjectApi
 import com.tencent.devops.common.auth.api.BkAuthProperties
 import com.tencent.devops.common.auth.api.pojo.BkAuthGroup
@@ -98,6 +101,7 @@ class ProjectLocalService @Autowired constructor(
     private val tofService: TOFService,
     private val redisOperation: RedisOperation,
     private val bkAuthProjectApi: BSAuthProjectApi,
+    private val bkAuthPermissionApi: AuthPermissionApi,
     private val bkAuthProperties: BkAuthProperties,
     private val projectDispatcher: ProjectDispatcher,
     private val bsPipelineAuthServiceCode: BSPipelineAuthServiceCode,
@@ -846,11 +850,48 @@ class ProjectLocalService @Autowired constructor(
         }
     }
 
+    fun createPipelinePermission(createUser: String, projectId : String, userId: String, permissionList: List<String>): Boolean{
+        logger.info("createPipelinePermission createUser[$createUser] projectId[$projectId] userId[$userId] permissionList[$permissionList]")
+        if(!bkAuthProjectApi.isProjectUser(createUser,bsPipelineAuthServiceCode, projectId, BkAuthGroup.MANAGER)){
+            logger.info("createPipelinePermission createUser is not project manager,createUser[$createUser] projectId[$projectId]")
+            throw RuntimeException()
+        }
+
+        if(!bkAuthProjectApi.isProjectUser(userId,bsPipelineAuthServiceCode, projectId, null)){
+            logger.info("createPipelinePermission userId is not project manager,userId[$userId] projectId[$projectId]")
+            throw RuntimeException()
+        }
+        val projectInfo = projectDao.getByEnglishName(dslContext, projectId) ?: throw RuntimeException()
+        permissionList.forEach {
+            bkAuthPermissionApi.addResourcePermissionForUsers(
+                userId = userId,
+                projectCode = projectId,
+                permission = AuthPermission.VIEW,
+                serviceCode = bsPipelineAuthServiceCode,
+                resourceType = AuthResourceType.PIPELINE_DEFAULT,
+                resourceCode = AuthResourceType.PIPELINE_DEFAULT.value,
+                userIdList = emptyList(),
+                supplier = null
+            )
+        }
+
+        return true
+    }
+
     private fun createUser2Project(userId: String, projectId: String): Boolean{
         logger.info("[createUser2Project]  userId[$userId] projectCode[$projectId]")
         val projectInfo = projectDao.getByEnglishName(dslContext, projectId) ?: throw RuntimeException()
-        return bkAuthProjectApi.createProjectUser(userId, bsPipelineAuthServiceCode, projectInfo.projectId, BkAuthGroup.DEVELOPER.value)
+        val roleList = bkAuthProjectApi.getProjectRoles(bsPipelineAuthServiceCode, projectId, projectInfo.projectName)
+        var roleId: String? = null
+        roleList.forEach {
+            if(it.roleName.equals(BkAuthGroup.DEVELOPER.value)){
+                roleId = it.roleId.toString()
+                return@forEach
+            }
+        }
+        return bkAuthProjectApi.createProjectUser(userId, bsPipelineAuthServiceCode, projectInfo.projectId, roleId!!)
     }
+
 
     companion object {
         val logger = LoggerFactory.getLogger(this::class.java)

@@ -48,7 +48,6 @@ import okhttp3.RequestBody
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import java.lang.RuntimeException
 
 @Component
 class BSAuthPermissionApi @Autowired constructor(
@@ -57,56 +56,56 @@ class BSAuthPermissionApi @Autowired constructor(
     private val bsAuthTokenApi: BSAuthTokenApi,
     private val jmxAuthApi: JmxAuthApi
 ) : AuthPermissionApi {
-    override fun addResourcePermissionForUsers(userId: String, projectCode: String, serviceCode: AuthServiceCode, permission: AuthPermission, resourceType: AuthResourceType, resourceCode: String, userIdList: List<String>, supplier: (() -> List<String>)?): Boolean {
-        logger.info("addResourcePermissionForUsers:Input($userId,$projectCode,$serviceCode,${permission.name},${resourceType.name},$resourceCode,$userIdList)")
-        val epoch = System.currentTimeMillis()
-        var success = false
-        try {
-            val accessToken = bsAuthTokenApi.getAccessToken(serviceCode)
-            val url = "${bkAuthProperties.url}/permission/project/service/policy/resource/users/grant?" +
-                "access_token=$accessToken"
-
-            val bkAuthPermissionGrantRequest = BkAuthPermissionGrantRequest(
-                projectCode = projectCode,
-                serviceCode = serviceCode.id(),
-                policyCode = permission.value,
-                resourceType = resourceType.value,
-                resourceCode = resourceCode,
-                userIdList = userIdList
-            )
-            val content = objectMapper.writeValueAsString(bkAuthPermissionGrantRequest)
-            val mediaType = MediaType.parse("application/json; charset=utf-8")
-            val requestBody = RequestBody.create(mediaType, content)
-
-            val request = Request.Builder()
-                .url(url)
-                .post(requestBody)
-                .build()
-
-            OkhttpUtils.doHttp(request).use { response ->
-                val responseContent = response.body()!!.string()
-                if (!response.isSuccessful) {
-                    logger.error("Fail to grant user permission. $responseContent")
-                    throw RemoteServiceException("Fail to grant user permission")
-                }
-
-                success = true
-                val responseObject = objectMapper.readValue<BkAuthResponse<String>>(responseContent)
-                if (responseObject.code != 0 && responseObject.code != 400) {
-                    if (responseObject.code == 403) {
-                        bsAuthTokenApi.refreshAccessToken(serviceCode)
-                    }
-                    logger.error("Fail to grant user permission. $responseContent")
-                    throw RemoteServiceException("Fail to grant user permission")
-                }
-                val result = responseObject.code == 0
-                logger.info("addResourcePermissionForUsers:Input($userId,$projectCode,$serviceCode,${permission.name},${resourceType.name},$resourceCode,$userIdList)->Output($result)")
-                return result
-            }
-        } finally {
-            jmxAuthApi.execute(LIST_USER_RESOURCE, System.currentTimeMillis() - epoch, success)
-        }
-    }
+//    override fun addResourcePermissionForUsers(userId: String, projectCode: String, serviceCode: AuthServiceCode, permission: AuthPermission, resourceType: AuthResourceType, resourceCode: String, userIdList: List<String>, supplier: (() -> List<String>)?): Boolean {
+//        logger.info("addResourcePermissionForUsers:Input($userId,$projectCode,$serviceCode,${permission.name},${resourceType.name},$resourceCode,$userIdList)")
+//        val epoch = System.currentTimeMillis()
+//        var success = false
+//        try {
+//            val accessToken = bsAuthTokenApi.getAccessToken(serviceCode)
+//            val url = "${bkAuthProperties.url}/permission/project/service/policy/resource/users/grant?" +
+//                "access_token=$accessToken"
+//
+//            val bkAuthPermissionGrantRequest = BkAuthPermissionGrantRequest(
+//                projectCode = projectCode,
+//                serviceCode = serviceCode.id(),
+//                policyCode = permission.value,
+//                resourceType = resourceType.value,
+//                resourceCode = resourceCode,
+//                userIdList = userIdList
+//            )
+//            val content = objectMapper.writeValueAsString(bkAuthPermissionGrantRequest)
+//            val mediaType = MediaType.parse("application/json; charset=utf-8")
+//            val requestBody = RequestBody.create(mediaType, content)
+//
+//            val request = Request.Builder()
+//                .url(url)
+//                .post(requestBody)
+//                .build()
+//
+//            OkhttpUtils.doHttp(request).use { response ->
+//                val responseContent = response.body()!!.string()
+//                if (!response.isSuccessful) {
+//                    logger.error("Fail to grant user permission. $responseContent")
+//                    throw RemoteServiceException("Fail to grant user permission")
+//                }
+//
+//                success = true
+//                val responseObject = objectMapper.readValue<BkAuthResponse<String>>(responseContent)
+//                if (responseObject.code != 0 && responseObject.code != 400) {
+//                    if (responseObject.code == 403) {
+//                        bsAuthTokenApi.refreshAccessToken(serviceCode)
+//                    }
+//                    logger.error("Fail to grant user permission. $responseContent")
+//                    throw RemoteServiceException("Fail to grant user permission")
+//                }
+//                val result = responseObject.code == 0
+//                logger.info("addResourcePermissionForUsers:Input($userId,$projectCode,$serviceCode,${permission.name},${resourceType.name},$resourceCode,$userIdList)->Output($result)")
+//                return result
+//            }
+//        } finally {
+//            jmxAuthApi.execute(LIST_USER_RESOURCE, System.currentTimeMillis() - epoch, success)
+//        }
+//    }
 
     override fun validateUserResourcePermission(
         user: String,
@@ -341,46 +340,56 @@ class BSAuthPermissionApi @Autowired constructor(
         }
     }
 
-    override fun createUserPermissions(
-        user: String,
-        serviceCode: AuthServiceCode,
-        resourceType: AuthResourceType,
+    override fun addResourcePermissionForUsers(
+        userId: String,
         projectCode: String,
-        permissions: Set<AuthPermission>
+        serviceCode: AuthServiceCode,
+        permission: AuthPermission,
+        resourceType: AuthResourceType,
+        resourceCode: String,
+        userIdList: List<String>,
+        supplier: (() -> List<String>)?
     ): Boolean {
         var result = false
         val accessToken = bsAuthTokenApi.getAccessToken(serviceCode)
-        val url = "${bkAuthProperties.url}/permission/project/service/policy/resource/users/grant?accessToken=$accessToken"
+        val url = "${bkAuthProperties.url}/permission/project/service/policy/resource/users/grant?access_token=$accessToken"
         val userList = mutableListOf<String>()
-        userList.add(user)
+        userList.add(userId)
         val grantRequest = BkAuthPermissionsGrantRequest(
             projectCode = projectCode,
             serviceCode = serviceCode.id(),
-            policyCode = permissions.toList()[0].value,
-            //TODO: 此处为项目id
+            policyCode = permission.value,
             resourceCode = resourceType.value,
             resourceType = resourceType.value,
             userIdList = userList
         )
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val content = objectMapper.writeValueAsString(grantRequest)
+        logger.info("addResourcePermissionForUsers url[$url], body[$content]")
         val requestBody = RequestBody.create(mediaType, content)
-        val request = Request.Builder().post(requestBody).url(url).build()
-        OkhttpUtils.doHttp(request).use { response->
-            val responseContent = response.body()!!.toString()
-            if(!response.isSuccessful){
-                logger.error("createUserPermissions fail : user[$user], projectCode[$projectCode]")
-                throw RuntimeException()
+        val request = Request.Builder().url(url).post(requestBody).build()
+        try {
+            OkhttpUtils.doHttp(request).use { response ->
+                val responseContent = response.body()!!.string()
+                logger.info("addResourcePermissionForUsers after call, responseContentp[$responseContent]")
+                if (!response.isSuccessful) {
+                    logger.error("createUserPermissions fail : user[$userId], projectCode[$projectCode]")
+                    throw RuntimeException()
+                }
+                val responseObject =
+                    objectMapper.readValue<BkAuthResponse<String>>(responseContent)
+                logger.info("addResourcePermissionForUsers responseObject[$responseObject]")
+                if (responseObject.code != 0) {
+                    logger.error("createUserPermissions fail : user[$userId], projectCode[$projectCode], message:${responseObject}")
+                    throw RuntimeException()
+                }
+                result = true
             }
-            //TODO: 定义数据结构
-            val responseObject =
-                objectMapper.readValue<BkAuthResponse<String>>(responseContent)
-            if(responseObject.code != 0){
-                logger.error("createUserPermissions fail : user[$user], projectCode[$projectCode], message:${responseObject}")
-                throw RuntimeException()
-            }
-            result = true
+        }catch (e: Exception){
+            logger.error(e.message)
+            throw e
         }
+
         return result
     }
 
