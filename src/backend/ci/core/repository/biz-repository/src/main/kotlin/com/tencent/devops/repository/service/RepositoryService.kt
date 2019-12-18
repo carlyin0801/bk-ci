@@ -1402,7 +1402,7 @@ class RepositoryService @Autowired constructor(
                 val resMap = JsonUtil.to(bodyStr, mutableMapOf<String, Any>().javaClass)
                 logger.info("json map: $resMap")
             } catch (e: Exception) {
-                logger.error("get branch failed: header: $header ${e.message} it.url=${it.url} url=$url tokenType=$tokenType token=$token")
+                logger.error("get branch failed: request: $request header: $header ${e.message} it.url=${it.url} url=$url tokenType=$tokenType token=$token")
             }
         }
     }
