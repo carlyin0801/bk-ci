@@ -1385,7 +1385,7 @@ class RepositoryService @Autowired constructor(
                 URLEncoder.encode(it.url.replace("http://git.code.oa.com/", "").replace(".git", ""), "utf-8")
             else
                 URLEncoder.encode(it.url.replace("git@git.code.oa.com:", "").replace(".git", ""), "utf-8")
-            val url = "https://git.code.oa.com/api/v3/projects/$id/repository/branches?page=$branPage&per_page=$branPageSize"
+            val url = "http://git.code.oa.com/api/v3/projects/$id/repository/branches?page=$branPage&per_page=$branPageSize"
             logger.info("it.url = ${it.url} url = $url")
             try {
                 val request = Request.Builder()
@@ -1402,7 +1402,7 @@ class RepositoryService @Autowired constructor(
                 val resMap = JsonUtil.to(bodyStr, mutableMapOf<String, Any>().javaClass)
                 logger.info("json map: $resMap")
             } catch (e: Exception) {
-                logger.error("get branch failed: header: $header ${e.message} it.url=${it.url} url=$url tokenType=$tokenType token=$token")
+                logger.error("get branch failed: request: $request header: $header ${e.message} it.url=${it.url} url=$url tokenType=$tokenType token=$token")
             }
         }
     }
