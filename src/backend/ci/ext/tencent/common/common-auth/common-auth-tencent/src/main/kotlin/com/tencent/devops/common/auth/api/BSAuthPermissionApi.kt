@@ -383,7 +383,6 @@ class BSAuthPermissionApi @Autowired constructor(
                 throw RemoteServiceException("add Resource Permission remote fail,message:${responseObject}")
             }
             result = true
-            throw e
         }
 
         return result
