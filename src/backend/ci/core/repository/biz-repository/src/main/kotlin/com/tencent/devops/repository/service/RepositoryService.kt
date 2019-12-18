@@ -75,6 +75,10 @@ import com.tencent.devops.repository.utils.CredentialUtils
 import com.tencent.devops.scm.enums.CodeSvnRegion
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import com.tencent.devops.ticket.api.ServiceCredentialResource
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
@@ -84,6 +88,7 @@ import org.springframework.stereotype.Service
 import java.net.URLEncoder
 import java.time.LocalDateTime
 import java.util.Base64
+import java.util.concurrent.TimeUnit
 import javax.ws.rs.NotFoundException
 
 @Service
@@ -1380,7 +1385,14 @@ class RepositoryService @Autowired constructor(
             val url = "https://git.code.oa.com/api/v3/projects/$id/repository/branches?page=$branPage&per_page=$branPageSize"
             logger.info("it.url = ${it.url} url = $url")
             try {
-                val response = OkhttpUtils.doGet(url, header)
+                val request = Request.Builder()
+                        .addHeader(tokenType, token)
+                        .url(url)
+                        .get()
+                        .build()
+
+                val response = OkhttpUtils.doHttp(request)
+                //val response = OkhttpUtils.doGet(url, header)
                 val rate = response.code()
                 val bodyStr = response.body().toString()
                 logger.info("repository list response rate: $rate body: $bodyStr url: $url")
