@@ -834,7 +834,6 @@ class ImageDao {
         if (!tag.isNullOrBlank()) {
             conditions.add(tImage.IMAGE_TAG.eq(tag))
         }
-        conditions.add(tStoreProjectRel.STORE_TYPE.eq(StoreTypeEnum.IMAGE.type.toByte()))
         // 用户自己发布的（测试、审核、已发布、下架中、已下架）+公共的（已发布、下架中、已下架）
         val query = dslContext.select(
             tImage.ID.`as`(KEY_IMAGE_ID),
@@ -846,6 +845,7 @@ class ImageDao {
             .join(tImageFeature).on(tImage.IMAGE_CODE.eq(tImageFeature.IMAGE_CODE))
             .join(tStoreProjectRel).on(tImage.IMAGE_CODE.eq(tStoreProjectRel.STORE_CODE))
             .where(conditions)
+            .and(tStoreProjectRel.STORE_TYPE.eq(StoreTypeEnum.IMAGE.type.toByte()))
             .and(tStoreProjectRel.PROJECT_CODE.eq(projectId))
             .and(
                 tImage.IMAGE_STATUS.`in`(
