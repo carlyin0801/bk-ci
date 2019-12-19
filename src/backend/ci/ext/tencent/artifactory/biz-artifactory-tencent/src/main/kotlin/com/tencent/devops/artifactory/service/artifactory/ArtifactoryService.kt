@@ -224,6 +224,9 @@ class ArtifactoryService @Autowired constructor(
         crossPipineId: String?,
         crossBuildNo: String?
     ): List<FileDetail> {
+        logger.info("getPropertiesByRegex, projectId: $projectId, pipelineId: $pipelineId, buildId: $buildId" +
+            ", artifactoryType: $artifactoryType, argPath: $argPath, crossProjectId: $crossProjectId, crossPipineId: $crossPipineId" +
+            ", crossBuildNo: $crossBuildNo")
         var targetProjectId = projectId
         var targetPipelineId = pipelineId
         var targetBuildId = buildId
@@ -253,6 +256,7 @@ class ArtifactoryService @Autowired constructor(
                     "用户($lastModifyUser)在项目($crossProjectId)下没有流水线${crossPipineId}下载构建权限")
             }
         }
+        logger.info("targetProjectId: $targetProjectId, targetPipelineId: $targetPipelineId, targetBuildId: $targetBuildId")
 
         val regex = Pattern.compile(",|;")
         val pathArray = regex.split(argPath)
