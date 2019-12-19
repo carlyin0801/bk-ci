@@ -262,8 +262,8 @@ class ArtifactoryService @Autowired constructor(
         val pathArray = regex.split(argPath)
 
         val repoPathPrefix = JFrogUtil.getRepoPath()
-        val pipelinePathPrefix = "/" + JFrogUtil.getPipelinePathPrefix(projectId).removePrefix(repoPathPrefix)
-        val customDirPathPrefix = "/" + JFrogUtil.getCustomDirPathPrefix(projectId).removePrefix(repoPathPrefix)
+        val pipelinePathPrefix = "/" + JFrogUtil.getPipelinePathPrefix(targetProjectId).removePrefix(repoPathPrefix)
+        val customDirPathPrefix = "/" + JFrogUtil.getCustomDirPathPrefix(targetProjectId).removePrefix(repoPathPrefix)
         val ret = mutableListOf<FileDetail>()
 
         pathArray.forEach { path ->
