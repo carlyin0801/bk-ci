@@ -40,6 +40,7 @@ import com.tencent.devops.model.repository.tables.TRepositoryGtiToken
 import com.tencent.devops.process.api.service.ServiceBuildResource
 import com.tencent.devops.repository.dao.GitTokenDao
 import com.tencent.devops.repository.pojo.AuthorizeResult
+import com.tencent.devops.repository.pojo.GitBranch
 import com.tencent.devops.repository.pojo.enums.RedirectUrlTypeEnum
 import com.tencent.devops.repository.pojo.oauth.GitToken
 import org.apache.commons.lang3.RandomStringUtils
@@ -88,6 +89,11 @@ class GitOauthService @Autowired constructor(
             logger.info("get oauth project fail: ${e.message}")
             AuthorizeResult(403, getAuthUrl(authParams))
         }
+    }
+
+    override fun getBranch(userId: String, repositoryId: String, page: Int?, pageSize: Int?): List<GitBranch> {
+        val accessToken = getAccessToken(userId) ?: return mutableListOf()
+        return gitService.getBranch(accessToken.accessToken, userId, repositoryId, page, pageSize)
     }
 
     override fun isOAuth(userId: String, redirectUrlType: RedirectUrlTypeEnum?, atomCode: String?): AuthorizeResult {
