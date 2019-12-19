@@ -117,7 +117,6 @@ abstract class AbsOpProjectServiceImpl @Autowired constructor(
             projectDispatcher.dispatch(ProjectUpdateBroadCastEvent(
                 userId = userId,
                 projectId = projectId,
-                accessToken = accessToken,
                 projectInfo = ProjectUpdateInfo(
                     projectName = projectInfoRequest.projectName,
                     projectType = projectInfoRequest.projectType,

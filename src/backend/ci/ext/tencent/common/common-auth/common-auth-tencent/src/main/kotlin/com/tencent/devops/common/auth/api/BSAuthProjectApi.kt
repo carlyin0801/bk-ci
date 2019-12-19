@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.tencent.devops.common.api.exception.RemoteServiceException
 import com.tencent.devops.common.api.util.OkhttpUtils
+import com.tencent.devops.common.auth.api.pojo.BKAuthProjectRolesResources
 import com.tencent.devops.common.auth.api.pojo.BkAuthGroup
 import com.tencent.devops.common.auth.api.pojo.BkAuthGroupAndUserList
 import com.tencent.devops.common.auth.api.pojo.BkAuthProjectCodeAndId
@@ -185,6 +186,23 @@ class BSAuthProjectApi @Autowired constructor(
             }
             return projectAvailableList
         }
+    }
+
+    override fun createProjectUser(
+        user: String,
+        serviceCode: AuthServiceCode,
+        projectCode: String,
+        role: String
+    ): Boolean {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun getProjectRoles(
+        serviceCode: AuthServiceCode,
+        projectCode: String,
+        projectId: String
+    ): List<BKAuthProjectRolesResources> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     companion object {

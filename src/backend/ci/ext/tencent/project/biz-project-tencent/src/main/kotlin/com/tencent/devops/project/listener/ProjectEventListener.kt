@@ -1,5 +1,7 @@
 package com.tencent.devops.project.listener
 
+import com.tencent.devops.common.auth.api.BSAuthTokenApi
+import com.tencent.devops.common.auth.code.BSPipelineAuthServiceCode
 import com.tencent.devops.common.event.listener.Listener
 import com.tencent.devops.project.pojo.ProjectUpdateLogoInfo
 import com.tencent.devops.project.pojo.mq.ProjectBroadCastEvent
@@ -16,7 +18,9 @@ import org.springframework.stereotype.Component
  */
 @Component
 class ProjectEventListener @Autowired constructor(
-    val projectPaasCCService: ProjectPaasCCService
+    val projectPaasCCService: ProjectPaasCCService,
+    val bsAuthTokenApi: BSAuthTokenApi,
+    val bsPipelineAuthServiceCode: BSPipelineAuthServiceCode
 ) : Listener<ProjectBroadCastEvent> {
 
     override fun execute(event: ProjectBroadCastEvent) {
@@ -30,32 +34,36 @@ class ProjectEventListener @Autowired constructor(
     }
 
     fun onReceiveProjectCreate(event: ProjectCreateBroadCastEvent) {
+        val accessToken = bsAuthTokenApi.getAccessToken(bsPipelineAuthServiceCode)
         projectPaasCCService.createPaasCCProject(
             userId = event.userId,
-            accessToken = event.userId,
             projectId = event.projectId,
+            accessToken = accessToken,
             projectCreateInfo = event.projectInfo
         )
     }
 
     fun onReceiveProjectUpdate(event: ProjectUpdateBroadCastEvent) {
+        val accessToken = bsAuthTokenApi.getAccessToken(bsPipelineAuthServiceCode)
         projectPaasCCService.updatePaasCCProject(
             userId = event.userId,
-            accessToken = event.userId,
             projectId = event.projectId,
-            projectUpdateInfo = event.projectInfo
-        )
+            projectUpdateInfo = event.projectInfo,
+            accessToken = accessToken
+            )
     }
 
     fun onReceiveProjectUpdateLogo(event: ProjectUpdateLogoBroadCastEvent) {
+        val accessToken = bsAuthTokenApi.getAccessToken(bsPipelineAuthServiceCode)
+
         val projectUpdateLogoInfo = ProjectUpdateLogoInfo(
             logo_addr = event.logoAddr,
             updator = event.userId
         )
         projectPaasCCService.updatePaasCCProjectLogo(
             userId = event.userId,
-            accessToken = event.userId,
             projectId = event.projectId,
+            accessToken = accessToken,
             projectUpdateLogoInfo = projectUpdateLogoInfo
         )
     }
