@@ -165,8 +165,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
                     projectDispatcher.dispatch(ProjectCreateBroadCastEvent(
                         userId = userId,
                         projectId = projectId,
-                        projectInfo = projectCreateInfo,
-                        accessToken = ""
+                        projectInfo = projectCreateInfo
                     ))
                 }
             } catch (e: DuplicateKeyException) {
@@ -209,8 +208,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
                     projectDispatcher.dispatch(ProjectUpdateBroadCastEvent(
                         userId = userId,
                         projectId = projectId,
-                        projectInfo = projectUpdateInfo,
-                        accessToken = ""
+                        projectInfo = projectUpdateInfo
                     ))
                 }
             } catch (e: DuplicateKeyException) {
@@ -365,8 +363,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
                     projectDispatcher.dispatch(ProjectUpdateLogoBroadCastEvent(
                         userId = userId,
                         projectId = projectId,
-                        logoAddr = result.data!!,
-                        accessToken = ""
+                        logoAddr = result.data!!
                     ))
                 }
             } catch (e: Exception) {
