@@ -33,6 +33,7 @@ import com.tencent.devops.repository.pojo.AuthorizeResult
 import com.tencent.devops.repository.pojo.GitBranch
 import com.tencent.devops.repository.pojo.enums.RedirectUrlTypeEnum
 import com.tencent.devops.repository.service.scm.IGitOauthService
+import com.tencent.devops.scm.code.git.api.GitBranch
 import org.springframework.beans.factory.annotation.Autowired
 
 @RestResource
@@ -54,5 +55,9 @@ class UserGitResourceImpl @Autowired constructor(
 
     override fun getProject(userId: String, projectId: String, repoHashId: String?): Result<AuthorizeResult> {
         return Result(gitOauthService.getProject(userId, projectId, repoHashId))
+    }
+
+    override fun getBranch(userId: String, repository: String, page: Int?, pageSize: Int?): Result<List<GitBranch>> {
+        return Result(gitOauthService.getBranch(userId, repository, page, pageSize))
     }
 }
