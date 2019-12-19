@@ -230,7 +230,7 @@ class ArtifactoryService @Autowired constructor(
         var targetProjectId = projectId
         var targetPipelineId = pipelineId
         var targetBuildId = buildId
-        if (crossProjectId.isNullOrBlank()) {
+        if (!crossProjectId.isNullOrBlank()) {
             val lastModifyUser = client.get(ServicePipelineResource::class)
                 .getPipelineInfo(projectId, pipelineId, null).data!!.lastModifyUser
 
