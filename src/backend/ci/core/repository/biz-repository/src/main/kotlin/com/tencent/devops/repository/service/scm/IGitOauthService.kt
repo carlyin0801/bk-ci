@@ -30,7 +30,6 @@ import com.tencent.devops.repository.pojo.AuthorizeResult
 import com.tencent.devops.repository.pojo.GitBranch
 import com.tencent.devops.repository.pojo.enums.RedirectUrlTypeEnum
 import com.tencent.devops.repository.pojo.oauth.GitToken
-import com.tencent.devops.scm.code.git.api.GitBranch
 import javax.ws.rs.core.Response
 
 interface IGitOauthService {
