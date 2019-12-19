@@ -36,6 +36,8 @@ import com.tencent.devops.model.store.tables.TLabel
 import com.tencent.devops.model.store.tables.TStoreMember
 import com.tencent.devops.model.store.tables.TStoreProjectRel
 import com.tencent.devops.model.store.tables.records.TImageRecord
+import com.tencent.devops.store.dao.image.Constants.KEY_CREATE_TIME
+import com.tencent.devops.store.dao.image.Constants.KEY_CREATOR
 import com.tencent.devops.store.dao.image.Constants.KEY_IMAGE_CODE
 import com.tencent.devops.store.dao.image.Constants.KEY_IMAGE_FEATURE_PUBLIC_FLAG
 import com.tencent.devops.store.dao.image.Constants.KEY_IMAGE_FEATURE_RECOMMEND_FLAG
@@ -48,10 +50,8 @@ import com.tencent.devops.store.dao.image.Constants.KEY_IMAGE_SOURCE_TYPE
 import com.tencent.devops.store.dao.image.Constants.KEY_IMAGE_STATUS
 import com.tencent.devops.store.dao.image.Constants.KEY_IMAGE_TAG
 import com.tencent.devops.store.dao.image.Constants.KEY_IMAGE_VERSION
-import com.tencent.devops.store.pojo.common.KEY_CREATE_TIME
-import com.tencent.devops.store.pojo.common.KEY_CREATOR
-import com.tencent.devops.store.pojo.common.KEY_MODIFIER
-import com.tencent.devops.store.pojo.common.KEY_UPDATE_TIME
+import com.tencent.devops.store.dao.image.Constants.KEY_MODIFIER
+import com.tencent.devops.store.dao.image.Constants.KEY_UPDATE_TIME
 import com.tencent.devops.store.pojo.common.enums.StoreProjectTypeEnum
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.pojo.image.enums.ImageAgentTypeEnum
@@ -834,6 +834,9 @@ class ImageDao {
         if (!tag.isNullOrBlank()) {
             conditions.add(tImage.IMAGE_TAG.eq(tag))
         }
+        val selfPublishConditions = mutableListOf<Condition>()
+        selfPublishConditions.addAll(conditions)
+        selfPublishConditions.add(tStoreProjectRel.STORE_TYPE.eq(StoreTypeEnum.IMAGE.type.toByte()))
         // 用户自己发布的（测试、审核、已发布、下架中、已下架）+公共的（已发布、下架中、已下架）
         val query = dslContext.select(
             tImage.ID.`as`(KEY_IMAGE_ID),
@@ -844,8 +847,7 @@ class ImageDao {
         ).from(tImage)
             .join(tImageFeature).on(tImage.IMAGE_CODE.eq(tImageFeature.IMAGE_CODE))
             .join(tStoreProjectRel).on(tImage.IMAGE_CODE.eq(tStoreProjectRel.STORE_CODE))
-            .where(conditions)
-            .and(tStoreProjectRel.STORE_TYPE.eq(StoreTypeEnum.IMAGE.type.toByte()))
+            .where(selfPublishConditions)
             .and(tStoreProjectRel.PROJECT_CODE.eq(projectId))
             .and(
                 tImage.IMAGE_STATUS.`in`(
