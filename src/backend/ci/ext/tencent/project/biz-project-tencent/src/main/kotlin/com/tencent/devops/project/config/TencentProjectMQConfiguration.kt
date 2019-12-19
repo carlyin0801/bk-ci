@@ -85,22 +85,22 @@ class TencentProjectMQConfiguration {
 
     @Bean
     fun projectCreateQueueBind(
-            @Autowired projectCreateQueue: Queue,
-            @Autowired projectCreateExchange: FanoutExchange
+        @Autowired projectCreateQueue: Queue,
+        @Autowired projectCreateExchange: FanoutExchange
     ) = BindingBuilder.bind(projectCreateQueue)
             .to(projectCreateExchange)
 
     @Bean
     fun projectUpdateQueueBind(
-            @Autowired projectUpdateQueue: Queue,
-            @Autowired projectUpdateExchange: FanoutExchange
+        @Autowired projectUpdateQueue: Queue,
+        @Autowired projectUpdateExchange: FanoutExchange
     ) = BindingBuilder.bind(projectUpdateQueue)
             .to(projectUpdateExchange)
 
     @Bean
     fun projectUpdateLogoQueueBind(
-            @Autowired projectUpdateLogoQueue: Queue,
-            @Autowired projectUpdateLogoExchange: FanoutExchange
+        @Autowired projectUpdateLogoQueue: Queue,
+        @Autowired projectUpdateLogoExchange: FanoutExchange
     ) = BindingBuilder.bind(projectUpdateLogoQueue)
             .to(projectUpdateLogoExchange)
 
@@ -111,7 +111,7 @@ class TencentProjectMQConfiguration {
         @Autowired rabbitAdmin: RabbitAdmin,
         @Autowired listener: ProjectEventListener,
         @Autowired messageConverter: Jackson2JsonMessageConverter
-    ): SimpleMessageListenerContainer{
+    ): SimpleMessageListenerContainer {
         val container = SimpleMessageListenerContainer(connectionFactory)
         container.setQueueNames(projectCreateQueue.name)
         val concurrency = 10
@@ -131,7 +131,7 @@ class TencentProjectMQConfiguration {
         @Autowired rabbitAdmin: RabbitAdmin,
         @Autowired listener: ProjectEventListener,
         @Autowired messageConverter: Jackson2JsonMessageConverter
-    ): SimpleMessageListenerContainer{
+    ): SimpleMessageListenerContainer {
         val container = SimpleMessageListenerContainer(connectionFactory)
         container.setQueueNames(projectUpdateQueue.name)
         val concurrency = 10
@@ -151,7 +151,7 @@ class TencentProjectMQConfiguration {
         @Autowired rabbitAdmin: RabbitAdmin,
         @Autowired listener: ProjectEventListener,
         @Autowired messageConverter: Jackson2JsonMessageConverter
-    ): SimpleMessageListenerContainer{
+    ): SimpleMessageListenerContainer {
         val container = SimpleMessageListenerContainer(connectionFactory)
         container.setQueueNames(projectUpdateLogoQueue.name)
         val concurrency = 10

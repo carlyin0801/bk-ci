@@ -140,7 +140,7 @@ class ProjectPaasCCService @Autowired constructor(
         }
     }
 
-    companion object{
+    companion object {
         val logger = LoggerFactory.getLogger(this::class.java)
     }
 }

@@ -17,14 +17,14 @@ import org.springframework.stereotype.Component
 @Component
 class ProjectEventListener @Autowired constructor(
     val projectPaasCCService: ProjectPaasCCService
-): Listener<ProjectBroadCastEvent> {
+) : Listener<ProjectBroadCastEvent> {
 
     override fun execute(event: ProjectBroadCastEvent) {
-       if(event is ProjectCreateBroadCastEvent){
+       if (event is ProjectCreateBroadCastEvent) {
            onReceiveProjectCreate(event)
-       }else if(event is ProjectUpdateBroadCastEvent){
+       } else if (event is ProjectUpdateBroadCastEvent) {
            onReceiveProjectUpdate(event)
-       }else if(event is ProjectUpdateLogoBroadCastEvent){
+       } else if (event is ProjectUpdateLogoBroadCastEvent) {
            onReceiveProjectUpdateLogo(event)
        }
     }
