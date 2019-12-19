@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.util.OkhttpUtils
+import com.tencent.devops.common.auth.code.PipelineAuthServiceCode
 import com.tencent.devops.project.pojo.PaasCCProjectForCreate
 import com.tencent.devops.project.pojo.PaasCCProjectForUpdate
 import com.tencent.devops.project.pojo.ProjectCreateInfo
@@ -21,7 +22,8 @@ import org.springframework.stereotype.Service
 
 @Service
 class ProjectPaasCCService @Autowired constructor(
-    val objectMapper: ObjectMapper
+    val objectMapper: ObjectMapper,
+    val bkAuthPipelineAuthServiceCode: PipelineAuthServiceCode
 ) {
     @Value("\${paas_cc.url}")
     private lateinit var ccUrl: String
@@ -140,7 +142,7 @@ class ProjectPaasCCService @Autowired constructor(
         }
     }
 
-    companion object{
+    companion object {
         val logger = LoggerFactory.getLogger(this::class.java)
     }
 }
