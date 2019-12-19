@@ -22,10 +22,9 @@ import org.springframework.stereotype.Service
 
 @Service
 class ProjectPaasCCService @Autowired constructor(
-    val objectMapper: ObjectMapper,
-    val bkAuthPipelineAuthServiceCode: PipelineAuthServiceCode
+    val objectMapper: ObjectMapper
 ) {
-    @Value("\${paas_cc.url}")
+    @Value("\${paas_cc.new_url}")
     private lateinit var ccUrl: String
 
     fun createPaasCCProject(
@@ -52,10 +51,11 @@ class ProjectPaasCCService @Autowired constructor(
             creator = userId
         )
 
-        val url = "$ccUrl/create_project?access_token=$accessToken"
+        val url = "$ccUrl/?access_token=$accessToken"
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val param = objectMapper.writeValueAsString(paasCCProject)
         val requestBody = RequestBody.create(mediaType, param)
+        logger.info("createPaasCCProject url:$url, body:$requestBody")
         val request = Request.Builder().url(url).post(requestBody).build()
         val responseContent = request(request, "调用PaasCC接口创建项目失败")
         val result = objectMapper.readValue<Result<Map<String, Any>>>(responseContent)
@@ -91,10 +91,11 @@ class ProjectPaasCCService @Autowired constructor(
             secrecy = projectUpdateInfo.secrecy
         )
 
-        val url = "$ccUrl/update_project/$projectId?access_token=$accessToken"
+        val url = "$ccUrl/$projectId?access_token=$accessToken"
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val param = objectMapper.writeValueAsString(paasCCProjectForUpdate)
         val requestBody = RequestBody.create(mediaType, param)
+        logger.info("updatePaasCCProject url:$url, body:$requestBody")
         val request = Request.Builder().url(url).put(requestBody).build()
         val responseContent = request(request, "更新PaaSCC的项目信息失败")
         logger.info("Success to update the project with response $responseContent")
@@ -114,7 +115,7 @@ class ProjectPaasCCService @Autowired constructor(
     ) {
         logger.info("Update the paas cc projectLogo $projectUpdateLogoInfo by user $userId with token $accessToken")
 
-        val url = "$ccUrl/update_project/$projectId?access_token=$accessToken"
+        val url = "$ccUrl/$projectId?access_token=$accessToken"
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val param = objectMapper.writeValueAsString(projectUpdateLogoInfo)
         val requestBody = RequestBody.create(mediaType, param)

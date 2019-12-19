@@ -1,6 +1,7 @@
 package com.tencent.devops.project.listener
 
 import com.tencent.devops.common.auth.api.BSAuthTokenApi
+import com.tencent.devops.common.auth.code.BSAuthServiceCode
 import com.tencent.devops.common.auth.code.BSPipelineAuthServiceCode
 import com.tencent.devops.common.event.listener.Listener
 import com.tencent.devops.project.pojo.ProjectUpdateLogoInfo
