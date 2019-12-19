@@ -32,7 +32,6 @@ import com.tencent.devops.common.api.exception.RemoteServiceException
 import com.tencent.devops.common.api.util.OkhttpUtils
 import com.tencent.devops.common.auth.api.pojo.BkAuthPermissionGrantRequest
 import com.tencent.devops.common.auth.api.pojo.BkAuthPermissionVerifyRequest
-import com.tencent.devops.common.auth.api.pojo.BkAuthPermissionsGrantRequest
 import com.tencent.devops.common.auth.api.pojo.BkAuthPermissionsPolicyCodeAndResourceType
 import com.tencent.devops.common.auth.api.pojo.BkAuthPermissionsResources
 import com.tencent.devops.common.auth.api.pojo.BkAuthPermissionsResourcesRequest

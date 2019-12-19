@@ -273,7 +273,7 @@ interface ServiceTxProjectResource {
     @Path("/createUserByUser")
     fun createProjectUserByUser(
         @ApiParam("执行人Id", required = true)
-        @HeaderParam(AUTH_HEADER_USER_ID)
+        @HeaderParam(AUTH_HEADER_DEVOPS_USER_ID)
         createUser: String,
         @ApiParam("添加信息", required = true)
         createInfo: ProjectCreateUserDTO
@@ -299,7 +299,7 @@ interface ServiceTxProjectResource {
         @HeaderParam(AUTH_HEADER_DEVOPS_ACCESS_TOKEN)
         accessToken: String,
         @ApiParam("执行人Id", required = true)
-        @HeaderParam(AUTH_HEADER_USER_ID)
+        @HeaderParam(AUTH_HEADER_DEVOPS_USER_ID)
         createUser: String,
         @ApiParam("添加信息", required = true)
         createInfo: PipelinePermissionInfo
