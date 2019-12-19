@@ -184,7 +184,7 @@ class GitCIBuildService @Autowired constructor(
                 // 根据job类型创建构建容器或者无构建环境容器，默认vmBuild
                 if (job.job.type == null || job.job.type == VM_JOB) {
                     // 构建环境容器每个job的第一个插件都是拉代码
-                    elementList.add(createGitCodeElement(event, gitProjectConf))
+//                    elementList.add(createGitCodeElement(event, gitProjectConf))
                     makeElementList(job, elementList, gitProjectConf, event.userId)
                     addVmBuildContainer(job, elementList, containerList, jobIndex)
                 } else if (job.job.type == NORMAL_JOB) {
