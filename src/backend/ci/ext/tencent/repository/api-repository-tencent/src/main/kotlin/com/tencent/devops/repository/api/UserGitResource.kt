@@ -91,7 +91,7 @@ interface UserGitResource {
 
     @ApiOperation("根据用户ID和仓库ID, 通过oauth方式获取项目分支")
     @GET
-    @Path("/getProject")
+    @Path("/getBranch")
     fun getBranch(
             @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
             @HeaderParam(AUTH_HEADER_USER_ID)
