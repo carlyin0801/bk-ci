@@ -22,10 +22,9 @@ import org.springframework.stereotype.Service
 
 @Service
 class ProjectPaasCCService @Autowired constructor(
-    val objectMapper: ObjectMapper,
-    val bkAuthPipelineAuthServiceCode: PipelineAuthServiceCode
+    val objectMapper: ObjectMapper
 ) {
-    @Value("\${paas_cc.url}")
+    @Value("\${paas_cc.new_url}")
     private lateinit var ccUrl: String
 
     fun createPaasCCProject(
@@ -52,7 +51,7 @@ class ProjectPaasCCService @Autowired constructor(
             creator = userId
         )
 
-        val url = "$ccUrl/create_project?access_token=$accessToken"
+        val url = "$ccUrl/?access_token=$accessToken"
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val param = objectMapper.writeValueAsString(paasCCProject)
         val requestBody = RequestBody.create(mediaType, param)
@@ -91,7 +90,7 @@ class ProjectPaasCCService @Autowired constructor(
             secrecy = projectUpdateInfo.secrecy
         )
 
-        val url = "$ccUrl/update_project/$projectId?access_token=$accessToken"
+        val url = "$ccUrl/$projectId?access_token=$accessToken"
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val param = objectMapper.writeValueAsString(paasCCProjectForUpdate)
         val requestBody = RequestBody.create(mediaType, param)
@@ -114,7 +113,7 @@ class ProjectPaasCCService @Autowired constructor(
     ) {
         logger.info("Update the paas cc projectLogo $projectUpdateLogoInfo by user $userId with token $accessToken")
 
-        val url = "$ccUrl/update_project/$projectId?access_token=$accessToken"
+        val url = "$ccUrl/$projectId?access_token=$accessToken"
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val param = objectMapper.writeValueAsString(projectUpdateLogoInfo)
         val requestBody = RequestBody.create(mediaType, param)
