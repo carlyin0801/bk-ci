@@ -170,8 +170,7 @@ class ProjectLocalService @Autowired constructor(
                         ProjectCreateBroadCastEvent(
                             userId = userId,
                             projectId = projectId,
-                            projectInfo = projectCreateInfo,
-                            accessToken = accessToken
+                            projectInfo = projectCreateInfo
                         )
                     )
                 } catch (e: DuplicateKeyException) {
@@ -531,8 +530,7 @@ class ProjectLocalService @Autowired constructor(
                 ProjectUpdateBroadCastEvent(
                     userId = userId,
                     projectId = projectId,
-                    projectInfo = projectUpdateInfo,
-                    accessToken = accessToken
+                    projectInfo = projectUpdateInfo
                 )
             )
 //            rabbitTemplate.convertAndSend(
@@ -573,8 +571,7 @@ class ProjectLocalService @Autowired constructor(
                     ProjectUpdateLogoBroadCastEvent(
                         userId = userId,
                         projectId = project.projectId,
-                        logoAddr = logoAddress,
-                        accessToken = accessToken
+                        logoAddr = logoAddress
                     )
                 )
 //                rabbitTemplate.convertAndSend(
