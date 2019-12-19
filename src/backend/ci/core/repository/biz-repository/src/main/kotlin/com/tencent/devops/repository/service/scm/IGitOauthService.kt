@@ -30,11 +30,12 @@ import com.tencent.devops.repository.pojo.AuthorizeResult
 import com.tencent.devops.repository.pojo.GitBranch
 import com.tencent.devops.repository.pojo.enums.RedirectUrlTypeEnum
 import com.tencent.devops.repository.pojo.oauth.GitToken
+import com.tencent.devops.scm.code.git.api.GitBranch
 import javax.ws.rs.core.Response
 
 interface IGitOauthService {
     fun getProject(userId: String, projectId: String, repoHashId: String?): AuthorizeResult
-    fun getBranch(userId: String, repositoryId: String, page: Int?, pageSize: Int?): List<GitBranch>
+    fun getBranch(userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch>
     fun isOAuth(userId: String, redirectUrlType: RedirectUrlTypeEnum?, atomCode: String? = null): AuthorizeResult
     fun gitCallback(code: String, state: String): Response
     fun checkAndGetAccessToken(buildId: String, userId: String): GitToken?
