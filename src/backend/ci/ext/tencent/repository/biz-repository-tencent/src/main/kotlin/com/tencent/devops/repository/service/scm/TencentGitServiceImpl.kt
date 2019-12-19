@@ -28,6 +28,7 @@ package com.tencent.devops.repository.service.scm
 
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.client.Client
+import com.tencent.devops.repository.pojo.GitBranch
 import com.tencent.devops.repository.pojo.enums.GitAccessLevelEnum
 import com.tencent.devops.repository.pojo.enums.RepoAuthType
 import com.tencent.devops.repository.pojo.enums.TokenTypeEnum
@@ -52,6 +53,10 @@ class TencentGitServiceImpl @Autowired constructor(val client: Client) : IGitSer
 
     override fun getProject(accessToken: String, userId: String): List<Project> {
         return client.getScm(ServiceGitResource::class).getProject(accessToken, userId).data ?: emptyList()
+    }
+
+    override fun getBranch(accessToken: String, userId: String, repositoryId: String, page: Int?, pageSize: Int?): List<GitBranch> {
+        return mutableListOf()
     }
 
     override fun refreshToken(userId: String, accessToken: GitToken): GitToken {

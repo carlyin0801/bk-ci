@@ -36,6 +36,7 @@ import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.OkhttpUtils
 import com.tencent.devops.common.api.util.script.CommonScriptUtils
 import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.repository.pojo.GitBranch
 import com.tencent.devops.repository.pojo.enums.GitAccessLevelEnum
 import com.tencent.devops.repository.pojo.enums.RepoAuthType
 import com.tencent.devops.repository.pojo.enums.TokenTypeEnum
@@ -139,6 +140,34 @@ class GitService @Autowired constructor(
         } finally {
             logger.info("It took ${System.currentTimeMillis() - startEpoch}ms to get the project")
         }
+    }
+
+    override fun getBranch(accessToken: String, userId: String, repositoryId: String, page: Int?, pageSize: Int?): List<GitBranch> {
+        logger.info("start to get branched: $repositoryId by user: $userId with token: $accessToken")
+
+        val url = "${gitConfig.gitApiUrl}/$repositoryId/repository/branches?access_token=$accessToken&page=$page&per_page=$pageSize"
+        val request = Request.Builder()
+                .url(url)
+                .get()
+                .build()
+
+        val res = mutableListOf<GitBranch>()
+        OkhttpUtils.doHttp(request).use { response ->
+            val data = response.body()!!.string()
+            val branchList = JsonParser().parse(data).asJsonArray
+            logger.info("get branch num: ${branchList.size()}")
+            branchList.forEach {
+                val branch = it.asJsonObject
+                val commit = branch["commit"].asJsonObject
+                res.add(GitBranch(
+                        name = branch["name"].asString,
+                        protected = branch["protected"].asBoolean,
+                        id = commit["id"].asString,
+                        short_id = commit["short_id"].asString
+                ))
+            }
+        }
+        return res
     }
 
     override fun refreshToken(userId: String, accessToken: GitToken): GitToken {

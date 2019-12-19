@@ -30,6 +30,7 @@ import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.repository.api.UserGitResource
 import com.tencent.devops.repository.pojo.AuthorizeResult
+import com.tencent.devops.repository.pojo.GitBranch
 import com.tencent.devops.repository.pojo.enums.RedirectUrlTypeEnum
 import com.tencent.devops.repository.service.scm.IGitOauthService
 import org.springframework.beans.factory.annotation.Autowired
@@ -41,6 +42,10 @@ class UserGitResourceImpl @Autowired constructor(
 
     override fun isOAuth(userId: String, redirectUrlType: RedirectUrlTypeEnum?, atomCode: String?): Result<AuthorizeResult> {
         return Result(gitOauthService.isOAuth(userId, redirectUrlType, atomCode))
+    }
+
+    override fun getBranch(userId: String, repositoryId: String, page: Int?, pageSize: Int?): Result<List<GitBranch>> {
+        return Result(gitOauthService.getBranch(userId, repositoryId, page, pageSize))
     }
 
     override fun deleteToken(userId: String): Result<Int> {
