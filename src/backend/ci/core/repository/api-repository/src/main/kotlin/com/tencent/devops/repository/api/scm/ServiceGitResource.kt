@@ -37,6 +37,7 @@ import com.tencent.devops.repository.pojo.git.GitMrReviewInfo
 import com.tencent.devops.repository.pojo.git.GitProjectInfo
 import com.tencent.devops.repository.pojo.git.UpdateGitProjectInfo
 import com.tencent.devops.repository.pojo.oauth.GitToken
+import com.tencent.devops.scm.code.git.api.GitBranch
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import com.tencent.devops.scm.pojo.Project
 import io.swagger.annotations.Api
@@ -71,6 +72,21 @@ interface ServiceGitResource {
         @QueryParam("userId")
         userId: String
     ): Result<List<Project>>
+
+    @ApiOperation("获取用户所有git项目")
+    @GET
+    @Path("/getBranch/test")
+    fun getBranch(
+            @ApiParam("accessToken", required = true)
+            @QueryParam("accessToken")
+            accessToken: String,
+            @ApiParam("用户id", required = true)
+            @QueryParam("userId")
+            userId: String,
+            @ApiParam("仓库ID", required = true)
+            @QueryParam("repository")
+            repository: String
+    ): Result<List<GitBranch>>
 
     @ApiOperation("刷新用户的token")
     @PUT

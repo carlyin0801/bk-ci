@@ -27,7 +27,6 @@
 package com.tencent.devops.repository.service.scm
 
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.repository.pojo.GitBranch
 import com.tencent.devops.repository.pojo.enums.GitAccessLevelEnum
 import com.tencent.devops.repository.pojo.enums.RepoAuthType
 import com.tencent.devops.repository.pojo.enums.TokenTypeEnum
@@ -39,6 +38,7 @@ import com.tencent.devops.repository.pojo.git.GitProjectInfo
 import com.tencent.devops.repository.pojo.git.UpdateGitProjectInfo
 import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.scm.code.git.api.GitBranch
+import com.tencent.devops.scm.code.git.api.GitTag
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import com.tencent.devops.scm.pojo.Project
 import javax.servlet.http.HttpServletResponse
@@ -46,6 +46,7 @@ import javax.servlet.http.HttpServletResponse
 interface IGitService {
     fun getProject(accessToken: String, userId: String): List<Project>
     fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch>
+    fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag>
     fun refreshToken(userId: String, accessToken: GitToken): GitToken
     fun getAuthUrl(authParamJsonStr: String): String
     fun getToken(userId: String, code: String): GitToken

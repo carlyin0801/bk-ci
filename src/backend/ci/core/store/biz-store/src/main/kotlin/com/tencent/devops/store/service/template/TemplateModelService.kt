@@ -24,10 +24,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.agent
+package com.tencent.devops.store.service.template
 
-const val AGENT_VERSION = 10.5
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.pipeline.Model
 
-fun main(argv: Array<String>) {
-    println(AGENT_VERSION)
+interface TemplateModelService {
+
+    /**
+     * 根据模板代码查询模板模型
+     */
+    fun getTemplateModel(templateCode: String): Result<Model?>
 }

@@ -56,6 +56,7 @@ import com.tencent.devops.scm.code.git.CodeGitUsernameCredentialSetter
 import com.tencent.devops.scm.code.git.api.GitBranch
 import com.tencent.devops.scm.code.git.api.GitBranchCommit
 import com.tencent.devops.scm.code.git.api.GitOauthApi
+import com.tencent.devops.scm.code.git.api.GitTag
 import com.tencent.devops.scm.config.GitConfig
 import com.tencent.devops.scm.exception.ScmException
 import com.tencent.devops.scm.pojo.CommitCheckRequest
@@ -172,9 +173,9 @@ class GitService @Autowired constructor(
     fun getBranch(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch>{
         val pageNotBull = page ?: 1
         val pageSizeNotNull = pageSize ?: 20
-        logger.info("start to get the ${userId}'s $repository branch by accessToken: $accessToken  page: $page pageSize: $pageSize")
+        logger.info("start to get the ${userId}'s $repository branch by accessToken: $pageNotBull  page: $page pageSize: $pageSizeNotNull")
         val repoId = URLEncoder.encode(repository, "utf-8")
-        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$page&pageSize=$pageSize"
+        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$page&pageSize=$pageSizeNotNull"
         val res = mutableListOf<GitBranch>()
         val request = Request.Builder()
                  .url(url)
@@ -199,6 +200,10 @@ class GitService @Autowired constructor(
             }
         }
         return res
+    }
+
+    fun getTag(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitTag>{
+        return emptyList()
     }
 
     fun refreshToken(userId: String, accessToken: GitToken): GitToken {

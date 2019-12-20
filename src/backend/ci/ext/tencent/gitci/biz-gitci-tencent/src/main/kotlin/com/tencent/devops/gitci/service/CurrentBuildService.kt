@@ -39,6 +39,7 @@ import com.tencent.devops.gitci.dao.GitCISettingDao
 import com.tencent.devops.gitci.dao.GitRequestEventBuildDao
 import com.tencent.devops.gitci.dao.GitRequestEventDao
 import com.tencent.devops.gitci.pojo.GitCIModelDetail
+import com.tencent.devops.gitci.pojo.GitRequestEvent
 import com.tencent.devops.process.api.service.ServiceBuildResource
 import com.tencent.devops.process.api.user.UserReportResource
 import com.tencent.devops.process.pojo.Report
@@ -77,6 +78,9 @@ class CurrentBuildService @Autowired constructor(
             channelCode
         ).data!!
 
+        // merge request event获取前一个commitId
+        getLastCommitId(eventRecord)
+
         return GitCIModelDetail(eventRecord!!, modelDetail)
     }
 
@@ -95,7 +99,21 @@ class CurrentBuildService @Autowired constructor(
             channelCode
         ).data!!
 
+        // merge request event获取前一个commitId
+        getLastCommitId(eventRecord)
+
         return GitCIModelDetail(eventRecord!!, modelDetail)
+    }
+
+    private fun getLastCommitId(eventRecord: GitRequestEvent?) {
+        if (eventRecord!!.objectKind == "merge_request") {
+            val lastEventRecord = gitRequestEventDao.getLastRequestEvent(dslContext, eventRecord.gitProjectId, eventRecord.commitTimeStamp!!)
+            if (lastEventRecord != null) {
+                eventRecord.lastCommitId = lastEventRecord.commitId
+            } else {
+                logger.warn("getLatestBuildDetail objectKind = 'merge_request' has no lastEventRecord. id: ${eventRecord.id}, commitTimeStamp: ${eventRecord.commitTimeStamp}")
+            }
+        }
     }
 
     fun search(
