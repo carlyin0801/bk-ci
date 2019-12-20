@@ -172,9 +172,9 @@ class GitService @Autowired constructor(
     fun getBranch(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch>{
         val pageNotBull = page ?: 1
         val pageSizeNotNull = pageSize ?: 20
-        logger.info("start to get the ${userId}'s $repository branch by accessToken: $accessToken  page: $page pageSize: $pageSize")
+        logger.info("start to get the ${userId}'s $repository branch by accessToken: $pageNotBull  page: $page pageSize: $pageSizeNotNull")
         val repoId = URLEncoder.encode(repository, "utf-8")
-        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$page&pageSize=$pageSize"
+        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$pageNotBull&page=$page&pageSize=$pageSizeNotNull"
         val res = mutableListOf<GitBranch>()
         val request = Request.Builder()
                  .url(url)
