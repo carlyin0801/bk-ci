@@ -33,6 +33,8 @@ import com.tencent.devops.gitci.dao.GitCISettingDao
 import com.tencent.devops.gitci.dao.GitRequestEventBuildDao
 import com.tencent.devops.gitci.dao.GitRequestEventDao
 import com.tencent.devops.gitci.pojo.GitCIModelDetail
+import com.tencent.devops.gitci.pojo.GitRequestEvent
+import com.tencent.devops.model.gitci.tables.records.TGitRequestEventRecord
 import com.tencent.devops.process.api.service.ServiceBuildResource
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
@@ -60,6 +62,9 @@ class CurrentBuildService @Autowired constructor(
         val eventRecord = gitRequestEventDao.get(dslContext, eventBuildRecord.eventId)
         val modelDetail = client.get(ServiceBuildResource::class).getBuildDetail(userId, conf.projectCode!!, eventBuildRecord.pipelineId, eventBuildRecord.buildId, channelCode).data!!
 
+        // merge request event获取前一个commitId
+        getLastCommitId(eventRecord)
+
         return GitCIModelDetail(eventRecord!!, modelDetail)
     }
 
@@ -69,6 +74,20 @@ class CurrentBuildService @Autowired constructor(
         val eventRecord = gitRequestEventDao.get(dslContext, eventBuildRecord.eventId)
         val modelDetail = client.get(ServiceBuildResource::class).getBuildDetail(userId, conf.projectCode!!, eventBuildRecord.pipelineId, buildId, channelCode).data!!
 
+        // merge request event获取前一个commitId
+        getLastCommitId(eventRecord)
+
         return GitCIModelDetail(eventRecord!!, modelDetail)
+    }
+
+    private fun getLastCommitId(eventRecord: GitRequestEvent?) {
+        if (eventRecord!!.objectKind == "merge_request") {
+            val lastEventRecord = gitRequestEventDao.getLastRequestEvent(dslContext, eventRecord.id!!, eventRecord.commitTimeStamp!!)
+            if (lastEventRecord != null) {
+                eventRecord.lastCommitId = lastEventRecord.commitId
+            } else {
+                logger.warn("getLatestBuildDetail objectKind = 'merge_request' has no lastEventRecord")
+            }
+        }
     }
 }

@@ -113,6 +113,42 @@ class GitRequestEventDao {
         }
     }
 
+    fun getLastRequestEvent(
+        dslContext: DSLContext,
+        id: Long,
+        commitTimestamp: String
+    ): GitRequestEvent? {
+        with(TGitRequestEvent.T_GIT_REQUEST_EVENT) {
+            val record = dslContext.selectFrom(this)
+                .where(ID.eq(id))
+                .and(COMMIT_TIMESTAMP.lt(commitTimestamp))
+                .limit(1)
+                .fetchOne()
+            return if (record == null) {
+                null
+            } else {
+                GitRequestEvent(
+                    record.id,
+                    record.objectKind,
+                    record.operationKind,
+                    record.extensionAction,
+                    record.gitProjectId,
+                    record.branch,
+                    record.targetBranch,
+                    record.commitId,
+                    record.commitMsg,
+                    record.commitTimestamp,
+                    record.userName,
+                    record.totalCommitCount,
+                    record.mergeRequestId,
+                    "", // record.event,
+                    record.description,
+                    record.mrTitle
+                )
+            }
+        }
+    }
+
     fun getRequestList(
         dslContext: DSLContext,
         gitProjectId: Long,
