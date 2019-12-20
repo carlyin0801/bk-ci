@@ -148,9 +148,9 @@ class GitService @Autowired constructor(
     override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
         val pageNotBull = page ?: 1
         val pageSizeNotNull = pageSize ?: 20
-        logger.info("start to get the ${userId}'s $repository branch by accessToken: $accessToken  page: $pageNotBull pageSize: $pageSizeNotNull")
+        logger.info("start to get the ${userId}'s $repository branch by accessToken: $pageNotBull  page: $page pageSize: $pageSizeNotNull")
         val repoId = URLEncoder.encode(repository, "utf-8")
-        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$pageNotBull&pageSize=$pageSizeNotNull"
+        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$page&pageSize=$pageSizeNotNull"
         val res = mutableListOf<GitBranch>()
         val request = Request.Builder()
                 .url(url)
@@ -158,20 +158,24 @@ class GitService @Autowired constructor(
                 .build()
 
         OkhttpUtils.doHttp(request).use { response ->
-            val data = response.body()!!.string()
+            val data = response.body()?.string() ?: return@use
             val branList = JsonParser().parse(data).asJsonArray
-            branList.forEach {
-                val branch = it.asJsonObject
-                val commit = branch["commit"].asJsonObject
-                res.add(GitBranch(name = branch["name"].asString,
-                        commit = GitBranchCommit(
-                                id = commit["id"].asString,
-                                message = commit["message"].asString,
-                                authoredDate = commit["authored_date"].asString,
-                                authorEmail = commit["author_email"].asString,
-                                authorName = commit["author_name"].asString,
-                                title = commit["title"].asString
-                        )))
+            if (!branList.isJsonNull) {
+                branList.forEach {
+                    val branch = it.asJsonObject
+                    val commit = branch["commit"].asJsonObject
+                    if (!branch.isJsonNull && !commit.isJsonNull) {
+                        res.add(GitBranch(name = if (branch["name"].isJsonNull) "" else branch["name"].asString,
+                                commit = GitBranchCommit(
+                                        id = if (commit["id"].isJsonNull) "" else commit["id"].asString,
+                                        message = if (commit["message"].isJsonNull) "" else commit["message"].asString,
+                                        authoredDate = if (commit["authored_date"].isJsonNull) "" else commit["authored_date"].asString,
+                                        authorEmail = if (commit["author_email"].isJsonNull) "" else commit["author_email"].asString,
+                                        authorName = if (commit["author_name"].isJsonNull) "" else commit["author_name"].asString,
+                                        title = if (commit["title"].isJsonNull) "" else commit["title"].asString
+                                )))
+                    }
+                }
             }
         }
         return res
@@ -190,20 +194,24 @@ class GitService @Autowired constructor(
                 .build()
 
         OkhttpUtils.doHttp(request).use { response ->
-            val data = response.body()!!.string()
+            val data = response.body()?.string() ?: return@use
             val tagList = JsonParser().parse(data).asJsonArray
-            tagList.forEach {
-                val tag = it.asJsonObject
-                val commit = tag["commit"].asJsonObject
-                res.add(GitTag(name = tag["name"].asString, message = tag["message"].asString,
-                        commit = GitTagCommit(
-                                id = commit["id"].asString,
-                                message = commit["message"].asString,
-                                authoredDate = commit["authored_date"].asString,
-                                authorName = commit["author_name"].asString,
-                                authorEmail = commit["author_email"].asString
-                        )
-                ))
+            if (!tagList.isJsonNull) {
+                tagList.forEach {
+                    val tag = it.asJsonObject
+                    val commit = tag["commit"].asJsonObject
+                    if(!tag.isJsonNull && !commit.isJsonNull) {
+                        res.add(GitTag(name = if(tag["name"].isJsonNull) "" else tag["name"].asString, message = if(tag["message"].isJsonNull) "" else tag["message"].asString,
+                                commit = GitTagCommit(
+                                        id = if(commit["id"].isJsonNull) "" else commit["id"].asString,
+                                        message = if(commit["message"].isJsonNull) "" else commit["message"].asString,
+                                        authoredDate = if(commit["authored_date"].isJsonNull) "" else commit["authored_date"].asString,
+                                        authorName = if(commit["author_name"].isJsonNull) "" else commit["author_name"].asString,
+                                        authorEmail = if(commit["author_email"].isJsonNull) "" else commit["author_email"].asString
+                                )
+                        ))
+                    }
+                }
             }
         }
         return res
