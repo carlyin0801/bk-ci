@@ -57,11 +57,11 @@ class TencentGitServiceImpl @Autowired constructor(val client: Client) : IGitSer
     }
 
     override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
-        return client.getScm(ServiceGitResource::class).getBranch(accessToken = accessToken, userId = userId, repository = repository).data ?: emptyList()
+        return client.getScm(ServiceGitResource::class).getBranch(accessToken = accessToken, userId = userId, repository = repository, page = page, pageSize = pageSize).data ?: emptyList()
     }
 
     override fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
-        return client.getScm(ServiceGitResource::class).getTag(accessToken = accessToken, userId = userId, repository = repository).data ?: emptyList()
+        return client.getScm(ServiceGitResource::class).getTag(accessToken = accessToken, userId = userId, repository = repository, page = page, pageSize = pageSize).data ?: emptyList()
     }
 
     override fun refreshToken(userId: String, accessToken: GitToken): GitToken {
