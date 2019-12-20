@@ -53,5 +53,5 @@ interface ApigwUserMarketTemplateResourceV2 {
         userId: String,
         @ApiParam("安装研发商店模板到项目请求报文体", required = true)
         installTemplateReq: InstallTemplateReq
-    ): Result<Boolean>
+    ): Result<Map<String, Pair<String, Long>>>
 }
