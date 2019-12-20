@@ -43,6 +43,7 @@ import com.tencent.devops.repository.pojo.AuthorizeResult
 import com.tencent.devops.repository.pojo.enums.RedirectUrlTypeEnum
 import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.scm.code.git.api.GitBranch
+import com.tencent.devops.scm.code.git.api.GitTag
 import org.apache.commons.lang3.RandomStringUtils
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
@@ -96,6 +97,12 @@ class GitOauthService @Autowired constructor(
         logger.info("start to get branch: userId:$userId repository: $repository")
         val accessToken = getAccessToken(userId) ?: return mutableListOf()
         return gitService.getBranch(accessToken = accessToken.accessToken, userId = userId, repository = repository, page = page, pageSize = pageSize)
+    }
+
+    override fun getTag(userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
+        logger.info("start to get tag: userId:$userId repository: $repository")
+        val accessToken = getAccessToken(userId) ?: return mutableListOf()
+        return gitService.getTag(accessToken.accessToken, userId, repository, page, pageSize)
     }
 
     override fun isOAuth(userId: String, redirectUrlType: RedirectUrlTypeEnum?, atomCode: String?): AuthorizeResult {

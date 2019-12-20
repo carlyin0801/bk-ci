@@ -56,6 +56,7 @@ import com.tencent.devops.scm.code.git.CodeGitUsernameCredentialSetter
 import com.tencent.devops.scm.code.git.api.GitBranch
 import com.tencent.devops.scm.code.git.api.GitBranchCommit
 import com.tencent.devops.scm.code.git.api.GitOauthApi
+import com.tencent.devops.scm.code.git.api.GitTag
 import com.tencent.devops.scm.config.GitConfig
 import com.tencent.devops.scm.exception.ScmException
 import com.tencent.devops.scm.pojo.CommitCheckRequest
@@ -199,6 +200,10 @@ class GitService @Autowired constructor(
             }
         }
         return res
+    }
+
+    fun getTag(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitTag>{
+        return emptyList()
     }
 
     fun refreshToken(userId: String, accessToken: GitToken): GitToken {
