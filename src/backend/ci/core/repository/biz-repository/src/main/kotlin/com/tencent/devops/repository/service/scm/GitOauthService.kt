@@ -42,6 +42,7 @@ import com.tencent.devops.repository.dao.GitTokenDao
 import com.tencent.devops.repository.pojo.AuthorizeResult
 import com.tencent.devops.repository.pojo.enums.RedirectUrlTypeEnum
 import com.tencent.devops.repository.pojo.oauth.GitToken
+import com.tencent.devops.scm.code.git.api.GitBranch
 import org.apache.commons.lang3.RandomStringUtils
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
@@ -91,6 +92,7 @@ class GitOauthService @Autowired constructor(
     }
 
     override fun getBranch(userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
+        logger.info("start to get branch: userId:$userId repository: $repository")
         val accessToken = getAccessToken(userId) ?: return mutableListOf()
         return gitService.getBranch(accessToken.accessToken, userId, repository, page, pageSize)
     }
