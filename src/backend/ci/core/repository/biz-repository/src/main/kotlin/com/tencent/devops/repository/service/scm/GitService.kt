@@ -51,6 +51,7 @@ import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.scm.code.git.CodeGitOauthCredentialSetter
 import com.tencent.devops.scm.code.git.CodeGitUsernameCredentialSetter
 import com.tencent.devops.scm.code.git.api.GitBranch
+import com.tencent.devops.scm.code.git.api.GitBranchCommit
 import com.tencent.devops.scm.config.GitConfig
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import com.tencent.devops.scm.pojo.Project
@@ -143,7 +144,35 @@ class GitService @Autowired constructor(
     }
 
     override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
-        return emptyList()
+        val pageNotBull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
+        logger.info("start to get the ${userId}'s $repository branch by accessToken: $accessToken  page: $pageNotBull pageSize: $pageSizeNotNull")
+        val repoId = URLEncoder.encode(repository, "utf-8")
+        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$pageNotBull&pageSize=$pageSizeNotNull"
+        val res = mutableListOf<GitBranch>()
+        val request = Request.Builder()
+                .url(url)
+                .get()
+                .build()
+
+        OkhttpUtils.doHttp(request).use { response ->
+            val data = response.body()!!.string()
+            val branList = JsonParser().parse(data).asJsonArray
+            branList.forEach {
+                val branch = it.asJsonObject
+                val commit = branch["commit"].asJsonObject
+                res.add(GitBranch(name = branch["name"].asString,
+                        commit = GitBranchCommit(
+                                id = commit["id"].asString,
+                                message = commit["message"].asString,
+                                authoredDate = commit["authored_date"].asString,
+                                authorEmail = commit["author_email"].asString,
+                                authorName = commit["author_name"].asString,
+                                title = commit["title"].asString
+                        )))
+            }
+        }
+        return res
     }
 
     override fun refreshToken(userId: String, accessToken: GitToken): GitToken {
