@@ -214,18 +214,22 @@ class GitService @Autowired constructor(
         OkhttpUtils.doHttp(request).use { response ->
             val data = response.body()!!.string()
             val tagList = JsonParser().parse(data).asJsonArray
-            tagList.forEach {
-                val tag = it.asJsonObject
-                val commit = tag["commit"].asJsonObject
-                res.add(GitTag(name = tag["name"].asString, message = tag["message"].asString,
-                        commit = GitTagCommit(
-                                id = commit["id"].asString,
-                                message = commit["message"].asString,
-                                authoredDate = commit["authored_date"].asString,
-                                authorName = commit["author_name"].asString,
-                                authorEmail = commit["author_email"].asString
-                        )
-                ))
+            if (!tagList.isJsonNull) {
+                tagList.forEach {
+                    val tag = it.asJsonObject
+                    val commit = tag["commit"].asJsonObject
+                    if(!tag.isJsonNull && !commit.isJsonNull) {
+                        res.add(GitTag(name = tag["name"].asString, message = tag["message"].asString,
+                                commit = GitTagCommit(
+                                        id = commit["id"].asString,
+                                        message = commit["message"].asString,
+                                        authoredDate = commit["authored_date"].asString,
+                                        authorName = commit["author_name"].asString,
+                                        authorEmail = commit["author_email"].asString
+                                )
+                        ))
+                    }
+                }
             }
         }
         return res
