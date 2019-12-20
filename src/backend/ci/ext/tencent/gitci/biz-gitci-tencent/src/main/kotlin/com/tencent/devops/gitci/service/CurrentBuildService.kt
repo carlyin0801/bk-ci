@@ -112,7 +112,7 @@ class CurrentBuildService @Autowired constructor(
             if (lastEventRecord != null) {
                 eventRecord.lastCommitId = lastEventRecord.commitId
             } else {
-                logger.warn("getLatestBuildDetail objectKind = 'merge_request' has no lastEventRecord")
+                logger.warn("getLatestBuildDetail objectKind = 'merge_request' has no lastEventRecord. id: ${eventRecord.id}, commitTimeStamp: ${eventRecord.commitTimeStamp}")
             }
         }
     }
