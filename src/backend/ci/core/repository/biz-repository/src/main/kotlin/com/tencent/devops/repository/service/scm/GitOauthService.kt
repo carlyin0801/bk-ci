@@ -95,7 +95,7 @@ class GitOauthService @Autowired constructor(
     override fun getBranch(userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
         logger.info("start to get branch: userId:$userId repository: $repository")
         val accessToken = getAccessToken(userId) ?: return mutableListOf()
-        return gitService.getBranch(accessToken.accessToken, userId, repository, page, pageSize)
+        return gitService.getBranch(accessToken = accessToken.accessToken, userId = userId, repository = repository, page = page, pageSize = pageSize)
     }
 
     override fun isOAuth(userId: String, redirectUrlType: RedirectUrlTypeEnum?, atomCode: String?): AuthorizeResult {
