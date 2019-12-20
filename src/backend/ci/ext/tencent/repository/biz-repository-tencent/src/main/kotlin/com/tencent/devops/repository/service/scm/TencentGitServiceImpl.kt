@@ -42,6 +42,7 @@ import com.tencent.devops.scm.api.ServiceGitResource
 import com.tencent.devops.scm.code.git.api.GitBranch
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import com.tencent.devops.scm.pojo.Project
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
@@ -51,7 +52,12 @@ import javax.servlet.http.HttpServletResponse
 @Service
 class TencentGitServiceImpl @Autowired constructor(val client: Client) : IGitService {
 
+    companion object {
+        val logger = LoggerFactory.getLogger(TencentGitServiceImpl::class.java)
+    }
+
     override fun getProject(accessToken: String, userId: String): List<Project> {
+        logger.info("get project method: TencentGitServiceImpl.getProject")
         return client.getScm(ServiceGitResource::class).getProject(accessToken, userId).data ?: emptyList()
     }
 
