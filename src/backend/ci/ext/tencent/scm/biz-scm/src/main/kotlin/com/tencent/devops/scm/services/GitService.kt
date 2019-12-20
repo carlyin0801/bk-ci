@@ -180,20 +180,24 @@ class GitService @Autowired constructor(
                  .build()
 
         OkhttpUtils.doHttp(request).use { response ->
-            val data = response.body()!!.string()
+            val data = response.body()?.string() ?: return@use
             val branList = JsonParser().parse(data).asJsonArray
-            branList.forEach {
-                val branch = it.asJsonObject
-                val commit = branch["commit"].asJsonObject
-                res.add(GitBranch(name = branch["name"].asString,
-                        commit = GitBranchCommit(
-                                id = commit["id"].asString,
-                                message = commit["message"].asString,
-                                authoredDate = commit["authored_date"].asString,
-                                authorEmail = commit["author_email"].asString,
-                                authorName = commit["author_name"].asString,
-                                title = commit["title"].asString
+            if (!branList.isJsonNull) {
+                branList.forEach {
+                    val branch = it.asJsonObject
+                    val commit = branch["commit"].asJsonObject
+                    if (!branch.isJsonNull && !commit.isJsonNull) {
+                        res.add(GitBranch(name = if (branch["name"].isJsonNull) "" else branch["name"].asString,
+                                commit = GitBranchCommit(
+                                        id = if (commit["id"].isJsonNull) "" else commit["id"].asString,
+                                        message = if (commit["message"].isJsonNull) "" else commit["message"].asString,
+                                        authoredDate = if (commit["authored_date"].isJsonNull) "" else commit["authored_date"].asString,
+                                        authorEmail = if (commit["author_email"].isJsonNull) "" else commit["author_email"].asString,
+                                        authorName = if (commit["author_name"].isJsonNull) "" else commit["author_name"].asString,
+                                        title = if (commit["title"].isJsonNull) "" else commit["title"].asString
                                 )))
+                    }
+                }
             }
         }
         return res
@@ -212,7 +216,7 @@ class GitService @Autowired constructor(
                 .build()
 
         OkhttpUtils.doHttp(request).use { response ->
-            val data = response.body()!!.string()
+            val data = response.body()?.string() ?: return@use
             val tagList = JsonParser().parse(data).asJsonArray
             if (!tagList.isJsonNull) {
                 tagList.forEach {
