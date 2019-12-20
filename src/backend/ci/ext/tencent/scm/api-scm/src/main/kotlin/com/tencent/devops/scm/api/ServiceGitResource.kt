@@ -86,13 +86,7 @@ interface ServiceGitResource {
             userId: String,
             @ApiParam("仓库ID", required = true)
             @QueryParam("repository")
-            repository: String,
-            @ApiParam("第几页", required = false)
-            @QueryParam("page")
-            page: Int?,
-            @ApiParam("每页条数", required = false)
-            @QueryParam("pageSize")
-            pageSize: Int?
+            repository: String
     ): Result<List<GitBranch>>
 
     @ApiOperation("刷新用户的token")
