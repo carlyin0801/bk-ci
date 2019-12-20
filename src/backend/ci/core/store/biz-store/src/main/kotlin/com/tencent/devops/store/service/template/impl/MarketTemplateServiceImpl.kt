@@ -27,6 +27,9 @@
 package com.tencent.devops.store.service.template.impl
 
 import com.tencent.devops.common.api.constant.CommonMessageCode
+import com.tencent.devops.common.api.constant.CommonMessageCode.ERROR_SERVICE_INVOKE_FAILURE
+import com.tencent.devops.common.api.constant.CommonMessageCode.PERMISSION_DENIED
+import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.JsonUtil
@@ -449,23 +452,57 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
     }
 
     /**
+     * 安装模板到项目并取得安装结果
+     */
+    override fun installTemplateAndGetResult(userId: String, channelCode: ChannelCode, installTemplateReq: InstallTemplateReq): Result<Map<String, Pair<String, Long>>> {
+        val template = marketTemplateDao.getLatestTemplateByCode(dslContext, installTemplateReq.templateCode)
+            ?: return MessageCodeUtil.generateResponseDataObject(
+                messageCode = CommonMessageCode.PARAMETER_IS_INVALID,
+                params = arrayOf(installTemplateReq.templateCode),
+                data = null
+            )
+        return installTemplateAndGetResult(
+            userId = userId,
+            channelCode = channelCode,
+            template = template,
+            projectCodeList = installTemplateReq.projectCodeList
+        )
+    }
+
+    /**
      * 安装模板到项目
      */
     override fun installTemplate(userId: String, channelCode: ChannelCode, installTemplateReq: InstallTemplateReq): Result<Boolean> {
-        logger.info("installTemplate userId is: $userId")
-        logger.info("installTemplate channelCode is: $channelCode, installTemplateReq is: $installTemplateReq")
-        val templateCode = installTemplateReq.templateCode
-        val projectCodeList = installTemplateReq.projectCodeList
-        val template = marketTemplateDao.getLatestTemplateByCode(dslContext, templateCode)
-        logger.info("template is: $template")
-        if (null == template) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_INVALID, arrayOf(templateCode), false)
-        }
-        // 校验用户是否在模板下插件的可见范围之内和模板的可见范围是否都在其下面的插件可见范围之内
-        val validateResult = validateUserTemplateAtomVisibleDept(userId, templateCode, projectCodeList)
-        if (validateResult.isNotOk()) {
+        val template = marketTemplateDao.getLatestTemplateByCode(dslContext, installTemplateReq.templateCode)
+            ?: return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_INVALID, arrayOf(installTemplateReq.templateCode), false)
+        try {
+            installTemplateAndGetResult(userId, channelCode, template, installTemplateReq.projectCodeList)
+        } catch (e: ErrorCodeException) {
             // 抛出错误提示
-            return Result(validateResult.status, validateResult.message ?: "")
+            return Result(e.statusCode, e.defaultMessage ?: "")
+        }
+        return storeProjectService.installStoreComponent(
+            userId = userId,
+            projectCodeList = installTemplateReq.projectCodeList,
+            storeId = template.id,
+            storeCode = installTemplateReq.templateCode,
+            storeType = StoreTypeEnum.TEMPLATE,
+            publicFlag = template.publicFlag,
+            channelCode = channelCode
+        )
+    }
+
+    private fun installTemplateAndGetResult(userId: String, channelCode: ChannelCode, template: TTemplateRecord, projectCodeList: ArrayList<String>): Result<Map<String, Pair<String, Long>>> {
+        logger.info("installTemplate userId is: $userId")
+        logger.info("template is: $template")
+        // 校验用户是否在模板下插件的可见范围之内和模板的可见范围是否都在其下面的插件可见范围之内
+        val validateResult = validateUserTemplateAtomVisibleDept(userId, template.templateCode, projectCodeList)
+        if (validateResult.isNotOk()) {
+            throw ErrorCodeException(
+                statusCode = validateResult.status,
+                errorCode = PERMISSION_DENIED,
+                defaultMessage = validateResult.message
+            )
         }
         logger.info("validateResult is: $validateResult")
         val validateInstallResult = storeProjectService.validateInstallPermission(
@@ -478,7 +515,11 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
         )
         logger.info("validateInstallResult is: $validateInstallResult")
         if (validateInstallResult.isNotOk()) {
-            return validateInstallResult
+            throw ErrorCodeException(
+                statusCode = validateInstallResult.status,
+                errorCode = PERMISSION_DENIED,
+                defaultMessage = validateInstallResult.message
+            )
         }
         val categoryRecords = templateCategoryRelDao.getCategorysByTemplateId(dslContext, template.id)
         val categoryCodeList = mutableListOf<String>()
@@ -487,7 +528,7 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
         }
         val addMarketTemplateRequest = AddMarketTemplateRequest(
             projectCodeList = projectCodeList,
-            templateCode = templateCode,
+            templateCode = template.templateCode,
             templateName = template.templateName,
             logoUrl = template.logoUrl,
             categoryCodeList = categoryCodeList,
@@ -498,21 +539,15 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
         logger.info("addMarketTemplateResult is $addMarketTemplateResult")
         if (addMarketTemplateResult.isNotOk()) {
             // 抛出错误提示
-            return Result(addMarketTemplateResult.status, addMarketTemplateResult.message ?: "")
+            throw ErrorCodeException(
+                statusCode = addMarketTemplateResult.status,
+                errorCode = ERROR_SERVICE_INVOKE_FAILURE,
+                defaultMessage = addMarketTemplateResult.message
+            )
         }
-
         // 更新生成的模板的红线规则
-        copyQualityRule(userId, templateCode, projectCodeList, addMarketTemplateResult.data ?: mapOf())
-
-        return storeProjectService.installStoreComponent(
-            userId = userId,
-            projectCodeList = projectCodeList,
-            storeId = template.id,
-            storeCode = templateCode,
-            storeType = StoreTypeEnum.TEMPLATE,
-            publicFlag = template.publicFlag,
-            channelCode = channelCode
-        )
+        copyQualityRule(userId, template.templateCode, projectCodeList, addMarketTemplateResult.data ?: mapOf())
+        return addMarketTemplateResult
     }
 
     override fun validateUserTemplateAtomVisibleDept(userId: String, templateCode: String, projectCodeList: List<String>?): Result<Boolean> {
@@ -601,7 +636,7 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
 
     abstract fun validateTempleAtomVisible(templateCode: String, templateModel: Model): Result<Boolean>
 
-    private fun copyQualityRule(userId: String, templateCode: String, projectCodeList: Collection<String>, projectTemplateMap: Map<String, String>) {
+    private fun copyQualityRule(userId: String, templateCode: String, projectCodeList: Collection<String>, projectTemplateMap: Map<String, Pair<String, Long>>) {
         try {
             logger.info("start to copy the quality rule for template: $templateCode")
             val sourceTemplate = client.get(ServiceTemplateResource::class).listTemplateById(
@@ -611,7 +646,7 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
                     sourceTemplate.projectId,
                     templateCode,
                     projectCode,
-                    projectTemplateMap[projectCode] ?: "",
+                    projectTemplateMap[projectCode]?.first ?: "",
                     userId
                 ))
             }
