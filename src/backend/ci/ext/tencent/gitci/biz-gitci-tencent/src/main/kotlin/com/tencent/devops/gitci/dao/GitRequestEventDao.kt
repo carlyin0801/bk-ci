@@ -115,12 +115,12 @@ class GitRequestEventDao {
 
     fun getLastRequestEvent(
         dslContext: DSLContext,
-        id: Long,
+        gitProjectId: Long,
         commitTimestamp: String
     ): GitRequestEvent? {
         with(TGitRequestEvent.T_GIT_REQUEST_EVENT) {
             val record = dslContext.selectFrom(this)
-                .where(ID.eq(id))
+                .where(GIT_PROJECT_ID.eq(gitProjectId))
                 .and(COMMIT_TIMESTAMP.lt(commitTimestamp))
                 .limit(1)
                 .fetchOne()

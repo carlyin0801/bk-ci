@@ -40,7 +40,6 @@ import com.tencent.devops.gitci.dao.GitRequestEventBuildDao
 import com.tencent.devops.gitci.dao.GitRequestEventDao
 import com.tencent.devops.gitci.pojo.GitCIModelDetail
 import com.tencent.devops.gitci.pojo.GitRequestEvent
-import com.tencent.devops.model.gitci.tables.records.TGitRequestEventRecord
 import com.tencent.devops.process.api.service.ServiceBuildResource
 import com.tencent.devops.process.api.user.UserReportResource
 import com.tencent.devops.process.pojo.Report
@@ -108,7 +107,7 @@ class CurrentBuildService @Autowired constructor(
 
     private fun getLastCommitId(eventRecord: GitRequestEvent?) {
         if (eventRecord!!.objectKind == "merge_request") {
-            val lastEventRecord = gitRequestEventDao.getLastRequestEvent(dslContext, eventRecord.id!!, eventRecord.commitTimeStamp!!)
+            val lastEventRecord = gitRequestEventDao.getLastRequestEvent(dslContext, eventRecord.gitProjectId, eventRecord.commitTimeStamp!!)
             if (lastEventRecord != null) {
                 eventRecord.lastCommitId = lastEventRecord.commitId
             } else {
