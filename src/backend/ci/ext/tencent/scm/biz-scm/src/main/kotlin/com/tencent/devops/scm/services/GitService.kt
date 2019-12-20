@@ -219,13 +219,13 @@ class GitService @Autowired constructor(
                     val tag = it.asJsonObject
                     val commit = tag["commit"].asJsonObject
                     if(!tag.isJsonNull && !commit.isJsonNull) {
-                        res.add(GitTag(name = tag["name"].asString, message = tag["message"].asString,
+                        res.add(GitTag(name = if(tag["name"].isJsonNull) "" else tag["name"].asString, message = if(tag["message"].isJsonNull) "" else tag["message"].asString,
                                 commit = GitTagCommit(
-                                        id = commit["id"].asString,
-                                        message = commit["message"].asString,
-                                        authoredDate = commit["authored_date"].asString,
-                                        authorName = commit["author_name"].asString,
-                                        authorEmail = commit["author_email"].asString
+                                        id = if(commit["id"].isJsonNull) "" else commit["id"].asString,
+                                        message = if(commit["message"].isJsonNull) "" else commit["message"].asString,
+                                        authoredDate = if(commit["authored_date"].isJsonNull) "" else commit["authored_date"].asString,
+                                        authorName = if(commit["author_name"].isJsonNull) "" else commit["author_name"].asString,
+                                        authorEmail = if(commit["author_email"].isJsonNull) "" else commit["author_email"].asString
                                 )
                         ))
                     }
