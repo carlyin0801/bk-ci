@@ -77,7 +77,7 @@ interface ServiceGitResource {
 
     @ApiOperation("获取用户所有git项目")
     @GET
-    @Path("/getBranch/test")
+    @Path("/getBranch")
     fun getBranch(
             @ApiParam("accessToken", required = true)
             @QueryParam("accessToken")
