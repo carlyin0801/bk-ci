@@ -53,7 +53,11 @@ import com.tencent.devops.repository.pojo.gitlab.GitlabFileInfo
 import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.scm.code.git.CodeGitOauthCredentialSetter
 import com.tencent.devops.scm.code.git.CodeGitUsernameCredentialSetter
-import com.tencent.devops.scm.code.git.api.*
+import com.tencent.devops.scm.code.git.api.GitBranch
+import com.tencent.devops.scm.code.git.api.GitBranchCommit
+import com.tencent.devops.scm.code.git.api.GitOauthApi
+import com.tencent.devops.scm.code.git.api.GitTagCommit
+import com.tencent.devops.scm.code.git.api.GitTag
 import com.tencent.devops.scm.config.GitConfig
 import com.tencent.devops.scm.exception.ScmException
 import com.tencent.devops.scm.pojo.CommitCheckRequest
@@ -167,17 +171,17 @@ class GitService @Autowired constructor(
         }
     }
 
-    fun getBranch(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch>{
+    fun getBranch(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
         val pageNotBull = page ?: 1
         val pageSizeNotNull = pageSize ?: 20
-        logger.info("start to get the ${userId}'s $repository branch by accessToken: $pageNotBull  page: $page pageSize: $pageSizeNotNull")
+        logger.info("start to get the $userId's $repository branch by accessToken: $pageNotBull  page: $page pageSize: $pageSizeNotNull")
         val repoId = URLEncoder.encode(repository, "utf-8")
         val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$page&pageSize=$pageSizeNotNull"
         val res = mutableListOf<GitBranch>()
         val request = Request.Builder()
-                 .url(url)
-                 .get()
-                 .build()
+            .url(url)
+            .get()
+            .build()
 
         OkhttpUtils.doHttp(request).use { response ->
             val data = response.body()?.string() ?: return@use
@@ -203,17 +207,17 @@ class GitService @Autowired constructor(
         return res
     }
 
-    fun getTag(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitTag>{
+    fun getTag(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
         val pageNotBull = page ?: 1
         val pageSizeNotNull = pageSize ?: 20
-        logger.info("start to get the ${userId}'s $repository tag by accessToken: $accessToken  page: $pageNotBull pageSize: $pageSizeNotNull")
+        logger.info("start to get the $userId's $repository tag by accessToken: $accessToken  page: $pageNotBull pageSize: $pageSizeNotNull")
         val repoId = URLEncoder.encode(repository, "utf-8")
         val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/tags?access_token=$accessToken&page=$page&pageSize=$pageSizeNotNull"
         val res = mutableListOf<GitTag>()
         val request = Request.Builder()
-                .url(url)
-                .get()
-                .build()
+            .url(url)
+            .get()
+            .build()
 
         OkhttpUtils.doHttp(request).use { response ->
             val data = response.body()?.string() ?: return@use
@@ -222,14 +226,14 @@ class GitService @Autowired constructor(
                 tagList.forEach {
                     val tag = it.asJsonObject
                     val commit = tag["commit"].asJsonObject
-                    if(!tag.isJsonNull && !commit.isJsonNull) {
-                        res.add(GitTag(name = if(tag["name"].isJsonNull) "" else tag["name"].asString, message = if(tag["message"].isJsonNull) "" else tag["message"].asString,
+                    if (!tag.isJsonNull && !commit.isJsonNull) {
+                        res.add(GitTag(name = if (tag["name"].isJsonNull) "" else tag["name"].asString, message = if (tag["message"].isJsonNull) "" else tag["message"].asString,
                                 commit = GitTagCommit(
-                                        id = if(commit["id"].isJsonNull) "" else commit["id"].asString,
-                                        message = if(commit["message"].isJsonNull) "" else commit["message"].asString,
-                                        authoredDate = if(commit["authored_date"].isJsonNull) "" else commit["authored_date"].asString,
-                                        authorName = if(commit["author_name"].isJsonNull) "" else commit["author_name"].asString,
-                                        authorEmail = if(commit["author_email"].isJsonNull) "" else commit["author_email"].asString
+                                        id = if (commit["id"].isJsonNull) "" else commit["id"].asString,
+                                        message = if (commit["message"].isJsonNull) "" else commit["message"].asString,
+                                        authoredDate = if (commit["authored_date"].isJsonNull) "" else commit["authored_date"].asString,
+                                        authorName = if (commit["author_name"].isJsonNull) "" else commit["author_name"].asString,
+                                        authorEmail = if (commit["author_email"].isJsonNull) "" else commit["author_email"].asString
                                 )
                         ))
                     }

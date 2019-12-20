@@ -77,15 +77,15 @@ interface ServiceGitResource {
     @GET
     @Path("/getBranch/test")
     fun getBranch(
-            @ApiParam("accessToken", required = true)
-            @QueryParam("accessToken")
-            accessToken: String,
-            @ApiParam("用户id", required = true)
-            @QueryParam("userId")
-            userId: String,
-            @ApiParam("仓库ID", required = true)
-            @QueryParam("repository")
-            repository: String
+        @ApiParam("accessToken", required = true)
+        @QueryParam("accessToken")
+        accessToken: String,
+        @ApiParam("用户id", required = true)
+        @QueryParam("userId")
+        userId: String,
+        @ApiParam("仓库ID", required = true)
+        @QueryParam("repository")
+        repository: String
     ): Result<List<GitBranch>>
 
     @ApiOperation("刷新用户的token")

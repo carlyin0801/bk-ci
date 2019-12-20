@@ -88,18 +88,18 @@ interface UserGitResource {
     @GET
     @Path("/getTag")
     fun getTag(
-            @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-            @HeaderParam(AUTH_HEADER_USER_ID)
-            userId: String,
-            @ApiParam(value = "仓库ID", required = true)
-            @QueryParam("repository")
-            repository: String,
-            @ApiParam(value = "第几页", required = false)
-            @QueryParam("page")
-            page: Int?,
-            @ApiParam(value = "每页数据条数", required = false)
-            @QueryParam("pageSize")
-            pageSize: Int?
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "仓库ID", required = true)
+        @QueryParam("repository")
+        repository: String,
+        @ApiParam(value = "第几页", required = false)
+        @QueryParam("page")
+        page: Int?,
+        @ApiParam(value = "每页数据条数", required = false)
+        @QueryParam("pageSize")
+        pageSize: Int?
     ): Result<List<GitTag>>
 
     @ApiOperation("删除用户的token ID")
