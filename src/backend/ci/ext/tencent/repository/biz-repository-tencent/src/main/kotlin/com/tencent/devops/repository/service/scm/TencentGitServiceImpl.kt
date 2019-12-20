@@ -52,17 +52,12 @@ import javax.servlet.http.HttpServletResponse
 @Service
 class TencentGitServiceImpl @Autowired constructor(val client: Client) : IGitService {
 
-    companion object {
-        val logger = LoggerFactory.getLogger(TencentGitServiceImpl::class.java)
-    }
-
     override fun getProject(accessToken: String, userId: String): List<Project> {
-        logger.info("get project method: TencentGitServiceImpl.getProject")
         return client.getScm(ServiceGitResource::class).getProject(accessToken, userId).data ?: emptyList()
     }
 
     override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
-        return client.getScm(ServiceGitResource::class).getBranch(accessToken, userId, repository, page, pageSize).data ?: emptyList()
+        return client.getScm(ServiceGitResource::class).getBranch(accessToken = accessToken, userId = userId, repository = repository, page = page, pageSize = pageSize).data ?: emptyList()
     }
 
     override fun refreshToken(userId: String, accessToken: GitToken): GitToken {
