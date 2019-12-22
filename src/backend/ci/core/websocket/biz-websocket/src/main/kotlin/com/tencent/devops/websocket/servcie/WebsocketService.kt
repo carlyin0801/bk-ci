@@ -43,6 +43,7 @@ class WebsocketService @Autowired constructor(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(this::class.java)
+        private val sessionSet = mutableSetOf<String>()
     }
 
     // 用户切换页面，需调整sessionId-page,page-sessionIdList两个map
@@ -123,6 +124,7 @@ class WebsocketService @Autowired constructor(
             logger.info("before clearUserSession:${RedisUtlis.getSessionIdByUserId(redisOperation, userId)}")
             RedisUtlis.deleteSigelSessionByUser(redisOperation, userId, sessionId)
             RedisUtlis.cleanSessionTimeOutBySession(redisOperation, sessionId)
+            removeCacheSession(sessionId)
             logger.info("after clearUserSession:${RedisUtlis.getSessionIdByUserId(redisOperation, userId)}")
         } finally {
             redisLock.unlock()
@@ -138,6 +140,19 @@ class WebsocketService @Autowired constructor(
             return false
         }
         return true
+    }
+
+
+    fun getCacheSession(): Set<String> {
+        return sessionSet
+    }
+
+    fun removeCacheSession(sessionId: String) {
+        sessionSet.remove(sessionId)
+    }
+
+    fun createCacheSession(sessionId: String) {
+        sessionSet.add(sessionId)
     }
 
     private fun lockUser(sessionId: String): RedisLock {
