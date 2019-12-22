@@ -74,5 +74,16 @@ class ClearTimeoutCron(
             }
             RedisUtlis.saveSessionTimeOutAll(redisOperation, objectMapper.writeValueAsString(newSessionMap))
         }
+        clearWarnPage()
+    }
+    
+    fun clearWarnPage() {
+        val warnPages = websocketService.getWranPage()
+        warnPages.forEach { page ->
+            val sessionIds = RedisUtlis.getSessionListFormPageSessionByPage(redisOperation, page)
+            if(sessionIds!= null && sessionIds.size > 20 ){
+                logger.warn("[clearTimeOutSession]: page[$page] has more than 20 session, session:${sessionIds}")
+            }
+        }
     }
 }

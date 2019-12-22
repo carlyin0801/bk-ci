@@ -44,6 +44,7 @@ class WebsocketService @Autowired constructor(
     companion object {
         private val logger = LoggerFactory.getLogger(this::class.java)
         private val sessionSet = mutableSetOf<String>()
+        private val moreLimitPage = mutableSetOf<String>()
     }
 
     // 用户切换页面，需调整sessionId-page,page-sessionIdList两个map
@@ -140,6 +141,18 @@ class WebsocketService @Autowired constructor(
             return false
         }
         return true
+    }
+
+    fun getWranPage(): Set<String>{
+        return moreLimitPage
+    }
+
+    fun createWranPage(page: String){
+        moreLimitPage.add(page)
+    }
+
+    fun removeWarnPage(page: String){
+        moreLimitPage.remove(page)
     }
 
 

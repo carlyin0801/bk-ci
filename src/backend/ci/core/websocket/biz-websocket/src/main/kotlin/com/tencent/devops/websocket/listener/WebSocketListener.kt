@@ -28,9 +28,7 @@ package com.tencent.devops.websocket.listener
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tencent.devops.common.event.listener.Listener
-import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.websocket.dispatch.message.SendMessage
-import com.tencent.devops.common.websocket.utils.RedisUtlis
 import com.tencent.devops.websocket.servcie.WebsocketService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -53,19 +51,21 @@ class WebSocketListener @Autowired constructor(
         try {
             val sessionList = event.sessionList
             if (sessionList != null && sessionList.isNotEmpty()) {
-                if(sessionList.size > 20){
+                if (sessionList.size > 20) {
                     logger.warn("websocketList: sessionList is more limit,page:${event.page}, sessionList:$sessionList")
+                    websocketService.createWranPage(event.page!!)
                 }
 
                 sessionList.forEach { session ->
-                    if(!websocketService.getCacheSession().contains(session)){
+                    if (!websocketService.getCacheSession().contains(session)) {
                         return
                     }
                     val startTime = System.currentTimeMillis()
                     messagingTemplate!!.convertAndSend(
-                            "/topic/bk/notify/$session",
-                            objectMapper.writeValueAsString(event.notifyPost))
-                    if(System.currentTimeMillis() - startTime > 100){
+                        "/topic/bk/notify/$session",
+                        objectMapper.writeValueAsString(event.notifyPost)
+                    )
+                    if (System.currentTimeMillis() - startTime > 100) {
                         logger.warn("websocketList: messagingTemplate spent more 100ms, page:${event.page}, sessionList:$sessionList}")
                     }
                 }
