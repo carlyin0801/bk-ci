@@ -76,6 +76,7 @@ object Runner {
                 loop@ while (true) {
                     logger.info("Start to claim the task")
                     val buildTask = ProcessService.claimTask()
+                    val taskName = buildTask.elementName ?: "Task"
                     logger.info("Start to execute the task($buildTask)")
                     when (buildTask.status) {
                         BuildTaskStatus.DO -> {
@@ -88,11 +89,10 @@ object Runner {
                             val taskDaemon = TaskDaemon(task, buildTask, buildVariables, workspacePathFile)
                             try {
                                 LoggerService.elementId = buildTask.elementId!!
-                                LoggerService.addNormalLine("")
-                                LoggerService.addFoldStartLine("${buildTask.elementName}-[${buildTask.elementId}]")
-                                LoggerService.addNormalLine(Ansi().bold().a("Start Element").reset().toString())
 
                                 // 开始Task执行
+//                                LoggerService.addRangeStartLine(taskName)
+                                LoggerService.addFoldStartLine(taskName)
                                 taskDaemon.run()
 
                                 // 获取执行结果
@@ -129,12 +129,14 @@ object Runner {
                                 } else {
                                     // Worker执行的错误处理
                                     logger.warn("[Worker Error] Fail to execute the task($buildTask) with system error", e)
-                                    val defaultErrorMsg = "Unknown system error has occurred with StackTrace:\n"
-                                    defaultErrorMsg.plus(e.toString())
-                                    e.stackTrace.map {
-                                        defaultErrorMsg.plus("\n    at ${it.className}.${it.methodName}(${it.fileName}:${it.lineNumber})")
+                                    val defaultMessage = StringBuilder("Unknown system error has occurred with StackTrace:\n")
+                                    defaultMessage.append(e.toString())
+                                    e.stackTrace.forEach {
+                                        with(it) {
+                                            defaultMessage.append("\n    at $className.$methodName($fileName:$lineNumber)")
+                                        }
                                     }
-                                    message = e.message ?: defaultErrorMsg
+                                    message = e.message ?: defaultMessage.toString()
                                     errorType = ErrorType.SYSTEM.name
                                     errorCode = AtomErrorCode.SYSTEM_WORKER_LOADING_ERROR
                                 }
@@ -155,6 +157,8 @@ object Runner {
                                     errorCode = errorCode
                                 )
                             } finally {
+                                LoggerService.addFoldEndLine(taskName)
+//                                LoggerService.addRangeEndLine(taskName)
                                 LoggerService.elementId = ""
                             }
                         }
@@ -220,7 +224,7 @@ object Runner {
         LoggerService.addNormalLine(Ansi().bold().a("Get build machine properties").reset().toString())
         LoggerService.addNormalLine(Ansi().bold().a("machine.current: ").reset().a(vmName).toString())
         System.getProperties().forEach { k, v ->
-            LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v.toString()).toString())
+            LoggerService.addYellowLine("$k: $v")
         }
         LoggerService.addFoldEndLine("env_machine")
     }
@@ -234,7 +238,7 @@ object Runner {
         LoggerService.addNormalLine(Ansi().bold().a("Get build system properties").reset().toString())
         val envs = System.getenv()
         envs.forEach { (k, v) ->
-            LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v).toString())
+            LoggerService.addYellowLine("$k: $v")
         }
         LoggerService.addFoldEndLine("env_system")
     }
@@ -247,7 +251,7 @@ object Runner {
         LoggerService.addFoldStartLine("env_user")
         LoggerService.addNormalLine(Ansi().bold().a("Resolve the construction process parameter variable table").reset().toString())
         variables.forEach { (k, v) ->
-            LoggerService.addNormalLine(Ansi().bold().a("$k: ").reset().a(v).toString())
+            LoggerService.addYellowLine("$k: $v")
         }
         LoggerService.addFoldEndLine("env_user")
     }

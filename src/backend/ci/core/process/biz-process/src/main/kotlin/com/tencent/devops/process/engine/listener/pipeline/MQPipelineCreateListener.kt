@@ -43,6 +43,7 @@ import com.tencent.devops.common.websocket.enum.NotityLevel
 import com.tencent.devops.common.websocket.pojo.BuildPageInfo
 import com.tencent.devops.common.websocket.pojo.NotifyPost
 import com.tencent.devops.common.websocket.pojo.WebSocketType
+import com.tencent.devops.process.engine.control.CallBackControl
 import com.tencent.devops.process.engine.pojo.PipelineWebhook
 import com.tencent.devops.process.engine.pojo.event.PipelineCreateEvent
 import com.tencent.devops.process.engine.service.PipelineRuntimeService
@@ -63,6 +64,7 @@ class MQPipelineCreateListener @Autowired constructor(
     private val pipelineWebhookService: PipelineWebhookService,
     private val webSocketDispatcher: WebSocketDispatcher,
     private val redisOperation: RedisOperation,
+    private val callBackControl: CallBackControl,
     private val objectMapper: ObjectMapper,
     pipelineEventDispatcher: PipelineEventDispatcher
 ) : BaseListener<PipelineCreateEvent>(pipelineEventDispatcher) {
@@ -71,6 +73,7 @@ class MQPipelineCreateListener @Autowired constructor(
         if (event.source == ("create_pipeline")) {
             pipelineRuntimeService.createPipelineBuildSummary(event.projectId, event.pipelineId, event.buildNo)
             logger.info("[${event.pipelineId}] createPipelineBuildSummary!")
+            callBackControl.pipelineCreateEvent(projectId = event.projectId, pipelineId = event.pipelineId)
         }
         if (event.source == "createWebhook") {
             logger.info("[${event.pipelineId}] createGitWebhook!MQ内调用")
@@ -124,7 +127,7 @@ class MQPipelineCreateListener @Autowired constructor(
                                 )
                         ),
                         code = WebsocketCode.WEBHOOK_ADD_ERROR,
-                        webSocketType = WebSocketType.changWebType(WebSocketType.WEBHOOK),
+                        webSocketType = WebSocketType.NAV.name,
                         page = null
                 )
                 websocketDispatch(post, event)
@@ -140,7 +143,6 @@ class MQPipelineCreateListener @Autowired constructor(
                         pipelineId = event.pipelineId,
                         projectId = event.projectId,
                         userId = event.userId,
-                        pushType = WebSocketType.WEBHOOK,
                         redisOperation = redisOperation,
                         page = notifyPost.dealUrl,
                         objectMapper = objectMapper,

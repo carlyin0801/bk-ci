@@ -26,15 +26,17 @@
 
 package com.tencent.devops.quality.service.v2
 
-import com.tencent.devops.common.api.exception.PermissionForbiddenException
+import com.tencent.devops.common.api.constant.CommonMessageCode
+import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.util.HashUtil
+import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.auth.api.AuthPermissionApi
 import com.tencent.devops.common.auth.api.AuthResourceApi
-import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.auth.api.AuthResourceType
 import com.tencent.devops.common.auth.code.QualityAuthServiceCode
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.pipeline.pojo.element.Element
+import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.model.quality.tables.records.TQualityRuleRecord
 import com.tencent.devops.process.api.service.ServicePipelineResource
 import com.tencent.devops.process.api.service.ServicePipelineTaskResource
@@ -53,6 +55,7 @@ import com.tencent.devops.quality.api.v2.pojo.request.RuleCreateRequest
 import com.tencent.devops.quality.api.v2.pojo.request.RuleUpdateRequest
 import com.tencent.devops.quality.api.v2.pojo.response.QualityRuleSummaryWithPermission
 import com.tencent.devops.quality.api.v2.pojo.response.UserQualityRule
+import com.tencent.devops.quality.constant.QualityMessageCode
 import com.tencent.devops.quality.dao.v2.QualityRuleDao
 import com.tencent.devops.quality.dao.v2.QualityRuleMapDao
 import com.tencent.devops.quality.pojo.RulePermission
@@ -60,6 +63,7 @@ import com.tencent.devops.quality.pojo.enum.NotifyType
 import com.tencent.devops.quality.pojo.enum.RuleOperation
 import com.tencent.devops.quality.pojo.enum.RuleRange
 import com.tencent.devops.quality.util.ElementUtils
+import org.apache.commons.lang3.math.NumberUtils
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
@@ -91,7 +95,7 @@ class QualityRuleService @Autowired constructor(
     }
 
     fun userCreate(userId: String, projectId: String, ruleRequest: RuleCreateRequest): String {
-        validatePermission(userId, projectId, AuthPermission.CREATE, "用户在项目($projectId)下没有创建拦截规则权限")
+        validatePermission(userId, projectId, AuthPermission.CREATE, "用户没有创建拦截规则权限")
         return serviceCreate(userId, projectId, ruleRequest)
     }
 
@@ -122,7 +126,7 @@ class QualityRuleService @Autowired constructor(
     fun userUpdate(userId: String, projectId: String, ruleHashId: String, ruleRequest: RuleUpdateRequest): Boolean {
         val ruleId = HashUtil.decodeIdToLong(ruleHashId)
         logger.info("user($userId) update the rule($ruleId) in project($projectId): $ruleRequest")
-        validatePermission(userId, projectId, ruleId, AuthPermission.EDIT, "用户在项目($projectId)下没拦截规则($ruleHashId)的编辑权限")
+        validatePermission(userId, projectId, ruleId, AuthPermission.EDIT, "用户没有拦截规则的编辑权限")
         dslContext.transactionResult { configuration ->
             val context = DSL.using(configuration)
             qualityRuleDao.update(context, userId, projectId, ruleId, ruleRequest)
@@ -147,14 +151,14 @@ class QualityRuleService @Autowired constructor(
     fun userUpdateEnable(userId: String, projectId: String, ruleHashId: String, enable: Boolean) {
         val ruleId = HashUtil.decodeIdToLong(ruleHashId)
         logger.info("user($userId) update the rule($ruleId) in project($projectId) to $enable")
-        validatePermission(userId, projectId, ruleId, AuthPermission.ENABLE, "用户在项目($projectId)下没拦截规则($ruleHashId)的停用/启用权限")
+        validatePermission(userId, projectId, ruleId, AuthPermission.ENABLE, "用户没拦截规则的停用/启用权限")
         qualityRuleDao.updateEnable(dslContext, ruleId, enable)
     }
 
     fun userDelete(userId: String, projectId: String, ruleHashId: String) {
         val ruleId = HashUtil.decodeIdToLong(ruleHashId)
         logger.info("user($userId) delete the rule($ruleId) in project($projectId)")
-        validatePermission(userId, projectId, ruleId, AuthPermission.ENABLE, "用户在项目($projectId)下没拦截规则($ruleHashId)的停用/启用权限")
+        validatePermission(userId, projectId, ruleId, AuthPermission.ENABLE, "用户没拦截规则的停用/启用权限")
         qualityRuleDao.delete(dslContext, ruleId)
         deleteResource(projectId, ruleId)
     }
@@ -239,10 +243,12 @@ class QualityRuleService @Autowired constructor(
         logger.info("get rule data for ruleId($ruleId): $mapRecord")
 
         // 顺序遍历rule map生成每个指标实际的operation和threshold
-        val indicatorIds = mapRecord.indicatorIds.split(",").map { it.toLong() }
+        val indicatorIds = mapRecord.indicatorIds.split(",")
+            .filter { NumberUtils.isDigits(it) }
+            .map { it.toLong() }
 
         // 查询控制点
-        val controlPoint = qualityControlPointService.serviceGet(record.controlPoint)
+        val controlPoint = qualityControlPointService.serviceGet(record.controlPoint, record.projectId)
         val dataControlPoint = QualityRule.RuleControlPoint(
                 HashUtil.encodeLongId(record.id),
                 record.controlPoint,
@@ -356,9 +362,10 @@ class QualityRuleService @Autowired constructor(
             val summaryIndicatorList = getSummaryIndicatorList(indicators, ruleIndicatorMap)
             val ruleSummaryControlPoint =
                     QualityRuleSummaryWithPermission.RuleSummaryControlPoint(
-                            controlPoint?.hashId ?: "",
-                            controlPoint?.type ?: "",
-                            controlPoint?.name ?: "")
+                        hashId = controlPoint?.hashId ?: "",
+                        name = controlPoint?.type ?: "",
+                        cnName = controlPoint?.name ?: ""
+                    )
             val pipelineCount = rule.indicatorRange.split(",").filter { pipelineIdInfoMap.containsKey(it) }.size
             val ruleTemplateIds = if (rule.pipelineTemplateRange.isNullOrBlank()) listOf() else rule.pipelineTemplateRange.split(",")
             val templatePipelineCount = templatePipelineCountMap.filter { it.key in ruleTemplateIds }.values.sum()
@@ -366,17 +373,17 @@ class QualityRuleService @Autowired constructor(
 
             // 最后生成结果
             QualityRuleSummaryWithPermission(
-                    HashUtil.encodeLongId(rule.id),
-                    rule.name,
-                    ruleSummaryControlPoint,
-                    summaryIndicatorList,
-                    RuleRange.PART_BY_NAME,
-                    templateSummary.plus(pipelineSummary),
-                    pipelineCount + templatePipelineCount,
-                    rule.executeCount,
-                    rule.interceptTimes,
-                    rule.enable,
-                    rulePermission
+                ruleHashId = HashUtil.encodeLongId(rule.id),
+                name = rule.name,
+                controlPoint = ruleSummaryControlPoint,
+                indicatorList = summaryIndicatorList,
+                range = RuleRange.PART_BY_NAME,
+                rangeSummary = templateSummary.plus(pipelineSummary),
+                pipelineCount = pipelineCount + templatePipelineCount,
+                pipelineExecuteCount = rule.executeCount,
+                interceptTimes = rule.interceptTimes,
+                enable = rule.enable,
+                permissions = rulePermission
             )
         } ?: listOf()
         return Pair(count, list)
@@ -423,7 +430,7 @@ class QualityRuleService @Autowired constructor(
             val pipelineId = it.key
             val info = it.value
             val pipelineElement = pipelineElementsMap[pipelineId] ?: listOf()
-            val pipelineElementCodes = pipelineElement.map { it.classType }
+            val pipelineElementCodes = pipelineElement.map { it.atomCode }
             val lackElements = indicatorElement.minus(pipelineElementCodes).toMutableSet()
             if (controlPoint != null && !pipelineElementCodes.contains(controlPoint.type)) lackElements.add(controlPoint.type)
             QualityRuleSummaryWithPermission.RuleRangeSummary(info.pipelineId, info.pipelineName, "PIPELINE",
@@ -462,21 +469,37 @@ class QualityRuleService @Autowired constructor(
         return pipelineList.map { it.pipelineId to it }.toMap()
     }
 
-    private fun validatePermission(userId: String, projectId: String, authPermission: AuthPermission): Boolean {
-        return bkAuthPermissionApi.validateUserResourcePermission(userId, serviceCode, RESOURCE_TYPE, projectId, authPermission)
+    private fun validatePermission(userId: String, projectId: String, bkAuthPermission: AuthPermission): Boolean {
+        return bkAuthPermissionApi.validateUserResourcePermission(userId, serviceCode, RESOURCE_TYPE, projectId, bkAuthPermission)
     }
 
-    private fun validatePermission(userId: String, projectId: String, authPermission: AuthPermission, message: String) {
-        if (!bkAuthPermissionApi.validateUserResourcePermission(userId, serviceCode, RESOURCE_TYPE, projectId, "*", authPermission)) {
+    private fun validatePermission(userId: String, projectId: String, bkAuthPermission: AuthPermission, message: String) {
+        if (!bkAuthPermissionApi.validateUserResourcePermission(userId, serviceCode, RESOURCE_TYPE, projectId, "*", bkAuthPermission)) {
             logger.error(message)
-            throw PermissionForbiddenException(message)
+            val permissionMsg = MessageCodeUtil.getCodeLanMessage(
+                messageCode = "${CommonMessageCode.MSG_CODE_PERMISSION_PREFIX}${bkAuthPermission.value}",
+                defaultMessage = bkAuthPermission.alias
+            )
+            throw ErrorCodeException(
+                errorCode = QualityMessageCode.NEED_QUALITY_INDICATOR_X_PERMISSION,
+                defaultMessage = message,
+                params = arrayOf(permissionMsg)
+            )
         }
     }
 
-    private fun validatePermission(userId: String, projectId: String, ruleId: Long, authPermission: AuthPermission, message: String) {
-        if (!bkAuthPermissionApi.validateUserResourcePermission(userId, serviceCode, RESOURCE_TYPE, projectId, HashUtil.encodeLongId(ruleId), authPermission)) {
+    private fun validatePermission(userId: String, projectId: String, ruleId: Long, bkAuthPermission: AuthPermission, message: String) {
+        if (!bkAuthPermissionApi.validateUserResourcePermission(userId, serviceCode, RESOURCE_TYPE, projectId, HashUtil.encodeLongId(ruleId), bkAuthPermission)) {
             logger.error(message)
-            throw PermissionForbiddenException(message)
+            val permissionMsg = MessageCodeUtil.getCodeLanMessage(
+                messageCode = "${CommonMessageCode.MSG_CODE_PERMISSION_PREFIX}${bkAuthPermission.value}",
+                defaultMessage = bkAuthPermission.alias
+            )
+            throw ErrorCodeException(
+                errorCode = QualityMessageCode.NEED_QUALITY_INDICATOR_X_PERMISSION,
+                defaultMessage = message,
+                params = arrayOf(permissionMsg)
+            )
         }
     }
 
@@ -492,8 +515,8 @@ class QualityRuleService @Autowired constructor(
         bkAuthResourceApi.deleteResource(serviceCode, RESOURCE_TYPE, projectId, HashUtil.encodeLongId(ruleId))
     }
 
-    private fun filterRules(userId: String, projectId: String, authPermissionSet: Set<AuthPermission>): Map<AuthPermission, List<Long>> {
-        val permissionResourceMap = bkAuthPermissionApi.getUserResourcesByPermissions(userId, serviceCode, RESOURCE_TYPE, projectId, authPermissionSet, null)
+    private fun filterRules(userId: String, projectId: String, bkAuthPermissionSet: Set<AuthPermission>): Map<AuthPermission, List<Long>> {
+        val permissionResourceMap = bkAuthPermissionApi.getUserResourcesByPermissions(userId, serviceCode, RESOURCE_TYPE, projectId, bkAuthPermissionSet, null)
         val permissionRuleMap = mutableMapOf<AuthPermission, List<Long>>()
         permissionResourceMap.forEach { permission, list ->
             permissionRuleMap[permission] = list.map { HashUtil.decodeIdToLong(it) }

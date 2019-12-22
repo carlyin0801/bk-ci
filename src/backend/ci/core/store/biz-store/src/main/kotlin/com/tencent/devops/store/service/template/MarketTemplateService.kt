@@ -92,11 +92,28 @@ interface MarketTemplateService {
      * 安装模板到项目
      */
     fun installTemplate(
-        accessToken: String,
         userId: String,
         channelCode: ChannelCode,
         installTemplateReq: InstallTemplateReq
     ): Result<Boolean>
+
+    /**
+     * 校验用户、模板和插件的可见范围
+     */
+    fun validateUserTemplateAtomVisibleDept(
+        userId: String,
+        templateCode: String,
+        projectCodeList: List<String>?
+    ): Result<Boolean>
+
+    /**
+     * 安装模板到项目
+     */
+    fun installTemplateAndGetResult(
+        userId: String,
+        channelCode: ChannelCode,
+        installTemplateReq: InstallTemplateReq
+    ): Result<Map<String, Pair<String, Long>>>
 
     /**
      * 获取工作台模版列表

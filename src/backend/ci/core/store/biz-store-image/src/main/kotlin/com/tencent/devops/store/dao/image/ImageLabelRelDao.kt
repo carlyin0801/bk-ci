@@ -28,12 +28,12 @@ package com.tencent.devops.store.dao.image
 import com.tencent.devops.common.api.util.UUIDUtil
 import com.tencent.devops.model.store.tables.TImageLabelRel
 import com.tencent.devops.model.store.tables.TLabel
-import com.tencent.devops.store.dao.image.Constants.KEY_CREATE_TIME
-import com.tencent.devops.store.dao.image.Constants.KEY_LABEL_CODE
-import com.tencent.devops.store.dao.image.Constants.KEY_LABEL_ID
-import com.tencent.devops.store.dao.image.Constants.KEY_LABEL_NAME
-import com.tencent.devops.store.dao.image.Constants.KEY_LABEL_TYPE
-import com.tencent.devops.store.dao.image.Constants.KEY_UPDATE_TIME
+import com.tencent.devops.store.pojo.common.KEY_CREATE_TIME
+import com.tencent.devops.store.pojo.common.KEY_LABEL_CODE
+import com.tencent.devops.store.pojo.common.KEY_LABEL_ID
+import com.tencent.devops.store.pojo.common.KEY_LABEL_NAME
+import com.tencent.devops.store.pojo.common.KEY_LABEL_TYPE
+import com.tencent.devops.store.pojo.common.KEY_UPDATE_TIME
 import org.jooq.DSLContext
 import org.jooq.Record1
 import org.jooq.Record6
@@ -70,6 +70,7 @@ class ImageLabelRelDao {
             a.UPDATE_TIME.`as`(KEY_UPDATE_TIME)
         ).from(a).join(b).on(a.ID.eq(b.LABEL_ID))
             .where(b.IMAGE_ID.eq(imageId))
+            .orderBy(a.LABEL_NAME.asc())
             .fetch()
     }
 

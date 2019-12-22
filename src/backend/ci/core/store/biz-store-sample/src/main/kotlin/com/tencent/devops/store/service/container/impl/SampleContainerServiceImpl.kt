@@ -51,7 +51,7 @@ class SampleContainerServiceImpl @Autowired constructor() : ContainerServiceImpl
         return true
     }
 
-    override fun clickable(buildType: BuildType, projectCode: String): Boolean {
+    override fun clickable(buildType: BuildType, projectCode: String, pipelineId: String?): Boolean {
         logger.info("clickable buildType is :$buildType,projectCode is :$projectCode")
         return true
     }

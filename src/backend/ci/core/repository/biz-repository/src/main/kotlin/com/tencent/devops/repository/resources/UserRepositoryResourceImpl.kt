@@ -406,6 +406,18 @@ class UserRepositoryResourceImpl @Autowired constructor(
         repositoryService.userUnLock(userId, projectId, repositoryHashId)
         return Result(true)
     }
+
+    override fun listRepoAndBranAndTag(userId: String, projectId: String, repositoryType: ScmType?, repoPage: Int?, repoPageSize: Int?, branPage: Int?, branPageSize: Int?, tagPage: Int?, tagPageSize: Int): Result<String> {
+        if (userId.isBlank()) {
+            throw ParamBlankException("Invalid userId")
+        }
+        if (projectId.isBlank()) {
+            throw ParamBlankException("Invalid projectId")
+        }
+
+        repositoryService.listRepoAndBranchAndTag(userId = userId, projectId = projectId, repositoryType = repositoryType, repoPage = repoPage ?: 1, repoPageSize = repoPageSize ?: 20, branPage = branPage ?: 1, branPageSize = branPageSize ?: 20, tagPage = tagPage ?: 1, tagPageSize = tagPageSize)
+        return Result("Ok")
+    }
 //
 //    override fun lockV2(userId: String, projectId: String, repositoryHashId: String): Result<Boolean> {
 //        if (userId.isBlank()) {

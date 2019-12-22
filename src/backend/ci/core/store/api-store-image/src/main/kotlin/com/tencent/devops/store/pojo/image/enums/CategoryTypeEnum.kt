@@ -25,7 +25,7 @@
  */
 package com.tencent.devops.store.pojo.image.enums
 
-enum class CategoryTypeEnum(val status: Int) {
+enum class CategoryTypeEnum(val type: Int) {
     ATOM(0), // 插件
     TEMPLATE(1), // 模板
     IMAGE(2); // 镜像

@@ -36,6 +36,7 @@ import com.tencent.devops.common.api.util.ShaUtils
 import com.tencent.devops.process.pojo.BuildVariables
 import com.tencent.devops.process.utils.PIPELINE_BUILD_NUM
 import com.tencent.devops.process.utils.PIPELINE_START_USER_ID
+import com.tencent.devops.store.pojo.atom.AtomDevLanguageEnvVar
 import com.tencent.devops.store.pojo.atom.AtomEnv
 import com.tencent.devops.store.pojo.atom.AtomEnvRequest
 import com.tencent.devops.store.pojo.common.SensitiveConfResp
@@ -125,11 +126,12 @@ class AtomArchiveResourceApi : AbstractBuildResourceApi(), AtomArchiveSDKApi {
 
         val url = StringBuilder("/ms/artifactory/build/atom/result/$path")
         with(buildVariables) {
+            val variablesMap = variables.map { it.key to it.value }.toMap()
             url.append(";$ARCHIVE_PROPS_PROJECT_ID=${encodeProperty(projectId)}")
             url.append(";$ARCHIVE_PROPS_PIPELINE_ID=${encodeProperty(pipelineId)}")
             url.append(";$ARCHIVE_PROPS_BUILD_ID=${encodeProperty(buildId)}")
-            url.append(";$ARCHIVE_PROPS_USER_ID=${encodeProperty(variables[PIPELINE_START_USER_ID] ?: "")}")
-            url.append(";$ARCHIVE_PROPS_BUILD_NO=${encodeProperty(variables[PIPELINE_BUILD_NUM] ?: "")}")
+            url.append(";$ARCHIVE_PROPS_USER_ID=${encodeProperty(variablesMap[PIPELINE_START_USER_ID] ?: "")}")
+            url.append(";$ARCHIVE_PROPS_BUILD_NO=${encodeProperty(variablesMap[PIPELINE_BUILD_NUM] ?: "")}")
             url.append(";$ARCHIVE_PROPS_SOURCE=pipeline")
         }
 
@@ -151,5 +153,15 @@ class AtomArchiveResourceApi : AbstractBuildResourceApi(), AtomArchiveSDKApi {
         )}"
         val request = buildGet(path)
         download(request, file)
+    }
+
+    /**
+     * 获取插件开发语言相关的环境变量
+     */
+    override fun getAtomDevLanguageEnvVars(language: String, buildHostType: String, buildHostOs: String): Result<List<AtomDevLanguageEnvVar>?> {
+        val path = "/store/api/build/market/atom/dev/language/env/var/languages/$language/types/$buildHostType/oss/$buildHostOs"
+        val request = buildGet(path)
+        val responseContent = request(request, "获取插件开发语言相关的环境变量信息失败")
+        return objectMapper.readValue(responseContent)
     }
 }

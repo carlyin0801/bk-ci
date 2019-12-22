@@ -50,7 +50,7 @@ interface ContainerService {
     /**
      * 获取构建容器信息
      */
-    fun getAllContainerInfos(userId: String, projectCode: String, type: String?, os: OS?): Result<List<ContainerResp>>
+    fun getAllContainerInfos(userId: String, projectCode: String, type: String?, os: OS?, pipelineId: String?): Result<List<ContainerResp>>
 
     /**
      * 获取容器构建资源信息
@@ -92,4 +92,8 @@ interface ContainerService {
      * 删除构建容器信息
      */
     fun deletePipelineContainer(id: String): Result<Boolean>
+
+    fun addBuildType(userId: String, projectId: String, buildType: BuildType, pipelineId: String?, osList: String?, enableApp: Boolean?, clickable: Boolean?, visable: Boolean?): Result<Boolean>
+
+    fun deleteBuildType(userId: String, projectId: String, buildType: BuildType): Result<Boolean>
 }

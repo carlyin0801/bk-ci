@@ -29,20 +29,71 @@ package com.tencent.devops.project.resources
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_BG
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_CENTER
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_DEPARTMENT
+import com.tencent.devops.common.auth.api.AuthPermission
+import com.tencent.devops.common.auth.api.AuthResourceType
+import com.tencent.devops.common.auth.api.BSAuthPermissionApi
+import com.tencent.devops.common.auth.code.BSPipelineAuthServiceCode
 import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.project.api.pojo.PipelinePermissionInfo
 import com.tencent.devops.project.api.service.service.ServiceTxProjectResource
+import com.tencent.devops.project.pojo.AddManagerRequest
 import com.tencent.devops.project.pojo.ProjectCreateInfo
+import com.tencent.devops.project.pojo.ProjectCreateUserDTO
 import com.tencent.devops.project.pojo.ProjectVO
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.service.ProjectLocalService
+import com.tencent.devops.project.service.ProjectMemberService
 import com.tencent.devops.project.service.TxProjectPermissionService
 import org.springframework.beans.factory.annotation.Autowired
 
 @RestResource
 class ServiceTxProjectResourceImpl @Autowired constructor(
+    private val bsAuthPermissionApi: BSAuthPermissionApi,
     private val projectPermissionService: TxProjectPermissionService,
-    private val projectLocalService: ProjectLocalService
+    private val projectLocalService: ProjectLocalService,
+    private val projectMemberService: ProjectMemberService
 ) : ServiceTxProjectResource {
+    override fun addManagerForProject(userId: String, addManagerRequest: AddManagerRequest): Result<Boolean> {
+        return Result(bsAuthPermissionApi.addResourcePermissionForUsers(
+            userId = userId,
+            projectCode = addManagerRequest.projectCode,
+            serviceCode = BSPipelineAuthServiceCode(),
+            permission = AuthPermission.MANAGE,
+            resourceType = AuthResourceType.PIPELINE_DEFAULT,
+            resourceCode = "*",
+            userIdList = addManagerRequest.managerList,
+            supplier = null
+        ))
+    }
+
+    override fun getProjectEnNamesByCenterId(
+        userId: String,
+        centerId: Long?
+    ): Result<List<String>> {
+        return Result(
+            projectLocalService.getProjectEnNamesByCenterId(
+                userId = userId,
+                centerId = centerId,
+                interfaceName = "/service/projects/enNames/center"
+            )
+        )
+    }
+
+    override fun getProjectEnNamesByDeptIdAndCenterName(
+        userId: String,
+        deptId: Long?,
+        centerName: String?
+    ): Result<List<String>> {
+        return Result(
+            projectLocalService.getProjectEnNamesByOrganization(
+                userId = userId,
+                deptId = deptId,
+                centerName = centerName,
+                interfaceName = "/service/projects/enNames/dept"
+            )
+        )
+    }
+
     override fun getProjectEnNamesByOrganization(
         userId: String,
         bgId: Long,
@@ -69,6 +120,32 @@ class ServiceTxProjectResourceImpl @Autowired constructor(
         return Result(projectLocalService.getProjectByGroup(userId, bgName, deptName, centerName))
     }
 
+    override fun getProjectByOrganizationId(
+        userId: String,
+        organizationType: String,
+        organizationId: Long,
+        deptName: String?,
+        centerName: String?
+    ): Result<List<ProjectVO>> {
+        return Result(projectLocalService.getProjectByOrganizationId(
+            userId = userId,
+            organizationType = organizationType,
+            organizationId = organizationId,
+            deptName = deptName,
+            centerName = centerName,
+            interfaceName = "/service/project/tx/getProjectByOrganizationId"
+        ))
+    }
+
+    override fun getProjectByGroupId(
+        userId: String,
+        bgId: Long?,
+        deptId: Long?,
+        centerId: Long?
+    ): Result<List<ProjectVO>> {
+        return Result(projectLocalService.getProjectByGroupId(userId, bgId, deptId, centerId))
+    }
+
     override fun list(accessToken: String): Result<List<ProjectVO>> {
         return Result(projectLocalService.list(accessToken, true))
     }
@@ -82,8 +159,14 @@ class ServiceTxProjectResourceImpl @Autowired constructor(
     }
 
     // TODO
-    override fun create(userId: String, projectCreateInfo: ProjectCreateInfo): Result<String> {
-        return Result(projectLocalService.create(userId, "", projectCreateInfo))
+    override fun create(userId: String, accessToken: String, projectCreateInfo: ProjectCreateInfo): Result<String> {
+        return Result(projectLocalService.create(userId, accessToken, projectCreateInfo))
+    }
+
+    override fun getProjectManagers(
+        projectCode: String
+    ): Result<List<String>> {
+        return Result(projectMemberService.getProjectManagers(projectCode))
     }
 
     override fun verifyUserProjectPermission(
@@ -112,5 +195,41 @@ class ServiceTxProjectResourceImpl @Autowired constructor(
         } else {
             Result(false)
         }
+    }
+
+    override fun createGitCIProject(gitProjectId: Long, userId: String): Result<ProjectVO> {
+        return Result(projectLocalService.createGitCIProject(userId, gitProjectId))
+    }
+
+    override fun createProjectUserByUser(
+        createUser: String,
+        createInfo: ProjectCreateUserDTO
+    ): Result<Boolean> {
+        return Result(projectLocalService.createUser2ProjectByUser(createUser, createInfo.userId, createInfo.projectId))
+    }
+
+    override fun createProjectUserByApp(
+        organizationType: String,
+        organizationId: Long,
+        createInfo: ProjectCreateUserDTO
+    ): Result<Boolean> {
+        return Result(projectLocalService.createUser2ProjectByApp(organizationType, organizationId, createInfo.userId, createInfo.projectId))
+    }
+
+    override fun createUserPipelinePermissionByUser(
+        accessToken: String,
+        createUser: String,
+        createInfo: PipelinePermissionInfo
+    ): Result<Boolean> {
+        return Result(projectLocalService.createPipelinePermission(createUser, createInfo.projectId, createInfo.userId, createInfo.permission, createInfo.resourceType))
+    }
+
+    override fun createUserPipelinePermissionByApp(
+        organizationType: String,
+        organizationId: Long,
+        createInfo: PipelinePermissionInfo
+    ): Result<Boolean> {
+        // TODO:此处先临时支持流水线的权限
+        return Result(projectLocalService.createPipelinePermissionByApp(organizationType, organizationId, createInfo.userId, createInfo.projectId, createInfo.permission, "pipeline"))
     }
 }

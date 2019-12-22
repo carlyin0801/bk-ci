@@ -26,15 +26,10 @@
 
 package com.tencent.devops.process.api.builds
 
-import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_BUILD_ID
-import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_VM_NAME
-import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_VM_SEQ_ID
+import com.tencent.devops.common.api.auth.*
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.pipeline.enums.ChannelCode
-import com.tencent.devops.process.pojo.BuildHistory
-import com.tencent.devops.process.pojo.BuildTask
-import com.tencent.devops.process.pojo.BuildTaskResult
-import com.tencent.devops.process.pojo.BuildVariables
+import com.tencent.devops.process.pojo.*
 import com.tencent.devops.process.pojo.pipeline.ModelDetail
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
@@ -169,4 +164,25 @@ interface BuildBuildResource {
         @QueryParam("channelCode")
         channelCode: ChannelCode
     ): Result<ModelDetail>
+
+    @ApiOperation("获取构建全部变量")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/vars")
+    fun getBuildVars(
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("渠道号，默认为DS", required = false)
+        @QueryParam("channelCode")
+        channelCode: ChannelCode = ChannelCode.BS
+    ): Result<BuildHistoryVariables>
 }

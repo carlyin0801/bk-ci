@@ -32,12 +32,14 @@ import com.tencent.devops.store.service.atom.impl.SampleAtomNotifyServiceImpl
 import com.tencent.devops.store.service.atom.impl.SampleAtomReleaseServiceImpl
 import com.tencent.devops.store.service.atom.impl.SampleAtomServiceImpl
 import com.tencent.devops.store.service.atom.impl.SampleMarketAtomServiceImpl
+import com.tencent.devops.store.service.common.impl.SampleStoreLogoServiceImpl
 import com.tencent.devops.store.service.common.impl.SampleStoreNotifyServiceImpl
 import com.tencent.devops.store.service.common.impl.SampleStoreUserServiceImpl
 import com.tencent.devops.store.service.container.impl.SampleContainerServiceImpl
 import com.tencent.devops.store.service.template.impl.SampleMarketTemplateServiceImpl
 import com.tencent.devops.store.service.template.impl.SampleTemplateNotifyServiceImpl
 import com.tencent.devops.store.service.template.impl.SampleTemplateReleaseServiceImpl
+import com.tencent.devops.store.service.template.impl.SampleTemplateVisibleDeptServiceImpl
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -79,4 +81,10 @@ class SampleServiceConfig {
 
     @Bean
     fun templateReleaseService() = SampleTemplateReleaseServiceImpl()
+
+    @Bean
+    fun storeLogoService() = SampleStoreLogoServiceImpl()
+
+    @Bean
+    fun templateVisibleDeptService() = SampleTemplateVisibleDeptServiceImpl()
 }

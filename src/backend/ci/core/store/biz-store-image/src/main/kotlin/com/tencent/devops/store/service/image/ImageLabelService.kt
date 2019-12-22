@@ -23,23 +23,24 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 package com.tencent.devops.store.service.image
 
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.store.dao.image.ImageLabelRelDao
 import com.tencent.devops.store.pojo.common.Label
-import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
+import com.tencent.devops.store.service.common.LabelService
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
-import java.time.LocalDateTime
 
 @Service
 class ImageLabelService @Autowired constructor(
     private val dslContext: DSLContext,
-    private val imageLabelRelDao: ImageLabelRelDao
+    private val imageLabelRelDao: ImageLabelRelDao,
+    private val labelService: LabelService
 ) {
     private val logger = LoggerFactory.getLogger(ImageLabelService::class.java)
 
@@ -51,17 +52,24 @@ class ImageLabelService @Autowired constructor(
         val imageLabelList = mutableListOf<Label>()
         val imageLabelRecords = imageLabelRelDao.getLabelsByImageId(dslContext, imageId) // 查询镜像标签信息
         imageLabelRecords?.forEach {
-            imageLabelList.add(
-                Label(
-                    id = it["id"] as String,
-                    labelCode = it["labelCode"] as String,
-                    labelName = it["labelName"] as String,
-                    labelType = StoreTypeEnum.getStoreType((it["labelType"] as Byte).toInt()),
-                    createTime = (it["createTime"] as LocalDateTime).timestampmilli(),
-                    updateTime = (it["updateTime"] as LocalDateTime).timestampmilli()
-                )
-            )
+            labelService.addLabelToLabelList(it, imageLabelList)
         }
         return Result(imageLabelList)
+    }
+
+    fun updateImageLabels(dslContext: DSLContext, userId: String, imageId: String, labelIdList: List<String>) {
+        // 更新标签信息
+        dslContext.transaction { configuration ->
+            val context = DSL.using(configuration)
+            imageLabelRelDao.deleteByImageId(context, imageId)
+            if (labelIdList.isNotEmpty()) {
+                imageLabelRelDao.batchAdd(
+                    dslContext = context,
+                    userId = userId,
+                    imageId = imageId,
+                    labelIdList = labelIdList
+                )
+            }
+        }
     }
 }

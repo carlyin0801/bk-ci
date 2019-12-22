@@ -51,7 +51,7 @@ class BuildLessDockerDispatcher @Autowired constructor(
             rabbitTemplate = rabbitTemplate,
             buildId = event.buildId,
             message = "Start buildLessDocker $dockerBuildVersion for the build",
-            tag = "",
+            tag = "j-${event.containerHashId}",
             jobId = event.containerHashId,
             executeCount = event.executeCount ?: 1
         )

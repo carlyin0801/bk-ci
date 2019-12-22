@@ -27,17 +27,21 @@ package com.tencent.devops.store.dao.image
 
 import com.tencent.devops.model.store.tables.TCategory
 import com.tencent.devops.model.store.tables.TImageCategoryRel
-import com.tencent.devops.store.dao.image.Constants.KEY_CATEGORY_CODE
-import com.tencent.devops.store.dao.image.Constants.KEY_CATEGORY_ICON_URL
-import com.tencent.devops.store.dao.image.Constants.KEY_CATEGORY_ID
-import com.tencent.devops.store.dao.image.Constants.KEY_CATEGORY_NAME
-import com.tencent.devops.store.dao.image.Constants.KEY_CATEGORY_TYPE
-import com.tencent.devops.store.dao.image.Constants.KEY_CREATE_TIME
-import com.tencent.devops.store.dao.image.Constants.KEY_UPDATE_TIME
+import com.tencent.devops.store.constant.StoreMessageCode.USER_IMAGE_UNKNOWN_IMAGE_CATEGORY
+import com.tencent.devops.store.exception.image.CategoryNotExistException
+import com.tencent.devops.store.pojo.common.KEY_CATEGORY_CODE
+import com.tencent.devops.store.pojo.common.KEY_CATEGORY_ICON_URL
+import com.tencent.devops.store.pojo.common.KEY_CATEGORY_ID
+import com.tencent.devops.store.pojo.common.KEY_CATEGORY_NAME
+import com.tencent.devops.store.pojo.common.KEY_CATEGORY_TYPE
+import com.tencent.devops.store.pojo.common.KEY_CREATE_TIME
+import com.tencent.devops.store.pojo.common.KEY_UPDATE_TIME
+import com.tencent.devops.store.pojo.image.enums.CategoryTypeEnum
 import org.jooq.DSLContext
 import org.jooq.Record1
 import org.jooq.Record7
 import org.jooq.Result
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 
@@ -112,6 +116,30 @@ class ImageCategoryRelDao {
                     )
             }
             dslContext.batch(addStep).execute()
+        }
+    }
+
+    fun updateCategory(dslContext: DSLContext, userId: String, imageId: String, categoryCode: String?) {
+        if (!categoryCode.isNullOrBlank()) {
+            dslContext.transaction { configuration ->
+                val context = DSL.using(configuration)
+                // 根据categoryCode查出对应的ID
+                val tCategory = TCategory.T_CATEGORY.`as`("tCategory")
+                val categoryIdRecords = context.select(tCategory.ID).from(tCategory).where(
+                    tCategory.CATEGORY_CODE.eq(categoryCode)
+                        .and(tCategory.TYPE.eq(CategoryTypeEnum.IMAGE.type.toByte()))
+                ).fetch()
+                if (categoryIdRecords.size == 0) {
+                    throw CategoryNotExistException(
+                        message = "category not exist,categoryCode=$categoryCode",
+                        errorCode = USER_IMAGE_UNKNOWN_IMAGE_CATEGORY,
+                        params = arrayOf(categoryCode ?: "")
+                    )
+                }
+                val categoryId = categoryIdRecords[0].get(0) as String
+                deleteByImageId(context, imageId)
+                batchAdd(context, userId, imageId, listOf(categoryId))
+            }
         }
     }
 }

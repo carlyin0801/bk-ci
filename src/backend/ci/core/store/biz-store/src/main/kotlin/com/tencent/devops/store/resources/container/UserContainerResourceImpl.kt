@@ -59,8 +59,8 @@ class UserContainerResourceImpl @Autowired constructor(private val containerServ
         return containerService.getContainerResource(userId, projectCode, null, os, buildType)
     }
 
-    override fun getAllContainerInfos(userId: String, projectCode: String): Result<List<ContainerResp>> {
-        return containerService.getAllContainerInfos(userId, projectCode, null, null)
+    override fun getAllContainerInfos(userId: String, projectCode: String, pipelineId: String?): Result<List<ContainerResp>> {
+        return containerService.getAllContainerInfos(userId, projectCode, null, null, pipelineId)
     }
 
     override fun getContainerInfoByType(
@@ -68,7 +68,7 @@ class UserContainerResourceImpl @Autowired constructor(private val containerServ
         projectCode: String,
         type: String
     ): Result<List<ContainerResp>> {
-        return containerService.getAllContainerInfos(userId, projectCode, type, null)
+        return containerService.getAllContainerInfos(userId, projectCode, type, null, null)
     }
 
     override fun getContainerInfoByTypeAndOs(
@@ -77,6 +77,6 @@ class UserContainerResourceImpl @Autowired constructor(private val containerServ
         type: String,
         os: OS
     ): Result<List<ContainerResp>> {
-        return containerService.getAllContainerInfos(userId, projectCode, type, os)
+        return containerService.getAllContainerInfos(userId, projectCode, type, os, null)
     }
 }

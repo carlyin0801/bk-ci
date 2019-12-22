@@ -50,7 +50,7 @@ open class CodeccApi constructor(
     private val existPath: String = "/ms/task/api/service/task/exists",
     private val deletePath: String = "/ms/task/api/service/task",
     private val report: String = "/api",
-    private val getRuleSetsPath: String = "/ms/task/api/service/checker/tasks/0/checkerSets"
+    private val getRuleSetsPath: String = "/ms/defect/api/service/checker/tools/{toolName}/pipelineCheckerSets"
 ) {
 
     companion object {
@@ -79,7 +79,10 @@ open class CodeccApi constructor(
                     DevOpsToolParams("phpcs_standard", phpcsStandard ?: ""),
                     DevOpsToolParams("go_path", goPath ?: ""),
                     DevOpsToolParams("py_version", pyVersion ?: ""),
-                    DevOpsToolParams("eslint_rc", eslintRc ?: "")
+                    DevOpsToolParams("ccn_threshold", ccnThreshold ?: ""),
+                    DevOpsToolParams("needCodeContent", needCodeContent ?: ""),
+                    DevOpsToolParams("eslint_rc", eslintRc ?: ""),
+                    DevOpsToolParams("buildCommand", script)
                 )
             )
             if (!element.projectBuildType.isNullOrBlank()) {
@@ -118,6 +121,8 @@ open class CodeccApi constructor(
                 DevOpsToolParams("phpcs_standard", phpcsStandard ?: ""),
                 DevOpsToolParams("go_path", goPath ?: ""),
                 DevOpsToolParams("py_version", pyVersion ?: ""),
+                DevOpsToolParams("ccn_threshold", ccnThreshold ?: ""),
+                DevOpsToolParams("needCodeContent", needCodeContent ?: ""),
                 DevOpsToolParams("eslint_rc", eslintRc ?: "")
             )
             if (!element.projectBuildType.isNullOrBlank()) {
@@ -161,18 +166,16 @@ open class CodeccApi constructor(
         taskExecution(body, "$deletePath/$taskId", headers, "DELETE")
     }
 
-
     fun getRuleSets(projectId: String, userId: String, toolName: String): Result<Map<String, Any>> {
         val headers = mapOf(
             AUTH_HEADER_DEVOPS_USER_ID to userId,
             AUTH_HEADER_DEVOPS_PROJECT_ID to projectId
         )
-        val body = mapOf<String, String>()
         val result = taskExecution(
-            body = body,
-            path = getRuleSetsPath,
+            body = mapOf(),
+            path = getRuleSetsPath.replace("{toolName}", toolName),
             headers = headers,
-            method = "POST"
+            method = "GET"
         )
         return objectMapper.readValue(result)
     }
@@ -215,11 +218,11 @@ open class CodeccApi constructor(
         val request = builder.build()
 
         OkhttpUtils.doHttp(request).use { response ->
+            val responseBody = response.body()!!.string()
             if (!response.isSuccessful) {
-                logger.warn("Fail to execute($path) task($body) because of ${response.message()}")
+                logger.warn("Fail to execute($path) task($body) because of ${response.message()} with response: $responseBody")
                 throw RemoteServiceException("Fail to invoke codecc request")
             }
-            val responseBody = response.body()!!.string()
             logger.info("Get the task response body - $responseBody")
             return responseBody
         }
@@ -283,16 +286,18 @@ open class CodeccApi constructor(
             if (!eslintToolSetId.isNullOrBlank()) map["ESLINT"] = eslintToolSetId!!
             if (!pylintToolSetId.isNullOrBlank()) map["PYLINT"] = pylintToolSetId!!
             if (!gometalinterToolSetId.isNullOrBlank()) map["GOML"] = gometalinterToolSetId!!
-            if (!checkStyleToolSetId.isNullOrBlank()) map["CHECKSTYLE"] = checkStyleToolSetId!!
-            if (!styleCopToolSetId.isNullOrBlank()) map["STYLECOP"] = styleCopToolSetId!!
+            if (!checkstyleToolSetId.isNullOrBlank()) map["CHECKSTYLE"] = checkstyleToolSetId!!
+            if (!stylecopToolSetId.isNullOrBlank()) map["STYLECOP"] = stylecopToolSetId!!
             if (!detektToolSetId.isNullOrBlank()) map["DETEKT"] = detektToolSetId!!
             if (!phpcsToolSetId.isNullOrBlank()) map["PHPCS"] = phpcsToolSetId!!
             if (!sensitiveToolSetId.isNullOrBlank()) map["SENSITIVE"] = sensitiveToolSetId!!
             if (!occheckToolSetId.isNullOrBlank()) map["OCCHECK"] = occheckToolSetId!!
-            if (!gociLintToolSetId.isNullOrBlank()) map["GOCILINT"] = gociLintToolSetId!!
+//            if (!ripsToolSetId.isNullOrBlank()) map["RIPS"] = ripsToolSetId!!
             if (!woodpeckerToolSetId.isNullOrBlank()) map["WOODPECKER_SENSITIVE"] = woodpeckerToolSetId!!
             if (!horuspyToolSetId.isNullOrBlank()) map["HORUSPY"] = horuspyToolSetId!!
+            if (!pinpointToolSetId.isNullOrBlank()) map["PINPOINT"] = pinpointToolSetId!!
         }
+
         return map
     }
 

@@ -23,6 +23,7 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 package com.tencent.devops.store.resources.image.user
 
 import com.tencent.devops.common.api.pojo.Page
@@ -31,8 +32,12 @@ import com.tencent.devops.common.pipeline.type.docker.ImageType
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.store.api.image.user.UserImageResource
 import com.tencent.devops.store.pojo.common.VersionInfo
+import com.tencent.devops.store.pojo.image.enums.ImageRDTypeEnum
+import com.tencent.devops.store.pojo.image.enums.MarketImageSortTypeEnum
+import com.tencent.devops.store.pojo.image.request.ImageBaseInfoUpdateRequest
 import com.tencent.devops.store.pojo.image.response.ImageDetail
 import com.tencent.devops.store.pojo.image.response.MarketImageMain
+import com.tencent.devops.store.pojo.image.response.MarketImageResp
 import com.tencent.devops.store.pojo.image.response.MyImage
 import com.tencent.devops.store.service.image.ImageService
 import org.springframework.beans.factory.annotation.Autowired
@@ -50,6 +55,21 @@ class UserImageResourceImpl @Autowired constructor(
             userId = userId,
             imageCode = imageCode,
             interfaceName = "/user/market/image/imageCodes/{imageCode},delete"
+        )
+    }
+
+    override fun updateImageBaseInfo(
+        userId: String,
+        imageCode: String,
+        imageBaseInfoUpdateRequest: ImageBaseInfoUpdateRequest
+    ): Result<Boolean> {
+        // 用户不可更新镜像大小信息
+        imageBaseInfoUpdateRequest.imageSize = null
+        return imageService.updateImageBaseInfo(
+            userId = userId,
+            imageCode = imageCode,
+            imageBaseInfoUpdateRequest = imageBaseInfoUpdateRequest,
+            interfaceName = "/user/market/baseInfo/images/{imageCode},put"
         )
     }
 
@@ -73,17 +93,21 @@ class UserImageResourceImpl @Autowired constructor(
         imageName: String?,
         imageSourceType: ImageType?,
         classifyCode: String?,
+        categoryCode: String?,
+        rdType: ImageRDTypeEnum?,
         labelCode: String?,
         score: Int?,
-        sortType: String?,
+        sortType: MarketImageSortTypeEnum?,
         page: Int?,
         pageSize: Int?
-    ): Result<List<MarketImageMain>> {
+    ): Result<MarketImageResp> {
         return imageService.searchImage(
             userId = userId,
             imageName = imageName,
             imageSourceType = imageSourceType,
             classifyCode = classifyCode,
+            categoryCode = categoryCode,
+            rdType = rdType,
             labelCode = labelCode,
             score = score,
             sortType = sortType,
@@ -124,7 +148,7 @@ class UserImageResourceImpl @Autowired constructor(
 
     override fun getImageDetailByCode(userId: String, imageCode: String): Result<ImageDetail> {
         return Result(
-            imageService.getImageDetailByCode(
+            imageService.getLatestImageDetailByCode(
                 userId = userId,
                 imageCode = imageCode,
                 interfaceName = "/user/market/image/imageCodes/{imageCode}"

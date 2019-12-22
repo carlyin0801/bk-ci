@@ -23,6 +23,7 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 package com.tencent.devops.store.pojo.image.response
 
 import io.swagger.annotations.ApiModel
@@ -64,7 +65,7 @@ data class MyImage(
     val imageSize: String,
 
     @ApiModelProperty("镜像大小数值（字节）", required = true)
-    val imageSizeNum: Int,
+    val imageSizeNum: Long,
 
     @ApiModelProperty(
         "镜像状态，INIT：初始化|COMMITTING：提交中|CHECKING：验证中|CHECK_FAIL：验证失败|TESTING：测试中|AUDITING：审核中|AUDIT_REJECT：审核驳回|RELEASED：已发布|GROUNDING_SUSPENSION：上架中止|UNDERCARRIAGING：下架中|UNDERCARRIAGED：已下架",
@@ -91,6 +92,8 @@ data class MyImage(
     val createTime: Long,
 
     @ApiModelProperty("修改时间", required = true)
-    val updateTime: Long
+    val updateTime: Long,
 
+    @ApiModelProperty("是否为公共镜像", required = true)
+    val publicFlag: Boolean
 )

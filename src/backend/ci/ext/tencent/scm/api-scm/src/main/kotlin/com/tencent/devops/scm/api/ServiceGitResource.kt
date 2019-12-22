@@ -38,6 +38,8 @@ import com.tencent.devops.repository.pojo.git.GitMrReviewInfo
 import com.tencent.devops.repository.pojo.git.GitProjectInfo
 import com.tencent.devops.repository.pojo.git.UpdateGitProjectInfo
 import com.tencent.devops.repository.pojo.oauth.GitToken
+import com.tencent.devops.scm.code.git.api.GitBranch
+import com.tencent.devops.scm.code.git.api.GitTag
 import com.tencent.devops.scm.pojo.CommitCheckRequest
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import io.swagger.annotations.Api
@@ -72,6 +74,48 @@ interface ServiceGitResource {
         @QueryParam("userId")
         userId: String
     ): Result<List<Project>>
+
+    @ApiOperation("获取用户所有git项目")
+    @GET
+    @Path("/getBranch")
+    fun getBranch(
+            @ApiParam("accessToken", required = true)
+            @QueryParam("accessToken")
+            accessToken: String,
+            @ApiParam("用户id", required = true)
+            @QueryParam("userId")
+            userId: String,
+            @ApiParam("仓库ID", required = true)
+            @QueryParam("repository")
+            repository: String,
+            @ApiParam("第几页", required = true)
+            @QueryParam("page")
+            page: Int?,
+            @ApiParam("每页数据条数", required = true)
+            @QueryParam("pageSize")
+            pageSize: Int?
+    ): Result<List<GitBranch>>
+
+    @ApiOperation("获取用户所有git项目")
+    @GET
+    @Path("/getTag")
+    fun getTag(
+            @ApiParam("accessToken", required = true)
+            @QueryParam("accessToken")
+            accessToken: String,
+            @ApiParam("用户id", required = true)
+            @QueryParam("userId")
+            userId: String,
+            @ApiParam("仓库ID", required = true)
+            @QueryParam("repository")
+            repository: String,
+            @ApiParam("第几页", required = true)
+            @QueryParam("page")
+            page: Int?,
+            @ApiParam("每页数据条数", required = true)
+            @QueryParam("pageSize")
+            pageSize: Int?
+    ): Result<List<GitTag>>
 
     @ApiOperation("刷新用户的token")
     @PUT
@@ -354,7 +398,6 @@ interface ServiceGitResource {
         @QueryParam("token")
         token: String
     ): Result<GitMrChangeInfo>
-
 
     @ApiOperation("添加Git Commit Check")
     @POST

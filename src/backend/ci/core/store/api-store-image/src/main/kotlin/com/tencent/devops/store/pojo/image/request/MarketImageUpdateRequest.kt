@@ -27,6 +27,7 @@ package com.tencent.devops.store.pojo.image.request
 
 import com.tencent.devops.common.pipeline.type.docker.ImageType
 import com.tencent.devops.store.pojo.common.enums.ReleaseTypeEnum
+import com.tencent.devops.store.pojo.image.enums.ImageAgentTypeEnum
 import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 
@@ -40,6 +41,10 @@ data class MarketImageUpdateRequest(
     val classifyCode: String,
     @ApiModelProperty("镜像标签列表", required = false)
     val labelIdList: ArrayList<String>?,
+    @ApiModelProperty("镜像所属范畴CATEGORY_CODE", required = false)
+    val category: String?,
+    @ApiModelProperty("镜像适用的构建机类型", required = true)
+    val agentTypeScope: List<ImageAgentTypeEnum>,
     @ApiModelProperty("镜像简介", required = false)
     val summary: String?,
     @ApiModelProperty("镜像描述", required = false)
@@ -48,8 +53,8 @@ data class MarketImageUpdateRequest(
     val logoUrl: String?,
     @ApiModelProperty("ticket身份ID", required = false)
     val ticketId: String?,
-    @ApiModelProperty("镜像来源 BKDEVOPS:蓝盾，THIRD:第三方，不传默认为THIRD", required = true)
-    val imageSourceType: ImageType = ImageType.THIRD,
+    @ApiModelProperty("镜像来源 BKDEVOPS:蓝盾，THIRD:第三方", required = true)
+    val imageSourceType: ImageType,
     @ApiModelProperty("镜像仓库地址", required = false)
     val imageRepoUrl: String?,
     @ApiModelProperty("镜像在仓库中的名称", required = true)

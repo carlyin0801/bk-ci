@@ -28,7 +28,6 @@ package com.tencent.devops.artifactory.service.artifactory
 
 import com.tencent.devops.artifactory.client.JFrogAQLService
 import com.tencent.devops.artifactory.client.JFrogApiService
-import com.tencent.devops.artifactory.client.JFrogService
 import com.tencent.devops.artifactory.pojo.AppFileInfo
 import com.tencent.devops.artifactory.pojo.CopyToCustomReq
 import com.tencent.devops.artifactory.pojo.Count
@@ -41,6 +40,7 @@ import com.tencent.devops.artifactory.pojo.FilePipelineInfo
 import com.tencent.devops.artifactory.pojo.FolderSize
 import com.tencent.devops.artifactory.pojo.Property
 import com.tencent.devops.artifactory.pojo.enums.ArtifactoryType
+import com.tencent.devops.artifactory.service.JFrogService
 import com.tencent.devops.artifactory.service.PipelineService
 import com.tencent.devops.artifactory.service.RepoService
 import com.tencent.devops.artifactory.service.pojo.JFrogAQLFileInfo
@@ -55,8 +55,14 @@ import com.tencent.devops.common.archive.constant.ARCHIVE_PROPS_PROJECT_ID
 import com.tencent.devops.common.archive.shorturl.ShortUrlApi
 import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.auth.api.AuthResourceType
+import com.tencent.devops.common.auth.api.BSAuthProjectApi
 import com.tencent.devops.common.auth.api.BkAuthServiceCode
+import com.tencent.devops.common.auth.code.BSRepoAuthServiceCode
+import com.tencent.devops.common.client.Client
+import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.service.utils.HomeHostUtil
+import com.tencent.devops.process.api.service.ServiceBuildResource
+import com.tencent.devops.process.api.service.ServicePipelineResource
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -67,6 +73,7 @@ import java.time.format.DateTimeFormatter
 import java.util.regex.Pattern
 import javax.ws.rs.BadRequestException
 
+@Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 @Service
 class ArtifactoryService @Autowired constructor(
     val jFrogApiService: JFrogApiService,
@@ -76,7 +83,10 @@ class ArtifactoryService @Autowired constructor(
     val artifactoryPipelineDirService: ArtifactoryPipelineDirService,
     val artifactoryCustomDirService: ArtifactoryCustomDirService,
     val jFrogPropertiesApi: JFrogPropertiesApi,
-    val shortUrlApi: ShortUrlApi
+    val shortUrlApi: ShortUrlApi,
+    val authProjectApi: BSAuthProjectApi,
+    private val client: Client,
+    private val artifactoryAuthServiceCode: BSRepoAuthServiceCode
 ) : RepoService {
     fun hasDownloadPermission(
         userId: String,
@@ -209,14 +219,51 @@ class ArtifactoryService @Autowired constructor(
         pipelineId: String,
         buildId: String,
         artifactoryType: ArtifactoryType,
-        argPath: String
+        argPath: String,
+        crossProjectId: String?,
+        crossPipineId: String?,
+        crossBuildNo: String?
     ): List<FileDetail> {
+        logger.info("getPropertiesByRegex, projectId: $projectId, pipelineId: $pipelineId, buildId: $buildId" +
+            ", artifactoryType: $artifactoryType, argPath: $argPath, crossProjectId: $crossProjectId, crossPipineId: $crossPipineId" +
+            ", crossBuildNo: $crossBuildNo")
+        var targetProjectId = projectId
+        var targetPipelineId = pipelineId
+        var targetBuildId = buildId
+        if (!crossProjectId.isNullOrBlank()) {
+            val lastModifyUser = client.get(ServicePipelineResource::class)
+                .getPipelineInfo(projectId, pipelineId, null).data!!.lastModifyUser
+
+            targetProjectId = crossProjectId!!
+            if (artifactoryType == ArtifactoryType.CUSTOM_DIR &&
+                !authProjectApi.getProjectUsers(artifactoryAuthServiceCode, targetProjectId).contains(lastModifyUser)) {
+                throw BadRequestException("用户（$lastModifyUser) 没有项目（$targetProjectId）下载权限)")
+            }
+            if (artifactoryType == ArtifactoryType.PIPELINE) {
+                targetPipelineId = crossPipineId ?: throw BadRequestException("Invalid Parameter pipelineId")
+                targetBuildId = client.get(ServiceBuildResource::class).getSingleHistoryBuild(
+                    targetProjectId,
+                    targetPipelineId,
+                    crossBuildNo ?: throw BadRequestException("Invalid Parameter buildNo"),
+                    ChannelCode.BS
+                ).data!!.id
+
+                pipelineService.validatePermission(
+                    lastModifyUser,
+                    targetProjectId,
+                    targetPipelineId,
+                    AuthPermission.DOWNLOAD,
+                    "用户($lastModifyUser)在项目($crossProjectId)下没有流水线${crossPipineId}下载构建权限")
+            }
+        }
+        logger.info("targetProjectId: $targetProjectId, targetPipelineId: $targetPipelineId, targetBuildId: $targetBuildId")
+
         val regex = Pattern.compile(",|;")
         val pathArray = regex.split(argPath)
 
         val repoPathPrefix = JFrogUtil.getRepoPath()
-        val pipelinePathPrefix = "/" + JFrogUtil.getPipelinePathPrefix(projectId).removePrefix(repoPathPrefix)
-        val customDirPathPrefix = "/" + JFrogUtil.getCustomDirPathPrefix(projectId).removePrefix(repoPathPrefix)
+        val pipelinePathPrefix = "/" + JFrogUtil.getPipelinePathPrefix(targetProjectId).removePrefix(repoPathPrefix)
+        val customDirPathPrefix = "/" + JFrogUtil.getCustomDirPathPrefix(targetProjectId).removePrefix(repoPathPrefix)
         val ret = mutableListOf<FileDetail>()
 
         pathArray.forEach { path ->
@@ -224,11 +271,11 @@ class ArtifactoryService @Autowired constructor(
             val realPath = if (path.startsWith("/")) normalizedPath else "/$normalizedPath"
 
             val pathPrefix = if (artifactoryType == ArtifactoryType.PIPELINE) {
-                "/" + JFrogUtil.getPipelinePathPrefix(projectId).removePrefix(repoPathPrefix) + "$pipelineId/$buildId/" + JFrogUtil.getParentFolder(
+                "/" + JFrogUtil.getPipelinePathPrefix(targetProjectId).removePrefix(repoPathPrefix) + "$targetPipelineId/$targetBuildId/" + JFrogUtil.getParentFolder(
                     realPath
                 ).removePrefix("/")
             } else {
-                "/" + JFrogUtil.getCustomDirPathPrefix(projectId).removePrefix(repoPathPrefix) + JFrogUtil.getParentFolder(
+                "/" + JFrogUtil.getCustomDirPathPrefix(targetProjectId).removePrefix(repoPathPrefix) + JFrogUtil.getParentFolder(
                     realPath
                 ).removePrefix("/")
             }
@@ -244,7 +291,7 @@ class ArtifactoryService @Autowired constructor(
                 } else {
                     "/" + it.path.removePrefix(customDirPathPrefix)
                 }
-                ret.add(show(projectId, artifactoryType, pathTemp))
+                ret.add(show(targetProjectId, artifactoryType, pathTemp))
             }
         }
         return ret
@@ -393,8 +440,8 @@ class ArtifactoryService @Autowired constructor(
             val pipelineName = pipelineService.getPipelineName(projectId, pipelineId)
             jFrogPropertiesMap[ARCHIVE_PROPS_PIPELINE_NAME] = pipelineName
         }
-
-        return if (jFrogFileInfo.checksums == null) {
+        val checksums = jFrogFileInfo.checksums
+        return if (checksums == null) {
             FileDetail(
                 JFrogUtil.getFileName(path),
                 path,
@@ -416,9 +463,9 @@ class ArtifactoryService @Autowired constructor(
                 LocalDateTime.parse(jFrogFileInfo.created, DateTimeFormatter.ISO_DATE_TIME).timestamp(),
                 LocalDateTime.parse(jFrogFileInfo.lastModified, DateTimeFormatter.ISO_DATE_TIME).timestamp(),
                 FileChecksums(
-                    jFrogFileInfo.checksums.sha256,
-                    jFrogFileInfo.checksums.sha1,
-                    jFrogFileInfo.checksums.md5
+                    checksums.sha256,
+                    checksums.sha1,
+                    checksums.md5
                 ),
                 jFrogPropertiesMap
             )
@@ -473,9 +520,8 @@ class ArtifactoryService @Autowired constructor(
                 listOf(ARCHIVE_PROPS_PROJECT_ID, ARCHIVE_PROPS_PIPELINE_ID, ARCHIVE_PROPS_BUILD_ID)
             )
             jFrogPropertiesApi.setProperties(
-                destPath, mapOf(
-                    ARCHIVE_PROPS_PROJECT_ID to listOf(targetProjectId)
-                )
+                destPath,
+                mapOf(ARCHIVE_PROPS_PROJECT_ID to listOf(targetProjectId))
             )
         }
 
@@ -486,7 +532,8 @@ class ArtifactoryService @Autowired constructor(
         projectId: String,
         jFrogAQLFileInfoList: List<JFrogAQLFileInfo>,
         pipelineHasPermissionList: List<String>,
-        checkPermission: Boolean = true
+        checkPermission: Boolean = true,
+        channelCode: ChannelCode ?= ChannelCode.BS
     ): List<FileInfo> {
         val startTimestamp = System.currentTimeMillis()
 
@@ -525,7 +572,13 @@ class ArtifactoryService @Autowired constructor(
                         "${HomeHostUtil.outerServerHost()}/app/download/devops_app_forward.html?flag=buildArchive&projectId=$projectId&pipelineId=$pipelineId&buildId=$buildId"
                     val shortUrl = shortUrlApi.getShortUrl(url, 300)
 
-                    if ((!checkPermission || pipelineHasPermissionList.contains(pipelineId)) &&
+                    // gitci请求跳过auth检测
+                    var pipelineHasPermission = pipelineHasPermissionList.contains(pipelineId)
+                    if (channelCode == ChannelCode.GIT) {
+                        pipelineHasPermission = true
+                    }
+
+                    if ((!checkPermission || pipelineHasPermission) &&
                         pipelineIdToNameMap.containsKey(pipelineId) && buildIdToNameMap.containsKey(buildId)
                     ) {
                         val pipelineName = pipelineIdToNameMap[pipelineId]!!

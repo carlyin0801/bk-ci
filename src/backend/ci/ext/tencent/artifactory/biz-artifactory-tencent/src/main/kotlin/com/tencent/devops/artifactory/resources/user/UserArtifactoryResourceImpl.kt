@@ -37,8 +37,8 @@ import com.tencent.devops.artifactory.pojo.Property
 import com.tencent.devops.artifactory.pojo.SearchProps
 import com.tencent.devops.artifactory.pojo.Url
 import com.tencent.devops.artifactory.pojo.enums.ArtifactoryType
-import com.tencent.devops.artifactory.service.BkRepoDownloadService
-import com.tencent.devops.artifactory.service.BkRepoSearchService
+import com.tencent.devops.artifactory.service.bkrepo.BkRepoDownloadService
+import com.tencent.devops.artifactory.service.bkrepo.BkRepoSearchService
 import com.tencent.devops.artifactory.service.artifactory.ArtifactoryDownloadService
 import com.tencent.devops.artifactory.service.artifactory.ArtifactorySearchService
 import com.tencent.devops.artifactory.service.artifactory.ArtifactoryService
@@ -47,6 +47,7 @@ import com.tencent.devops.common.api.exception.InvalidParamException
 import com.tencent.devops.common.api.exception.ParamBlankException
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.PageUtil
+import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.gray.RepoGray
 import com.tencent.devops.common.web.RestResource
@@ -91,7 +92,7 @@ class UserArtifactoryResourceImpl @Autowired constructor(
         }
     }
 
-    override fun search(userId: String, projectId: String, page: Int?, pageSize: Int?, searchProps: SearchProps): Result<FileInfoPage<FileInfo>> {
+    override fun search(userId: String, projectId: String, page: Int?, pageSize: Int?, channelCode: ChannelCode?, searchProps: SearchProps): Result<FileInfoPage<FileInfo>> {
         checkParameters(userId, projectId)
         return if (repoGray.isGray(projectId, redisOperation)) {
             val pageNotNull = page ?: 0
@@ -102,7 +103,7 @@ class UserArtifactoryResourceImpl @Autowired constructor(
             val pageNotNull = page ?: 0
             val pageSizeNotNull = pageSize ?: -1
             val offset = if (pageSizeNotNull == -1) 0 else (pageNotNull - 1) * pageSizeNotNull
-            val result = artifactorySearchService.search(userId, projectId, searchProps, offset, pageSizeNotNull)
+            val result = artifactorySearchService.search(userId, projectId, searchProps, offset, pageSizeNotNull, channelCode)
             return Result(FileInfoPage(0, pageNotNull, pageSizeNotNull, result.second, result.first))
         }
     }
@@ -111,10 +112,10 @@ class UserArtifactoryResourceImpl @Autowired constructor(
         checkParameters(userId, projectId)
         return if (repoGray.isGray(projectId, redisOperation)) {
             val result = bkRepoSearchService.searchFileAndProperty(userId, projectId, searchProps)
-            return Result(FileInfoPage(result.second.size.toLong(), 0, 0, result.second, result.first))
+            Result(FileInfoPage(result.second.size.toLong(), 0, 0, result.second, result.first))
         } else {
             val result = artifactorySearchService.searchFileAndProperty(userId, projectId, searchProps)
-            return Result(FileInfoPage(result.second.size.toLong(), 0, 0, result.second, result.first))
+            Result(FileInfoPage(result.second.size.toLong(), 0, 0, result.second, result.first))
         }
     }
 
@@ -145,21 +146,21 @@ class UserArtifactoryResourceImpl @Autowired constructor(
         }
     }
 
-    override fun downloadUrl(userId: String, projectId: String, artifactoryType: ArtifactoryType, path: String): Result<Url> {
+    override fun downloadUrl(userId: String, projectId: String, artifactoryType: ArtifactoryType, path: String, channelCode: ChannelCode?): Result<Url> {
         checkParameters(userId, projectId, path)
         return if (repoGray.isGray(projectId, redisOperation)) {
-            Result(bkRepoDownloadService.getDownloadUrl(userId, projectId, artifactoryType, path))
+            Result(bkRepoDownloadService.getDownloadUrl(userId, projectId, artifactoryType, path, channelCode))
         } else {
-            Result(artifactoryDownloadService.getDownloadUrl(userId, projectId, artifactoryType, path))
+            Result(artifactoryDownloadService.getDownloadUrl(userId, projectId, artifactoryType, path, channelCode))
         }
     }
 
     override fun ioaUrl(userId: String, projectId: String, artifactoryType: ArtifactoryType, path: String): Result<Url> {
         checkParameters(userId, projectId, path)
         return if (repoGray.isGray(projectId, redisOperation)) {
-            Result(bkRepoDownloadService.getDownloadUrl(userId, projectId, artifactoryType, path))
+            Result(bkRepoDownloadService.getDownloadUrl(userId, projectId, artifactoryType, path, ChannelCode.BS))
         } else {
-            Result(artifactoryDownloadService.getDownloadUrl(userId, projectId, artifactoryType, path))
+            Result(artifactoryDownloadService.getDownloadUrl(userId, projectId, artifactoryType, path, ChannelCode.BS))
         }
     }
 

@@ -50,6 +50,10 @@ import com.tencent.devops.repository.pojo.gitlab.GitlabFileInfo
 import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.scm.code.git.CodeGitOauthCredentialSetter
 import com.tencent.devops.scm.code.git.CodeGitUsernameCredentialSetter
+import com.tencent.devops.scm.code.git.api.GitBranch
+import com.tencent.devops.scm.code.git.api.GitBranchCommit
+import com.tencent.devops.scm.code.git.api.GitTag
+import com.tencent.devops.scm.code.git.api.GitTagCommit
 import com.tencent.devops.scm.config.GitConfig
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import com.tencent.devops.scm.pojo.Project
@@ -139,6 +143,78 @@ class GitService @Autowired constructor(
         } finally {
             logger.info("It took ${System.currentTimeMillis() - startEpoch}ms to get the project")
         }
+    }
+
+    override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
+        val pageNotBull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
+        logger.info("start to get the ${userId}'s $repository branch by accessToken: $pageNotBull  page: $page pageSize: $pageSizeNotNull")
+        val repoId = URLEncoder.encode(repository, "utf-8")
+        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$page&pageSize=$pageSizeNotNull"
+        val res = mutableListOf<GitBranch>()
+        val request = Request.Builder()
+                .url(url)
+                .get()
+                .build()
+
+        OkhttpUtils.doHttp(request).use { response ->
+            val data = response.body()?.string() ?: return@use
+            val branList = JsonParser().parse(data).asJsonArray
+            if (!branList.isJsonNull) {
+                branList.forEach {
+                    val branch = it.asJsonObject
+                    val commit = branch["commit"].asJsonObject
+                    if (!branch.isJsonNull && !commit.isJsonNull) {
+                        res.add(GitBranch(name = if (branch["name"].isJsonNull) "" else branch["name"].asString,
+                                commit = GitBranchCommit(
+                                        id = if (commit["id"].isJsonNull) "" else commit["id"].asString,
+                                        message = if (commit["message"].isJsonNull) "" else commit["message"].asString,
+                                        authoredDate = if (commit["authored_date"].isJsonNull) "" else commit["authored_date"].asString,
+                                        authorEmail = if (commit["author_email"].isJsonNull) "" else commit["author_email"].asString,
+                                        authorName = if (commit["author_name"].isJsonNull) "" else commit["author_name"].asString,
+                                        title = if (commit["title"].isJsonNull) "" else commit["title"].asString
+                                )))
+                    }
+                }
+            }
+        }
+        return res
+    }
+
+    override fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
+        val pageNotBull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
+        logger.info("start to get the ${userId}'s $repository tag by accessToken: $accessToken  page: $pageNotBull pageSize: $pageSizeNotNull")
+        val repoId = URLEncoder.encode(repository, "utf-8")
+        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/tags?access_token=$accessToken&page=$page&pageSize=$pageSizeNotNull"
+        val res = mutableListOf<GitTag>()
+        val request = Request.Builder()
+                .url(url)
+                .get()
+                .build()
+
+        OkhttpUtils.doHttp(request).use { response ->
+            val data = response.body()?.string() ?: return@use
+            val tagList = JsonParser().parse(data).asJsonArray
+            if (!tagList.isJsonNull) {
+                tagList.forEach {
+                    val tag = it.asJsonObject
+                    val commit = tag["commit"].asJsonObject
+                    if(!tag.isJsonNull && !commit.isJsonNull) {
+                        res.add(GitTag(name = if(tag["name"].isJsonNull) "" else tag["name"].asString, message = if(tag["message"].isJsonNull) "" else tag["message"].asString,
+                                commit = GitTagCommit(
+                                        id = if(commit["id"].isJsonNull) "" else commit["id"].asString,
+                                        message = if(commit["message"].isJsonNull) "" else commit["message"].asString,
+                                        authoredDate = if(commit["authored_date"].isJsonNull) "" else commit["authored_date"].asString,
+                                        authorName = if(commit["author_name"].isJsonNull) "" else commit["author_name"].asString,
+                                        authorEmail = if(commit["author_email"].isJsonNull) "" else commit["author_email"].asString
+                                )
+                        ))
+                    }
+                }
+            }
+        }
+        return res
     }
 
     override fun refreshToken(userId: String, accessToken: GitToken): GitToken {

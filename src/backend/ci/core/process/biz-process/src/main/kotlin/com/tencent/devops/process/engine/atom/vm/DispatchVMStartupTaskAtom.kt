@@ -52,6 +52,7 @@ import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_PIPELINE_NOT
 import com.tencent.devops.process.engine.atom.AtomResponse
 import com.tencent.devops.process.engine.atom.AtomUtils
 import com.tencent.devops.process.engine.atom.IAtomTask
+import com.tencent.devops.process.engine.atom.vm.parser.DispatchTypeParser
 import com.tencent.devops.process.engine.common.VMUtils
 import com.tencent.devops.process.engine.exception.BuildTaskException
 import com.tencent.devops.process.engine.pojo.PipelineBuildTask
@@ -67,6 +68,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
+import javax.xml.bind.Element
 
 /**
  *
@@ -80,7 +82,8 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
     private val pipelineBuildDetailService: PipelineBuildDetailService,
     private val pipelineRuntimeService: PipelineRuntimeService,
     private val pipelineEventDispatcher: PipelineEventDispatcher,
-    private val rabbitTemplate: RabbitTemplate
+    private val rabbitTemplate: RabbitTemplate,
+    private val dispatchTypeParser: DispatchTypeParser
 ) : IAtomTask<VMBuildContainer> {
     override fun getParamElement(task: PipelineBuildTask): VMBuildContainer {
         return JsonUtil.mapTo(task.taskParams, VMBuildContainer::class.java)
@@ -123,15 +126,15 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
         val buildId = task.buildId
         val taskId = task.taskId
 
-// 构建环境容器序号ID
+        // 构建环境容器序号ID
         val vmSeqId = task.containerId
-// 预指定VM名称列表（逗号分割）
+        // 预指定VM名称列表（逗号分割）
         val vmNames = param.vmNames.joinToString(",")
 
         val pipelineInfo = pipelineRepositoryService.getPipelineInfo(projectId, pipelineId)
             ?: throw BuildTaskException(
                 errorType = ErrorType.SYSTEM,
-                errorCode = ERROR_PIPELINE_NOT_EXISTS,
+                errorCode = ERROR_PIPELINE_NOT_EXISTS.toInt(),
                 errorMsg = "流水线不存在",
                 pipelineId = pipelineId,
                 buildId = buildId,
@@ -141,7 +144,7 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
         val model = pipelineBuildDetailService.getBuildModel(buildId)
             ?: throw BuildTaskException(
                 errorType = ErrorType.SYSTEM,
-                errorCode = ERROR_PIPELINE_MODEL_NOT_EXISTS,
+                errorCode = ERROR_PIPELINE_MODEL_NOT_EXISTS.toInt(),
                 errorMsg = "流水线模型不存在",
                 pipelineId = pipelineId,
                 buildId = buildId,
@@ -151,7 +154,7 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
         val container = model.getContainer(vmSeqId)
             ?: throw BuildTaskException(
                 errorType = ErrorType.SYSTEM,
-                errorCode = ERROR_PIPELINE_NODEL_CONTAINER_NOT_EXISTS,
+                errorCode = ERROR_PIPELINE_NODEL_CONTAINER_NOT_EXISTS.toInt(),
                 errorMsg = "流水线的模型中指定构建容器${vmNames}不存在",
                 pipelineId = pipelineId,
                 buildId = buildId,
@@ -168,6 +171,18 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
 
         val source = "vmStartupTaskAtom"
         val dispatchType = getDispatchType(projectId, pipelineId, buildId, param, param.baseOS)
+
+        // 处理dispatchType中的BKSTORE镜像信息
+        dispatchTypeParser.parse(
+            userId = task.starter,
+            projectId = task.projectId,
+            pipelineId = task.pipelineId,
+            buildId = task.buildId,
+            dispatchType = dispatchType
+        )
+
+        dispatchType.replaceVariable(pipelineRuntimeService.getAllVariable(buildId))
+
         pipelineEventDispatcher.dispatch(
             PipelineAgentStartupEvent(
                 source = source,
@@ -218,7 +233,6 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
          * 新版的构建环境直接传入指定的构建机方式
          */
         if (param.dispatchType != null) {
-            param.dispatchType!!.replaceVariable(pipelineRuntimeService.getAllVariable(buildId))
             return param.dispatchType!!
         }
 
@@ -342,7 +356,7 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
     private fun agentException(pipelineId: String, buildId: String) =
         BuildTaskException(
             errorType = ErrorType.SYSTEM,
-            errorCode = ERROR_PIPELINE_AGENT_STATUS_EXCEPTION,
+            errorCode = ERROR_PIPELINE_AGENT_STATUS_EXCEPTION.toInt(),
             errorMsg = "第三方构建机的Agent状态异常",
             pipelineId = pipelineId,
             buildId = buildId,
@@ -364,7 +378,8 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
             userId: String
         ): PipelineBuildTask {
 
-            // 防止
+            val taskParams = container.genTaskParams()
+            taskParams["elements"] = emptyList<Element>() // elements可能过多导致存储问题
             return PipelineBuildTask(
                 projectId = projectId,
                 pipelineId = pipelineId,
@@ -379,7 +394,7 @@ class DispatchVMStartupTaskAtom @Autowired constructor(
                 taskType = EnvControlTaskType.VM.name,
                 taskAtom = AtomUtils.parseAtomBeanName(DispatchVMStartupTaskAtom::class.java),
                 status = BuildStatus.QUEUE,
-                taskParams = container.genTaskParams(),
+                taskParams = taskParams,
                 executeCount = 1,
                 starter = userId,
                 approver = null,

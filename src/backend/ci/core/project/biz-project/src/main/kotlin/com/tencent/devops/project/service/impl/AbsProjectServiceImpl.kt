@@ -29,7 +29,6 @@ package com.tencent.devops.project.service.impl
 import com.tencent.devops.artifactory.api.service.ServiceFileResource
 import com.tencent.devops.artifactory.pojo.enums.FileChannelTypeEnum
 import com.tencent.devops.common.api.exception.OperationException
-import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.common.api.util.FileUtil
 import com.tencent.devops.common.api.util.UUIDUtil
 import com.tencent.devops.common.auth.api.pojo.ResourceRegisterInfo
@@ -38,9 +37,9 @@ import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.gray.Gray
 import com.tencent.devops.common.service.utils.CommonUtils
 import com.tencent.devops.common.service.utils.MessageCodeUtil
-import com.tencent.devops.model.project.tables.records.TProjectRecord
 import com.tencent.devops.project.constant.ProjectMessageCode
 import com.tencent.devops.project.dao.ProjectDao
+import com.tencent.devops.project.dispatch.ProjectDispatcher
 import com.tencent.devops.project.jmx.api.ProjectJmxApi
 import com.tencent.devops.project.jmx.api.ProjectJmxApi.Companion.PROJECT_LIST
 import com.tencent.devops.project.pojo.ProjectCreateInfo
@@ -48,13 +47,18 @@ import com.tencent.devops.project.pojo.ProjectUpdateInfo
 import com.tencent.devops.project.pojo.ProjectVO
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.pojo.enums.ProjectValidateType
+import com.tencent.devops.project.pojo.mq.ProjectCreateBroadCastEvent
+import com.tencent.devops.project.pojo.mq.ProjectUpdateBroadCastEvent
+import com.tencent.devops.project.pojo.mq.ProjectUpdateLogoBroadCastEvent
 import com.tencent.devops.project.pojo.user.UserDeptDetail
 import com.tencent.devops.project.service.ProjectPermissionService
 import com.tencent.devops.project.service.ProjectService
 import com.tencent.devops.project.util.ImageUtil
+import com.tencent.devops.project.util.ProjectUtils
 import com.tencent.devops.project.util.exception.ProjectNotExistException
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.dao.DuplicateKeyException
@@ -70,7 +74,8 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
     private val projectJmxApi: ProjectJmxApi,
     private val redisOperation: RedisOperation,
     private val gray: Gray,
-    private val client: Client
+    private val client: Client,
+    private val projectDispatcher: ProjectDispatcher
 ) : ProjectService {
 
     override fun validate(validateType: ProjectValidateType, name: String, projectId: String?) {
@@ -154,7 +159,15 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
                 groupName = ""
             )
             try {
-                projectDao.create(dslContext, userId, logoAddress, projectCreateInfo, userDeptDetail, projectId)
+                dslContext.transaction { configuration ->
+                    val context = DSL.using(configuration)
+                    projectDao.create(context, userId, logoAddress, projectCreateInfo, userDeptDetail, projectId)
+                    projectDispatcher.dispatch(ProjectCreateBroadCastEvent(
+                        userId = userId,
+                        projectId = projectId,
+                        projectInfo = projectCreateInfo
+                    ))
+                }
             } catch (e: DuplicateKeyException) {
                 logger.warn("Duplicate project $projectCreateInfo", e)
                 throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PROJECT_NAME_EXIST))
@@ -177,7 +190,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
 
     override fun getByEnglishName(englishName: String): ProjectVO? {
         val record = projectDao.getByEnglishName(dslContext, englishName) ?: return null
-        return packagingBean(record, grayProjectSet())
+        return ProjectUtils.packagingBean(record, grayProjectSet())
     }
 
     override fun update(userId: String, projectId: String, projectUpdateInfo: ProjectUpdateInfo): Boolean {
@@ -185,11 +198,19 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
         var success = false
         try {
             try {
-                projectDao.update(dslContext, userId, projectId, projectUpdateInfo)
-                projectPermissionService.modifyResource(
-                    projectCode = projectUpdateInfo.englishName,
-                    projectName = projectUpdateInfo.projectName
-                )
+                dslContext.transaction { configuration ->
+                    val context = DSL.using(configuration)
+                    projectDao.update(context, userId, projectId, projectUpdateInfo)
+                    projectPermissionService.modifyResource(
+                        projectCode = projectUpdateInfo.englishName,
+                        projectName = projectUpdateInfo.projectName
+                    )
+                    projectDispatcher.dispatch(ProjectUpdateBroadCastEvent(
+                        userId = userId,
+                        projectId = projectId,
+                        projectInfo = projectUpdateInfo
+                    ))
+                }
             } catch (e: DuplicateKeyException) {
                 logger.warn("Duplicate project $projectUpdateInfo", e)
                 throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PROJECT_NAME_EXIST))
@@ -213,7 +234,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
 
             val list = ArrayList<ProjectVO>()
             projectDao.listByEnglishName(dslContext, projects).map {
-                list.add(packagingBean(it, grayProjectSet()))
+                list.add(ProjectUtils.packagingBean(it, grayProjectSet()))
             }
             success = true
             return list
@@ -232,7 +253,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
             val grayProjectSet = grayProjectSet()
 
             projectDao.listByCodes(dslContext, projectCodes).filter { it.enabled == null || it.enabled }.map {
-                list.add(packagingBean(it, grayProjectSet))
+                list.add(ProjectUtils.packagingBean(it, grayProjectSet))
             }
             success = true
             return list
@@ -257,7 +278,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
                 // 多次查询保证有序
                 val projectRecord =
                     projectDao.getByEnglishName(dslContext, it) ?: throw ProjectNotExistException("projectCode=$it")
-                list.add(packagingBean(projectRecord, grayProjectSet))
+                list.add(ProjectUtils.packagingBean(projectRecord, grayProjectSet))
             }
             success = true
             return list
@@ -273,7 +294,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
         try {
             val list = ArrayList<ProjectVO>()
             projectDao.getAllProject(dslContext).filter { it.enabled == null || it.enabled }.map {
-                list.add(recordToBean(it))
+                list.add(ProjectUtils.packagingBean(it, emptySet()))
             }
             success = true
             return list
@@ -297,7 +318,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
             val grayProjectSet = grayProjectSet()
 
             projectDao.listByCodes(dslContext, projectCodes.toSet()).filter { it.enabled == null || it.enabled }.map {
-                list.add(packagingBean(it, grayProjectSet))
+                list.add(ProjectUtils.packagingBean(it, grayProjectSet))
             }
             success = true
             return list
@@ -318,102 +339,6 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
     override fun grayProjectSet() =
         (redisOperation.getSetMembers(gray.getGrayRedisKey()) ?: emptySet()).filter { !it.isBlank() }.toSet()
 
-    private fun recordToBean(tProjectRecord: TProjectRecord): ProjectVO {
-        return ProjectVO(
-            id = tProjectRecord.id,
-            projectId = tProjectRecord.projectId ?: "",
-            projectName = tProjectRecord.projectName,
-            projectCode = tProjectRecord.englishName ?: "",
-            projectType = tProjectRecord.projectType ?: 0,
-            approvalStatus = tProjectRecord.approvalStatus ?: 0,
-            approvalTime = if (tProjectRecord.approvalTime == null) {
-                ""
-            } else {
-                DateTimeUtil.toDateTime(tProjectRecord.approvalTime, "yyyy-MM-dd'T'HH:mm:ssZ")
-            },
-            approver = tProjectRecord.approver ?: "",
-            bgId = tProjectRecord.bgId?.toString(),
-            bgName = tProjectRecord.bgName ?: "",
-            ccAppId = tProjectRecord.ccAppId ?: 0,
-            ccAppName = tProjectRecord.ccAppName ?: "",
-            centerId = tProjectRecord.centerId?.toString(),
-            centerName = tProjectRecord.centerName ?: "",
-            createdAt = DateTimeUtil.toDateTime(tProjectRecord.createdAt, "yyyy-MM-dd'T'HH:mm:ssZ"),
-            creator = tProjectRecord.creator ?: "",
-            dataId = tProjectRecord.dataId ?: 0,
-            deployType = tProjectRecord.deployType ?: "",
-            deptId = tProjectRecord.deptId?.toString(),
-            deptName = tProjectRecord.deptName ?: "",
-            description = tProjectRecord.description ?: "",
-            englishName = tProjectRecord.englishName ?: "",
-            extra = tProjectRecord.extra ?: "",
-            offlined = tProjectRecord.isOfflined,
-            secrecy = tProjectRecord.isSecrecy,
-            helmChartEnabled = tProjectRecord.isHelmChartEnabled,
-            kind = tProjectRecord.kind,
-            logoAddr = tProjectRecord.logoAddr ?: "",
-            remark = tProjectRecord.remark ?: "",
-            updatedAt = if (tProjectRecord.updatedAt == null) {
-                ""
-            } else {
-                DateTimeUtil.toDateTime(tProjectRecord.updatedAt, "yyyy-MM-dd'T'HH:mm:ssZ")
-            },
-            useBk = tProjectRecord.useBk,
-            enabled = tProjectRecord.enabled,
-            gray = false,
-            hybridCcAppId = tProjectRecord.hybridCcAppId,
-            enableExternal = tProjectRecord.enableExternal,
-            enableIdc = tProjectRecord.enableIdc
-        )
-    }
-    fun packagingBean(tProjectRecord: TProjectRecord, grayProjectSet: Set<String>): ProjectVO {
-        return ProjectVO(
-            id = tProjectRecord.id,
-            projectId = tProjectRecord.projectId ?: "",
-            projectName = tProjectRecord.projectName,
-            projectCode = tProjectRecord.englishName ?: "",
-            projectType = tProjectRecord.projectType ?: 0,
-            approvalStatus = tProjectRecord.approvalStatus ?: 0,
-            approvalTime = if (tProjectRecord.approvalTime == null) {
-                ""
-            } else {
-                DateTimeUtil.toDateTime(tProjectRecord.approvalTime, "yyyy-MM-dd'T'HH:mm:ssZ")
-            },
-            approver = tProjectRecord.approver ?: "",
-            bgId = tProjectRecord.bgId?.toString(),
-            bgName = tProjectRecord.bgName ?: "",
-            ccAppId = tProjectRecord.ccAppId ?: 0,
-            ccAppName = tProjectRecord.ccAppName ?: "",
-            centerId = tProjectRecord.centerId?.toString(),
-            centerName = tProjectRecord.centerName ?: "",
-            createdAt = DateTimeUtil.toDateTime(tProjectRecord.createdAt, "yyyy-MM-dd"),
-            creator = tProjectRecord.creator ?: "",
-            dataId = tProjectRecord.dataId ?: 0,
-            deployType = tProjectRecord.deployType ?: "",
-            deptId = tProjectRecord.deptId?.toString(),
-            deptName = tProjectRecord.deptName ?: "",
-            description = tProjectRecord.description ?: "",
-            englishName = tProjectRecord.englishName ?: "",
-            extra = tProjectRecord.extra ?: "",
-            offlined = tProjectRecord.isOfflined,
-            secrecy = tProjectRecord.isSecrecy,
-            helmChartEnabled = tProjectRecord.isHelmChartEnabled,
-            kind = tProjectRecord.kind,
-            logoAddr = tProjectRecord.logoAddr ?: "",
-            remark = tProjectRecord.remark ?: "",
-            updatedAt = if (tProjectRecord.updatedAt == null) {
-                ""
-            } else {
-                DateTimeUtil.toDateTime(tProjectRecord.updatedAt, "yyyy-MM-dd")
-            },
-            useBk = tProjectRecord.useBk,
-            enabled = tProjectRecord.enabled,
-            gray = grayProjectSet.contains(tProjectRecord.englishName),
-            hybridCcAppId = tProjectRecord.hybridCcAppId,
-            enableExternal = tProjectRecord.enableExternal
-        )
-    }
-
     override fun updateLogo(
         userId: String,
         projectId: String,
@@ -432,7 +357,15 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
                 if (result.isNotOk()) {
                     return Result(result.status, result.message, false)
                 }
-                projectDao.updateLogoAddress(dslContext, userId, projectId, result.data!!)
+                dslContext.transaction { configuration ->
+                    val context = DSL.using(configuration)
+                    projectDao.updateLogoAddress(context, userId, projectId, result.data!!)
+                    projectDispatcher.dispatch(ProjectUpdateLogoBroadCastEvent(
+                        userId = userId,
+                        projectId = projectId,
+                        logoAddr = result.data!!
+                    ))
+                }
             } catch (e: Exception) {
                 logger.warn("fail update projectLogo", e)
                 throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.UPDATE_LOGO_FAIL))

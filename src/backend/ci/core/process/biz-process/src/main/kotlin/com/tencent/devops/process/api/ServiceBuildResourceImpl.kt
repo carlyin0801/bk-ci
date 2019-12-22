@@ -118,7 +118,7 @@ class ServiceBuildResourceImpl @Autowired constructor(
         )
     }
 
-        override fun retry(userId: String, projectId: String, pipelineId: String, buildId: String, taskId: String?, channelCode: ChannelCode): Result<BuildId> {
+    override fun retry(userId: String, projectId: String, pipelineId: String, buildId: String, taskId: String?, channelCode: ChannelCode): Result<BuildId> {
         checkUserId(userId)
         checkParam(projectId, pipelineId)
         if (buildId.isBlank()) {
@@ -252,6 +252,33 @@ class ServiceBuildResourceImpl @Autowired constructor(
         )
     }
 
+    /**
+     * 不鉴权接口，仅供平台方调用
+     */
+    override fun getBuildStatusWithoutPermission(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        channelCode: ChannelCode
+    ): Result<BuildHistoryWithVars> {
+        checkUserId(userId)
+        checkParam(projectId, pipelineId)
+        if (buildId.isBlank()) {
+            throw ParamBlankException("Invalid buildId")
+        }
+        return Result(
+            buildService.getBuildStatusWithVars(
+                userId = userId,
+                projectId = projectId,
+                pipelineId = pipelineId,
+                buildId = buildId,
+                channelCode = channelCode,
+                checkPermission = false
+            )
+        )
+    }
+
     override fun getBuildVars(
         userId: String,
         projectId: String,
@@ -310,6 +337,14 @@ class ServiceBuildResourceImpl @Autowired constructor(
             vmInfo = vmInfo
         )
         return Result(true)
+    }
+
+    override fun getSingleHistoryBuild(projectId: String, pipelineId: String, buildNum: String, channelCode: ChannelCode?): Result<BuildHistory?> {
+        val history = buildService.getSingleHistoryBuild(
+            projectId, pipelineId,
+            buildNum.toInt(), channelCode ?: ChannelCode.BS
+        )
+        return Result(history)
     }
 
     override fun workerBuildFinish(

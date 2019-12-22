@@ -1,3 +1,29 @@
+/*
+ * Tencent is pleased to support the open source community by making BK-CI 蓝鲸持续集成平台 available.
+ *
+ * Copyright (C) 2019 THL A29 Limited, a Tencent company.  All rights reserved.
+ *
+ * BK-CI 蓝鲸持续集成平台 is licensed under the MIT license.
+ *
+ * A copy of the MIT License is included in this file.
+ *
+ *
+ * Terms of the MIT License:
+ * ---------------------------------------------------
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+ * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+ * NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package com.tencent.devops.gitci.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -35,11 +61,15 @@ import com.tencent.devops.common.ci.yaml.CIBuildYaml
 import com.tencent.devops.common.ci.yaml.Credential
 import com.tencent.devops.common.ci.yaml.Pool
 import com.tencent.devops.common.ci.CiBuildConfig
+import com.tencent.devops.common.ci.NORMAL_JOB
+import com.tencent.devops.common.ci.VM_JOB
 import com.tencent.devops.common.ci.task.ServiceJobDevCloudTask
+import com.tencent.devops.common.ci.yaml.Job
 import com.tencent.devops.common.pipeline.container.NormalContainer
 import com.tencent.devops.common.pipeline.enums.CodePullStrategy
 import com.tencent.devops.common.pipeline.enums.GitPullModeType
 import com.tencent.devops.gitci.client.ScmClient
+import com.tencent.devops.gitci.utils.GitCIParameterUtils
 import com.tencent.devops.process.api.service.ServiceBuildResource
 import com.tencent.devops.process.api.service.ServicePipelineResource
 import com.tencent.devops.process.pojo.BuildId
@@ -61,7 +91,8 @@ class GitCIBuildService @Autowired constructor(
     private val gitRequestEventBuildDao: GitRequestEventBuildDao,
     private val gitServicesConfDao: GitCIServicesConfDao,
     private val buildConfig: BuildConfig,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val gitCIParameterUtils: GitCIParameterUtils
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(GitCIBuildService::class.java)
@@ -142,62 +173,90 @@ class GitCIBuildService @Autowired constructor(
         val stage1 = Stage(listOf(triggerContainer), "stage-1")
         stageList.add(stage1)
 
-//        // 第二个stage，拉代码
-//        addGitCodeStage(event, gitProjectConf, stageList)
-
-        // 第三个stage，services初始化
+        // 第二个stage，services初始化
         addServicesStage(yaml, stageList)
 
         // 其他的stage
         yaml.stages!!.forEachIndexed { stageIndex, stage ->
-
             val containerList = mutableListOf<Container>()
             stage.stage.forEachIndexed { jobIndex, job ->
                 val elementList = mutableListOf<Element>()
-                //每个job的第一个插件都是拉代码
-                elementList.add(createGitCodeElement(event, gitProjectConf))
-
-                job.job.steps.forEach {
-                    val element = it.covertToElement(getCiBuildConf(buildConfig))
-                    elementList.add(element)
-                    if (element is MarketBuildAtomElement) {
-                        logger.info("install market atom: ${element.getAtomCode()}")
-                        installMarketAtom(gitProjectConf, event.userId, element.getAtomCode())
-                    }
+                // 根据job类型创建构建容器或者无构建环境容器，默认vmBuild
+                if (job.job.type == null || job.job.type == VM_JOB) {
+                    // 构建环境容器每个job的第一个插件都是拉代码
+//                    elementList.add(createGitCodeElement(event, gitProjectConf))
+                    makeElementList(job, elementList, gitProjectConf, event.userId)
+                    addVmBuildContainer(job, elementList, containerList, jobIndex)
+                } else if (job.job.type == NORMAL_JOB) {
+                    makeElementList(job, elementList, gitProjectConf, event.userId)
+                    addNormalContainer(elementList, containerList)
                 }
-                val containerPool = if (job.job.pool?.container == null) {
-                    Pool(buildConfig.registryImage, Credential(buildConfig.registryUserName!!, buildConfig.registryPassword!!))
-                } else {
-                    // TODO password decrypt
-
-                    Pool(job.job.pool!!.container, Credential(job.job.pool!!.credential?.user ?: "", job.job.pool!!.credential?.password ?: ""))
-                }
-                val vmContainer = VMBuildContainer(
-                        id = null,
-                        name = job.job.name ?: "stage${stageIndex + 3}-${jobIndex + 1}",
-                        elements = elementList,
-                        status = null,
-                        startEpoch = null,
-                        systemElapsed = null,
-                        elementElapsed = null,
-                        baseOS = VMBaseOS.LINUX,
-                        vmNames = setOf(),
-                        maxQueueMinutes = 60,
-                        maxRunningMinutes = 900,
-                        buildEnv = null,
-                        customBuildEnv = null,
-                        thirdPartyAgentId = null,
-                        thirdPartyAgentEnvId = null,
-                        thirdPartyWorkspace = null,
-                        dockerBuildVersion = null,
-                        tstackAgentId = null,
-                        dispatchType = GitCIDispatchType(objectMapper.writeValueAsString(containerPool))
-                )
-                containerList.add(vmContainer)
             }
-            stageList.add(Stage(containerList, "stage-${stageIndex + 3}"))
+
+            stageList.add(Stage(containerList, "stage-$stageIndex"))
         }
         return Model("git_" + gitProjectConf.gitProjectId + "_" + System.currentTimeMillis(), "", stageList, emptyList(), false, event.userId)
+    }
+
+    private fun addNormalContainer(elementList: List<Element>, containerList: MutableList<Container>) {
+        containerList.add(NormalContainer(
+            containerId = null,
+            id = null,
+            name = "无编译环境",
+            elements = elementList,
+            status = null,
+            startEpoch = null,
+            systemElapsed = null,
+            elementElapsed = null,
+            enableSkip = false,
+            conditions = null,
+            canRetry = false,
+            jobControlOption = null,
+            mutexGroup = null
+        ))
+    }
+
+    private fun addVmBuildContainer(job: Job, elementList: List<Element>, containerList: MutableList<Container>, jobIndex: Int) {
+        val containerPool =
+            if (job.job.pool?.container == null) {
+                Pool(buildConfig.registryImage, Credential("", ""))
+            } else {
+                Pool(job.job.pool!!.container, Credential(job.job.pool!!.credential?.user ?: "", job.job.pool!!.credential?.password ?: ""))
+            }
+
+        val vmContainer = VMBuildContainer(
+            id = null,
+            name = "Job_${jobIndex + 1} " + (job.job.name ?: ""),
+            elements = elementList,
+            status = null,
+            startEpoch = null,
+            systemElapsed = null,
+            elementElapsed = null,
+            baseOS = VMBaseOS.LINUX,
+            vmNames = setOf(),
+            maxQueueMinutes = 60,
+            maxRunningMinutes = 900,
+            buildEnv = null,
+            customBuildEnv = null,
+            thirdPartyAgentId = null,
+            thirdPartyAgentEnvId = null,
+            thirdPartyWorkspace = null,
+            dockerBuildVersion = null,
+            tstackAgentId = null,
+            dispatchType = GitCIDispatchType(objectMapper.writeValueAsString(containerPool))
+        )
+        containerList.add(vmContainer)
+    }
+
+    private fun makeElementList(job: Job, elementList: MutableList<Element>, gitProjectConf: GitRepositoryConf, userId: String) {
+        job.job.steps.forEach {
+            val element = it.covertToElement(getCiBuildConf(buildConfig))
+            elementList.add(element)
+            if (element is MarketBuildAtomElement) {
+                logger.info("install market atom: ${element.getAtomCode()}")
+                installMarketAtom(gitProjectConf, userId, element.getAtomCode())
+            }
+        }
     }
 
     private fun installMarketAtom(gitProjectConf: GitRepositoryConf, userId: String, atomCode: String) {
@@ -329,11 +388,12 @@ class GitCIBuildService @Autowired constructor(
     private fun createPipelineParams(gitProjectConf: GitRepositoryConf, yaml: CIBuildYaml): List<BuildFormProperty> {
         val result = mutableListOf<BuildFormProperty>()
         gitProjectConf.env?.forEach {
+            val value = gitCIParameterUtils.encrypt(it.value)
             result.add(BuildFormProperty(
                     it.name,
                     false,
-                    BuildFormPropertyType.STRING,
-                    it.value,
+                    BuildFormPropertyType.PASSWORD,
+                    value,
                     null,
                     null,
                     null,
@@ -365,6 +425,7 @@ class GitCIBuildService @Autowired constructor(
 
     private fun getCiBuildConf(buildConf: BuildConfig): CiBuildConfig {
         return CiBuildConfig(
+                buildConf.codeCCSofwareClientImage,
                 buildConf.codeCCSofwarePath,
                 buildConf.registryHost,
                 buildConf.registryUserName,

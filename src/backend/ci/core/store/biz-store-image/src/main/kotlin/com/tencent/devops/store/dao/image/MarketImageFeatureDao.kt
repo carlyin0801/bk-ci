@@ -104,6 +104,10 @@ class MarketImageFeatureDao {
             if (null != certificationFlag) {
                 baseStep.set(CERTIFICATION_FLAG, certificationFlag)
             }
+            val deleteFlag = imageFeatureUpdateRequest.deleteFlag
+            if (null != deleteFlag) {
+                baseStep.set(DELETE_FLAG, deleteFlag)
+            }
             baseStep.set(MODIFIER, userId)
                 .set(UPDATE_TIME, LocalDateTime.now())
                 .where(IMAGE_CODE.eq(imageFeatureUpdateRequest.imageCode))

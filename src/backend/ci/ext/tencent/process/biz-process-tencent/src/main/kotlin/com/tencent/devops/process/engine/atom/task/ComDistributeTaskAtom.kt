@@ -29,12 +29,16 @@ package com.tencent.devops.process.engine.atom.task
 import com.google.gson.JsonParser
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.OkhttpUtils
+import com.tencent.devops.common.archive.client.BkRepoClient
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
+import com.tencent.devops.common.pipeline.element.ComDistributionElement
 import com.tencent.devops.common.pipeline.enums.BuildStatus
+import com.tencent.devops.common.redis.RedisOperation
+import com.tencent.devops.common.service.config.CommonConfig
+import com.tencent.devops.common.service.gray.RepoGray
 import com.tencent.devops.log.utils.LogUtils
 import com.tencent.devops.process.bkjob.ClearJobTempFileEvent
-import com.tencent.devops.common.pipeline.element.ComDistributionElement
 import com.tencent.devops.process.engine.atom.AtomResponse
 import com.tencent.devops.process.engine.atom.IAtomTask
 import com.tencent.devops.process.engine.atom.defaultFailAtomResponse
@@ -55,7 +59,6 @@ import org.apache.commons.lang.StringUtils
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -69,15 +72,16 @@ class ComDistributeTaskAtom @Autowired constructor(
     private val jobFastPushFile: JobFastPushFile,
     private val rabbitTemplate: RabbitTemplate,
     private val pipelineUserService: PipelineUserService,
-    private val client: Client
+    private val client: Client,
+    private val commonConfig: CommonConfig,
+    private val repoGray: RepoGray,
+    private val redisOperation: RedisOperation,
+    private val bkRepoClient: BkRepoClient
 ) : IAtomTask<ComDistributionElement> {
 
     override fun getParamElement(task: PipelineBuildTask): ComDistributionElement {
         return JsonUtil.mapTo(task.taskParams, ComDistributionElement::class.java)
     }
-
-    @Value("\${gateway.url:#{null}}")
-    private val gatewayUrl: String? = null
 
     private val praser = JsonParser()
 
@@ -128,10 +132,10 @@ class ComDistributeTaskAtom @Autowired constructor(
 
             task.taskParams[FIRST_STATUS] = buildStatus.name
             if (BuildStatus.isFailure(buildStatus)) { // 步骤1失败，终止
-                LogUtils.addRedLine(rabbitTemplate, buildId, "构件分发失败/send file to cloud stone fail", taskId, containerId, executeCount)
+                LogUtils.addRedLine(rabbitTemplate, buildId, "构件分发失败/send file to svr fail", taskId, containerId, executeCount)
                 return AtomResponse(buildStatus)
             }
-            LogUtils.addLine(rabbitTemplate, buildId, "构件分发成功/send file to cloud stone done", taskId, containerId, executeCount)
+            LogUtils.addLine(rabbitTemplate, buildId, "构件分发成功/send file to svr done", taskId, containerId, executeCount)
         }
 
         return defaultSuccessAtomResponse
@@ -157,10 +161,10 @@ class ComDistributeTaskAtom @Autowired constructor(
         clearTempFile(task) // 清理临时文件
 
         if (BuildStatus.isFailure(buildStatus)) { // 如果失败则结束
-            LogUtils.addRedLine(rabbitTemplate, buildId, "send file to cloud stone fail", taskId, containerId, executeCount)
+            LogUtils.addRedLine(rabbitTemplate, buildId, "send file to svr fail", taskId, containerId, executeCount)
             return AtomResponse(buildStatus)
         } else if (BuildStatus.isFinish(buildStatus)) { // 成功了，继续
-            LogUtils.addLine(rabbitTemplate, buildId, "send file to cloud stone done", taskId, containerId, executeCount)
+            LogUtils.addLine(rabbitTemplate, buildId, "send file to svr done", taskId, containerId, executeCount)
         }
 
         return AtomResponse(buildStatus)
@@ -171,23 +175,27 @@ class ComDistributeTaskAtom @Autowired constructor(
         runVariables: Map<String, String>,
         param: ComDistributionElement
     ): BuildStatus {
-        val searchUrl = "http://$gatewayUrl/jfrog/api/service/search/aql"
+        val user = task.starter
         val buildId = task.buildId
         val pipelineId = task.pipelineId
         val taskId = task.taskId
         val containerId = task.containerHashId
         val executeCount = task.executeCount ?: 1
         val workspace = java.nio.file.Files.createTempDirectory("${DigestUtils.md5Hex("$buildId-$taskId")}_").toFile()
-        val localFileList = mutableListOf<String>()
+        val isRepoGray = repoGray.isGray(projectId, redisOperation)
+        if (isRepoGray) {
+            LogUtils.addLine(rabbitTemplate, buildId, "use bkrepo: $isRepoGray", taskId, containerId, executeCount)
+        }
 
+        val localFileList = mutableListOf<String>()
         var userId = task.starter
         val appId = client.get(ServiceProjectResource::class).get(task.projectId).data?.ccAppId?.toInt()
-        ?: run {
-            LogUtils.addLine(rabbitTemplate, task.buildId, "找不到绑定业务ID/can not found business ID", task.taskId,
-                containerId, executeCount
-            )
-            return BuildStatus.FAILED
-        }
+            ?: run {
+                LogUtils.addLine(rabbitTemplate, task.buildId, "找不到绑定业务ID/can not found business ID", task.taskId,
+                    containerId, executeCount
+                )
+                return BuildStatus.FAILED
+            }
         val isCustom = param.customize
         val regexPathsStr = parseVariable(param.regexPaths, runVariables)
         var count = 0
@@ -197,35 +205,49 @@ class ComDistributeTaskAtom @Autowired constructor(
             val targetPathStr = parseVariable(param.targetPath, runVariables)
 
             regexPathsStr.split(",").forEach { regex ->
-                val requestBody = getRequestBody(regex.trim(), isCustom)
-                LogUtils.addLine(
-                    rabbitTemplate,
-                    buildId,
-                    "requestBody:" + requestBody.removePrefix("items.find(").removeSuffix(")"),
-                    taskId,
-                    containerId,
-                    executeCount
-                )
-
-                val request = Request.Builder()
-                    .url(searchUrl)
-                    .post(RequestBody.create(MediaType.parse("text/plain; charset=utf-8"), requestBody))
-                    .build()
-
-                OkhttpUtils.doHttp(request).use { response ->
-                    val body = response.body()!!.string()
-
-                    val results = praser.parse(body).asJsonObject["results"].asJsonArray
-                    for (i in 0 until results.size()) {
+                if (isRepoGray) {
+                    val fileList = bkRepoClient.matchBkRepoFile(regex, projectId, pipelineId, buildId, isCustom)
+                    val repoName = if (isCustom) "custom" else "pipeline"
+                    fileList.forEach { bkrepoFile ->
+                        LogUtils.addLine(rabbitTemplate, buildId, "匹配到文件：(${bkrepoFile.displayPath})", taskId, containerId, executeCount)
                         count++
-                        val obj = results[i].asJsonObject
-                        val path = getPath(obj["path"].asString, obj["name"].asString, isCustom)
-                        val url = getUrl(path, isCustom)
-
-                        val destFile = File(workspace, obj["name"].asString)
-                        OkhttpUtils.downloadFile(url, destFile)
+                        val destFile = File(workspace, File(bkrepoFile.displayPath).name)
+                        bkRepoClient.downloadFile(user, projectId, repoName, bkrepoFile.fullPath, destFile)
                         localFileList.add(destFile.absolutePath)
                         logger.info("save file : ${destFile.canonicalPath} (${destFile.length()})")
+                    }
+                } else {
+                    val requestBody = getRequestBody(regex.trim(), isCustom)
+                    LogUtils.addLine(
+                        rabbitTemplate,
+                        buildId,
+                        "requestBody:" + requestBody.removePrefix("items.find(").removeSuffix(")"),
+                        taskId,
+                        containerId,
+                        executeCount
+                    )
+
+                    val searchUrl = "${commonConfig.devopsHostGateway}/jfrog/api/service/search/aql"
+                    val request = Request.Builder()
+                        .url(searchUrl)
+                        .post(RequestBody.create(MediaType.parse("text/plain; charset=utf-8"), requestBody))
+                        .build()
+
+                    OkhttpUtils.doHttp(request).use { response ->
+                        val body = response.body()!!.string()
+
+                        val results = praser.parse(body).asJsonObject["results"].asJsonArray
+                        for (i in 0 until results.size()) {
+                            count++
+                            val obj = results[i].asJsonObject
+                            val path = getPath(obj["path"].asString, obj["name"].asString, isCustom)
+                            val url = getUrl(path, isCustom)
+
+                            val destFile = File(workspace, obj["name"].asString)
+                            OkhttpUtils.downloadFile(url, destFile)
+                            localFileList.add(destFile.absolutePath)
+                            logger.info("save file : ${destFile.canonicalPath} (${destFile.length()})")
+                        }
                     }
                 }
             }
@@ -250,7 +272,7 @@ class ComDistributeTaskAtom @Autowired constructor(
             // 执行超时后的保底清理事件
             pipelineEventDispatcher.dispatch(
                 ClearJobTempFileEvent(
-                    source = "sendFileToCloudStone",
+                    source = "sendFileToJob",
                     pipelineId = pipelineId,
                     buildId = buildId,
                     projectId = task.projectId,
@@ -317,10 +339,10 @@ class ComDistributeTaskAtom @Autowired constructor(
             } else {
                 task.taskParams[BS_ATOM_START_TIME_MILLS] = startTime
             }
-            logger.info("[$buildId]|sendFileToCloudStone| status=$buildStatus")
+            logger.info("[$buildId]|sendFileToJob| status=$buildStatus")
             return buildStatus
         } catch (e: Throwable) {
-            logger.error("[$buildId]|sendFileToCloudStone fail| e=$e", e)
+            logger.error("[$buildId]|sendFileToJob fail| e=$e", e)
             workspace.deleteRecursively()
             return BuildStatus.FAILED
         }
@@ -398,9 +420,9 @@ class ComDistributeTaskAtom @Autowired constructor(
     // 获取jfrog传回的url
     private fun getUrl(realPath: String, isCustom: Boolean): String {
         return if (isCustom) {
-            "http://$gatewayUrl/jfrog/storage/service/custom/$realPath"
+            "${commonConfig.devopsHostGateway}/jfrog/storage/service/custom/$realPath"
         } else {
-            "http://$gatewayUrl/jfrog/storage/service/archive/$realPath"
+            "${commonConfig.devopsHostGateway}/jfrog/storage/service/archive/$realPath"
         }
     }
 

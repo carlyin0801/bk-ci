@@ -37,5 +37,7 @@ data class ImageFeatureUpdateRequest(
     @ApiModelProperty("是否推荐标识 true：推荐，false：不推荐", required = false)
     val recommendFlag: Boolean? = null,
     @ApiModelProperty("是否官方认证， TRUE：是 FALSE：不是", required = false)
-    val certificationFlag: Boolean? = null
+    val certificationFlag: Boolean? = null,
+    @ApiModelProperty("删除标识", required = false)
+    val deleteFlag: Boolean? = null
 )

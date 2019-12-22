@@ -26,12 +26,17 @@
 package com.tencent.devops.store.api.image.user
 
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.pipeline.type.docker.ImageType
 import com.tencent.devops.store.pojo.common.VersionInfo
+import com.tencent.devops.store.pojo.image.enums.ImageRDTypeEnum
+import com.tencent.devops.store.pojo.image.enums.MarketImageSortTypeEnum
+import com.tencent.devops.store.pojo.image.request.ImageBaseInfoUpdateRequest
 import com.tencent.devops.store.pojo.image.response.ImageDetail
 import com.tencent.devops.store.pojo.image.response.MarketImageMain
+import com.tencent.devops.store.pojo.image.response.MarketImageResp
 import com.tencent.devops.store.pojo.image.response.MyImage
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
@@ -40,6 +45,7 @@ import javax.ws.rs.Consumes
 import javax.ws.rs.DELETE
 import javax.ws.rs.GET
 import javax.ws.rs.HeaderParam
+import javax.ws.rs.PUT
 import javax.ws.rs.Path
 import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
@@ -82,6 +88,12 @@ interface UserImageResource {
         @ApiParam("镜像分类编码", required = false)
         @QueryParam("classifyCode")
         classifyCode: String?,
+        @ApiParam("应用范畴", required = false)
+        @QueryParam("categoryCode")
+        categoryCode: String?,
+        @ApiParam("镜像研发来源", required = false)
+        @QueryParam("rdType")
+        rdType: ImageRDTypeEnum?,
         @ApiParam("镜像标签代码", required = false)
         @QueryParam("labelCode")
         labelCode: String?,
@@ -90,14 +102,14 @@ interface UserImageResource {
         score: Int?,
         @ApiParam("镜像排序字段", required = false)
         @QueryParam("sortType")
-        sortType: String?,
+        sortType: MarketImageSortTypeEnum?,
         @ApiParam("页码", required = false)
         @QueryParam("page")
         page: Int?,
         @ApiParam("每页大小", required = false)
         @QueryParam("pageSize")
         pageSize: Int?
-    ): Result<List<MarketImageMain>>
+    ): Result<MarketImageResp>
 
     @ApiOperation("根据ID查询镜像详情")
     @GET
@@ -169,6 +181,20 @@ interface UserImageResource {
         @ApiParam("镜像Code", required = true)
         @PathParam("imageCode")
         imageCode: String
+    ): Result<Boolean>
+
+    @ApiOperation("更新流水线镜像信息")
+    @PUT
+    @Path("/baseInfo/images/{imageCode}")
+    fun updateImageBaseInfo(
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("镜像代码 ", required = true)
+        @PathParam("imageCode")
+        imageCode: String,
+        @ApiParam(value = "镜像基本信息修改请求报文体", required = true)
+        imageBaseInfoUpdateRequest: ImageBaseInfoUpdateRequest
     ): Result<Boolean>
 
     @ApiOperation("根据镜像代码获取对应的版本列表信息")

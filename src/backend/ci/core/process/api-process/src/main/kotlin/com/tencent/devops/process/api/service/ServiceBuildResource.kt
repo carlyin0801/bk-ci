@@ -323,7 +323,28 @@ interface ServiceBuildResource {
         @ApiParam("构建ID", required = true)
         @PathParam("buildId")
         buildId: String,
-        @ApiParam("渠道号，默认为DS", required = true)
+        @ApiParam("渠道号，默认为BS", required = true)
+        @QueryParam("channelCode")
+        channelCode: ChannelCode
+    ): Result<BuildHistoryWithVars>
+
+    @ApiOperation("获取构建详情（平台调用，不鉴权）")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/nopermission/status")
+    fun getBuildStatusWithoutPermission(
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("渠道号，默认为BS", required = true)
         @QueryParam("channelCode")
         channelCode: ChannelCode
     ): Result<BuildHistoryWithVars>
@@ -418,4 +439,22 @@ interface ServiceBuildResource {
         @ApiParam("参数", required = true)
         vmInfo: VmInfo
     ): Result<Boolean>
+
+    @ApiOperation("获取流水线构建单条历史")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildNum}/history")
+    fun getSingleHistoryBuild(
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("流水线buildNum", required = true)
+        @PathParam("buildNum")
+        buildNum: String,
+        @ApiParam("渠道号，默认为DS", required = false)
+        @QueryParam("channelCode")
+        channelCode: ChannelCode?
+    ): Result<BuildHistory?>
 }

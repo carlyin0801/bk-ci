@@ -25,21 +25,30 @@
  */
 package com.tencent.devops.openapi.api.v2
 
+import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_ID
+import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_USER_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_USER_ID_DEFAULT_VALUE
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.openapi.api.external.measure.PipelineBuildResponseData
+import com.tencent.devops.process.pojo.BuildHistoryWithVars
 import com.tencent.devops.process.pojo.pipeline.ModelDetail
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
+import javax.ws.rs.DefaultValue
 import javax.ws.rs.GET
 import javax.ws.rs.HeaderParam
 import javax.ws.rs.PUT
 import javax.ws.rs.Path
 import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
+import javax.ws.rs.QueryParam
 import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.Response
 
 @Api(tags = ["OPEN_API_V2_BUILD"], description = "OPEN-API-V2-构建资源")
 @Path("/{apigw:apigw-user|apigw-app|apigw}/v2/builds")
@@ -65,6 +74,32 @@ interface ApigwBuildResourceV2 {
         buildId: String
     ): Result<Boolean>
 
+    @ApiOperation("流水线构建查询接口，含详情与质量红线信息")
+    @GET
+    @Path("/detail/listByBG")
+    fun getBuildListByBG(
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_DEVOPS_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_DEVOPS_USER_ID)
+        userId: String,
+        @ApiParam(value = "事业群ID", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_ORGANIZATION_ID)
+        bgId: String,
+        @ApiParam(value = "开始时间(时间戳形式)", required = true)
+        @QueryParam(value = "beginDate")
+        beginDate: Long?,
+        @ApiParam(value = "结束时间(时间戳形式)", required = true)
+        @QueryParam(value = "endDate")
+        endDate: Long?,
+        @ApiParam(value = "偏移量", required = true, defaultValue = "0")
+        @QueryParam(value = "offset")
+        @DefaultValue("0")
+        offset: Int? = 0,
+        @ApiParam(value = "查询数量", required = true, defaultValue = "10")
+        @QueryParam(value = "limit")
+        @DefaultValue("10")
+        limit: Int? = 10
+    ): Result<List<PipelineBuildResponseData>?>
+
     @ApiOperation("构建详情")
     @GET
     @Path("/projects/{projectId}/pipelines/{pipelineId}/builds/{buildId}/detail")
@@ -82,4 +117,57 @@ interface ApigwBuildResourceV2 {
         @PathParam("buildId")
         buildId: String
     ): Result<ModelDetail>
+
+    @ApiOperation("查看构建状态信息（平台方调用，不鉴权）")
+    @GET
+    @Path("/{projectId}/{pipelineId}/{buildId}/nopermission/status")
+    fun getStatusWithoutPermission(
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_DEVOPS_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_DEVOPS_USER_ID)
+        userId: String,
+        @ApiParam(value = "组织类型", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE)
+        organizationType: String,
+        @ApiParam(value = "组织Id", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_ORGANIZATION_ID)
+        organizationId: Long,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String
+    ): Result<BuildHistoryWithVars>
+
+
+    @ApiOperation("下载构建日志")
+    @GET
+    @Path("/projects/{projectId}/pipelines/{pipelineId}/builds/{buildId}/download")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    fun downloadLogs(
+        @ApiParam("用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @ApiParam("构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String,
+        @ApiParam("对应element ID", required = false)
+        @QueryParam("tag")
+        tag: String?,
+        @ApiParam("对应jobId", required = false)
+        @QueryParam("jobId")
+        jobId: String?,
+        @ApiParam("执行次数", required = false)
+        @QueryParam("executeCount")
+        executeCount: Int?
+    ): Response
 }

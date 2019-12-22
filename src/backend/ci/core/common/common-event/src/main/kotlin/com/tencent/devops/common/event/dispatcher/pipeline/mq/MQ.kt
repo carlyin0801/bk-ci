@@ -87,7 +87,7 @@ object MQ {
 
     // 插件结束后续广播exchange
     const val EXCHANGE_PIPELINE_BUILD_ELEMENT_FINISH_FANOUT = "e.engine.pipeline.build.element.finish"
-    const val ROUTE_PIPELINE_BUILD_ELEMENT_FINISH = "r.engine.pipeline.build.element.finish"
+//    const val ROUTE_PIPELINE_BUILD_ELEMENT_FINISH = "r.engine.pipeline.build.element.finish"
     // 接收上述广播的队列
     const val QUEUE_PIPELINE_BUILD_ELEMENT_FINISH_LAMBDA = "q.engine.pipeline.build.element.lambda"
     const val QUEUE_PIPELINE_BUILD_FINISH_EXT = "q.engine.pipeline.build.finish.ext"
@@ -127,6 +127,10 @@ object MQ {
     const val EXCHANGE_LOG_BATCH_BUILD_EVENT = "e.engine.log.batch.build.event"
     const val ROUTE_LOG_BATCH_BUILD_EVENT = "r.engine.log.batch.build.event"
     const val QUEUE_LOG_BATCH_BUILD_EVENT = "q.engine.log.batch.build.event"
+
+    const val EXCHANGE_LOG_PUSH_BUILD_EVENT = "e.engine.log.push.build.event"
+    const val ROUTE_LOG_PUSH_BUILD_EVENT = "r.engine.log.push.build.event"
+    const val QUEUE_LOG_PUSH_BUILD_EVENT = "q.engine.log.push.build.event"
 
     // 日志事件
     const val EXCHANGE_LOG_STATUS_BUILD_EVENT = "e.engine.log.status.build.event"
@@ -189,4 +193,16 @@ object MQ {
     const val EXCHANGE_GITCI_REQUEST_TRIGGER_EVENT = "e.gitci.request.trigger.event"
     const val ROUTE_GITCI_REQUEST_TRIGGER_EVENT = "r.gitci.request.trigger.event"
     const val QUEUE_GITCI_REQUEST_TRIGGER_EVENT = "q.gitci.request.trigger.event"
+
+    // 回调
+    const val EXCHANGE_PIPELINE_BUILD_CALL_BACK_FANOUT = "e.engine.pipeline.build.callback.fanout"
+    const val QUEUE_PIPELINE_BUILD_STATUS_CHANGE = "e.engine.pipeline.build.callback.change"
+
+    // 蓝盾项目管理
+    const val EXCHANGE_PROJECT_CREATE_FANOUT = "e.project.create.exchange.fanout"
+    const val EXCHANGE_PROJECT_UPDATE_FANOUT = "e.project.update.exchange.fanout"
+    const val EXCHANGE_PROJECT_UPDATE_LOGO_FANOUT = "e.project.update.logo.exchange.fanout"
+    const val QUEUE_PROJECT_CREATE_EVENT = "q.project.create.project.queue"
+    const val QUEUE_PROJECT_UPDATE_EVENT = "q.project.update.project.queue"
+    const val QUEUE_PROJECT_UPDATE_LOGO_EVENT = "q.project.update.logo.project.queue"
 }

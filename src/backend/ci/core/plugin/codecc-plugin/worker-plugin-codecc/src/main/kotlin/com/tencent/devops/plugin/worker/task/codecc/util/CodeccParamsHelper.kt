@@ -1,3 +1,29 @@
+/*
+ * Tencent is pleased to support the open source community by making BK-CI 蓝鲸持续集成平台 available.
+ *
+ * Copyright (C) 2019 THL A29 Limited, a Tencent company.  All rights reserved.
+ *
+ * BK-CI 蓝鲸持续集成平台 is licensed under the MIT license.
+ *
+ * A copy of the MIT License is included in this file.
+ *
+ *
+ * Terms of the MIT License:
+ * ---------------------------------------------------
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+ * LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+ * NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package com.tencent.devops.plugin.worker.task.codecc.util
 
 import com.fasterxml.jackson.core.type.TypeReference
@@ -9,11 +35,14 @@ import com.tencent.devops.plugin.codecc.pojo.coverity.ProjectLanguage
 import com.tencent.devops.plugin.worker.pojo.CodeccExecuteConfig
 import com.tencent.devops.plugin.worker.task.codecc.LinuxCodeccConstants
 import com.tencent.devops.plugin.worker.task.codecc.WindowsCodeccConstants
+import com.tencent.devops.process.pojo.AtomErrorCode
+import com.tencent.devops.process.pojo.ErrorType
 import com.tencent.devops.worker.common.CommonEnv
 import com.tencent.devops.worker.common.api.utils.ThirdPartyAgentBuildInfoUtils
 import com.tencent.devops.worker.common.env.AgentEnv
 import com.tencent.devops.worker.common.env.BuildEnv
 import com.tencent.devops.worker.common.env.BuildType
+import com.tencent.devops.worker.common.exception.TaskExecuteException
 import com.tencent.devops.worker.common.logger.LoggerService
 import java.io.File
 
@@ -175,7 +204,11 @@ object CodeccParamsHelper {
         return if (scriptType == BuildScriptType.SHELL) {
             val shareCoverityFile = LinuxCodeccConstants.getCovPyFile()
             if (!shareCoverityFile.exists()) {
-                throw RuntimeException("The coverity file (${shareCoverityFile.canonicalPath}) is not exist")
+                throw TaskExecuteException(
+                    errorType = ErrorType.USER,
+                    errorCode = AtomErrorCode.USER_RESOURCE_NOT_FOUND,
+                    errorMsg = "The coverity file (${shareCoverityFile.canonicalPath}) is not exist"
+                )
             }
             val localCoverityFile = File(codeccWorkspace, shareCoverityFile.name)
             shareCoverityFile.copyTo(localCoverityFile, true)
@@ -189,7 +222,11 @@ object CodeccParamsHelper {
         return if (scriptType == BuildScriptType.SHELL) {
             val shareToolFile = LinuxCodeccConstants.getToolPyFile()
             if (AgentEnv.getOS() != OSType.MAC_OS && !shareToolFile.exists()) {
-                throw RuntimeException("The mutli tool file (${shareToolFile.canonicalPath}) is not exist")
+                throw TaskExecuteException(
+                    errorType = ErrorType.USER,
+                    errorCode = AtomErrorCode.USER_RESOURCE_NOT_FOUND,
+                    errorMsg = "The mutli tool file (${shareToolFile.canonicalPath}) is not exist"
+                )
             }
             val localToolFile = File(codeccWorkspace, shareToolFile.name)
             shareToolFile.copyTo(localToolFile, true)

@@ -51,7 +51,6 @@ import com.tencent.devops.common.wechatwork.model.sendmessage.richtext.RichtextT
 import com.tencent.devops.common.wechatwork.model.sendmessage.richtext.RichtextView
 import com.tencent.devops.common.wechatwork.model.sendmessage.richtext.RichtextViewLink
 import com.tencent.devops.process.dao.PipelineSubscriptionDao
-import com.tencent.devops.process.engine.pojo.BuildInfo
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildAtomTaskEvent
 import com.tencent.devops.process.engine.service.PipelineRepositoryService
 import com.tencent.devops.process.engine.service.PipelineRuntimeService
@@ -64,8 +63,11 @@ import com.tencent.devops.process.util.NotifyUtils
 import com.tencent.devops.process.util.NotifyUtils.parseMessageTemplate
 import com.tencent.devops.process.util.ServiceHomeUrlUtils.server
 import com.tencent.devops.process.utils.PIPELINE_BUILD_NUM
+import com.tencent.devops.process.utils.PIPELINE_NAME
 import com.tencent.devops.process.utils.PIPELINE_START_CHANNEL
 import com.tencent.devops.process.utils.PIPELINE_START_MOBILE
+import com.tencent.devops.process.utils.PIPELINE_START_PARENT_BUILD_ID
+import com.tencent.devops.process.utils.PIPELINE_START_PARENT_BUILD_TASK_ID
 import com.tencent.devops.process.utils.PIPELINE_START_PIPELINE_USER_ID
 import com.tencent.devops.process.utils.PIPELINE_START_TYPE
 import com.tencent.devops.process.utils.PIPELINE_START_USER_ID
@@ -73,6 +75,7 @@ import com.tencent.devops.process.utils.PIPELINE_START_WEBHOOK_USER_ID
 import com.tencent.devops.process.utils.PIPELINE_TIME_DURATION
 import com.tencent.devops.process.utils.PIPELINE_TIME_END
 import com.tencent.devops.process.utils.PIPELINE_VERSION
+import com.tencent.devops.process.utils.PipelineVarUtil
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
@@ -184,17 +187,17 @@ class PipelineSubscriptionService @Autowired(required = false) constructor(
             val timeDuration = vars[PIPELINE_TIME_DURATION]!!.toLongOrNull() ?: 0L
             vars[PIPELINE_TIME_DURATION] = DateTimeUtil.formatMillSecond(timeDuration * 1000)
         }
+        // 兼容旧流水线的旧变量
+        PipelineVarUtil.fillOldVar(vars)
 
         val executionVar = getExecutionVariables(pipelineId, vars)
-        val buildInfo = pipelineRuntimeService.getBuildInfo(buildId) ?: return
         if (executionVar.originTriggerType == StartType.PIPELINE.name) {
-            checkPipelineCall(buildInfo) // 通知父流水线状态
+            checkPipelineCall(pipelineId, buildId, vars) // 通知父流水线状态
         }
 
-        val pipelineInfo = pipelineRepositoryService.getPipelineInfo(pipelineId) ?: return
-        val pipelineName = pipelineInfo.pipelineName
+        val pipelineName = vars[PIPELINE_NAME] ?: return
         val trigger = executionVar.trigger
-        val buildNum = buildInfo.buildNum
+        val buildNum = executionVar.buildNum!!
         val user = executionVar.user
         val originTriggerType = executionVar.originTriggerType
 
@@ -424,7 +427,14 @@ class PipelineSubscriptionService @Autowired(required = false) constructor(
         }
 
         val trigger = StartType.toReadableString(triggerType, channelCode)
-        return ExecutionVariables(pipelineVersion, buildNum, trigger, triggerType, buildUser, isMobileStart ?: false)
+        return ExecutionVariables(
+            pipelineVersion = pipelineVersion,
+            buildNum = buildNum,
+            trigger = trigger,
+            originTriggerType = triggerType,
+            user = buildUser,
+            isMobileStart = isMobileStart ?: false
+        )
     }
 
     private fun setBuildNo(pipelineId: String, model: Model?, shutdownType: Int) {
@@ -472,20 +482,19 @@ class PipelineSubscriptionService @Autowired(required = false) constructor(
         }
     }
 
-    private fun checkPipelineCall(buildInfo: BuildInfo) {
-
-        val superCallElementId = buildInfo.parentTaskId ?: return
-
-        val parentBuildTask = pipelineRuntimeService.getBuildTask(buildInfo.parentBuildId!!, buildInfo.parentTaskId!!)
+    private fun checkPipelineCall(pipelineId: String, buildId: String, vars: Map<String, String>) {
+        val parentTaskId = vars[PIPELINE_START_PARENT_BUILD_TASK_ID] ?: return
+        val parentBuildId = vars[PIPELINE_START_PARENT_BUILD_ID] ?: return
+        val parentBuildTask = pipelineRuntimeService.getBuildTask(parentBuildId, parentTaskId)
         if (parentBuildTask == null) {
-            logger.error("The parent build(${buildInfo.parentBuildId}) task(${buildInfo.parentTaskId}) not exist ")
+            logger.error("The parent build($parentBuildId) task($parentTaskId) not exist ")
             return
         }
 
-        logger.info("Finish the root pipeline(${buildInfo.pipelineId}) of build(${buildInfo.buildId}) with elementId($superCallElementId)")
+        logger.info("Finish the root pipeline($pipelineId) of build($buildId) with taskId($parentTaskId)")
         pipelineEventDispatcher.dispatch(
             PipelineBuildAtomTaskEvent(
-                source = "sub_pipeline_build_${buildInfo.buildId}", // 来源
+                source = "sub_pipeline_build_$buildId", // 来源
                 projectId = parentBuildTask.projectId,
                 pipelineId = parentBuildTask.pipelineId,
                 userId = parentBuildTask.starter,

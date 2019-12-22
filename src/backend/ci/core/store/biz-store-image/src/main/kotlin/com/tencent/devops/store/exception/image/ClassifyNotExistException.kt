@@ -23,7 +23,6 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
 package com.tencent.devops.store.exception.image
 
 import com.tencent.devops.common.api.constant.CommonMessageCode.PARAMETER_IS_INVALID
@@ -39,4 +38,4 @@ class ClassifyNotExistException(
     errorCode: String = PARAMETER_IS_INVALID,
     params: Array<String>? = null
 ) :
-    ErrorCodeException(errorCode, message, params)
+    ErrorCodeException(errorCode = errorCode, defaultMessage = message, params = params)

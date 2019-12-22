@@ -29,9 +29,12 @@ import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_ACCESS_TOKEN
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.store.pojo.common.InstalledProjRespItem
+import com.tencent.devops.store.pojo.image.enums.ImageAgentTypeEnum
+import com.tencent.devops.store.pojo.image.enums.ImageRDTypeEnum
 import com.tencent.devops.store.pojo.image.request.InstallImageReq
-import com.tencent.devops.store.pojo.image.response.ImageDetail
-import com.tencent.devops.store.pojo.image.response.ProjectSimpleInfo
+import com.tencent.devops.store.pojo.image.response.JobImageItem
+import com.tencent.devops.store.pojo.image.response.JobMarketImageItem
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
@@ -72,10 +75,13 @@ interface UserImageProjectResource {
         @ApiParam("token", required = true)
         @HeaderParam(AUTH_HEADER_DEVOPS_ACCESS_TOKEN)
         accessToken: String,
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
         @ApiParam("模版代码", required = true)
         @PathParam("imageCode")
         imageCode: String
-    ): Result<List<ProjectSimpleInfo?>>
+    ): Result<List<InstalledProjRespItem>>
 
     @ApiOperation("根据项目标识获取可用镜像列表（公共+已安装）")
     @GET
@@ -90,18 +96,27 @@ interface UserImageProjectResource {
         @ApiParam("项目标识", required = true)
         @QueryParam("projectCode")
         projectCode: String,
+        @ApiParam("机器类型", required = false)
+        @QueryParam("agentType")
+        agentType: ImageAgentTypeEnum?,
+        @ApiParam("是否推荐", required = false)
+        @QueryParam("recommendFlag")
+        recommendFlag: Boolean?,
+        @ApiParam("分类ID", required = false)
+        @QueryParam("classifyId")
+        classifyId: String?,
         @ApiParam("页码", required = false)
         @QueryParam("page")
         page: Int?,
         @ApiParam("每页数量", required = false)
         @QueryParam("pageSize")
         pageSize: Int?
-    ): Result<Page<ImageDetail?>?>
+    ): Result<Page<JobImageItem>?>
 
     @ApiOperation("根据项目标识获取商店镜像列表")
     @GET
-    @Path("/image/marketImages")
-    fun getMarketImagesByProjectCode(
+    @Path("/image/jobMarketImages")
+    fun getJobMarketImagesByProjectCode(
         @ApiParam("token", required = true)
         @HeaderParam(AUTH_HEADER_DEVOPS_ACCESS_TOKEN)
         accessToken: String,
@@ -111,18 +126,24 @@ interface UserImageProjectResource {
         @ApiParam("项目标识", required = true)
         @QueryParam("projectCode")
         projectCode: String,
+        @ApiParam("机器类型", required = false)
+        @QueryParam("agentType")
+        agentType: ImageAgentTypeEnum,
+        @ApiParam("是否推荐", required = false)
+        @QueryParam("recommendFlag")
+        recommendFlag: Boolean?,
         @ApiParam("页码", required = false)
         @QueryParam("page")
         page: Int?,
         @ApiParam("每页数量", required = false)
         @QueryParam("pageSize")
         pageSize: Int?
-    ): Result<Page<ImageDetail?>?>
+    ): Result<Page<JobMarketImageItem?>?>
 
     @ApiOperation("根据项目标识与镜像名称模糊搜索商店镜像列表（已安装+未安装）")
     @POST
-    @Path("/image/marketImages/search")
-    fun searchMarketImages(
+    @Path("/image/jobMarketImages/search")
+    fun searchJobMarketImages(
         @ApiParam("token", required = true)
         @HeaderParam(AUTH_HEADER_DEVOPS_ACCESS_TOKEN)
         accessToken: String,
@@ -132,16 +153,29 @@ interface UserImageProjectResource {
         @ApiParam("项目标识", required = true)
         @QueryParam("projectCode")
         projectCode: String,
+        @ApiParam("机器类型", required = false)
+        @QueryParam("agentType")
+        agentType: ImageAgentTypeEnum,
+        @ApiParam("是否推荐", required = false)
+        @QueryParam("recommendFlag")
+        recommendFlag: Boolean?,
         @ApiParam("部分镜像名称", required = false)
         @QueryParam("imageNamePart")
         imageNamePart: String?,
-        @ApiParam("镜像分类Code列表", required = false)
-        classifyCodeList: List<String>?,
+        @ApiParam("镜像分类Id", required = false)
+        @QueryParam("classifyId")
+        classifyId: String?,
+        @ApiParam("应用范畴", required = false)
+        @QueryParam("categoryCode")
+        categoryCode: String?,
+        @ApiParam("研发来源", required = false)
+        @QueryParam("rdType")
+        rdType: ImageRDTypeEnum?,
         @ApiParam("页码", required = false)
         @QueryParam("page")
         page: Int?,
         @ApiParam("每页数量", required = false)
         @QueryParam("pageSize")
         pageSize: Int?
-    ): Result<Page<ImageDetail?>?>
+    ): Result<Page<JobMarketImageItem?>?>
 }

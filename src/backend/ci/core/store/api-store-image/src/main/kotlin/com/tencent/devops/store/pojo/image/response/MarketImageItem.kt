@@ -45,6 +45,9 @@ data class MarketImageItem constructor(
     @ApiModelProperty("镜像名称", required = true)
     val name: String,
 
+    @ApiModelProperty("研发来源")
+    val rdType: String,
+
     @ApiModelProperty("镜像来源 BKDEVOPS:蓝盾，THIRD:第三方", required = true)
     val imageSourceType: String,
 
@@ -52,7 +55,7 @@ data class MarketImageItem constructor(
     val imageSize: String,
 
     @ApiModelProperty("镜像大小数值（字节）", required = true)
-    val imageSizeNum: Int,
+    val imageSizeNum: Long,
 
     @ApiModelProperty("所属镜像分类代码", required = true)
     val classifyCode: String,
@@ -106,6 +109,7 @@ data class MarketImageItem constructor(
         instance.id,
         instance.code,
         instance.name,
+        instance.rdType,
         instance.imageSourceType,
         instance.imageSize,
         instance.imageSizeNum,
