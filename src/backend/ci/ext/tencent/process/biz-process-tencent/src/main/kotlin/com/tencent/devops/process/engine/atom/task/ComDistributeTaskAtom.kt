@@ -206,7 +206,7 @@ class ComDistributeTaskAtom @Autowired constructor(
 
             regexPathsStr.split(",").forEach { regex ->
                 if (isRepoGray) {
-                    val fileList = bkRepoClient.matchBkRepoFile(regex, projectId, pipelineId, buildId, isCustom)
+                    val fileList = bkRepoClient.matchBkRepoFile(userId, regex, projectId, pipelineId, buildId, isCustom)
                     val repoName = if (isCustom) "custom" else "pipeline"
                     fileList.forEach { bkrepoFile ->
                         LogUtils.addLine(rabbitTemplate, buildId, "匹配到文件：(${bkrepoFile.displayPath})", taskId, containerId, executeCount)
