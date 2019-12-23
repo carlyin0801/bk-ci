@@ -77,7 +77,7 @@ interface ServiceGitResource {
 
     @ApiOperation("获取用户所有git项目，分页方式获取")
     @GET
-    @Path("/getProject")
+    @Path("/getProjectList")
     fun getProjectList(
         @ApiParam("accessToken", required = true)
         @QueryParam("accessToken")
