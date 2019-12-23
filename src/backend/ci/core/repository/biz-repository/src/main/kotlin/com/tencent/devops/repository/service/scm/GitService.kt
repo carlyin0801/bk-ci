@@ -145,7 +145,7 @@ class GitService @Autowired constructor(
         }
     }
 
-    fun getBranch(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
+    override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
         logger.info("start to get the $userId's $repository branch by accessToken: page: $page pageSize: $pageSize")
         val repoId = URLEncoder.encode(repository, "utf-8")
         val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$page&pageSize=$pageSize"
@@ -179,7 +179,7 @@ class GitService @Autowired constructor(
         return res
     }
 
-    fun getTag(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
+    override fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
         logger.info("start to get the $userId's $repository tag by accessToken: $accessToken  page: $page pageSize: $pageSize")
         val repoId = URLEncoder.encode(repository, "utf-8")
         val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/tags?access_token=$accessToken&page=$page&pageSize=$pageSize"
