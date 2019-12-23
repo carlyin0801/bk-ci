@@ -91,7 +91,7 @@ class ZhiyunInstanceMaintenanceTaskAtom @Autowired constructor(
                     "ips" to ips.split(",")
                 )
             )
-            createRollbackTask(requestData, url, task)
+//            createRollbackTask(requestData, url, task)
         } else {
             val url = "${zhiyunConfig.esbUrl}/instanceMaintenance"
             val requestData = mapOf(
@@ -111,7 +111,7 @@ class ZhiyunInstanceMaintenanceTaskAtom @Autowired constructor(
                     "batch_interval" to batchInterval
                 )
             )
-            createTask(requestData, url, task)
+//            createTask(requestData, url, task)
         }
 
         // 等待返回结果

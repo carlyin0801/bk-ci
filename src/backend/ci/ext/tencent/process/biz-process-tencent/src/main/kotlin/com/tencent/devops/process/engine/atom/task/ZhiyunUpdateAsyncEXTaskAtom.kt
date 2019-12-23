@@ -86,32 +86,7 @@ class ZhiyunUpdateAsyncEXTaskAtom @Autowired constructor(
 
         val url = "$zhiyunConfig.esbUrl/updateAsyncEX"
         val requestData = mapOf(
-                "app_code" to appCode,
-                "app_secret" to appSecret,
-                "caller" to zhiyunConfig.caller,
-                "password" to zhiyunConfig.password,
-                "operator" to userId,
-                "para" to mapOf(
-                        "product" to product,
-                        "name" to pkgName,
-                        "fromVersion" to fromVersion,
-                        "toVersion" to toVersion,
-                        "install_path" to installPath,
-                        "ips" to ips.split(","),
-                        "stop" to if ("true".equals(stop, true)) "true" else "",
-                        "force" to if ("true".equals(force, true)) "true" else "",
-                        "restart" to if ("true".equals(restart, true)) "true" else "",
-                        "graceful" to if ("true".equals(graceful, true)) "true" else "",
-                        "batch_num" to batchNum,
-                        "batch_interval" to batchInterval,
-                        "install_cp" to if ("true".equals(installCp, true)) "true" else "",
-                        "ignore" to ignore,
-                        "update_appname" to if ("true".equals(updateAppName, true)) "true" else "",
-                        "update_port" to if ("false".equals(updatePort, true)) "false" else "",
-                        "update_start_stop" to if ("false".equals(updateStartStop, true)) "false" else "",
-                        "restart_app" to restartApp,
-                        "route" to if ("true".equals(route, true)) "true" else ""
-                )
+            "app_code" to ""
         )
         val instanceIds = createTask(requestData, url, task)
 
