@@ -79,18 +79,18 @@ interface ServiceGitResource {
     @GET
     @Path("/getProject")
     fun getProjectList(
-            @ApiParam("accessToken", required = true)
-            @QueryParam("accessToken")
-            accessToken: String,
-            @ApiParam("用户id", required = true)
-            @QueryParam("userId")
-            userId: String,
-            @ApiParam("第几页", required = true)
-            @QueryParam("page")
-            page: Int?,
-            @ApiParam("每页数据条数", required = true)
-            @QueryParam("pageSize")
-            pageSize: Int?
+        @ApiParam("accessToken", required = true)
+        @QueryParam("accessToken")
+        accessToken: String,
+        @ApiParam("用户id", required = true)
+        @QueryParam("userId")
+        userId: String,
+        @ApiParam("第几页", required = true)
+        @QueryParam("page")
+        page: Int?,
+        @ApiParam("每页数据条数", required = true)
+        @QueryParam("pageSize")
+        pageSize: Int?
     ): Result<List<Project>>
 
     @ApiOperation("获取用户所有git分支")

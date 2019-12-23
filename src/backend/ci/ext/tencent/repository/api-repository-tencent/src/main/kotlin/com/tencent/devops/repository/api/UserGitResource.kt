@@ -71,15 +71,15 @@ interface UserGitResource {
     @GET
     @Path("/getProjectList")
     fun getProjectList(
-            @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-            @HeaderParam(AUTH_HEADER_USER_ID)
-            userId: String,
-            @ApiParam(value = "第几页", required = false)
-            @QueryParam("page")
-            page: Int?,
-            @ApiParam(value = "每页数据条数", required = false)
-            @QueryParam("pageSize")
-            pageSize: Int?
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "第几页", required = false)
+        @QueryParam("page")
+        page: Int?,
+        @ApiParam(value = "每页数据条数", required = false)
+        @QueryParam("pageSize")
+        pageSize: Int?
     ): Result<List<Project>>
 
     @ApiOperation("根据用户ID, 通过oauth方式获取项目分支")
