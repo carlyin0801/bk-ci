@@ -1,10 +1,6 @@
 package com.tencent.devops.project.listener
 
 import com.tencent.devops.common.auth.api.BSAuthTokenApi
-<<<<<<< HEAD
-import com.tencent.devops.common.auth.code.BSAuthServiceCode
-=======
->>>>>>> story_856841043
 import com.tencent.devops.common.auth.code.BSPipelineAuthServiceCode
 import com.tencent.devops.common.event.listener.Listener
 import com.tencent.devops.project.pojo.ProjectUpdateLogoInfo
@@ -28,15 +24,6 @@ class ProjectEventListener @Autowired constructor(
 ) : Listener<ProjectBroadCastEvent> {
 
     override fun execute(event: ProjectBroadCastEvent) {
-<<<<<<< HEAD
-       if (event is ProjectCreateBroadCastEvent) {
-           onReceiveProjectCreate(event)
-       } else if (event is ProjectUpdateBroadCastEvent) {
-           onReceiveProjectUpdate(event)
-       } else if (event is ProjectUpdateLogoBroadCastEvent) {
-           onReceiveProjectUpdateLogo(event)
-       }
-=======
         when (event) {
             is ProjectCreateBroadCastEvent -> {
                 onReceiveProjectCreate(event)
@@ -48,7 +35,6 @@ class ProjectEventListener @Autowired constructor(
                 onReceiveProjectUpdateLogo(event)
             }
         }
->>>>>>> story_856841043
     }
 
     fun onReceiveProjectCreate(event: ProjectCreateBroadCastEvent) {
@@ -68,11 +54,7 @@ class ProjectEventListener @Autowired constructor(
             projectId = event.projectId,
             projectUpdateInfo = event.projectInfo,
             accessToken = accessToken
-<<<<<<< HEAD
-            )
-=======
         )
->>>>>>> story_856841043
     }
 
     fun onReceiveProjectUpdateLogo(event: ProjectUpdateLogoBroadCastEvent) {
