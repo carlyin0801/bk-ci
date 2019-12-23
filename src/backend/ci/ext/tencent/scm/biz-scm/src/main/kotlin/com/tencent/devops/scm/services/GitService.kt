@@ -54,11 +54,11 @@ import com.tencent.devops.repository.pojo.gitlab.GitlabFileInfo
 import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.scm.code.git.CodeGitOauthCredentialSetter
 import com.tencent.devops.scm.code.git.CodeGitUsernameCredentialSetter
+import com.tencent.devops.scm.code.git.api.GitOauthApi
 import com.tencent.devops.scm.code.git.api.GitBranch
 import com.tencent.devops.scm.code.git.api.GitBranchCommit
-import com.tencent.devops.scm.code.git.api.GitOauthApi
-import com.tencent.devops.scm.code.git.api.GitTagCommit
 import com.tencent.devops.scm.code.git.api.GitTag
+import com.tencent.devops.scm.code.git.api.GitTagCommit
 import com.tencent.devops.scm.config.GitConfig
 import com.tencent.devops.scm.exception.ScmException
 import com.tencent.devops.scm.pojo.CommitCheckRequest
@@ -203,7 +203,7 @@ class GitService @Autowired constructor(
         return res
     }
 
-    fun getBranch(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
+    fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
         val pageNotNull = page ?: 1
         val pageSizeNotNull = pageSize ?: 20
         logger.info("start to get the $userId's $repository branch by accessToken: page: $pageNotNull pageSize: $pageSizeNotNull")
@@ -211,9 +211,9 @@ class GitService @Autowired constructor(
         val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$pageNotNull&per_page=$pageSizeNotNull"
         val res = mutableListOf<GitBranch>()
         val request = Request.Builder()
-            .url(url)
-            .get()
-            .build()
+                .url(url)
+                .get()
+                .build()
 
         OkhttpUtils.doHttp(request).use { response ->
             val data = response.body()?.string() ?: return@use
@@ -239,7 +239,7 @@ class GitService @Autowired constructor(
         return res
     }
 
-    fun getTag(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
+    fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
         val pageNotNull = page ?: 1
         val pageSizeNotNull = pageSize ?: 20
         logger.info("start to get the $userId's $repository tag by accessToken: $accessToken  page: $pageNotNull pageSize: $pageSizeNotNull")
@@ -247,9 +247,9 @@ class GitService @Autowired constructor(
         val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/tags?access_token=$accessToken&page=$pageNotNull&per_page=$pageSizeNotNull"
         val res = mutableListOf<GitTag>()
         val request = Request.Builder()
-            .url(url)
-            .get()
-            .build()
+                .url(url)
+                .get()
+                .build()
 
         OkhttpUtils.doHttp(request).use { response ->
             val data = response.body()?.string() ?: return@use

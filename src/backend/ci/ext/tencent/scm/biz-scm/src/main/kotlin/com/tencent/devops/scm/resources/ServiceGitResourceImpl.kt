@@ -117,11 +117,11 @@ class ServiceGitResourceImpl @Autowired constructor(
     }
 
     override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): Result<List<GitBranch>> {
-        return Result(gitService.getBranch(userId, accessToken, repository, page, pageSize))
+        return Result(gitService.getBranch(accessToken, userId, repository, page, pageSize))
     }
 
     override fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): Result<List<GitTag>> {
-        return Result(gitService.getTag(userId, accessToken, repository, page, pageSize))
+        return Result(gitService.getTag(accessToken, userId, repository, page, pageSize))
     }
 
     override fun refreshToken(userId: String, accessToken: GitToken): Result<GitToken> {

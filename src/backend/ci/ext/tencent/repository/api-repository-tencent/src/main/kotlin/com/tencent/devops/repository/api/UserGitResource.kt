@@ -67,17 +67,17 @@ interface UserGitResource {
         repoHashId: String?
     ): Result<AuthorizeResult>
 
-    @ApiOperation("根据用户ID, 通过oauth方式获取项目，分页获取")
+    @ApiOperation("根据用户ID, 通过oauth方式获取项目")
     @GET
     @Path("/getProjectList")
     fun getProjectList(
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam(value = "第几页", required = false)
+        @ApiParam(value = "第几页", required = true)
         @QueryParam("page")
         page: Int?,
-        @ApiParam(value = "每页数据条数", required = false)
+        @ApiParam(value = "每页条数", required = true)
         @QueryParam("pageSize")
         pageSize: Int?
     ): Result<List<Project>>
@@ -89,13 +89,13 @@ interface UserGitResource {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam(value = "仓库ID", required = true)
-        @QueryParam("repository")
+        @ApiParam(value = "仓库标识", required = true)
+        @QueryParam("page")
         repository: String,
         @ApiParam(value = "第几页", required = false)
         @QueryParam("page")
         page: Int?,
-        @ApiParam(value = "每页数据条数", required = false)
+        @ApiParam(value = "每页条数", required = false)
         @QueryParam("pageSize")
         pageSize: Int?
     ): Result<List<GitBranch>>
@@ -104,18 +104,18 @@ interface UserGitResource {
     @GET
     @Path("/getTag")
     fun getTag(
-        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-        @HeaderParam(AUTH_HEADER_USER_ID)
-        userId: String,
-        @ApiParam(value = "仓库ID", required = true)
-        @QueryParam("repository")
-        repository: String,
-        @ApiParam(value = "第几页", required = false)
-        @QueryParam("page")
-        page: Int?,
-        @ApiParam(value = "每页数据条数", required = false)
-        @QueryParam("pageSize")
-        pageSize: Int?
+            @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+            @HeaderParam(AUTH_HEADER_USER_ID)
+            userId: String,
+            @ApiParam(value = "仓库标识", required = true)
+            @QueryParam("page")
+            repository: String,
+            @ApiParam(value = "第几页", required = false)
+            @QueryParam("page")
+            page: Int?,
+            @ApiParam(value = "每页条数", required = false)
+            @QueryParam("pageSize")
+            pageSize: Int?
     ): Result<List<GitTag>>
 
     @ApiOperation("删除用户的token ID")
