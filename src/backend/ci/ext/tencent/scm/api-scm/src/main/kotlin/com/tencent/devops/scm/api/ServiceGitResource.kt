@@ -75,7 +75,7 @@ interface ServiceGitResource {
         userId: String
     ): Result<List<Project>>
 
-    @ApiOperation("获取用户所有git项目")
+    @ApiOperation("获取用户所有git分支")
     @GET
     @Path("/getBranch")
     fun getBranch(
@@ -96,7 +96,7 @@ interface ServiceGitResource {
         pageSize: Int?
     ): Result<List<GitBranch>>
 
-    @ApiOperation("获取用户所有git项目")
+    @ApiOperation("获取用户所有git TAG")
     @GET
     @Path("/getTag")
     fun getTag(

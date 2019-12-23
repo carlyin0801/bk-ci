@@ -84,7 +84,7 @@ interface UserGitResource {
         pageSize: Int?
     ): Result<List<GitBranch>>
 
-    @ApiOperation("根据用户ID, 通过oauth方式获取项目分支")
+    @ApiOperation("根据用户ID, 通过oauth方式获取项目Tag")
     @GET
     @Path("/getTag")
     fun getTag(
