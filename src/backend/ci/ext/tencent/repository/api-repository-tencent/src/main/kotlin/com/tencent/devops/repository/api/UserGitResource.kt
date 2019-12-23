@@ -71,51 +71,51 @@ interface UserGitResource {
     @GET
     @Path("/getProjectList")
     fun getProjectList(
-            @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-            @HeaderParam(AUTH_HEADER_USER_ID)
-            userId: String,
-            @ApiParam(value = "第几页", required = true)
-            @QueryParam("page")
-            page: Int?,
-            @ApiParam(value = "每页条数", required = true)
-            @QueryParam("pageSize")
-            pageSize: Int?
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "第几页", required = false)
+        @QueryParam("page")
+        page: Int?,
+        @ApiParam(value = "每页条数", required = false)
+        @QueryParam("pageSize")
+        pageSize: Int?
     ): Result<List<Project>>
 
     @ApiOperation("根据用户ID, 通过oauth方式获取项目分支")
     @GET
     @Path("/getBranch")
     fun getBranch(
-            @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-            @HeaderParam(AUTH_HEADER_USER_ID)
-            userId: String,
-            @ApiParam(value = "仓库标识", required = true)
-            @QueryParam("page")
-            repository: String,
-            @ApiParam(value = "第几页", required = false)
-            @QueryParam("page")
-            page: Int?,
-            @ApiParam(value = "每页条数", required = false)
-            @QueryParam("pageSize")
-            pageSize: Int?
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "仓库标识", required = true)
+        @QueryParam("repository")
+        repository: String,
+        @ApiParam(value = "第几页", required = false)
+        @QueryParam("page")
+        page: Int?,
+        @ApiParam(value = "每页条数", required = false)
+        @QueryParam("pageSize")
+        pageSize: Int?
     ): Result<List<GitBranch>>
 
     @ApiOperation("根据用户ID, 通过oauth方式获取项目Tag")
     @GET
     @Path("/getTag")
     fun getTag(
-            @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-            @HeaderParam(AUTH_HEADER_USER_ID)
-            userId: String,
-            @ApiParam(value = "仓库标识", required = true)
-            @QueryParam("page")
-            repository: String,
-            @ApiParam(value = "第几页", required = false)
-            @QueryParam("page")
-            page: Int?,
-            @ApiParam(value = "每页条数", required = false)
-            @QueryParam("pageSize")
-            pageSize: Int?
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "仓库标识", required = true)
+        @QueryParam("repository")
+        repository: String,
+        @ApiParam(value = "第几页", required = false)
+        @QueryParam("page")
+        page: Int?,
+        @ApiParam(value = "每页条数", required = false)
+        @QueryParam("pageSize")
+        pageSize: Int?
     ): Result<List<GitTag>>
 
     @ApiOperation("删除用户的token ID")
