@@ -56,6 +56,10 @@ class TencentGitServiceImpl @Autowired constructor(val client: Client) : IGitSer
         return client.getScm(ServiceGitResource::class).getProject(accessToken, userId).data ?: emptyList()
     }
 
+    override fun getProjectList(accessToken: String, userId: String, page: Int?, pageSize: Int?): List<Project> {
+        return client.getScm(ServiceGitResource::class).getProjectList(accessToken = accessToken, userId = userId, page = page, pageSize = pageSize).data ?: emptyList()
+    }
+
     override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
         return client.getScm(ServiceGitResource::class).getBranch(accessToken = accessToken, userId = userId, repository = repository, page = page, pageSize = pageSize).data ?: emptyList()
     }

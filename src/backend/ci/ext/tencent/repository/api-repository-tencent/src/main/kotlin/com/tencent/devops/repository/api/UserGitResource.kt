@@ -33,6 +33,7 @@ import com.tencent.devops.repository.pojo.AuthorizeResult
 import com.tencent.devops.repository.pojo.enums.RedirectUrlTypeEnum
 import com.tencent.devops.scm.code.git.api.GitBranch
 import com.tencent.devops.scm.code.git.api.GitTag
+import com.tencent.devops.scm.pojo.Project
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
@@ -65,6 +66,21 @@ interface UserGitResource {
         @QueryParam("repoHashId")
         repoHashId: String?
     ): Result<AuthorizeResult>
+
+    @ApiOperation("根据用户ID, 通过oauth方式获取项目，分页获取")
+    @GET
+    @Path("/getProjectList")
+    fun getProjectList(
+            @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+            @HeaderParam(AUTH_HEADER_USER_ID)
+            userId: String,
+            @ApiParam(value = "第几页", required = false)
+            @QueryParam("page")
+            page: Int?,
+            @ApiParam(value = "每页数据条数", required = false)
+            @QueryParam("pageSize")
+            pageSize: Int?
+    ): Result<List<Project>>
 
     @ApiOperation("根据用户ID, 通过oauth方式获取项目分支")
     @GET

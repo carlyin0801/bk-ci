@@ -45,6 +45,7 @@ import javax.servlet.http.HttpServletResponse
 
 interface IGitService {
     fun getProject(accessToken: String, userId: String): List<Project>
+    fun getProjectList(accessToken: String, userId: String, page: Int?, pageSize: Int?): List<Project>
     fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch>
     fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag>
     fun refreshToken(userId: String, accessToken: GitToken): GitToken

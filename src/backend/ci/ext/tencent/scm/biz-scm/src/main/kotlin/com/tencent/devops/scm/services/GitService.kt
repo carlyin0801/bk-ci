@@ -171,10 +171,43 @@ class GitService @Autowired constructor(
         }
     }
 
+    fun getProjectList(accessToken: String, userId: String, page: Int?, pageSize: Int?): List<Project> {
+        val pageNotNull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
+        val url = "${gitConfig.gitApiUrl}/projects?access_token=$accessToken&page=$pageNotNull&per_page=$pageSizeNotNull"
+        val res = mutableListOf<Project>()
+        val request = Request.Builder()
+                .url(url)
+                .get()
+                .build()
+
+        OkhttpUtils.doHttp(request).use { response ->
+            val data = response.body()?.string() ?: return@use
+            val repoList = JsonParser().parse(data).asJsonArray
+            if (!repoList.isJsonNull) {
+                repoList.forEach {
+                    val project = it.asJsonObject
+                    val lastActivityTime = project["last_activity_at"].asString.removeSuffix("+0000")
+                    res.add(Project(
+                            project["id"].asString,
+                            project["name"].asString,
+                            project["name_with_namespace"].asString,
+                            project["ssh_url_to_repo"].asString,
+                            project["http_url_to_repo"].asString,
+                            DateTimeUtil.convertLocalDateTimeToTimestamp(LocalDateTime.parse(lastActivityTime)) * 1000L
+                    ))
+                }
+            }
+        }
+        return res
+    }
+
     fun getBranch(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
-        logger.info("start to get the $userId's $repository branch by accessToken: page: $page pageSize: $pageSize")
+        val pageNotNull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
+        logger.info("start to get the $userId's $repository branch by accessToken: page: $pageNotNull pageSize: $pageSizeNotNull")
         val repoId = URLEncoder.encode(repository, "utf-8")
-        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$page&pageSize=$pageSize"
+        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$pageNotNull&pageSize=$pageSizeNotNull"
         val res = mutableListOf<GitBranch>()
         val request = Request.Builder()
             .url(url)
@@ -206,9 +239,11 @@ class GitService @Autowired constructor(
     }
 
     fun getTag(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
-        logger.info("start to get the $userId's $repository tag by accessToken: $accessToken  page: $page pageSize: $pageSize")
+        val pageNotNull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
+        logger.info("start to get the $userId's $repository tag by accessToken: $accessToken  page: $pageNotNull pageSize: $pageSizeNotNull")
         val repoId = URLEncoder.encode(repository, "utf-8")
-        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/tags?access_token=$accessToken&page=$page&pageSize=$pageSize"
+        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/tags?access_token=$accessToken&page=$pageNotNull&pageSize=$pageSizeNotNull"
         val res = mutableListOf<GitTag>()
         val request = Request.Builder()
             .url(url)
