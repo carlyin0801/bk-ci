@@ -78,40 +78,15 @@ class ZhiyunInstanceMaintenanceTaskAtom @Autowired constructor(
         val instanceId = if (operation == ZhiyunOperation.ROLLBACK.name) {
             val url = "${zhiyunConfig.esbUrl}/rollbackEX"
             val requestData = mapOf(
-                "app_code" to appCode,
-                "app_secret" to appSecret,
-                "caller" to zhiyunConfig.caller,
-                "password" to zhiyunConfig.password,
-                "operator" to userId,
-                "para" to mapOf(
-                    "product" to product,
-                    "name" to pkgName,
-                    "install_path" to installPath,
-                    "curVersion" to curVersion,
-                    "ips" to ips.split(",")
-                )
+                "app_code" to appCode!!
             )
-//            createRollbackTask(requestData, url, task)
+            createRollbackTask(requestData, url, task)
         } else {
             val url = "${zhiyunConfig.esbUrl}/instanceMaintenance"
             val requestData = mapOf(
-                "app_code" to appCode,
-                "app_secret" to appSecret,
-                "caller" to zhiyunConfig.caller,
-                "password" to zhiyunConfig.password,
-                "operator" to userId,
-                "para" to mapOf(
-                    "product" to product,
-                    "name" to pkgName,
-                    "install_path" to installPath,
-                    "operation" to operation.toLowerCase(),
-                    "ips" to ips.split(","),
-                    "graceful" to if ("true".equals(graceful, true)) "true" else "",
-                    "batch_num" to batchNum,
-                    "batch_interval" to batchInterval
-                )
+                "app_code" to appCode!!
             )
-//            createTask(requestData, url, task)
+            createTask(requestData, url, task)
         }
 
         // 等待返回结果
