@@ -390,6 +390,8 @@ open class MarketAtomTask : ITask() {
 //        logger.info("runtimeVariables is:$runtimeVariables") // 有敏感信息
         val inputFileFile = File(workspace, inputFile)
         inputFileFile.writeText(JsonUtil.toJson(inputVariables))
+        LoggerService.addNormalLine("market atom task input json:")
+        LoggerService.addNormalLine(inputFileFile.readText())
     }
 
     private fun output(
