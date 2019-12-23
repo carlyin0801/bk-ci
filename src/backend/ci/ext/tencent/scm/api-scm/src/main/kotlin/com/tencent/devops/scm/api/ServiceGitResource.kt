@@ -86,10 +86,10 @@ interface ServiceGitResource {
         @ApiParam("用户id", required = true)
         @QueryParam("userId")
         userId: String,
-        @ApiParam("第几页", required = true)
+        @ApiParam("第几页", required = false)
         @QueryParam("page")
         page: Int?,
-        @ApiParam("每页数据条数", required = true)
+        @ApiParam("每页数据条数", required = false)
         @QueryParam("pageSize")
         pageSize: Int?
     ): Result<List<Project>>
@@ -107,10 +107,10 @@ interface ServiceGitResource {
         @ApiParam("仓库ID", required = true)
         @QueryParam("repository")
         repository: String,
-        @ApiParam("第几页", required = true)
+        @ApiParam("第几页", required = false)
         @QueryParam("page")
         page: Int?,
-        @ApiParam("每页数据条数", required = true)
+        @ApiParam("每页数据条数", required = false)
         @QueryParam("pageSize")
         pageSize: Int?
     ): Result<List<GitBranch>>
@@ -128,10 +128,10 @@ interface ServiceGitResource {
         @ApiParam("仓库ID", required = true)
         @QueryParam("repository")
         repository: String,
-        @ApiParam("第几页", required = true)
+        @ApiParam("第几页", required = false)
         @QueryParam("page")
         page: Int?,
-        @ApiParam("每页数据条数", required = true)
+        @ApiParam("每页数据条数", required = false)
         @QueryParam("pageSize")
         pageSize: Int?
     ): Result<List<GitTag>>

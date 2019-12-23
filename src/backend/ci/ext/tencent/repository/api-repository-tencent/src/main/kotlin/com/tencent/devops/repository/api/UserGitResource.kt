@@ -74,10 +74,10 @@ interface UserGitResource {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam(value = "第几页", required = true)
+        @ApiParam(value = "第几页", required = false)
         @QueryParam("page")
         page: Int?,
-        @ApiParam(value = "每页条数", required = true)
+        @ApiParam(value = "每页条数", required = false)
         @QueryParam("pageSize")
         pageSize: Int?
     ): Result<List<Project>>
@@ -90,7 +90,7 @@ interface UserGitResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam(value = "仓库标识", required = true)
-        @QueryParam("page")
+        @QueryParam("repository")
         repository: String,
         @ApiParam(value = "第几页", required = false)
         @QueryParam("page")
@@ -104,18 +104,18 @@ interface UserGitResource {
     @GET
     @Path("/getTag")
     fun getTag(
-            @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-            @HeaderParam(AUTH_HEADER_USER_ID)
-            userId: String,
-            @ApiParam(value = "仓库标识", required = true)
-            @QueryParam("page")
-            repository: String,
-            @ApiParam(value = "第几页", required = false)
-            @QueryParam("page")
-            page: Int?,
-            @ApiParam(value = "每页条数", required = false)
-            @QueryParam("pageSize")
-            pageSize: Int?
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "仓库标识", required = true)
+        @QueryParam("repository")
+        repository: String,
+        @ApiParam(value = "第几页", required = false)
+        @QueryParam("page")
+        page: Int?,
+        @ApiParam(value = "每页条数", required = false)
+        @QueryParam("pageSize")
+        pageSize: Int?
     ): Result<List<GitTag>>
 
     @ApiOperation("删除用户的token ID")
