@@ -75,9 +75,27 @@ interface ServiceGitResource {
         userId: String
     ): Result<List<Project>>
 
+    @ApiOperation("获取用户所有git项目，分页方式获取")
+    @GET
+    @Path("/getProjectList")
+    fun getProjectList(
+        @ApiParam("accessToken", required = true)
+        @QueryParam("accessToken")
+        accessToken: String,
+        @ApiParam("用户id", required = true)
+        @QueryParam("userId")
+        userId: String,
+        @ApiParam("第几页", required = true)
+        @QueryParam("page")
+        page: Int?,
+        @ApiParam("每页数据条数", required = true)
+        @QueryParam("pageSize")
+        pageSize: Int?
+    ): Result<List<Project>>
+
     @ApiOperation("获取用户所有git分支")
     @GET
-    @Path("/getBranch/test")
+    @Path("/getBranch")
     fun getBranch(
         @ApiParam("accessToken", required = true)
         @QueryParam("accessToken")
@@ -87,7 +105,13 @@ interface ServiceGitResource {
         userId: String,
         @ApiParam("仓库ID", required = true)
         @QueryParam("repository")
-        repository: String
+        repository: String,
+        @ApiParam("第几页", required = true)
+        @QueryParam("page")
+        page: Int?,
+        @ApiParam("每页数据条数", required = true)
+        @QueryParam("pageSize")
+        pageSize: Int?
     ): Result<List<GitBranch>>
 
     @ApiOperation("获取用户所有git TAG")
