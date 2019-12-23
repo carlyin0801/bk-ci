@@ -112,6 +112,10 @@ class ServiceGitResourceImpl @Autowired constructor(
         return Result(gitService.getProject(accessToken, userId))
     }
 
+    override fun getProjectList(accessToken: String, userId: String, page: Int?, pageSize: Int?): Result<List<Project>> {
+        return Result(gitService.getProjectList(accessToken, userId, page, pageSize))
+    }
+
     override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): Result<List<GitBranch>> {
         return Result(gitService.getBranch(userId, accessToken, repository, page, pageSize))
     }
