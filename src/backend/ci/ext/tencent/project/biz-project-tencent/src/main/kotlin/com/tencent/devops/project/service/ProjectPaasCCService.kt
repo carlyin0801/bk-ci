@@ -138,6 +138,10 @@ class ProjectPaasCCService @Autowired constructor(
         val responseContent = request(request, "获取PAASCC项目信息失败")
         val result = objectMapper.readValue<Result<PaasCCProjectInfo>>(responseContent)
         if (result.code.toInt() != 0) {
+            if(result.code == 2001600){
+                logger.warn("Fail to get Project in paas cc with: ${result.message}")
+                return result.data
+            }
             logger.warn("Fail to get Project in paas cc with response $responseContent")
             throw OperationException("获取PAASCC 项目失败")
         }
