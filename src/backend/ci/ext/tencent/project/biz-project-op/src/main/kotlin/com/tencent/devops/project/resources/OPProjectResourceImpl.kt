@@ -72,8 +72,8 @@ class OPProjectResourceImpl @Autowired constructor(
         return opProjectService.synProject(projectCode)
     }
 
-    override fun synProjectInit(projectCode: String): Result<List<String>> {
-        return opProjectService.synProject(projectCode)
+    override fun synProjectInit(): Result<List<String>> {
+        TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
     }
 
 }
