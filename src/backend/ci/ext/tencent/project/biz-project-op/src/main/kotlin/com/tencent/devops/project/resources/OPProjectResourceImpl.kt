@@ -69,6 +69,11 @@ class OPProjectResourceImpl @Autowired constructor(
     }
 
     override fun synProject(projectCode: String): Result<Boolean> {
+        return opProjectService.synProject(projectCode)
+    }
+
+    override fun synProjectInit(projectCode: String): Result<List<String>> {
+        return opProjectService.synProject(projectCode)
     }
 
 }

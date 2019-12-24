@@ -29,8 +29,8 @@ package com.tencent.devops.project.service.impl
 import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.auth.api.AuthProjectApi
 import com.tencent.devops.common.auth.api.AuthTokenApi
+import com.tencent.devops.common.auth.api.pojo.ResourceRegisterInfo
 import com.tencent.devops.common.auth.code.AuthServiceCode
-import com.tencent.devops.common.auth.code.BSPipelineAuthServiceCode
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.gray.Gray
 import com.tencent.devops.common.service.utils.MessageCodeUtil
@@ -48,8 +48,7 @@ import com.tencent.devops.project.pojo.ProjectUpdateInfo
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.pojo.mq.ProjectCreateBroadCastEvent
 import com.tencent.devops.project.service.ProjectPaasCCService
-import io.swagger.annotations.ApiModelProperty
-import org.bouncycastle.asn1.x500.style.RFC4519Style.description
+import com.tencent.devops.project.service.ProjectPermissionService
 import org.jooq.DSLContext
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
@@ -67,6 +66,7 @@ class OpProjectServiceImpl @Autowired constructor(
     private val paasCCService: ProjectPaasCCService,
     private val bkAuthProjectApi: AuthProjectApi,
     private val bsAuthTokenApi: AuthTokenApi,
+    private val projectPermissionService: ProjectPermissionService,
     private val bsPipelineAuthServiceCode: AuthServiceCode
 ) : AbsOpProjectServiceImpl(dslContext, projectDao, projectLabelRelDao, redisOperation, gray, projectDispatcher) {
     override fun listGrayProject(): Result<OpGrayProject> {
@@ -116,7 +116,9 @@ class OpProjectServiceImpl @Autowired constructor(
         return super.getProjectCount(projectName, englishName, projectType, isSecrecy, creator, approver, approvalStatus, grayFlag)
     }
 
-    fun synProject(projectCode: String): Boolean{
+
+
+    override fun synProject(projectCode: String): Result<Boolean>{
         val projectInfo = projectDao.getByEnglishName(dslContext, projectCode)
         if(projectInfo == null){
             logger.error("syn project $projectCode is not exist")
@@ -150,8 +152,16 @@ class OpProjectServiceImpl @Autowired constructor(
         val authProjectInfo = bkAuthProjectApi.getProjectInfo(bsPipelineAuthServiceCode, projectCode)
         if(authProjectInfo == null){
             logger.info("synProject projectCode:$projectCode, authCenter is not exist. start Syn")
+            projectPermissionService.createResources(
+                userId = projectInfo.creator,
+                projectList = listOf(
+                    ResourceRegisterInfo(
+                        projectInfo.englishName,
+                        projectInfo.projectName
+                    )
+                )
+            )
         }
-
-        return true
+        return Result(true)
     }
 }

@@ -37,6 +37,7 @@ import com.tencent.devops.common.auth.api.BSAuthProjectApi
 import com.tencent.devops.common.auth.api.BkAuthProperties
 import com.tencent.devops.common.auth.api.pojo.ResourceRegisterInfo
 import com.tencent.devops.common.auth.code.BSProjectServiceCodec
+import com.tencent.devops.project.pojo.AuthProjectForCreateResult
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.service.ProjectPermissionService
 import okhttp3.MediaType
@@ -59,16 +60,32 @@ class ProjectPermissionServiceImpl @Autowired constructor(
 
     private val authUrl = authProperties.url
 
-    override fun createResources(userId: String, projectList: List<ResourceRegisterInfo>) {
+    override fun createResources(userId: String, projectList: List<ResourceRegisterInfo>): String {
         val projectCreateInfo = projectList[0]
-        authResourceApi.createResource(
-            user = userId,
-            serviceCode = bsProjectAuthServiceCode,
-            resourceType = AuthResourceType.PROJECT,
-            projectCode = projectCreateInfo.resourceCode,
-            resourceCode = projectCreateInfo.resourceCode,
-            resourceName = projectCreateInfo.resourceName
-        )
+        val accessToken = authTokenApi.getAccessToken(bsProjectAuthServiceCode)
+        // 创建AUTH项目
+        val authUrl = "$authUrl?access_token=$accessToken"
+        val param: MutableMap<String, String> = mutableMapOf("project_code" to projectCreateInfo.resourceCode)
+        val mediaType = MediaType.parse("application/json; charset=utf-8")
+        val json = objectMapper.writeValueAsString(param)
+        val requestBody = RequestBody.create(mediaType, json)
+        val request = Request.Builder().url(authUrl).post(requestBody).build()
+        val responseContent = request(request, "调用权限中心创建项目失败")
+        val result = objectMapper.readValue<Result<AuthProjectForCreateResult>>(responseContent)
+        if (result.isNotOk()) {
+            logger.warn("Fail to create the project of response $responseContent")
+            throw OperationException("调用权限中心创建项目失败: ${result.message}")
+        }
+        val authProjectForCreateResult = result.data
+        return if (authProjectForCreateResult != null) {
+            if (authProjectForCreateResult.project_id.isBlank()) {
+                throw OperationException("权限中心创建的项目ID无效")
+            }
+            authProjectForCreateResult.project_id
+        } else {
+            logger.warn("Fail to get the project id from response $responseContent")
+            throw OperationException("权限中心创建的项目ID无效")
+        }
     }
 
     override fun deleteResource(projectCode: String) {
