@@ -124,7 +124,7 @@ open class CodeccApi constructor(
                 DevOpsToolParams("ccn_threshold", ccnThreshold ?: ""),
                 DevOpsToolParams("needCodeContent", needCodeContent ?: ""),
                 DevOpsToolParams("eslint_rc", eslintRc ?: ""),
-                    DevOpsToolParams("SHELL", script)
+                DevOpsToolParams("SHELL", script)
             )
             if (!element.projectBuildType.isNullOrBlank()) {
                 devopsToolParams.add(DevOpsToolParams("PROJECT_BUILD_TYPE", projectBuildType!!))
@@ -298,7 +298,6 @@ open class CodeccApi constructor(
             if (!horuspyToolSetId.isNullOrBlank()) map["HORUSPY"] = horuspyToolSetId!!
             if (!pinpointToolSetId.isNullOrBlank()) map["PINPOINT"] = pinpointToolSetId!!
         }
-
         return map
     }
 

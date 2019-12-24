@@ -43,6 +43,7 @@ import org.springframework.core.Ordered
 @ConditionalOnWebApplication
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)
 class BkRepoAutoConfiguration {
+
     @Bean
     @Primary
     fun bkRepoClient(
