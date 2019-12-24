@@ -28,6 +28,7 @@ package com.tencent.devops.project.service.impl
 
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.gray.Gray
+import com.tencent.devops.common.service.gray.RepoGray
 import com.tencent.devops.common.web.mq.EXCHANGE_PAASCC_PROJECT_UPDATE
 import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_UPDATE
 import com.tencent.devops.project.dao.ProjectDao
@@ -51,8 +52,9 @@ class OpProjectServiceImpl @Autowired constructor(
     private val rabbitTemplate: RabbitTemplate,
     private val redisOperation: RedisOperation,
     private val gray: Gray,
+    private val repoGray: RepoGray,
     private val projectDispatcher: ProjectDispatcher
-) : AbsOpProjectServiceImpl(dslContext, projectDao, projectLabelRelDao, redisOperation, gray, projectDispatcher) {
+) : AbsOpProjectServiceImpl(dslContext, projectDao, projectLabelRelDao, redisOperation, gray, repoGray, projectDispatcher) {
     override fun listGrayProject(): Result<OpGrayProject> {
         return super.listGrayProject()
     }
