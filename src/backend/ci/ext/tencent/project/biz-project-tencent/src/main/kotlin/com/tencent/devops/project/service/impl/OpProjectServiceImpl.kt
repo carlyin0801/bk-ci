@@ -181,6 +181,7 @@ class OpProjectServiceImpl @Autowired constructor(
                     )
                 )
             )
+            logger.info("project syn success, projectCode[$projectCode]")
             isSyn = true
         }
         if(!isSyn){

@@ -64,7 +64,7 @@ class ProjectPermissionServiceImpl @Autowired constructor(
         val projectCreateInfo = projectList[0]
         val accessToken = authTokenApi.getAccessToken(bsProjectAuthServiceCode)
         // 创建AUTH项目
-        val authUrl = "$authUrl?access_token=$accessToken"
+        val authUrl = "$authUrl/projects?access_token=$accessToken"
         val param: MutableMap<String, String> = mutableMapOf("project_code" to projectCreateInfo.resourceCode)
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val json = objectMapper.writeValueAsString(param)
