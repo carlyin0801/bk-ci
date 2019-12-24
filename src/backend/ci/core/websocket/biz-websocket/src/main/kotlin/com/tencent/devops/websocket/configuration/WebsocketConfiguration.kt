@@ -29,7 +29,7 @@ package com.tencent.devops.websocket.configuration
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.websocket.dispatch.WebSocketDispatcher
-import com.tencent.devops.websocket.handler.ConnectChannelInterceptor
+import com.tencent.devops.websocket.interceptor.ConnectChannelInterceptor
 import com.tencent.devops.websocket.listener.WebSocketListener
 import com.tencent.devops.websocket.utils.HostUtils
 import org.slf4j.LoggerFactory

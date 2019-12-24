@@ -29,6 +29,7 @@ package com.tencent.devops.websocket.listener
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tencent.devops.common.event.listener.Listener
 import com.tencent.devops.common.websocket.dispatch.message.SendMessage
+import com.tencent.devops.websocket.servcie.WebsocketService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.messaging.simp.SimpMessagingTemplate
@@ -37,7 +38,8 @@ import org.springframework.stereotype.Component
 @Component
 class WebSocketListener @Autowired constructor(
     val objectMapper: ObjectMapper,
-    val messagingTemplate: SimpMessagingTemplate
+    val messagingTemplate: SimpMessagingTemplate,
+    val websocketService: WebsocketService
 ) : Listener<SendMessage> {
 
     companion object {
@@ -49,10 +51,23 @@ class WebSocketListener @Autowired constructor(
         try {
             val sessionList = event.sessionList
             if (sessionList != null && sessionList.isNotEmpty()) {
+                if (sessionList.size > 20) {
+                    logger.warn("websocketList: sessionList is more limit,page:${event.page}, sessionList:$sessionList")
+                    websocketService.createWranPage(event.page!!)
+                }
+
                 sessionList.forEach { session ->
+                    if (!websocketService.getCacheSession().contains(session)) {
+                        return
+                    }
+                    val startTime = System.currentTimeMillis()
                     messagingTemplate!!.convertAndSend(
-                            "/topic/bk/notify/$session",
-                            objectMapper.writeValueAsString(event.notifyPost))
+                        "/topic/bk/notify/$session",
+                        objectMapper.writeValueAsString(event.notifyPost)
+                    )
+                    if (System.currentTimeMillis() - startTime > 100) {
+                        logger.warn("websocketList: messagingTemplate spent more 100ms, page:${event.page}, sessionList:$sessionList}")
+                    }
                     logger.info("[sendWebsocket] session:$session, type:${event.notifyPost.webSocketType}, page:${event.notifyPost.page}")
                 }
             } else {

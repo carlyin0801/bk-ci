@@ -76,11 +76,12 @@ class OPProjectResourceImpl @Autowired constructor(
         return opProjectService.getProjectCount(projectName, englishName, projectType, isSecrecy, creator, approver, approvalStatus, grayFlag)
     }
 
-//    override fun updateProjectV2(userId: String, accessToken: String, projectInfoRequest: OpProjectUpdateInfoRequest): Result<Int> {
-//        return Result(data = opProjectService.updateProjectFromOp(userId, accessToken, projectInfoRequest))
-//    }
-//
-//    override fun setGrayProjectV2(projectGraySetRequest: OpProjectGraySetRequest): Result<Boolean> {
-//        return Result(data = opProjectService.setGrayProject(projectGraySetRequest.projectCodeList, projectGraySetRequest.operateFlag))
-//    }
+    override fun synProject(projectCode: String): Result<Boolean> {
+        return opProjectService.synProject(projectCode)
+    }
+
+    override fun synProjectInit(): Result<List<String>> {
+        return opProjectService.synProjectInit()
+    }
+
 }

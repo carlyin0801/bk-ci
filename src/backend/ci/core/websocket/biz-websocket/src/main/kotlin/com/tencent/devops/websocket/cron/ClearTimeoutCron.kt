@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.websocket.utils.RedisUtlis
+import com.tencent.devops.websocket.servcie.WebsocketService
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -37,7 +38,8 @@ import org.springframework.stereotype.Component
 @Component
 class ClearTimeoutCron(
     private val redisOperation: RedisOperation,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val websocketService: WebsocketService
 ) {
 
     companion object {
@@ -66,10 +68,22 @@ class ClearTimeoutCron(
                         RedisUtlis.cleanPageSessionBySessionId(redisOperation, sessionId, sessionPage)
                     }
                     RedisUtlis.cleanUserSessionBySessionId(redisOperation, userId, sessionId)
+                    websocketService.removeCacheSession(sessionId)
                     logger.info("[clearTimeOutSession] sessionId:$sessionId,loadPage:$sessionPage,userId:$userId")
                 }
             }
             RedisUtlis.saveSessionTimeOutAll(redisOperation, objectMapper.writeValueAsString(newSessionMap))
+        }
+        clearWarnPage()
+    }
+    
+    fun clearWarnPage() {
+        val warnPages = websocketService.getWranPage()
+        warnPages.forEach { page ->
+            val sessionIds = RedisUtlis.getSessionListFormPageSessionByPage(redisOperation, page)
+            if(sessionIds!= null && sessionIds.size > 20 ){
+                logger.warn("[clearTimeOutSession]: page[$page] has more than 20 session, session:${sessionIds}")
+            }
         }
     }
 }
