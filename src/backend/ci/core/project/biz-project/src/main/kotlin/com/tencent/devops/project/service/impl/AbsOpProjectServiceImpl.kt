@@ -30,6 +30,7 @@ import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.gray.Gray
+import com.tencent.devops.common.service.gray.RepoGray
 import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.model.project.tables.records.TProjectRecord
 import com.tencent.devops.project.ProjectInfoResponse
@@ -56,6 +57,7 @@ abstract class AbsOpProjectServiceImpl @Autowired constructor(
     private val projectLabelRelDao: ProjectLabelRelDao,
     private val redisOperation: RedisOperation,
     private val gray: Gray,
+    private val repoGray: RepoGray,
     private val projectDispatcher: ProjectDispatcher
 ) : OpProjectService {
 
@@ -181,9 +183,10 @@ abstract class AbsOpProjectServiceImpl @Autowired constructor(
         )
         val dataList = mutableListOf<ProjectInfoResponse>()
         val grayProjectSet = grayProjectSet()
+        val repoGrayProjectSet = repoGray.grayProjectSet(redisOperation)
         for (i in projectInfos.indices) {
             val projectData = projectInfos[i]
-            val projectInfo = getProjectInfoResponse(projectData, grayProjectSet)
+            val projectInfo = getProjectInfoResponse(projectData, grayProjectSet, repoGrayProjectSet)
             dataList.add(projectInfo)
         }
         dataObj["projectList"] = dataList
@@ -211,7 +214,7 @@ abstract class AbsOpProjectServiceImpl @Autowired constructor(
     fun grayProjectSet() =
             (redisOperation.getSetMembers(gray.getGrayRedisKey()) ?: emptySet()).filter { !it.isBlank() }.toSet()
 
-    private fun getProjectInfoResponse(projectData: TProjectRecord, grayProjectSet: Set<String>): ProjectInfoResponse {
+    private fun getProjectInfoResponse(projectData: TProjectRecord, grayProjectSet: Set<String>, repoGrayProjectSet: Set<String>): ProjectInfoResponse {
         return ProjectInfoResponse(
                 projectId = projectData.projectId,
                 projectName = projectData.projectName,
@@ -238,6 +241,7 @@ abstract class AbsOpProjectServiceImpl @Autowired constructor(
                 kind = projectData.kind,
                 enabled = projectData.enabled ?: true,
                 grayFlag = grayProjectSet.contains(projectData.englishName),
+                repoGrayFlag = repoGrayProjectSet.contains(projectData.englishName),
                 hybridCCAppId = projectData.hybridCcAppId,
                 enableExternal = projectData.enableExternal,
                 enableIdc = projectData.enableIdc
