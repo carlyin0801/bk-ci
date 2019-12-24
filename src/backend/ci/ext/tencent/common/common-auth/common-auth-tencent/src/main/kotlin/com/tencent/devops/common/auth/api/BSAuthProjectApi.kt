@@ -256,7 +256,7 @@ class BSAuthProjectApi @Autowired constructor(
             val responseContent = response.body()!!.string()
             if (!response.isSuccessful) {
                 logger.error("get project info fail: projectCode[$projectCode]")
-                throw RemoteServiceException("get project info fail: projectCode[$projectCode]")
+                throw RemoteServiceException("get project inProjectPaasCCServicefo fail: projectCode[$projectCode]")
             }
             val responseObject = objectMapper.readValue<BkAuthResponse<BkAuthProjectInfoResources>>(responseContent)
             if (responseObject.code != 0) {
