@@ -248,7 +248,7 @@ class BSAuthProjectApi @Autowired constructor(
         }
     }
 
-    override fun getProjectInfo(serviceCode: AuthServiceCode, projectCode: String): BkAuthProjectInfoResources {
+    override fun getProjectInfo(serviceCode: AuthServiceCode, projectCode: String): BkAuthProjectInfoResources? {
         val accessToken = bsAuthTokenApi.getAccessToken(serviceCode)
         val url = "${bkAuthProperties.url}/projects/$projectCode?access_token=$accessToken"
         val request = Request.Builder().url(url).get().build()
@@ -263,7 +263,7 @@ class BSAuthProjectApi @Autowired constructor(
                 logger.error("get project info fail: $responseObject")
                 throw RemoteServiceException("get project info fail: $responseObject")
             }
-            return responseObject.data
+            return responseObject.data ?: null
         }
     }
 

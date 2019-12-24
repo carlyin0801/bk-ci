@@ -41,6 +41,7 @@ import com.tencent.devops.common.auth.api.AuthResourceType
 import com.tencent.devops.common.auth.api.BSAuthProjectApi
 import com.tencent.devops.common.auth.api.BkAuthProperties
 import com.tencent.devops.common.auth.api.pojo.BkAuthGroup
+import com.tencent.devops.common.auth.api.pojo.ResourceRegisterInfo
 import com.tencent.devops.common.auth.code.AuthServiceCode
 import com.tencent.devops.common.auth.code.BSPipelineAuthServiceCode
 import com.tencent.devops.common.redis.RedisOperation
@@ -105,6 +106,7 @@ class ProjectLocalService @Autowired constructor(
     private val bkAuthProperties: BkAuthProperties,
     private val projectDispatcher: ProjectDispatcher,
     private val bsPipelineAuthServiceCode: BSPipelineAuthServiceCode,
+    private val projectPermissionService: ProjectPermissionService,
     private val gray: Gray,
     private val jmxApi: ProjectJmxApi
 ) {
@@ -126,35 +128,44 @@ class ProjectLocalService @Autowired constructor(
             try {
                 // 发送服务器
                 val logoAddress = s3Service.saveLogo(logoFile, projectCreateInfo.englishName)
-
-                // 创建AUTH项目
-                val authUrl = "$authUrl?access_token=$accessToken"
-                val param: MutableMap<String, String> = mutableMapOf("project_code" to projectCreateInfo.englishName)
-                val mediaType = MediaType.parse("application/json; charset=utf-8")
-                val json = objectMapper.writeValueAsString(param)
-                val requestBody = RequestBody.create(mediaType, json)
-                val request = Request.Builder().url(authUrl).post(requestBody).build()
-                val responseContent =
-                    request(request, MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.CALL_PEM_FAIL))
-                val result = objectMapper.readValue<Result<AuthProjectForCreateResult>>(responseContent)
-                if (result.isNotOk()) {
-                    logger.warn("Fail to create the project of response $responseContent")
-                    throw OperationException(
-                        MessageCodeUtil.generateResponseDataObject<String>(
-                            ProjectMessageCode.CALL_PEM_FAIL_PARM, arrayOf(result.message!!)
-                        ).message!!
+                projectPermissionService.createResources(
+                    userId = userId,
+                    projectList = listOf(
+                        ResourceRegisterInfo(
+                            projectCreateInfo.englishName,
+                            projectCreateInfo.projectName
+                        )
                     )
-                }
-                val authProjectForCreateResult = result.data
-                val projectId = if (authProjectForCreateResult != null) {
-                    if (authProjectForCreateResult.project_id.isBlank()) {
-                        throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PEM_CREATE_FAIL))
-                    }
-                    authProjectForCreateResult.project_id
-                } else {
-                    logger.warn("Fail to get the project id from response $responseContent")
-                    throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PEM_CREATE_ID_INVALID))
-                }
+                )
+//
+//                // 创建AUTH项目
+//                val authUrl = "$authUrl?access_token=$accessToken"
+//                val param: MutableMap<String, String> = mutableMapOf("project_code" to projectCreateInfo.englishName)
+//                val mediaType = MediaType.parse("application/json; charset=utf-8")
+//                val json = objectMapper.writeValueAsString(param)
+//                val requestBody = RequestBody.create(mediaType, json)
+//                val request = Request.Builder().url(authUrl).post(requestBody).build()
+//                val responseContent =
+//                    request(request, MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.CALL_PEM_FAIL))
+//                val result = objectMapper.readValue<Result<AuthProjectForCreateResult>>(responseContent)
+//                if (result.isNotOk()) {
+//                    logger.warn("Fail to create the project of response $responseContent")
+//                    throw OperationException(
+//                        MessageCodeUtil.generateResponseDataObject<String>(
+//                            ProjectMessageCode.CALL_PEM_FAIL_PARM, arrayOf(result.message!!)
+//                        ).message!!
+//                    )
+//                }
+//                val authProjectForCreateResult = result.data
+//                val projectId = if (authProjectForCreateResult != null) {
+//                    if (authProjectForCreateResult.project_id.isBlank()) {
+//                        throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PEM_CREATE_FAIL))
+//                    }
+//                    authProjectForCreateResult.project_id
+//                } else {
+//                    logger.warn("Fail to get the project id from response $responseContent")
+//                    throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PEM_CREATE_ID_INVALID))
+//                }
                 val userDeptDetail = tofService.getUserDeptDetail(userId, "") // 获取用户机构信息
                 try {
                     projectDao.create(
@@ -526,6 +537,10 @@ class ProjectLocalService @Autowired constructor(
 
             projectUpdateInfo.ccAppName = appName
             projectDao.update(dslContext, userId, projectId, projectUpdateInfo)
+            projectPermissionService.modifyResource(
+                projectCode = projectUpdateInfo.englishName,
+                projectName = projectUpdateInfo.projectName
+            )
             projectDispatcher.dispatch(
                 ProjectUpdateBroadCastEvent(
                     userId = userId,

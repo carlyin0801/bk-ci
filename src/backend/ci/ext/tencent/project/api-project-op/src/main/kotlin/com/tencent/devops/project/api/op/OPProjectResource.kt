@@ -246,8 +246,11 @@ interface OPProjectResource {
     @Path("/listGrayProject")
     fun listGrayProject(): Result<OpGrayProject>
 
-//    @ApiOperation("查看灰度项目列表")
-//    @GET
-//    @Path("/list_gray/query")
-//    fun listGrayProjectV2(): Result<OpGrayProject>
+    @ApiOperation("同步项目")
+    @PUT
+    @Path("/{projectId}/syn")
+    fun synProject(
+        @ApiParam(value = "项目code", required = true)
+        projectCode: String
+    ): Result<Boolean>
 }

@@ -30,6 +30,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.util.OkhttpUtils
+import com.tencent.devops.common.auth.api.AuthResourceApi
+import com.tencent.devops.common.auth.api.AuthResourceType
+import com.tencent.devops.common.auth.api.AuthTokenApi
 import com.tencent.devops.common.auth.api.BSAuthProjectApi
 import com.tencent.devops.common.auth.api.BkAuthProperties
 import com.tencent.devops.common.auth.api.pojo.ResourceRegisterInfo
@@ -49,11 +52,23 @@ class ProjectPermissionServiceImpl @Autowired constructor(
     private val objectMapper: ObjectMapper,
     private val authProperties: BkAuthProperties,
     private val authProjectApi: BSAuthProjectApi,
-    private val bsProjectAuthServiceCode: BSProjectServiceCodec
+    private val authTokenApi: AuthTokenApi,
+    private val bsProjectAuthServiceCode: BSProjectServiceCodec,
+    private val authResourceApi: AuthResourceApi
 ) : ProjectPermissionService {
 
+    private val authUrl = authProperties.url
+
     override fun createResources(userId: String, projectList: List<ResourceRegisterInfo>) {
-        // 内部版用不到
+        val projectCreateInfo = projectList[0]
+        authResourceApi.createResource(
+            user = userId,
+            serviceCode = bsProjectAuthServiceCode,
+            resourceType = AuthResourceType.PROJECT,
+            projectCode = projectCreateInfo.resourceCode,
+            resourceCode = projectCreateInfo.resourceCode,
+            resourceName = projectCreateInfo.resourceName
+        )
     }
 
     override fun deleteResource(projectCode: String) {
@@ -61,7 +76,13 @@ class ProjectPermissionServiceImpl @Autowired constructor(
     }
 
     override fun modifyResource(projectCode: String, projectName: String) {
-        // 内部版用不到
+        authResourceApi.modifyResource(
+            serviceCode = bsProjectAuthServiceCode,
+            resourceType = AuthResourceType.PROJECT,
+            projectCode = projectCode,
+            resourceCode = projectCode,
+            resourceName = projectName
+        )
     }
 
     override fun getUserProjects(userId: String): List<String> {
