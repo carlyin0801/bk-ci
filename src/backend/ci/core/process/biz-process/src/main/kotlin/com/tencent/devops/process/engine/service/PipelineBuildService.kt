@@ -285,7 +285,7 @@ class PipelineBuildService(
                     defaultMessage = "构建任务${buildId}不存在",
                     params = arrayOf(buildId))
 
-            if (!BuildStatus.isFailure(buildInfo.status)) {
+            if (!BuildStatus.isFinish(buildInfo.status)) {
                 throw ErrorCodeException(
                     errorCode = ProcessMessageCode.ERROR_DUPLICATE_BUILD_RETRY_ACT,
                     defaultMessage = "重试已经启动，忽略重复的请求"
@@ -366,7 +366,7 @@ class PipelineBuildService(
             return startPipeline(
                 userId = userId,
                 readyToBuildPipelineInfo = readyToBuildPipelineInfo,
-                startType = StartType.toStartType(params[PIPELINE_START_TYPE]?.toString()?:""),
+                startType = StartType.toStartType(params[PIPELINE_START_TYPE]?.toString() ?: ""),
                 startParamsWithType = startParamsWithType,
                 channelCode = channelCode ?: ChannelCode.BS,
                 isMobile = isMobile,
