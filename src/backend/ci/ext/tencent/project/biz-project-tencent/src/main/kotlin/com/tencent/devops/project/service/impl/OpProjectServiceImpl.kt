@@ -206,11 +206,11 @@ class OpProjectServiceImpl @Autowired constructor(
                 isContinue = false
             }
 
-            if(page <= 2){
-                logger.info("project List: $projectInfoMap")
+            if(page <= 1){
+                logger.info("project List: ${projectInfoMap.data}")
             }
 
-            val dataList = projectInfoMap.data!!["projectList"] as MutableList<ProjectInfoResponse>
+            val dataList = projectInfoMap.data!!["projectList"] as MutableList<Any>
             if(dataList == null){
                 isContinue = false
             }
@@ -221,6 +221,7 @@ class OpProjectServiceImpl @Autowired constructor(
 
             page++
             dataList.forEach {
+                it as ProjectInfoResponse
                 val isSyn = synProject(it.projectEnglishName)
                 if(isSyn.data!!){
                     synProject.add(it.projectEnglishName)
