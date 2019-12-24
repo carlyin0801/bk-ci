@@ -132,7 +132,7 @@ class ProjectPaasCCService @Autowired constructor(
 
     fun getPaasCCProjectInfo(projectCode: String, accessToken: String): PaasCCProjectInfo? {
         logger.info("get the paas cc projectInfo $projectCode with token $accessToken")
-        val url = "$ccUrl/projects/$projectCode?access_token=$accessToken"
+        val url = "$ccUrl/$projectCode?access_token=$accessToken"
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val request = Request.Builder().url(url).get().build()
         val responseContent = request(request, "获取PAASCC项目信息失败")

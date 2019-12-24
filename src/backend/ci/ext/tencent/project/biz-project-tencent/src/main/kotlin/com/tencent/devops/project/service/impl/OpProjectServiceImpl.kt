@@ -171,13 +171,15 @@ class OpProjectServiceImpl @Autowired constructor(
     }
 
     override fun synProjectInit(): Result<List<String>> {
+        logger.info("synProject time: ${System.currentTimeMillis()}")
         val synProject = mutableListOf<String>()
         val startTime = System.currentTimeMillis()
-        var page = 0
+        var page = 1
         val limit = 500
         var isContinue = true
         while (isContinue) {
             val SQLLimit = PageUtil.convertPageSizeToSQLLimit(page, limit)
+            logger.info("synProject page: $page")
             val projectInfoMap = getProjectList(
                 projectName = null,
                 englishName = null,
@@ -193,8 +195,12 @@ class OpProjectServiceImpl @Autowired constructor(
             if(projectInfoMap.data == null){
                 isContinue = false
             }
-            var dataList = mutableListOf<ProjectInfoResponse>()
-            dataList = projectInfoMap.data!!["projectList"] as MutableList<ProjectInfoResponse>
+
+            if(page <= 2){
+                logger.info("project List: $projectInfoMap")
+            }
+
+            val dataList = projectInfoMap.data!!["projectList"] as MutableList<ProjectInfoResponse>
             if(dataList == null){
                 isContinue = false
             }
