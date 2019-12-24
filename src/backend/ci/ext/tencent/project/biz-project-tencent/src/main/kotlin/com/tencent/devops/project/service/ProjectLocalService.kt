@@ -128,7 +128,7 @@ class ProjectLocalService @Autowired constructor(
             try {
                 // 发送服务器
                 val logoAddress = s3Service.saveLogo(logoFile, projectCreateInfo.englishName)
-                projectPermissionService.createResources(
+                val projectId = projectPermissionService.createResources(
                     userId = userId,
                     projectList = listOf(
                         ResourceRegisterInfo(
