@@ -72,6 +72,9 @@ class OpProjectServiceImpl @Autowired constructor(
     private val bsPipelineAuthServiceCode: AuthServiceCode,
     private val repoGray: RepoGray
 ) : AbsOpProjectServiceImpl(dslContext, projectDao, projectLabelRelDao, redisOperation, gray, repoGray, projectDispatcher) {
+
+    private final val REDIS_PROJECT_KEY = "BK:PROJECT:INFO:"
+
     override fun listGrayProject(): Result<OpGrayProject> {
         return super.listGrayProject()
     }
@@ -131,6 +134,10 @@ class OpProjectServiceImpl @Autowired constructor(
 
     override fun synProject(projectCode: String): Result<Boolean>{
         var isSyn = false
+        if(redisOperation.get(REDIS_PROJECT_KEY+projectCode) != null){
+            return Result(isSyn)
+        }
+
         val projectInfo = projectDao.getByEnglishName(dslContext, projectCode)
         if(projectInfo == null){
             logger.error("syn project $projectCode is not exist")
@@ -176,6 +183,10 @@ class OpProjectServiceImpl @Autowired constructor(
             )
             isSyn = true
         }
+        if(!isSyn){
+            redisOperation.set(REDIS_PROJECT_KEY+projectCode, projectCode, null, true)
+        }
+
         return Result(isSyn)
     }
 
@@ -212,7 +223,7 @@ class OpProjectServiceImpl @Autowired constructor(
             }
             for (i in projectInfos.indices) {
                 val projectData = projectInfos[i]
-                val isSyn = synProject(projectData.projectName)
+                val isSyn = synProject(projectData.englishName)
                 if(isSyn.data!!){
                     synProject.add(projectData.englishName)
                 }
