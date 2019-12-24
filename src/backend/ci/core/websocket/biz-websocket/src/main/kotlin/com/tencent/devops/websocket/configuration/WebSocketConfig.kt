@@ -26,7 +26,7 @@
 
 package com.tencent.devops.websocket.configuration
 
-import com.tencent.devops.websocket.handler.BKHandshakeInterceptor
+import com.tencent.devops.websocket.interceptor.BKHandshakeInterceptor
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -40,7 +40,8 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry
 @Configuration
 @EnableWebSocketMessageBroker
 class WebSocketConfig @Autowired constructor(
-    private val bkHandshake: BKHandshakeInterceptor
+    private val bkHandshake: BKHandshakeInterceptor,
+    private val cacheHandshake: CacheChannelInterceptor
 ) : AbstractWebSocketMessageBrokerConfigurer() {
 
     @Value("\${thread.min:8}")
@@ -56,7 +57,7 @@ class WebSocketConfig @Autowired constructor(
     }
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
-        registry.addEndpoint("/ws/user").addInterceptors(bkHandshake).setAllowedOrigins("*").withSockJS()
+        registry.addEndpoint("/ws/user").addInterceptors(bkHandshake).addInterceptors(cacheHandshake).setAllowedOrigins("*").withSockJS()
     }
 
     @Override
@@ -78,4 +79,5 @@ class WebSocketConfig @Autowired constructor(
         }
         registration.taskExecutor().corePoolSize(defaultCorePoolSize).maxPoolSize(defaultCorePoolSize * 2)
     }
+
 }
