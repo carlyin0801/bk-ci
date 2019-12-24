@@ -45,7 +45,6 @@ import com.tencent.devops.project.pojo.OpGrayProject
 import com.tencent.devops.project.pojo.OpProjectUpdateInfoRequest
 import com.tencent.devops.project.pojo.PaasCCUpdateProject
 import com.tencent.devops.project.pojo.ProjectCreateInfo
-import com.tencent.devops.project.pojo.ProjectInfoResponse
 import com.tencent.devops.project.pojo.ProjectUpdateInfo
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.pojo.mq.ProjectCreateBroadCastEvent
@@ -180,9 +179,11 @@ class OpProjectServiceImpl @Autowired constructor(
         while (isContinue) {
             val SQLLimit = PageUtil.convertPageSizeToSQLLimit(page, limit)
             logger.info("synProject page: $page")
-            val projectInfoMap = getProjectList(
+            val projectInfos = projectDao.getProjectList(
+                dslContext = dslContext,
                 projectName = null,
                 englishName = null,
+                englishNames = null,
                 projectType = null,
                 isSecrecy = null,
                 creator = null,
@@ -192,31 +193,21 @@ class OpProjectServiceImpl @Autowired constructor(
                 limit = SQLLimit.limit,
                 grayFlag = false
             )
-            if(projectInfoMap.data == null){
+
+            if(projectInfos == null || projectInfos.size < limit){
                 isContinue = false
             }
-
             if(page <= 1){
-                logger.info("project List: ${projectInfoMap.data}")
+                logger.info("project List: ${projectInfos[1]}")
             }
-
-            val dataList = projectInfoMap.data!!["projectList"] as MutableList<Any>
-            if(dataList == null){
-                isContinue = false
-            }
-
-            if(dataList.size < page){
-                isContinue = false
-            }
-
-            page++
-            dataList.forEach {
-                it as ProjectInfoResponse
-                val isSyn = synProject(it.projectEnglishName)
+            for (i in projectInfos.indices) {
+                val projectData = projectInfos[i]
+                val isSyn = synProject(projectData.projectName)
                 if(isSyn.data!!){
-                    synProject.add(it.projectEnglishName)
+                    synProject.add(projectData.englishName)
                 }
             }
+            page++
         }
         val endTime = System.currentTimeMillis()
         logger.info("syn project time: ${endTime - startTime}, syn project count: ${synProject.size} ")
