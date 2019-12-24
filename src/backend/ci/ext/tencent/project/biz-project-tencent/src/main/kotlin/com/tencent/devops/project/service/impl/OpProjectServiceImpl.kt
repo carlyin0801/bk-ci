@@ -26,18 +26,29 @@
 
 package com.tencent.devops.project.service.impl
 
+import com.tencent.devops.common.api.exception.OperationException
+import com.tencent.devops.common.auth.api.AuthProjectApi
+import com.tencent.devops.common.auth.api.AuthTokenApi
+import com.tencent.devops.common.auth.api.pojo.ResourceRegisterInfo
+import com.tencent.devops.common.auth.code.AuthServiceCode
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.gray.Gray
+import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.common.web.mq.EXCHANGE_PAASCC_PROJECT_UPDATE
 import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_UPDATE
+import com.tencent.devops.project.constant.ProjectMessageCode
 import com.tencent.devops.project.dao.ProjectDao
 import com.tencent.devops.project.dao.ProjectLabelRelDao
 import com.tencent.devops.project.dispatch.ProjectDispatcher
 import com.tencent.devops.project.pojo.OpGrayProject
 import com.tencent.devops.project.pojo.OpProjectUpdateInfoRequest
 import com.tencent.devops.project.pojo.PaasCCUpdateProject
+import com.tencent.devops.project.pojo.ProjectCreateInfo
 import com.tencent.devops.project.pojo.ProjectUpdateInfo
 import com.tencent.devops.project.pojo.Result
+import com.tencent.devops.project.pojo.mq.ProjectCreateBroadCastEvent
+import com.tencent.devops.project.service.ProjectPaasCCService
+import com.tencent.devops.project.service.ProjectPermissionService
 import org.jooq.DSLContext
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
@@ -51,7 +62,12 @@ class OpProjectServiceImpl @Autowired constructor(
     private val rabbitTemplate: RabbitTemplate,
     private val redisOperation: RedisOperation,
     private val gray: Gray,
-    private val projectDispatcher: ProjectDispatcher
+    private val projectDispatcher: ProjectDispatcher,
+    private val paasCCService: ProjectPaasCCService,
+    private val bkAuthProjectApi: AuthProjectApi,
+    private val bsAuthTokenApi: AuthTokenApi,
+    private val projectPermissionService: ProjectPermissionService,
+    private val bsPipelineAuthServiceCode: AuthServiceCode
 ) : AbsOpProjectServiceImpl(dslContext, projectDao, projectLabelRelDao, redisOperation, gray, projectDispatcher) {
     override fun listGrayProject(): Result<OpGrayProject> {
         return super.listGrayProject()
@@ -98,5 +114,54 @@ class OpProjectServiceImpl @Autowired constructor(
 
     override fun getProjectCount(projectName: String?, englishName: String?, projectType: Int?, isSecrecy: Boolean?, creator: String?, approver: String?, approvalStatus: Int?, grayFlag: Boolean): Result<Int> {
         return super.getProjectCount(projectName, englishName, projectType, isSecrecy, creator, approver, approvalStatus, grayFlag)
+    }
+
+
+
+    override fun synProject(projectCode: String): Result<Boolean>{
+        val projectInfo = projectDao.getByEnglishName(dslContext, projectCode)
+        if(projectInfo == null){
+            logger.error("syn project $projectCode is not exist")
+            throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PROJECT_NOT_EXIST))
+        }
+        val accessToken = bsAuthTokenApi.getAccessToken(bsPipelineAuthServiceCode)
+        val paasProjectInfo = paasCCService.getPaasCCProjectInfo(projectCode, accessToken)
+        if(paasProjectInfo == null){
+            logger.info("synProject projectCode:$projectCode, paasCC is not exist. start Syn")
+            projectDispatcher.dispatch(
+                ProjectCreateBroadCastEvent(
+                    userId = projectInfo.creator,
+                    projectId = projectInfo.projectId,
+                    projectInfo = ProjectCreateInfo(
+                        projectName = projectInfo.projectName,
+                        englishName = projectInfo.englishName,
+                        projectType = projectInfo.projectType,
+                        description = projectInfo.description,
+                        bgId = projectInfo.bgId,
+                        bgName = projectInfo.bgName,
+                        deptId = projectInfo.deptId,
+                        deptName = projectInfo.deptName,
+                        centerId = projectInfo.centerId,
+                        centerName= projectInfo.centerName,
+                        secrecy = projectInfo.isSecrecy,
+                        kind = projectInfo.kind
+                    )
+                )
+            )
+        }
+        val authProjectInfo = bkAuthProjectApi.getProjectInfo(bsPipelineAuthServiceCode, projectCode)
+        if(authProjectInfo == null){
+            logger.info("synProject projectCode:$projectCode, authCenter is not exist. start Syn")
+            projectPermissionService.createResources(
+                userId = projectInfo.creator,
+                projectList = listOf(
+                    ResourceRegisterInfo(
+                        projectInfo.englishName,
+                        projectInfo.projectName
+                    )
+                )
+            )
+        }
+        return Result(true)
     }
 }
