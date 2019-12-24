@@ -58,9 +58,11 @@ class QueueInterceptor @Autowired constructor(
         val pipelineId = task.pipelineInfo.pipelineId
         val setting = pipelineSettingService.getSetting(pipelineId)
         val runLockType = setting?.runLockType ?: return Response(BuildStatus.RUNNING)
+        logger.info("[$pipelineId] runLockType=$runLockType| setting=$setting")
         return if (runLockType == PipelineRunLockType.SINGLE.ordinal) {
             val maxQueue = setting.maxQueueSize ?: 10
             val buildSummaryRecord = pipelineRuntimeService.getBuildSummaryRecord(pipelineId)
+            logger.info("[$pipelineId] maxQueue=$maxQueue| buildSummaryRecord=$buildSummaryRecord")
             if (buildSummaryRecord == null) {
                 // Summary为空，如新创建的pipeline
                 Response(BuildStatus.RUNNING)
@@ -94,7 +96,6 @@ class QueueInterceptor @Autowired constructor(
                             status = BuildStatus.CANCELED
                         )
                     )
-                    Response(BuildStatus.QUEUE)
                 }
                 Response(BuildStatus.RUNNING)
             } else {
