@@ -67,4 +67,6 @@ interface OpProjectService {
     fun synProject(
         projectCode: String
     ): Result<Boolean>
+
+    fun synProjectInit(): Result<List<String>>
 }

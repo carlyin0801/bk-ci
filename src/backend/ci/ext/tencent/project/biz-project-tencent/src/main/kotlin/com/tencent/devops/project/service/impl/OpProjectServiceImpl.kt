@@ -27,6 +27,7 @@
 package com.tencent.devops.project.service.impl
 
 import com.tencent.devops.common.api.exception.OperationException
+import com.tencent.devops.common.api.util.PageUtil
 import com.tencent.devops.common.auth.api.AuthProjectApi
 import com.tencent.devops.common.auth.api.AuthTokenApi
 import com.tencent.devops.common.auth.api.pojo.ResourceRegisterInfo
@@ -44,6 +45,7 @@ import com.tencent.devops.project.pojo.OpGrayProject
 import com.tencent.devops.project.pojo.OpProjectUpdateInfoRequest
 import com.tencent.devops.project.pojo.PaasCCUpdateProject
 import com.tencent.devops.project.pojo.ProjectCreateInfo
+import com.tencent.devops.project.pojo.ProjectInfoResponse
 import com.tencent.devops.project.pojo.ProjectUpdateInfo
 import com.tencent.devops.project.pojo.Result
 import com.tencent.devops.project.pojo.mq.ProjectCreateBroadCastEvent
@@ -119,6 +121,7 @@ class OpProjectServiceImpl @Autowired constructor(
 
 
     override fun synProject(projectCode: String): Result<Boolean>{
+        var isSyn = false
         val projectInfo = projectDao.getByEnglishName(dslContext, projectCode)
         if(projectInfo == null){
             logger.error("syn project $projectCode is not exist")
@@ -148,6 +151,7 @@ class OpProjectServiceImpl @Autowired constructor(
                     )
                 )
             )
+            isSyn = true
         }
         val authProjectInfo = bkAuthProjectApi.getProjectInfo(bsPipelineAuthServiceCode, projectCode)
         if(authProjectInfo == null){
@@ -161,7 +165,54 @@ class OpProjectServiceImpl @Autowired constructor(
                     )
                 )
             )
+            isSyn = true
         }
-        return Result(true)
+        return Result(isSyn)
+    }
+
+    override fun synProjectInit(): Result<List<String>> {
+        val synProject = mutableListOf<String>()
+        val startTime = System.currentTimeMillis()
+        var page = 0
+        val limit = 500
+        var isContinue = true
+        while (isContinue) {
+            val SQLLimit = PageUtil.convertPageSizeToSQLLimit(page, limit)
+            val projectInfoMap = getProjectList(
+                projectName = null,
+                englishName = null,
+                projectType = null,
+                isSecrecy = null,
+                creator = null,
+                approver = null,
+                approvalStatus = null,
+                offset = SQLLimit.offset,
+                limit = SQLLimit.limit,
+                grayFlag = false
+            )
+            if(projectInfoMap.data == null){
+                isContinue = false
+            }
+            var dataList = mutableListOf<ProjectInfoResponse>()
+            dataList = projectInfoMap.data!!["projectList"] as MutableList<ProjectInfoResponse>
+            if(dataList == null){
+                isContinue = false
+            }
+
+            if(dataList.size < page){
+                isContinue = false
+            }
+
+            page++
+            dataList.forEach {
+                val isSyn = synProject(it.projectEnglishName)
+                if(isSyn.data!!){
+                    synProject.add(it.projectEnglishName)
+                }
+            }
+        }
+        val endTime = System.currentTimeMillis()
+        logger.info("syn project time: ${endTime - startTime}, syn project count: ${synProject.size} ")
+        return Result(synProject)
     }
 }
