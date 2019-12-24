@@ -35,6 +35,7 @@ import com.tencent.devops.common.auth.code.AuthServiceCode
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.gray.Gray
 import com.tencent.devops.common.service.gray.RepoGray
+import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.common.web.mq.EXCHANGE_PAASCC_PROJECT_UPDATE
 import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_UPDATE
 import com.tencent.devops.project.constant.ProjectMessageCode
@@ -69,7 +70,8 @@ class OpProjectServiceImpl @Autowired constructor(
     private val bkAuthProjectApi: AuthProjectApi,
     private val bsAuthTokenApi: AuthTokenApi,
     private val projectPermissionService: ProjectPermissionService,
-    private val bsPipelineAuthServiceCode: AuthServiceCode
+    private val bsPipelineAuthServiceCode: AuthServiceCode,
+    private val repoGray: RepoGray
 ) : AbsOpProjectServiceImpl(dslContext, projectDao, projectLabelRelDao, redisOperation, gray, repoGray, projectDispatcher) {
     override fun listGrayProject(): Result<OpGrayProject> {
         return super.listGrayProject()
