@@ -282,11 +282,7 @@ class ArtifactoryDownloadService @Autowired constructor(
                     targetProjectId,
                     targetPipelineId,
                     AuthPermission.DOWNLOAD,
-<<<<<<< HEAD
                     "用户($lastModifyUser)在项目($crossProjectId)下没有流水线${crossPipineId}下载构建权限")
-=======
-                    "用户($lastModifyUser)在项目($crossProjectId)下没有流水线($crossPipineId)下载构建权限")
->>>>>>> story_856841043
 
                 val targetBuild = client.get(ServiceBuildResource::class).getSingleHistoryBuild(
                     targetProjectId,
