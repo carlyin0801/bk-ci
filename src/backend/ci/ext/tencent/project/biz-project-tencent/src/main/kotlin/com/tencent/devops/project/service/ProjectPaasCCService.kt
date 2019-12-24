@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.util.OkhttpUtils
-<<<<<<< HEAD
 import com.tencent.devops.common.auth.code.PipelineAuthServiceCode
-=======
->>>>>>> story_856841043
 import com.tencent.devops.project.pojo.PaasCCProjectForCreate
 import com.tencent.devops.project.pojo.PaasCCProjectForUpdate
 import com.tencent.devops.project.pojo.ProjectCreateInfo
