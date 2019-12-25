@@ -130,12 +130,12 @@ class ProjectLocalService @Autowired constructor(
                 val logoAddress = s3Service.saveLogo(logoFile, projectCreateInfo.englishName)
                 val projectId = projectPermissionService.createResources(
                     userId = userId,
-                    projectList = listOf(
-                        ResourceRegisterInfo(
+                    accessToken = accessToken,
+                    projectList = ResourceRegisterInfo(
                             projectCreateInfo.englishName,
                             projectCreateInfo.projectName
                         )
-                    )
+
                 )
                 val userDeptDetail = tofService.getUserDeptDetail(userId, "") // 获取用户机构信息
                 try {
