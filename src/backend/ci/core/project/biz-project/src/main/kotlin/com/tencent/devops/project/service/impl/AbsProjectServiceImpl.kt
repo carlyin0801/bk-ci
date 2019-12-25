@@ -135,12 +135,12 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
                 // 注册项目到权限中心
                 projectPermissionService.createResources(
                     userId = userId,
-                    projectList = listOf(
+                    accessToken = "",
+                    resourceRegisterInfo =
                         ResourceRegisterInfo(
                             projectCreateInfo.englishName,
                             projectCreateInfo.projectName
                         )
-                    )
                 )
             } catch (e: Exception) {
                 logger.warn("权限中心创建项目信息： $projectCreateInfo", e)
