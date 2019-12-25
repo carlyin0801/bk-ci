@@ -201,8 +201,8 @@ class OpProjectServiceImpl @Autowired constructor(
         val limit = 100
         var isContinue = true
         val excludeName = mutableListOf<String>()
-        excludeName.add("CODE_%")
-        excludeName.add("git_%")
+        excludeName.add("CODE_")
+        excludeName.add("git_")
 
         while (isContinue) {
             val SQLLimit = PageUtil.convertPageSizeToSQLLimit(page, limit)
