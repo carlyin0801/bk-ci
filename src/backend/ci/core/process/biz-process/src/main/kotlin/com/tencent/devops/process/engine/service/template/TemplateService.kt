@@ -50,10 +50,13 @@ import com.tencent.devops.common.pipeline.container.TriggerContainer
 import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.pipeline.extend.ModelCheckPlugin
 import com.tencent.devops.common.pipeline.pojo.BuildFormProperty
+import com.tencent.devops.common.pipeline.pojo.BuildNo
 import com.tencent.devops.common.pipeline.pojo.element.Element
 import com.tencent.devops.common.pipeline.pojo.element.agent.CodeGitElement
 import com.tencent.devops.common.pipeline.pojo.element.agent.CodeSvnElement
 import com.tencent.devops.common.pipeline.pojo.element.agent.GithubElement
+import com.tencent.devops.common.pipeline.pojo.element.agent.LinuxPaasCodeCCScriptElement
+import com.tencent.devops.common.pipeline.pojo.element.agent.LinuxScriptElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGitWebHookTriggerElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGithubWebHookTriggerElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeSVNWebHookTriggerElement
@@ -240,7 +243,8 @@ class TemplateService @Autowired constructor(
             ?: throw ErrorCodeException(
                 statusCode = Response.Status.NOT_FOUND.statusCode,
                 errorCode = ProcessMessageCode.ERROR_PIPELINE_MODEL_NOT_EXISTS,
-                defaultMessage = "流水线编排不存在")
+                defaultMessage = "流水线编排不存在"
+            )
 
         val templateId = UUIDUtil.generate()
         dslContext.transaction { configuration ->
@@ -294,19 +298,22 @@ class TemplateService @Autowired constructor(
             if (pipelines.isNotEmpty) {
                 throw ErrorCodeException(
                     errorCode = ProcessMessageCode.TEMPLATE_CAN_NOT_DELETE_WHEN_HAVE_INSTANCE,
-                    defaultMessage = "模板还存在实例，不允许删除")
+                    defaultMessage = "模板还存在实例，不允许删除"
+                )
             }
             if (template.type == TemplateType.CUSTOMIZE.name && template.storeFlag == true) {
                 throw ErrorCodeException(
                     errorCode = ProcessMessageCode.TEMPLATE_CAN_NOT_DELETE_WHEN_PUBLISH,
-                    defaultMessage = "已关联到研发商店，请先下架再删除")
+                    defaultMessage = "已关联到研发商店，请先下架再删除"
+                )
             }
             if (template.type == TemplateType.CUSTOMIZE.name &&
                 templateDao.isExistInstalledTemplate(context, templateId)
             ) {
                 throw ErrorCodeException(
                     errorCode = ProcessMessageCode.TEMPLATE_CAN_NOT_DELETE_WHEN_INSTALL,
-                    defaultMessage = "已安装到其他项目下使用，不能删除")
+                    defaultMessage = "已安装到其他项目下使用，不能删除"
+                )
             }
 
             templateDao.delete(context, templateId)
@@ -332,7 +339,8 @@ class TemplateService @Autowired constructor(
                 logger.warn("There are ${pipelines.size} pipeline attach to $templateId of version $version")
                 throw ErrorCodeException(
                     errorCode = ProcessMessageCode.TEMPLATE_CAN_NOT_DELETE_WHEN_HAVE_INSTANCE,
-                    defaultMessage = "模板还存在实例，不允许删除")
+                    defaultMessage = "模板还存在实例，不允许删除"
+                )
             }
             templateDao.delete(dslContext, templateId, setOf(version)) == 1
         }
@@ -406,7 +414,8 @@ class TemplateService @Autowired constructor(
             logger.warn("Fail to get the template setting - [$projectId|$userId|$templateId]")
             throw ErrorCodeException(
                 errorCode = ProcessMessageCode.PIPELINE_SETTING_NOT_EXISTS,
-                defaultMessage = "流水线模板设置不存在")
+                defaultMessage = "流水线模板设置不存在"
+            )
         }
 
         val hasPermission = hasManagerPermission(projectId, userId)
@@ -553,7 +562,10 @@ class TemplateService @Autowired constructor(
             }
 
             if (templateRecord == null) {
-                throw ErrorCodeException(errorCode = ProcessMessageCode.ERROR_TEMPLATE_NOT_EXISTS, defaultMessage = "模板不存在")
+                throw ErrorCodeException(
+                    errorCode = ProcessMessageCode.ERROR_TEMPLATE_NOT_EXISTS,
+                    defaultMessage = "模板不存在"
+                )
             } else {
                 val modelStr = templateRecord["template"] as String
                 val version = templateRecord["version"] as Long
@@ -752,7 +764,8 @@ class TemplateService @Autowired constructor(
         val templateCount = templateDao.countTemplate(dslContext, projectId, true, templateType, null, null)
         dslContext.transaction { configuration ->
             val context = DSL.using(configuration)
-            val templates = templateDao.listTemplate(context, projectId, true, templateType, templateIds, null, page, pageSize)
+            val templates =
+                templateDao.listTemplate(context, projectId, true, templateType, templateIds, null, page, pageSize)
 
             val constrainedTemplateList = mutableListOf<String>()
             val templateIdList = mutableSetOf<String>()
@@ -762,7 +775,8 @@ class TemplateService @Autowired constructor(
                 }
                 templateIdList.add(tempTemplate["templateId"] as String)
             }
-            val srcTemplateRecords = templateDao.listTemplate(context, null, null, null, constrainedTemplateList, null, null, null)
+            val srcTemplateRecords =
+                templateDao.listTemplate(context, null, null, null, constrainedTemplateList, null, null, null)
             val srcTemplates = srcTemplateRecords?.associateBy { it["templateId"] as String }
 
             val settings = pipelineSettingDao.getSettings(context, templateIdList).map { it.pipelineId to it }.toMap()
@@ -785,7 +799,8 @@ class TemplateService @Autowired constructor(
                     val setting = settings[templateId]
                     val logoUrl = record["logoUrl"] as? String
                     val categoryStr = record["category"] as? String
-                    val key = if (type == TemplateType.CONSTRAINT.name) record["srcTemplateId"] as String else templateId
+                    val key =
+                        if (type == TemplateType.CONSTRAINT.name) record["srcTemplateId"] as String else templateId
                     result[key] = OptionalTemplate(
                         name = setting?.name ?: model.name,
                         templateId = templateId,
@@ -795,7 +810,10 @@ class TemplateService @Autowired constructor(
                         templateType = type,
                         templateTypeDesc = TemplateType.getTemplateTypeDesc(type),
                         logoUrl = logoUrl ?: "",
-                        category = if (!categoryStr.isNullOrBlank()) JsonUtil.getObjectMapper().readValue(categoryStr, List::class.java) as List<String> else listOf(),
+                        category = if (!categoryStr.isNullOrBlank()) JsonUtil.getObjectMapper().readValue(
+                            categoryStr,
+                            List::class.java
+                        ) as List<String> else listOf(),
                         stages = model.stages
                     )
                 }
@@ -824,7 +842,10 @@ class TemplateService @Autowired constructor(
             templates = templateDao.listTemplateByIds(dslContext, listOf(latestTemplate.srcTemplateId))
             if (templates.isEmpty()) {
                 logger.warn("The src template ${latestTemplate.srcTemplateId} is not exist")
-                throw ErrorCodeException(errorCode = ProcessMessageCode.ERROR_SOURCE_TEMPLATE_NOT_EXISTS, defaultMessage = "源模板不存在")
+                throw ErrorCodeException(
+                    errorCode = ProcessMessageCode.ERROR_SOURCE_TEMPLATE_NOT_EXISTS,
+                    defaultMessage = "源模板不存在"
+                )
             }
             latestTemplate = templates[0]
         }
@@ -832,7 +853,10 @@ class TemplateService @Autowired constructor(
         val setting = pipelineSettingDao.getSetting(dslContext, templateId)
         if (setting == null) {
             logger.warn("The template setting is not exist [$projectId|$userId|$templateId]")
-            throw ErrorCodeException(errorCode = ProcessMessageCode.PIPELINE_SETTING_NOT_EXISTS, defaultMessage = "模板设置不存在")
+            throw ErrorCodeException(
+                errorCode = ProcessMessageCode.PIPELINE_SETTING_NOT_EXISTS,
+                defaultMessage = "模板设置不存在"
+            )
         }
 
         val latestVersion = TemplateVersion(
@@ -943,7 +967,8 @@ class TemplateService @Autowired constructor(
                     ?: throw ErrorCodeException(
                         statusCode = Response.Status.NOT_FOUND.statusCode,
                         errorCode = ProcessMessageCode.ERROR_PIPELINE_MODEL_NOT_EXISTS,
-                        defaultMessage = "流水线编排不存在")
+                        defaultMessage = "流水线编排不存在"
+                    )
             ),
             template
         )
@@ -1087,7 +1112,8 @@ class TemplateService @Autowired constructor(
                 val pipelineId = it.key
                 val m: Model = objectMapper.readValue(it.value)
                 val container = m.stages[0].containers[0] as TriggerContainer
-                val param = paramService.filterParams(userId, projectId, pipelineId, removeProperties(params, container.params))
+                val param =
+                    paramService.filterParams(userId, projectId, pipelineId, removeProperties(params, container.params))
                 logger.info("[$userId|$projectId|$templateId|$version] Get the param ($param)")
                 val no = if (container.buildNo != null) {
                     container.buildNo
@@ -1103,7 +1129,10 @@ class TemplateService @Autowired constructor(
             }.toMap()
         } catch (t: Throwable) {
             logger.warn("Fail to list pipeline params - [$projectId|$userId|$templateId|$version]", t)
-            throw ErrorCodeException(errorCode = ProcessMessageCode.FAIL_TO_LIST_TEMPLATE_PARAMS, defaultMessage = "列举流水线参数失败")
+            throw ErrorCodeException(
+                errorCode = ProcessMessageCode.FAIL_TO_LIST_TEMPLATE_PARAMS,
+                defaultMessage = "列举流水线参数失败"
+            )
         }
     }
 
@@ -1242,7 +1271,8 @@ class TemplateService @Autowired constructor(
                         userId = userId,
                         projectId = projectId,
                         pipelineId = it.pipelineId,
-                        model = pipelineService.instanceModel(
+                        model = getInstanceModel(
+                            pipelineId = it.pipelineId,
                             templateModel = templateModel,
                             pipelineName = it.pipelineName,
                             buildNo = it.buildNo,
@@ -1281,6 +1311,61 @@ class TemplateService @Autowired constructor(
         }
 
         return TemplateOperationRet(0, TemplateOperationMessage(successPipelines, failurePipelines, messages), "")
+    }
+
+    /**
+     *  实例内有codeccId则用实例内的数据
+     */
+    private fun getInstanceModel(
+        pipelineId: String,
+        templateModel: Model,
+        pipelineName: String,
+        buildNo: BuildNo?,
+        param: List<BuildFormProperty>?,
+        instanceFromTemplate: Boolean,
+        labels: List<String>? = null
+    ): Model {
+        var model = pipelineService.instanceModel(
+            templateModel = templateModel,
+            pipelineName = pipelineName,
+            buildNo = buildNo,
+            param = param,
+            instanceFromTemplate = instanceFromTemplate,
+            labels = labels
+        )
+
+        val instanceModel = pipelineResDao.getLatestVersionModelString(dslContext, pipelineId) as Model
+        var codeCCTaskId: String? = null
+        var codeCCTaskCnName: String? = null
+        var codeCCTaskName: String? = null
+
+        instanceModel.stages.forEach { stage ->
+            stage.containers.forEach { container ->
+                container.elements.forEach { element ->
+                    if (element is LinuxPaasCodeCCScriptElement) {
+                        codeCCTaskId = element.codeCCTaskId
+                        codeCCTaskCnName = element.codeCCTaskCnName,
+                        codeCCTaskName = element.codeCCTaskName
+                        return@forEach
+                    }
+                }
+            }
+        }
+        if (codeCCTaskId != null) {
+            model.stages.forEach { stage ->
+                stage.containers.forEach { container ->
+                    container.elements.forEach { element ->
+                        if (element is LinuxPaasCodeCCScriptElement) {
+                            logger.info("template model LinuxPaasCodeCCScriptElement codeCCTaskId[${element.codeCCTaskId}] codeCCTaskName[${element.codeCCTaskName}] codeCCTaskCnName[${element.codeCCTaskCnName}],instance Model codeCCTaskId[$codeCCTaskId] codeCCTaskName[$codeCCTaskName] codeCCTaskCnName[$codeCCTaskCnName]")
+                            element.codeCCTaskId = codeCCTaskId
+                            element.codeCCTaskName = codeCCTaskName
+                            element.codeCCTaskCnName = codeCCTaskCnName
+                        }
+                    }
+                }
+            }
+        }
+        return model
     }
 
     fun copySetting(setting: PipelineSetting, pipelineId: String, templateName: String): PipelineSetting {
@@ -1433,7 +1518,10 @@ class TemplateService @Autowired constructor(
         val errMsg = "用户${userId}没有模板操作权限"
         if (!isProjectUser) {
             logger.warn("The manager users is empty of project $projectId")
-            throw ErrorCodeException(defaultMessage = errMsg, errorCode = ProcessMessageCode.ONLY_MANAGE_CAN_OPERATE_TEMPLATE)
+            throw ErrorCodeException(
+                defaultMessage = errMsg,
+                errorCode = ProcessMessageCode.ONLY_MANAGE_CAN_OPERATE_TEMPLATE
+            )
         }
     }
 
@@ -1487,7 +1575,8 @@ class TemplateService @Autowired constructor(
     ): TemplateInstancePage {
         logger.info("[$projectId|$userId|$templateId|$page|$pageSize] List the template instances with filter $searchKey")
 
-        val instancePage = templatePipelineDao.listPipelineInPage(dslContext, projectId, templateId, page, pageSize, searchKey)
+        val instancePage =
+            templatePipelineDao.listPipelineInPage(dslContext, projectId, templateId, page, pageSize, searchKey)
         val associatePipelines = instancePage.records
         val pipelineIds = associatePipelines.map { it.pipelineId }.toSet()
         logger.info("Get the pipelineIds - $associatePipelines")
@@ -1503,7 +1592,10 @@ class TemplateService @Autowired constructor(
         val templatePipelines = associatePipelines.map {
             val pipelineSetting = pipelineSettings[it.pipelineId]
             if (pipelineSetting == null || pipelineSetting.isEmpty()) {
-                throw ErrorCodeException(defaultMessage = "流水线设置配置不存在", errorCode = ProcessMessageCode.PIPELINE_SETTING_NOT_EXISTS)
+                throw ErrorCodeException(
+                    defaultMessage = "流水线设置配置不存在",
+                    errorCode = ProcessMessageCode.PIPELINE_SETTING_NOT_EXISTS
+                )
             }
             TemplatePipeline(
                 templateId = it.templateId,
@@ -1546,7 +1638,8 @@ class TemplateService @Autowired constructor(
     fun serviceCountTemplateInstancesDetail(projectId: String, templateIds: Collection<String>): Map<String, Int> {
         logger.info("[$projectId|$templateIds] List the templates instances")
         if (templateIds.isEmpty()) return mapOf()
-        return templatePipelineDao.listPipeline(dslContext, templateIds).groupBy { it.templateId }.map { it.key to it.value.size }.toMap()
+        return templatePipelineDao.listPipeline(dslContext, templateIds).groupBy { it.templateId }
+            .map { it.key to it.value.size }.toMap()
     }
 
     fun listTemplateInstances(projectId: String, userId: String, templateId: String): TemplateInstances {
@@ -1576,7 +1669,10 @@ class TemplateService @Autowired constructor(
             val templatePipelines = associatePipelines.map {
                 val pipelineSetting = pipelineSettings[it.pipelineId]
                 if (pipelineSetting == null || pipelineSetting.isEmpty()) {
-                    throw ErrorCodeException(defaultMessage = "流水线设置配置不存在", errorCode = ProcessMessageCode.PIPELINE_SETTING_NOT_EXISTS)
+                    throw ErrorCodeException(
+                        defaultMessage = "流水线设置配置不存在",
+                        errorCode = ProcessMessageCode.PIPELINE_SETTING_NOT_EXISTS
+                    )
                 }
                 TemplatePipeline(
                     templateId = it.templateId,
@@ -1613,8 +1709,10 @@ class TemplateService @Autowired constructor(
      */
     private fun checkTemplate(template: Model) {
         if (template.name.isBlank()) {
-            throw ErrorCodeException(defaultMessage = "模板名不能为空字符串",
-                errorCode = ProcessMessageCode.TEMPLATE_NAME_CAN_NOT_NULL)
+            throw ErrorCodeException(
+                defaultMessage = "模板名不能为空字符串",
+                errorCode = ProcessMessageCode.TEMPLATE_NAME_CAN_NOT_NULL
+            )
         }
         modelCheckPlugin.checkModelIntegrity(model = template)
         checkPipelineParam(template)
@@ -1639,7 +1737,8 @@ class TemplateService @Autowired constructor(
                 if (param.id == template.id) {
                     throw ErrorCodeException(
                         errorCode = ProcessMessageCode.PIPELINE_PARAM_CONSTANTS_DUPLICATE,
-                        defaultMessage = "流水线变量参数和常量重名")
+                        defaultMessage = "流水线变量参数和常量重名"
+                    )
                 }
             }
         }
@@ -1683,7 +1782,10 @@ class TemplateService @Autowired constructor(
             isTemplate = true
         )?.value1() ?: 0
         if (count > 0) {
-            throw ErrorCodeException(errorCode = ProcessMessageCode.ERROR_TEMPLATE_NAME_IS_EXISTS, defaultMessage = "模板名已经存在")
+            throw ErrorCodeException(
+                errorCode = ProcessMessageCode.ERROR_TEMPLATE_NAME_IS_EXISTS,
+                defaultMessage = "模板名已经存在"
+            )
         }
     }
 
@@ -1696,7 +1798,10 @@ class TemplateService @Autowired constructor(
         }.toMap()
     }
 
-    fun addMarketTemplate(userId: String, addMarketTemplateRequest: AddMarketTemplateRequest): com.tencent.devops.common.api.pojo.Result<Map<String, Pair<String, Long>>> {
+    fun addMarketTemplate(
+        userId: String,
+        addMarketTemplateRequest: AddMarketTemplateRequest
+    ): com.tencent.devops.common.api.pojo.Result<Map<String, String>> {
         logger.info("the userId is:$userId,addMarketTemplateRequest is:$addMarketTemplateRequest")
         val templateCode = addMarketTemplateRequest.templateCode
         val publicFlag = addMarketTemplateRequest.publicFlag // 是否为公共模板
@@ -1705,7 +1810,11 @@ class TemplateService @Autowired constructor(
         val projectTemplateMap = mutableMapOf<String, Pair<String, Long>>()
         if (publicFlag) {
             val publicTemplateRecord = pipelineTemplateDao.getTemplate(dslContext, templateCode.toInt())
-                ?: return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_INVALID, arrayOf(templateCode), mapOf())
+                ?: return MessageCodeUtil.generateResponseDataObject(
+                    CommonMessageCode.PARAMETER_IS_INVALID,
+                    arrayOf(templateCode),
+                    mapOf()
+                )
             logger.info("the publicTemplateRecord is:$publicTemplateRecord")
             dslContext.transaction { t ->
                 val context = DSL.using(t)
