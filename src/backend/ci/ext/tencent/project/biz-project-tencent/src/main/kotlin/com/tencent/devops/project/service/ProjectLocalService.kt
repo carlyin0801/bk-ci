@@ -131,7 +131,7 @@ class ProjectLocalService @Autowired constructor(
                 val projectId = projectPermissionService.createResources(
                     userId = userId,
                     accessToken = accessToken,
-                    projectList = ResourceRegisterInfo(
+                    resourceRegisterInfo = ResourceRegisterInfo(
                             projectCreateInfo.englishName,
                             projectCreateInfo.projectName
                         )

@@ -68,12 +68,12 @@ class OPProjectResourceImpl @Autowired constructor(
         return opProjectService.getProjectCount(projectName, englishName, projectType, isSecrecy, creator, approver, approvalStatus, grayFlag)
     }
 
-    override fun synProject(projectCode: String): Result<Boolean> {
-        return opProjectService.synProject(projectCode)
+    override fun synProject(projectCode: String, isRefresh: Boolean): Result<Boolean> {
+        return opProjectService.synProject(projectCode, isRefresh)
     }
 
-    override fun synProjectInit(): Result<List<String>> {
-        return opProjectService.synProjectInit()
+    override fun synProjectInit(isRefresh: Boolean): Result<List<String>> {
+        return opProjectService.synProjectInit(isRefresh)
     }
 
 }
