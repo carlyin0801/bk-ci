@@ -147,40 +147,40 @@ class OpProjectServiceImpl @Autowired constructor(
         val paasProjectInfo = paasCCService.getPaasCCProjectInfo(projectCode, accessToken)
         if(paasProjectInfo == null){
             logger.info("synProject projectCode:$projectCode, paasCC is not exist. start Syn")
-            projectDispatcher.dispatch(
-                ProjectCreateBroadCastEvent(
-                    userId = projectInfo.creator,
-                    projectId = projectInfo.projectId,
-                    projectInfo = ProjectCreateInfo(
-                        projectName = projectInfo.projectName,
-                        englishName = projectInfo.englishName,
-                        projectType = projectInfo.projectType,
-                        description = projectInfo.description,
-                        bgId = projectInfo.bgId,
-                        bgName = projectInfo.bgName,
-                        deptId = projectInfo.deptId,
-                        deptName = projectInfo.deptName,
-                        centerId = projectInfo.centerId,
-                        centerName= projectInfo.centerName,
-                        secrecy = projectInfo.isSecrecy,
-                        kind = projectInfo.kind
-                    )
-                )
-            )
+//            projectDispatcher.dispatch(
+//                ProjectCreateBroadCastEvent(
+//                    userId = projectInfo.creator,
+//                    projectId = projectInfo.projectId,
+//                    projectInfo = ProjectCreateInfo(
+//                        projectName = projectInfo.projectName,
+//                        englishName = projectInfo.englishName,
+//                        projectType = projectInfo.projectType,
+//                        description = projectInfo.description,
+//                        bgId = projectInfo.bgId,
+//                        bgName = projectInfo.bgName,
+//                        deptId = projectInfo.deptId,
+//                        deptName = projectInfo.deptName,
+//                        centerId = projectInfo.centerId,
+//                        centerName= projectInfo.centerName,
+//                        secrecy = projectInfo.isSecrecy,
+//                        kind = projectInfo.kind
+//                    )
+//                )
+//            )
             isSyn = true
         }
         val authProjectInfo = bkAuthProjectApi.getProjectInfo(bsPipelineAuthServiceCode, projectCode)
         if(authProjectInfo == null){
             logger.info("synProject projectCode:$projectCode, authCenter is not exist. start Syn")
-            projectPermissionService.createResources(
-                userId = projectInfo.creator,
-                projectList = listOf(
-                    ResourceRegisterInfo(
-                        projectInfo.englishName,
-                        projectInfo.projectName
-                    )
-                )
-            )
+//            projectPermissionService.createResources(
+//                userId = projectInfo.creator,
+//                projectList = listOf(
+//                    ResourceRegisterInfo(
+//                        projectInfo.englishName,
+//                        projectInfo.projectName
+//                    )
+//                )
+//            )
             logger.info("project syn success, projectCode[$projectCode]")
             isSyn = true
         }
