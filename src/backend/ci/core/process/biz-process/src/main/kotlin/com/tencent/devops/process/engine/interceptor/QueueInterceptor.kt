@@ -32,10 +32,10 @@ import com.tencent.devops.log.utils.LogUtils
 import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_PIPELINE_QUEUE_FULL
 import com.tencent.devops.process.engine.pojo.Response
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildCancelEvent
+import com.tencent.devops.process.engine.service.PipelineRepositoryService
 import com.tencent.devops.process.engine.service.PipelineRuntimeExtService
 import com.tencent.devops.process.engine.service.PipelineRuntimeService
 import com.tencent.devops.process.pojo.setting.PipelineRunLockType
-import com.tencent.devops.process.service.PipelineSettingService
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
@@ -48,7 +48,7 @@ import org.springframework.stereotype.Component
 @Component
 class QueueInterceptor @Autowired constructor(
     private val pipelineRuntimeService: PipelineRuntimeService,
-    private val pipelineSettingService: PipelineSettingService,
+    private val pipelineRepositoryService: PipelineRepositoryService,
     private val pipelineRuntimeExtService: PipelineRuntimeExtService,
     private val pipelineEventDispatcher: PipelineEventDispatcher,
     private val rabbitTemplate: RabbitTemplate
@@ -56,10 +56,10 @@ class QueueInterceptor @Autowired constructor(
 
     override fun execute(task: InterceptData): Response<BuildStatus> {
         val pipelineId = task.pipelineInfo.pipelineId
-        val setting = pipelineSettingService.getSetting(pipelineId)
+        val setting = pipelineRepositoryService.getSetting(pipelineId)
         val runLockType = setting?.runLockType ?: return Response(BuildStatus.RUNNING)
         logger.info("[$pipelineId] runLockType=$runLockType| setting=$setting")
-        return if (runLockType == PipelineRunLockType.SINGLE.ordinal) {
+        return if (runLockType == PipelineRunLockType.SINGLE) {
             val maxQueue = setting.maxQueueSize ?: 10
             val buildSummaryRecord = pipelineRuntimeService.getBuildSummaryRecord(pipelineId)
             logger.info("[$pipelineId] maxQueue=$maxQueue| buildSummaryRecord=$buildSummaryRecord")
@@ -108,6 +108,6 @@ class QueueInterceptor @Autowired constructor(
     }
 
     companion object {
-        private val logger = LoggerFactory.getLogger(PipelineInterceptor::class.java)
+        private val logger = LoggerFactory.getLogger(QueueInterceptor::class.java)
     }
 }
