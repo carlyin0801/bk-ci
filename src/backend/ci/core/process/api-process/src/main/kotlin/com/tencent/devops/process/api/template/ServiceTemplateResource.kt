@@ -64,7 +64,7 @@ interface ServiceTemplateResource {
         userId: String,
         @ApiParam("安装模板请求报文体", required = true)
         addMarketTemplateRequest: AddMarketTemplateRequest
-    ): Result<Map<String, String>>
+    ): Result<Map<String, Pair<String, Long>>>
 
     @ApiOperation("更新已安装的模版")
     @POST

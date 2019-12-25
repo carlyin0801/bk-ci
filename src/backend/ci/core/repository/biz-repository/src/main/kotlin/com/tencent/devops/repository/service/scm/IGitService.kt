@@ -26,6 +26,7 @@
 
 package com.tencent.devops.repository.service.scm
 
+import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.repository.pojo.enums.GitAccessLevelEnum
 import com.tencent.devops.repository.pojo.enums.RepoAuthType
@@ -45,6 +46,7 @@ import javax.servlet.http.HttpServletResponse
 
 interface IGitService {
     fun getProject(accessToken: String, userId: String): List<Project>
+    fun getProjectList(accessToken: String, userId: String, page: Int?, pageSize: Int?): List<Project>
     fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch>
     fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag>
     fun refreshToken(userId: String, accessToken: GitToken): GitToken
@@ -74,7 +76,8 @@ interface IGitService {
         sampleProjectPath: String?,
         namespaceId: Int?,
         visibilityLevel: VisibilityLevelEnum?,
-        tokenType: TokenTypeEnum
+        tokenType: TokenTypeEnum,
+        frontendType: FrontendTypeEnum? = null
     ): Result<GitRepositoryResp?>
 
     fun addGitProjectMember(

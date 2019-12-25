@@ -56,6 +56,10 @@ class OPProjectResourceImpl @Autowired constructor(
         return Result(data = opProjectService.setGrayProject(projectGraySetRequest.projectCodeList, projectGraySetRequest.operateFlag))
     }
 
+    override fun setRepoGrayProject(projectGraySetRequest: OpProjectGraySetRequest): Result<Boolean> {
+        return Result(data = opProjectService.setRepoGrayProject(projectGraySetRequest.projectCodeList, projectGraySetRequest.operateFlag))
+    }
+
     override fun updateProject(userId: String, accessToken: String, projectInfoRequest: OpProjectUpdateInfoRequest): Result<Int> {
         return Result(data = opProjectService.updateProjectFromOp(userId, accessToken, projectInfoRequest))
     }
@@ -64,15 +68,20 @@ class OPProjectResourceImpl @Autowired constructor(
         return opProjectService.getProjectList(projectName, englishName, projectType, isSecrecy, creator, approver, approvalStatus, offset, limit, grayFlag)
     }
 
+    override fun getProjectList(projectName: String?, englishName: String?, projectType: Int?, isSecrecy: Boolean?, creator: String?, approver: String?, approvalStatus: Int?, offset: Int, limit: Int, grayFlag: Boolean, repoGrayFlag: Boolean, request: HttpServletRequest): Result<Map<String, Any?>?> {
+        return opProjectService.getProjectList(projectName, englishName, projectType, isSecrecy, creator, approver, approvalStatus, offset, limit, grayFlag, repoGrayFlag)
+    }
+
     override fun getProjectCount(projectName: String?, englishName: String?, projectType: Int?, isSecrecy: Boolean?, creator: String?, approver: String?, approvalStatus: Int?, grayFlag: Boolean): Result<Int> {
         return opProjectService.getProjectCount(projectName, englishName, projectType, isSecrecy, creator, approver, approvalStatus, grayFlag)
     }
 
-//    override fun updateProjectV2(userId: String, accessToken: String, projectInfoRequest: OpProjectUpdateInfoRequest): Result<Int> {
-//        return Result(data = opProjectService.updateProjectFromOp(userId, accessToken, projectInfoRequest))
-//    }
-//
-//    override fun setGrayProjectV2(projectGraySetRequest: OpProjectGraySetRequest): Result<Boolean> {
-//        return Result(data = opProjectService.setGrayProject(projectGraySetRequest.projectCodeList, projectGraySetRequest.operateFlag))
-//    }
+    override fun synProject(projectCode: String): Result<Boolean> {
+        return opProjectService.synProject(projectCode)
+    }
+
+    override fun synProjectInit(): Result<List<String>> {
+        return opProjectService.synProjectInit()
+    }
+
 }

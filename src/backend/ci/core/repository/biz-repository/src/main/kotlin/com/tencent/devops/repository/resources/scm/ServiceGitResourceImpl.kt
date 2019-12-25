@@ -26,6 +26,7 @@
 
 package com.tencent.devops.repository.resources.scm
 
+import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.repository.api.scm.ServiceGitResource
@@ -42,6 +43,7 @@ import com.tencent.devops.repository.pojo.git.UpdateGitProjectInfo
 import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.repository.service.scm.IGitService
 import com.tencent.devops.scm.code.git.api.GitBranch
+import com.tencent.devops.scm.code.git.api.GitTag
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import org.springframework.beans.factory.annotation.Autowired
 import javax.servlet.http.HttpServletResponse
@@ -73,8 +75,16 @@ class ServiceGitResourceImpl @Autowired constructor(
         return Result(gitService.getProject(accessToken, userId))
     }
 
-    override fun getBranch(accessToken: String, userId: String, repository: String): Result<List<GitBranch>> {
-        return Result(gitService.getBranch(userId, accessToken, repository, 1, 20))
+    override fun getProjectList(accessToken: String, userId: String, page: Int?, pageSize: Int?): Result<List<Project>> {
+        return Result(gitService.getProjectList(accessToken, userId, page, pageSize))
+    }
+
+    override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): Result<List<GitBranch>> {
+        return Result(gitService.getBranch(userId, accessToken, repository, page, pageSize))
+    }
+
+    override fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): Result<List<GitTag>> {
+        return Result(gitService.getTag(accessToken, userId, repository, page, pageSize))
     }
 
     override fun refreshToken(userId: String, accessToken: GitToken): Result<GitToken> {
@@ -128,9 +138,19 @@ class ServiceGitResourceImpl @Autowired constructor(
         sampleProjectPath: String,
         namespaceId: Int?,
         visibilityLevel: VisibilityLevelEnum?,
-        tokenType: TokenTypeEnum
+        tokenType: TokenTypeEnum,
+        frontendType: FrontendTypeEnum?
     ): Result<GitRepositoryResp?> {
-        return gitService.createGitCodeRepository(userId, token, repositoryName, sampleProjectPath, namespaceId, visibilityLevel, tokenType)
+        return gitService.createGitCodeRepository(
+            userId = userId,
+            token = token,
+            repositoryName = repositoryName,
+            sampleProjectPath = sampleProjectPath,
+            namespaceId = namespaceId,
+            visibilityLevel = visibilityLevel,
+            tokenType = tokenType,
+            frontendType = frontendType
+        )
     }
 
     override fun addGitProjectMember(

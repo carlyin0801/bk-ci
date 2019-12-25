@@ -48,6 +48,15 @@ class ServiceTemplateResourceImpl @Autowired constructor(
         )
     }
 
+    override fun installTemplateAndGetResult(userId: String, installTemplateReq: InstallTemplateReq): Result<Map<String, Pair<String, Long>>> {
+        // 可见与可安装鉴权在marketTemplateService中实现
+        return marketTemplateService.installTemplateAndGetResult(
+            userId = userId,
+            channelCode = ChannelCode.BS,
+            installTemplateReq = installTemplateReq
+        )
+    }
+
     override fun list(userId: String): Result<MarketTemplateResp> {
         return Result(
             marketTemplateService.list(

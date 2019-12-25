@@ -44,6 +44,7 @@ import com.tencent.devops.repository.pojo.enums.RedirectUrlTypeEnum
 import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.scm.code.git.api.GitBranch
 import com.tencent.devops.scm.code.git.api.GitTag
+import com.tencent.devops.scm.pojo.Project
 import org.apache.commons.lang3.RandomStringUtils
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
@@ -93,16 +94,28 @@ class GitOauthService @Autowired constructor(
         }
     }
 
+    override fun getProjectList(userId: String, page: Int?, pageSize: Int?): List<Project> {
+        val pageNotNull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
+        logger.info("start to get project: userId:$userId")
+        val accessToken = getAccessToken(userId) ?: return mutableListOf()
+        return gitService.getProjectList(accessToken = accessToken.accessToken, userId = userId, page = pageNotNull, pageSize = pageSizeNotNull)
+    }
+
     override fun getBranch(userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
+        val pageNotNull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
         logger.info("start to get branch: userId:$userId repository: $repository")
         val accessToken = getAccessToken(userId) ?: return mutableListOf()
-        return gitService.getBranch(accessToken = accessToken.accessToken, userId = userId, repository = repository, page = page, pageSize = pageSize)
+        return gitService.getBranch(accessToken = accessToken.accessToken, userId = userId, repository = repository, page = pageNotNull, pageSize = pageSizeNotNull)
     }
 
     override fun getTag(userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
+        val pageNotNull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
         logger.info("start to get tag: userId:$userId repository: $repository")
         val accessToken = getAccessToken(userId) ?: return mutableListOf()
-        return gitService.getTag(accessToken.accessToken, userId, repository, page, pageSize)
+        return gitService.getTag(accessToken = accessToken.accessToken, userId = userId, repository = repository, page = pageNotNull, pageSize = pageSizeNotNull)
     }
 
     override fun isOAuth(userId: String, redirectUrlType: RedirectUrlTypeEnum?, atomCode: String?): AuthorizeResult {

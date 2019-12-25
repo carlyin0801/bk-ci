@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.gson.JsonParser
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.constant.RepositoryMessageCode
+import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.common.api.util.HashUtil
@@ -53,10 +54,11 @@ import com.tencent.devops.repository.pojo.gitlab.GitlabFileInfo
 import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.scm.code.git.CodeGitOauthCredentialSetter
 import com.tencent.devops.scm.code.git.CodeGitUsernameCredentialSetter
+import com.tencent.devops.scm.code.git.api.GitOauthApi
 import com.tencent.devops.scm.code.git.api.GitBranch
 import com.tencent.devops.scm.code.git.api.GitBranchCommit
-import com.tencent.devops.scm.code.git.api.GitOauthApi
 import com.tencent.devops.scm.code.git.api.GitTag
+import com.tencent.devops.scm.code.git.api.GitTagCommit
 import com.tencent.devops.scm.config.GitConfig
 import com.tencent.devops.scm.exception.ScmException
 import com.tencent.devops.scm.pojo.CommitCheckRequest
@@ -170,40 +172,107 @@ class GitService @Autowired constructor(
         }
     }
 
-    fun getBranch(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch>{
-        val pageNotBull = page ?: 1
+    fun getProjectList(accessToken: String, userId: String, page: Int?, pageSize: Int?): List<Project> {
+        val pageNotNull = page ?: 1
         val pageSizeNotNull = pageSize ?: 20
-        logger.info("start to get the ${userId}'s $repository branch by accessToken: $pageNotBull  page: $page pageSize: $pageSizeNotNull")
-        val repoId = URLEncoder.encode(repository, "utf-8")
-        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$page&pageSize=$pageSizeNotNull"
-        val res = mutableListOf<GitBranch>()
+        val url = "${gitConfig.gitApiUrl}/projects?access_token=$accessToken&page=$pageNotNull&per_page=$pageSizeNotNull"
+        val res = mutableListOf<Project>()
         val request = Request.Builder()
-                 .url(url)
-                 .get()
-                 .build()
+                .url(url)
+                .get()
+                .build()
 
         OkhttpUtils.doHttp(request).use { response ->
-            val data = response.body()!!.string()
-            val branList = JsonParser().parse(data).asJsonArray
-            branList.forEach {
-                val branch = it.asJsonObject
-                val commit = branch["commit"].asJsonObject
-                res.add(GitBranch(name = branch["name"].asString,
-                        commit = GitBranchCommit(
-                                id = commit["id"].asString,
-                                message = commit["message"].asString,
-                                authoredDate = commit["authored_date"].asString,
-                                authorEmail = commit["author_email"].asString,
-                                authorName = commit["author_name"].asString,
-                                title = commit["title"].asString
-                                )))
+            val data = response.body()?.string() ?: return@use
+            val repoList = JsonParser().parse(data).asJsonArray
+            if (!repoList.isJsonNull) {
+                repoList.forEach {
+                    val project = it.asJsonObject
+                    val lastActivityTime = project["last_activity_at"].asString.removeSuffix("+0000")
+                    res.add(Project(
+                            project["id"].asString,
+                            project["name"].asString,
+                            project["name_with_namespace"].asString,
+                            project["ssh_url_to_repo"].asString,
+                            project["http_url_to_repo"].asString,
+                            DateTimeUtil.convertLocalDateTimeToTimestamp(LocalDateTime.parse(lastActivityTime)) * 1000L
+                    ))
+                }
             }
         }
         return res
     }
 
-    fun getTag(userId: String, accessToken: String, repository: String, page: Int?, pageSize: Int?): List<GitTag>{
-        return emptyList()
+    fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
+        val pageNotNull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
+        logger.info("start to get the $userId's $repository branch by accessToken: page: $pageNotNull pageSize: $pageSizeNotNull")
+        val repoId = URLEncoder.encode(repository, "utf-8")
+        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/branches?access_token=$accessToken&page=$pageNotNull&per_page=$pageSizeNotNull"
+        val res = mutableListOf<GitBranch>()
+        val request = Request.Builder()
+                .url(url)
+                .get()
+                .build()
+
+        OkhttpUtils.doHttp(request).use { response ->
+            val data = response.body()?.string() ?: return@use
+            val branList = JsonParser().parse(data).asJsonArray
+            if (!branList.isJsonNull) {
+                branList.forEach {
+                    val branch = it.asJsonObject
+                    val commit = branch["commit"].asJsonObject
+                    if (!branch.isJsonNull && !commit.isJsonNull) {
+                        res.add(GitBranch(name = if (branch["name"].isJsonNull) "" else branch["name"].asString,
+                                commit = GitBranchCommit(
+                                        id = if (commit["id"].isJsonNull) "" else commit["id"].asString,
+                                        message = if (commit["message"].isJsonNull) "" else commit["message"].asString,
+                                        authoredDate = if (commit["authored_date"].isJsonNull) "" else commit["authored_date"].asString,
+                                        authorEmail = if (commit["author_email"].isJsonNull) "" else commit["author_email"].asString,
+                                        authorName = if (commit["author_name"].isJsonNull) "" else commit["author_name"].asString,
+                                        title = if (commit["title"].isJsonNull) "" else commit["title"].asString
+                                )))
+                    }
+                }
+            }
+        }
+        return res
+    }
+
+    fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
+        val pageNotNull = page ?: 1
+        val pageSizeNotNull = pageSize ?: 20
+        logger.info("start to get the $userId's $repository tag by accessToken: $accessToken  page: $pageNotNull pageSize: $pageSizeNotNull")
+        val repoId = URLEncoder.encode(repository, "utf-8")
+        val url = "${gitConfig.gitApiUrl}/projects/$repoId/repository/tags?access_token=$accessToken&page=$pageNotNull&per_page=$pageSizeNotNull"
+        val res = mutableListOf<GitTag>()
+        val request = Request.Builder()
+                .url(url)
+                .get()
+                .build()
+
+        OkhttpUtils.doHttp(request).use { response ->
+            val data = response.body()?.string() ?: return@use
+            val tagList = JsonParser().parse(data).asJsonArray
+            if (!tagList.isJsonNull) {
+                tagList.forEach {
+                    val tag = it.asJsonObject
+                    val commit = tag["commit"].asJsonObject
+                    if (!tag.isJsonNull && !commit.isJsonNull) {
+                        res.add(GitTag(name = if (tag["name"].isJsonNull) "" else tag["name"].asString, message = if (tag["message"].isJsonNull) "" else tag["message"].asString,
+                                commit = GitTagCommit(
+                                        id = if (commit["id"].isJsonNull) "" else commit["id"].asString,
+                                        message = if (commit["message"].isJsonNull) "" else commit["message"].asString,
+                                        authoredDate = if (commit["authored_date"].isJsonNull) "" else commit["authored_date"].asString,
+                                        authorName = if (commit["author_name"].isJsonNull) "" else commit["author_name"].asString,
+                                        authorEmail = if (commit["author_email"].isJsonNull) "" else commit["author_email"].asString
+                                )
+                        ))
+                    }
+                }
+            }
+        }
+        return res
     }
 
     fun refreshToken(userId: String, accessToken: GitToken): GitToken {
@@ -379,7 +448,8 @@ class GitService @Autowired constructor(
         sampleProjectPath: String?,
         namespaceId: Int?,
         visibilityLevel: VisibilityLevelEnum?,
-        tokenType: TokenTypeEnum
+        tokenType: TokenTypeEnum,
+        frontendType: FrontendTypeEnum?
     ): Result<GitRepositoryResp?> {
         logger.info("createGitRepository userId is:$userId,token is:$token, repositoryName is:$repositoryName, sampleProjectPath is:$sampleProjectPath")
         logger.info("createGitRepository  namespaceId is:$namespaceId, visibilityLevel is:$visibilityLevel, tokenType is:$tokenType")
@@ -419,7 +489,15 @@ class GitService @Autowired constructor(
                 addGitProjectMember(listOf(userId), nameSpaceName, GitAccessLevelEnum.MASTER, token, tokenType)
                 if (!sampleProjectPath.isNullOrBlank()) {
                     // 把样例工程代码添加到用户的仓库
-                    initRepositoryInfo(userId, sampleProjectPath!!, token, tokenType, repositoryName, atomRepositoryUrl as String)
+                    initRepositoryInfo(
+                        userId = userId,
+                        sampleProjectPath = sampleProjectPath!!,
+                        token = token,
+                        tokenType = tokenType,
+                        repositoryName = repositoryName,
+                        atomRepositoryUrl = atomRepositoryUrl as String,
+                        frontendType = frontendType
+                    )
                 }
             }
             return Result(GitRepositoryResp(nameSpaceName, atomRepositoryUrl as String))
@@ -432,7 +510,8 @@ class GitService @Autowired constructor(
         token: String,
         tokenType: TokenTypeEnum,
         repositoryName: String,
-        atomRepositoryUrl: String
+        atomRepositoryUrl: String,
+        frontendType: FrontendTypeEnum?
     ): Result<Boolean> {
         logger.info("initRepositoryInfo userId is:$userId,sampleProjectPath is:$sampleProjectPath,atomRepositoryUrl is:$atomRepositoryUrl")
         logger.info("initRepositoryInfo token is:$token,tokenType is:$tokenType,repositoryName is:$repositoryName")
@@ -452,6 +531,22 @@ class GitService @Autowired constructor(
             val atomGitFileDir = File(atomFileDir, ".git")
             if (atomGitFileDir.exists()) {
                 FileSystemUtils.deleteRecursively(atomGitFileDir)
+            }
+            // 如果用户选的是自定义UI方式开发插件，则需要初始化UI开发脚手架
+            if(FrontendTypeEnum.SPECIAL == frontendType) {
+                val atomFrontendFileDir = File(atomFileDir, "bk-frontend")
+                if (!atomFrontendFileDir.exists()){
+                    atomFrontendFileDir.mkdirs()
+                }
+                CommonScriptUtils.execute("git clone ${credentialSetter.getCredentialUrl("http://git.code.oa.com/devops-frontend/devops-remote-atom.git")}", atomFrontendFileDir)
+                val frontendProjectDir = atomFrontendFileDir.listFiles()?.firstOrNull()
+                logger.info("initRepositoryInfo frontendProjectDir is:${frontendProjectDir?.absolutePath}")
+                val frontendGitFileDir = File(frontendProjectDir, ".git")
+                if (frontendGitFileDir.exists()) {
+                    FileSystemUtils.deleteRecursively(frontendGitFileDir)
+                }
+                FileSystemUtils.copyRecursively(frontendProjectDir, atomFrontendFileDir)
+                FileSystemUtils.deleteRecursively(frontendProjectDir)
             }
             // 3、重新生成git信息
             CommonScriptUtils.execute("git init", atomFileDir)

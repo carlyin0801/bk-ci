@@ -66,4 +66,15 @@ interface ServiceTemplateResource {
         @ApiParam("安装模板到项目请求报文体", required = true)
         installTemplateReq: InstallTemplateReq
     ): Result<Boolean>
+
+    @ApiOperation("安装模板到项目并取得安装结果")
+    @POST
+    @Path("/template/installAndGetResult")
+    fun installTemplateAndGetResult(
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("安装模板到项目请求报文体", required = true)
+        installTemplateReq: InstallTemplateReq
+    ): Result<Map<String, Pair<String, Long>>>
 }

@@ -86,6 +86,7 @@ import com.tencent.devops.process.pojo.template.SaveAsTemplateReq
 import com.tencent.devops.process.pojo.template.TemplateCompareModel
 import com.tencent.devops.process.pojo.template.TemplateCompareModelResult
 import com.tencent.devops.process.pojo.template.TemplateInstanceCreate
+import com.tencent.devops.process.pojo.template.TemplateInstancePage
 import com.tencent.devops.process.pojo.template.TemplateInstanceParams
 import com.tencent.devops.process.pojo.template.TemplateInstanceUpdate
 import com.tencent.devops.process.pojo.template.TemplateInstances
@@ -97,7 +98,6 @@ import com.tencent.devops.process.pojo.template.TemplateOperationRet
 import com.tencent.devops.process.pojo.template.TemplatePipeline
 import com.tencent.devops.process.pojo.template.TemplateType
 import com.tencent.devops.process.pojo.template.TemplateVersion
-import com.tencent.devops.process.pojo.template.TemplateInstancePage
 import com.tencent.devops.process.service.ParamService
 import com.tencent.devops.process.service.label.PipelineGroupService
 import com.tencent.devops.process.template.dao.PipelineTemplateDao
@@ -372,7 +372,7 @@ class TemplateService @Autowired constructor(
         }
 
 //        if (latestTemplate.storeFlag) {
-            // 将更新信息推送给使用模版的项目管理员 -- todo
+        // 将更新信息推送给使用模版的项目管理员 -- todo
 //        }
 
         return true
@@ -672,10 +672,12 @@ class TemplateService @Autowired constructor(
                 container.elements.forEach element@{ element ->
                     when (element) {
                         is CodeGitElement -> codes.add(
-                            getCode(projectId = projectId, repositoryConfig = RepositoryConfigUtils.buildConfig(element)) ?: return@element
+                            getCode(projectId = projectId, repositoryConfig = RepositoryConfigUtils.buildConfig(element))
+                                ?: return@element
                         )
                         is GithubElement -> codes.add(
-                            getCode(projectId = projectId, repositoryConfig = RepositoryConfigUtils.buildConfig(element)) ?: return@element
+                            getCode(projectId = projectId, repositoryConfig = RepositoryConfigUtils.buildConfig(element))
+                                ?: return@element
                         )
                         is CodeSvnElement -> codes.add(
                             getCode(projectId, RepositoryConfigUtils.buildConfig(element)) ?: return@element
@@ -1605,6 +1607,7 @@ class TemplateService @Autowired constructor(
             )
         }
     }
+
     /**
      * 检查模板是不是合法
      */
@@ -1693,13 +1696,13 @@ class TemplateService @Autowired constructor(
         }.toMap()
     }
 
-    fun addMarketTemplate(userId: String, addMarketTemplateRequest: AddMarketTemplateRequest): com.tencent.devops.common.api.pojo.Result<Map<String, String>> {
+    fun addMarketTemplate(userId: String, addMarketTemplateRequest: AddMarketTemplateRequest): com.tencent.devops.common.api.pojo.Result<Map<String, Pair<String, Long>>> {
         logger.info("the userId is:$userId,addMarketTemplateRequest is:$addMarketTemplateRequest")
         val templateCode = addMarketTemplateRequest.templateCode
         val publicFlag = addMarketTemplateRequest.publicFlag // 是否为公共模板
         val category = JsonUtil.toJson(addMarketTemplateRequest.categoryCodeList ?: listOf<String>())
         val projectCodeList = addMarketTemplateRequest.projectCodeList
-        val projectTemplateMap = mutableMapOf<String, String>()
+        val projectTemplateMap = mutableMapOf<String, Pair<String, Long>>()
         if (publicFlag) {
             val publicTemplateRecord = pipelineTemplateDao.getTemplate(dslContext, templateCode.toInt())
                 ?: return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_INVALID, arrayOf(templateCode), mapOf())
@@ -1708,7 +1711,7 @@ class TemplateService @Autowired constructor(
                 val context = DSL.using(t)
                 projectCodeList.forEach {
                     val templateId = UUIDUtil.generate()
-                    templateDao.createTemplate(
+                    val version = templateDao.createTemplate(
                         dslContext = context,
                         projectId = it,
                         templateId = templateId,
@@ -1730,7 +1733,7 @@ class TemplateService @Autowired constructor(
                         pipelineName = addMarketTemplateRequest.templateName,
                         isTemplate = true
                     )
-                    projectTemplateMap[it] = templateId
+                    projectTemplateMap[it] = Pair(templateId, version)
                 }
             }
         } else {
@@ -1740,7 +1743,7 @@ class TemplateService @Autowired constructor(
                 val context = DSL.using(t)
                 projectCodeList.forEach {
                     val templateId = UUIDUtil.generate()
-                    templateDao.createTemplate(
+                    val version = templateDao.createTemplate(
                         dslContext = context,
                         projectId = it,
                         templateId = templateId,
@@ -1762,12 +1765,13 @@ class TemplateService @Autowired constructor(
                         pipelineName = addMarketTemplateRequest.templateName,
                         isTemplate = true
                     )
-                    projectTemplateMap[it] = templateId
+                    projectTemplateMap[it] = Pair(templateId, version)
                 }
             }
         }
         return com.tencent.devops.common.api.pojo.Result(projectTemplateMap)
     }
+
     fun updateMarketTemplateReference(
         userId: String,
         updateMarketTemplateRequest: AddMarketTemplateRequest

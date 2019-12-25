@@ -41,6 +41,7 @@ import com.tencent.devops.common.auth.api.AuthResourceType
 import com.tencent.devops.common.auth.api.BSAuthProjectApi
 import com.tencent.devops.common.auth.api.BkAuthProperties
 import com.tencent.devops.common.auth.api.pojo.BkAuthGroup
+import com.tencent.devops.common.auth.api.pojo.ResourceRegisterInfo
 import com.tencent.devops.common.auth.code.AuthServiceCode
 import com.tencent.devops.common.auth.code.BSPipelineAuthServiceCode
 import com.tencent.devops.common.redis.RedisOperation
@@ -105,6 +106,7 @@ class ProjectLocalService @Autowired constructor(
     private val bkAuthProperties: BkAuthProperties,
     private val projectDispatcher: ProjectDispatcher,
     private val bsPipelineAuthServiceCode: BSPipelineAuthServiceCode,
+    private val projectPermissionService: ProjectPermissionService,
     private val gray: Gray,
     private val jmxApi: ProjectJmxApi
 ) {
@@ -126,35 +128,15 @@ class ProjectLocalService @Autowired constructor(
             try {
                 // 发送服务器
                 val logoAddress = s3Service.saveLogo(logoFile, projectCreateInfo.englishName)
-
-                // 创建AUTH项目
-                val authUrl = "$authUrl?access_token=$accessToken"
-                val param: MutableMap<String, String> = mutableMapOf("project_code" to projectCreateInfo.englishName)
-                val mediaType = MediaType.parse("application/json; charset=utf-8")
-                val json = objectMapper.writeValueAsString(param)
-                val requestBody = RequestBody.create(mediaType, json)
-                val request = Request.Builder().url(authUrl).post(requestBody).build()
-                val responseContent =
-                    request(request, MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.CALL_PEM_FAIL))
-                val result = objectMapper.readValue<Result<AuthProjectForCreateResult>>(responseContent)
-                if (result.isNotOk()) {
-                    logger.warn("Fail to create the project of response $responseContent")
-                    throw OperationException(
-                        MessageCodeUtil.generateResponseDataObject<String>(
-                            ProjectMessageCode.CALL_PEM_FAIL_PARM, arrayOf(result.message!!)
-                        ).message!!
+                val projectId = projectPermissionService.createResources(
+                    userId = userId,
+                    projectList = listOf(
+                        ResourceRegisterInfo(
+                            projectCreateInfo.englishName,
+                            projectCreateInfo.projectName
+                        )
                     )
-                }
-                val authProjectForCreateResult = result.data
-                val projectId = if (authProjectForCreateResult != null) {
-                    if (authProjectForCreateResult.project_id.isBlank()) {
-                        throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PEM_CREATE_FAIL))
-                    }
-                    authProjectForCreateResult.project_id
-                } else {
-                    logger.warn("Fail to get the project id from response $responseContent")
-                    throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PEM_CREATE_ID_INVALID))
-                }
+                )
                 val userDeptDetail = tofService.getUserDeptDetail(userId, "") // 获取用户机构信息
                 try {
                     projectDao.create(
@@ -526,6 +508,10 @@ class ProjectLocalService @Autowired constructor(
 
             projectUpdateInfo.ccAppName = appName
             projectDao.update(dslContext, userId, projectId, projectUpdateInfo)
+            projectPermissionService.modifyResource(
+                projectCode = projectUpdateInfo.englishName,
+                projectName = projectUpdateInfo.projectName
+            )
             projectDispatcher.dispatch(
                 ProjectUpdateBroadCastEvent(
                     userId = userId,
@@ -784,7 +770,15 @@ class ProjectLocalService @Autowired constructor(
                 // 发送服务器
                 val logoAddress = s3Service.saveLogo(logoFile, projectCreateInfo.englishName)
                 val userDeptDetail = tofService.getUserDeptDetail(userId, "") // 获取用户组织架构信息
-                projectDao.create(dslContext, userId, logoAddress, projectCreateInfo, userDeptDetail, projectCode, ProjectChannelCode.BS)
+                projectDao.create(
+                    dslContext = dslContext,
+                    userId = userId,
+                    logoAddress = logoAddress,
+                    projectCreateInfo = projectCreateInfo,
+                    userDeptDetail = userDeptDetail,
+                    projectId = projectCode,
+                    channelCode = ProjectChannelCode.BS
+                )
             } finally {
                 if (logoFile.exists()) {
                     logoFile.delete()
@@ -809,7 +803,12 @@ class ProjectLocalService @Autowired constructor(
         return createUser2Project(userId, projectCode)
     }
 
-    fun createUser2ProjectByApp(organizationType: String, organizationId: Long, userId: String, projectCode: String): Boolean {
+    fun createUser2ProjectByApp(
+        organizationType: String,
+        organizationId: Long,
+        userId: String,
+        projectCode: String
+    ): Boolean {
         logger.info("[createUser2ProjectByApp] organizationType[$organizationType], organizationId[$organizationId] userId[$userId] projectCode[$projectCode]")
         var bgId: Long? = null
         var deptId: Long? = null
@@ -843,7 +842,13 @@ class ProjectLocalService @Autowired constructor(
         }
     }
 
-    fun createPipelinePermission(createUser: String, projectId: String, userId: String, permission: String, resourceType: String): Boolean {
+    fun createPipelinePermission(
+        createUser: String,
+        projectId: String,
+        userId: String,
+        permission: String,
+        resourceType: String
+    ): Boolean {
         logger.info("createPipelinePermission createUser[$createUser] projectId[$projectId] userId[$userId] permissionList[$permission]")
         if (!bkAuthProjectApi.isProjectUser(createUser, bsPipelineAuthServiceCode, projectId, BkAuthGroup.MANAGER)) {
             logger.info("createPipelinePermission createUser is not project manager,createUser[$createUser] projectId[$projectId]")
@@ -858,11 +863,22 @@ class ProjectLocalService @Autowired constructor(
         return createPermission(userId, projectId, permission, resourceType, bsPipelineAuthServiceCode)
     }
 
-    fun createPipelinePermissionByApp(organizationType: String, organizationId: Long, userId: String, projectId: String, permission: String, resourceType: String): Boolean {
+    fun createPipelinePermissionByApp(
+        organizationType: String,
+        organizationId: Long,
+        userId: String,
+        projectId: String,
+        permission: String,
+        resourceType: String
+    ): Boolean {
         logger.info("[createPipelinePermissionByApp] organizationType[$organizationType], organizationId[$organizationId] userId[$userId] projectCode[$projectId], permission[$permission]")
         var bgId: Long? = null
         var deptId: Long? = null
         var centerId: Long? = null
+        if (!bkAuthProjectApi.isProjectUser(userId, bsPipelineAuthServiceCode, projectId, null)) {
+            logger.info("createPipelinePermission userId is not project manager,userId[$userId] projectId[$projectId]")
+            throw OperationException((MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.USER_NOT_PROJECT_USER)))
+        }
         when (organizationType) {
             AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_BG -> bgId = organizationId
             AUTH_HEADER_DEVOPS_ORGANIZATION_TYPE_DEPARTMENT -> deptId = organizationId
@@ -890,8 +906,15 @@ class ProjectLocalService @Autowired constructor(
         return createPermission(userId, projectId, permission, resourceType, bsPipelineAuthServiceCode)
     }
 
-    private fun createPermission(userId: String, projectId: String, permission: String, resourceType: String, authServiceCode: AuthServiceCode): Boolean {
-        projectDao.getByEnglishName(dslContext, projectId) ?: throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PROJECT_NOT_EXIST))
+    private fun createPermission(
+        userId: String,
+        projectId: String,
+        permission: String,
+        resourceType: String,
+        authServiceCode: AuthServiceCode
+    ): Boolean {
+        projectDao.getByEnglishName(dslContext, projectId)
+            ?: throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PROJECT_NOT_EXIST))
 
         val authPermission = AuthPermission.get(permission)
         val authResourceType = AuthResourceType.get(resourceType)

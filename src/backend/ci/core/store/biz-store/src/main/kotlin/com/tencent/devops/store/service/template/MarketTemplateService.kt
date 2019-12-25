@@ -107,6 +107,15 @@ interface MarketTemplateService {
     ): Result<Boolean>
 
     /**
+     * 安装模板到项目
+     */
+    fun installTemplateAndGetResult(
+        userId: String,
+        channelCode: ChannelCode,
+        installTemplateReq: InstallTemplateReq
+    ): Result<Map<String, Pair<String, Long>>>
+
+    /**
      * 获取工作台模版列表
      */
     fun getMyTemplates(

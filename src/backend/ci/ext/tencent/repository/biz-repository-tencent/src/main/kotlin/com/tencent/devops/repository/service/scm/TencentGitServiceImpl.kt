@@ -26,6 +26,7 @@
 
 package com.tencent.devops.repository.service.scm
 
+import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.repository.pojo.enums.GitAccessLevelEnum
@@ -56,12 +57,16 @@ class TencentGitServiceImpl @Autowired constructor(val client: Client) : IGitSer
         return client.getScm(ServiceGitResource::class).getProject(accessToken, userId).data ?: emptyList()
     }
 
+    override fun getProjectList(accessToken: String, userId: String, page: Int?, pageSize: Int?): List<Project> {
+        return client.getScm(ServiceGitResource::class).getProjectList(accessToken = accessToken, userId = userId, page = page, pageSize = pageSize).data ?: emptyList()
+    }
+
     override fun getBranch(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitBranch> {
-        return client.getScm(ServiceGitResource::class).getBranch(accessToken = accessToken, userId = userId, repository = repository).data ?: emptyList()
+        return client.getScm(ServiceGitResource::class).getBranch(accessToken = accessToken, userId = userId, repository = repository, page = page, pageSize = pageSize).data ?: emptyList()
     }
 
     override fun getTag(accessToken: String, userId: String, repository: String, page: Int?, pageSize: Int?): List<GitTag> {
-        return client.getScm(ServiceGitResource::class).getTag(accessToken = accessToken, userId = userId, repository = repository).data ?: emptyList()
+        return client.getScm(ServiceGitResource::class).getTag(accessToken = accessToken, userId = userId, repository = repository, page = page, pageSize = pageSize).data ?: emptyList()
     }
 
     override fun refreshToken(userId: String, accessToken: GitToken): GitToken {
@@ -118,7 +123,8 @@ class TencentGitServiceImpl @Autowired constructor(val client: Client) : IGitSer
         sampleProjectPath: String?,
         namespaceId: Int?,
         visibilityLevel: VisibilityLevelEnum?,
-        tokenType: TokenTypeEnum
+        tokenType: TokenTypeEnum,
+        frontendType: FrontendTypeEnum?
     ): Result<GitRepositoryResp?> {
         return client.getScm(ServiceGitResource::class).createGitCodeRepository(
             userId = userId,
@@ -127,7 +133,8 @@ class TencentGitServiceImpl @Autowired constructor(val client: Client) : IGitSer
             sampleProjectPath = sampleProjectPath,
             namespaceId = namespaceId,
             visibilityLevel = visibilityLevel,
-            tokenType = tokenType
+            tokenType = tokenType,
+            frontendType = frontendType
         )
     }
 

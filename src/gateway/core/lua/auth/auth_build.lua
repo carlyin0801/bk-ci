@@ -383,7 +383,7 @@ elseif build_type == "MACOS" then
         return
     else
         --- 获取对应的buildId
-        local redRes, err = red:get("devops_macos_" .. client_ip)
+        local redRes, err = red:get("dispatcher:devops_macos_" .. client_ip)
         --- 将redis连接放回pool中
         local ok, err = red:set_keepalive(config.redis.max_idle_time, config.redis.pool_size)
         if not ok then
