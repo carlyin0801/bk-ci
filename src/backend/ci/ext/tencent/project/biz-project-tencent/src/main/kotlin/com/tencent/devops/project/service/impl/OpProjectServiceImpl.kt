@@ -41,6 +41,7 @@ import com.tencent.devops.common.web.mq.ROUTE_PAASCC_PROJECT_UPDATE
 import com.tencent.devops.project.constant.ProjectMessageCode
 import com.tencent.devops.project.dao.ProjectDao
 import com.tencent.devops.project.dao.ProjectLabelRelDao
+import com.tencent.devops.project.dao.ProjectLocalDao
 import com.tencent.devops.project.dispatch.ProjectDispatcher
 import com.tencent.devops.project.pojo.OpGrayProject
 import com.tencent.devops.project.pojo.OpProjectUpdateInfoRequest
@@ -60,6 +61,7 @@ import org.springframework.stereotype.Service
 class OpProjectServiceImpl @Autowired constructor(
     private val dslContext: DSLContext,
     private val projectDao: ProjectDao,
+    private val projectLocalDao: ProjectLocalDao,
     private val projectLabelRelDao: ProjectLabelRelDao,
     private val rabbitTemplate: RabbitTemplate,
     private val redisOperation: RedisOperation,
@@ -196,27 +198,38 @@ class OpProjectServiceImpl @Autowired constructor(
         val synProject = mutableListOf<String>()
         val startTime = System.currentTimeMillis()
         var page = 1
-        val limit = 500
+        val limit = 100
         var isContinue = true
+        val excludeName = mutableListOf<String>()
+        excludeName.add("CODE_%")
+        excludeName.add("git_%")
+
         while (isContinue) {
             val SQLLimit = PageUtil.convertPageSizeToSQLLimit(page, limit)
             logger.info("synProject page: $page")
-            val projectInfos = projectDao.getProjectList(
+            val projectInfos = projectLocalDao.getProjectListExclude(
+                dslContext = dslContext,
+                offset = SQLLimit.offset,
+                limit = SQLLimit.limit,
+                englishNamesExclude = excludeName
+            )
+
+            val lastPageInfos = projectDao.getProjectList(
                 dslContext = dslContext,
                 projectName = null,
                 englishName = null,
-                englishNames = null,
                 projectType = null,
                 isSecrecy = null,
                 creator = null,
                 approver = null,
                 approvalStatus = null,
-                offset = SQLLimit.offset,
+                grayFlag = false,
+                englishNames = null,
                 limit = SQLLimit.limit,
-                grayFlag = false
+                offset = SQLLimit.offset
             )
 
-            if(projectInfos == null || projectInfos.size < limit){
+            if(lastPageInfos == null || lastPageInfos.size < limit){
                 isContinue = false
             }
             if(page <= 1){
@@ -226,6 +239,7 @@ class OpProjectServiceImpl @Autowired constructor(
                 val projectData = projectInfos[i]
                 val isSyn = synProject(projectData.englishName)
                 if(isSyn.data!!){
+                    logger.info("project ${projectData.englishName} need syn authCenter or Paas")
                     synProject.add(projectData.englishName)
                 }
             }
