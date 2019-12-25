@@ -59,7 +59,7 @@ class QueueInterceptor @Autowired constructor(
         val setting = pipelineRepositoryService.getSetting(pipelineId)
         val runLockType = setting?.runLockType ?: return Response(BuildStatus.RUNNING)
         logger.info("[$pipelineId] runLockType=$runLockType| setting=$setting")
-        return if (runLockType == PipelineRunLockType.SINGLE.ordinal) {
+        return if (runLockType == PipelineRunLockType.SINGLE) {
             val maxQueue = setting.maxQueueSize ?: 10
             val buildSummaryRecord = pipelineRuntimeService.getBuildSummaryRecord(pipelineId)
             logger.info("[$pipelineId] maxQueue=$maxQueue| buildSummaryRecord=$buildSummaryRecord")

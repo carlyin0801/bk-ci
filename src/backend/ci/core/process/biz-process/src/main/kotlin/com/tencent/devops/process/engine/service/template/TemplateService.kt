@@ -1801,7 +1801,7 @@ class TemplateService @Autowired constructor(
     fun addMarketTemplate(
         userId: String,
         addMarketTemplateRequest: AddMarketTemplateRequest
-    ): com.tencent.devops.common.api.pojo.Result<Map<String, String>> {
+    ): com.tencent.devops.common.api.pojo.Result<Map<String, Pair<String, Long>>> {
         logger.info("the userId is:$userId,addMarketTemplateRequest is:$addMarketTemplateRequest")
         val templateCode = addMarketTemplateRequest.templateCode
         val publicFlag = addMarketTemplateRequest.publicFlag // 是否为公共模板
