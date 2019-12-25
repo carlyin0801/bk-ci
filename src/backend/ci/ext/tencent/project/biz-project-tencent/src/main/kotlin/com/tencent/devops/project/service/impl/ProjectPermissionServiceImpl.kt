@@ -66,6 +66,7 @@ class ProjectPermissionServiceImpl @Autowired constructor(
         val param: MutableMap<String, String> = mutableMapOf("project_code" to projectCreateInfo.resourceCode)
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val json = objectMapper.writeValueAsString(param)
+        logger.info("createResource: url[$authUrl], body:[$json]")
         val requestBody = RequestBody.create(mediaType, json)
         val request = Request.Builder().url(authUrl).post(requestBody).build()
         val responseContent = request(request, "调用权限中心创建项目失败")
