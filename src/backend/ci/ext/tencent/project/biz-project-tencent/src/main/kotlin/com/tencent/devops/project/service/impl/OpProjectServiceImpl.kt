@@ -85,95 +85,132 @@ class OpProjectServiceImpl @Autowired constructor(
         return super.setGrayProject(projectCodeList, operateFlag)
     }
 
-    override fun setRepoGrayProject(projectCodeList: List<String>, operateFlag: Int): Boolean {
-        return super.setRepoGrayProject(projectCodeList, operateFlag)
-    }
-
-    override fun updateProjectFromOp(userId: String, accessToken: String, projectInfoRequest: OpProjectUpdateInfoRequest): Int {
+    override fun updateProjectFromOp(
+        userId: String,
+        accessToken: String,
+        projectInfoRequest: OpProjectUpdateInfoRequest
+    ): Int {
         val count = super.updateProjectFromOp(userId, accessToken, projectInfoRequest)
         val dbProjectRecord = projectDao.get(dslContext, projectInfoRequest.projectId)
         rabbitTemplate.convertAndSend(
             EXCHANGE_PAASCC_PROJECT_UPDATE,
             ROUTE_PAASCC_PROJECT_UPDATE, PaasCCUpdateProject(
-            userId = userId,
-            accessToken = accessToken,
-            projectId = projectInfoRequest.projectId,
-            retryCount = 0,
-            projectUpdateInfo = ProjectUpdateInfo(
-                projectName = projectInfoRequest.projectName,
-                projectType = projectInfoRequest.projectType,
-                bgId = projectInfoRequest.bgId,
-                bgName = projectInfoRequest.bgName,
-                centerId = projectInfoRequest.centerId,
-                centerName = projectInfoRequest.centerName,
-                deptId = projectInfoRequest.deptId,
-                deptName = projectInfoRequest.deptName,
-                description = dbProjectRecord!!.description ?: "",
-                englishName = dbProjectRecord!!.englishName,
-                ccAppId = projectInfoRequest.ccAppId,
-                ccAppName = projectInfoRequest.cc_app_name,
-                kind = projectInfoRequest.kind
+                userId = userId,
+                accessToken = accessToken,
+                projectId = projectInfoRequest.projectId,
+                retryCount = 0,
+                projectUpdateInfo = ProjectUpdateInfo(
+                    projectName = projectInfoRequest.projectName,
+                    projectType = projectInfoRequest.projectType,
+                    bgId = projectInfoRequest.bgId,
+                    bgName = projectInfoRequest.bgName,
+                    centerId = projectInfoRequest.centerId,
+                    centerName = projectInfoRequest.centerName,
+                    deptId = projectInfoRequest.deptId,
+                    deptName = projectInfoRequest.deptName,
+                    description = dbProjectRecord!!.description ?: "",
+                    englishName = dbProjectRecord!!.englishName,
+                    ccAppId = projectInfoRequest.ccAppId,
+                    ccAppName = projectInfoRequest.cc_app_name,
+                    kind = projectInfoRequest.kind
 //                        secrecy = projectInfoRequest.secrecyFlag
+                )
             )
-        )
         )
         return count
     }
 
-    override fun getProjectList(projectName: String?, englishName: String?, projectType: Int?, isSecrecy: Boolean?, creator: String?, approver: String?, approvalStatus: Int?, offset: Int, limit: Int, grayFlag: Boolean): Result<Map<String, Any?>?> {
-        return super.getProjectList(projectName, englishName, projectType, isSecrecy, creator, approver, approvalStatus, offset, limit, grayFlag)
+    override fun getProjectList(
+        projectName: String?,
+        englishName: String?,
+        projectType: Int?,
+        isSecrecy: Boolean?,
+        creator: String?,
+        approver: String?,
+        approvalStatus: Int?,
+        offset: Int,
+        limit: Int,
+        grayFlag: Boolean
+    ): Result<Map<String, Any?>?> {
+        return super.getProjectList(
+            projectName,
+            englishName,
+            projectType,
+            isSecrecy,
+            creator,
+            approver,
+            approvalStatus,
+            offset,
+            limit,
+            grayFlag
+        )
     }
 
-    override fun getProjectList(projectName: String?, englishName: String?, projectType: Int?, isSecrecy: Boolean?, creator: String?, approver: String?, approvalStatus: Int?, offset: Int, limit: Int, grayFlag: Boolean, repoGrayFlag: Boolean): Result<Map<String, Any?>?> {
-        return super.getProjectList(projectName, englishName, projectType, isSecrecy, creator, approver, approvalStatus, offset, limit, grayFlag, repoGrayFlag)
+    override fun getProjectCount(
+        projectName: String?,
+        englishName: String?,
+        projectType: Int?,
+        isSecrecy: Boolean?,
+        creator: String?,
+        approver: String?,
+        approvalStatus: Int?,
+        grayFlag: Boolean
+    ): Result<Int> {
+        return super.getProjectCount(
+            projectName,
+            englishName,
+            projectType,
+            isSecrecy,
+            creator,
+            approver,
+            approvalStatus,
+            grayFlag
+        )
     }
 
-    override fun getProjectCount(projectName: String?, englishName: String?, projectType: Int?, isSecrecy: Boolean?, creator: String?, approver: String?, approvalStatus: Int?, grayFlag: Boolean): Result<Int> {
-        return super.getProjectCount(projectName, englishName, projectType, isSecrecy, creator, approver, approvalStatus, grayFlag)
-    }
-
-
-
-    override fun synProject(projectCode: String): Result<Boolean>{
+    override fun synProject(projectCode: String, isRefresh: Boolean?): Result<Boolean> {
         var isSyn = false
-        if(redisOperation.get(REDIS_PROJECT_KEY+projectCode) != null){
+        if (redisOperation.get(REDIS_PROJECT_KEY + projectCode) != null) {
             return Result(isSyn)
         }
 
         val projectInfo = projectDao.getByEnglishName(dslContext, projectCode)
-        if(projectInfo == null){
+        if (projectInfo == null) {
             logger.error("syn project $projectCode is not exist")
             throw OperationException(MessageCodeUtil.getCodeLanMessage(ProjectMessageCode.PROJECT_NOT_EXIST))
         }
         val accessToken = bsAuthTokenApi.getAccessToken(bsPipelineAuthServiceCode)
         val paasProjectInfo = paasCCService.getPaasCCProjectInfo(projectCode, accessToken)
-        if(paasProjectInfo == null){
+        if (paasProjectInfo == null) {
             logger.info("synProject projectCode:$projectCode, paasCC is not exist. start Syn")
-//            projectDispatcher.dispatch(
-//                ProjectCreateBroadCastEvent(
-//                    userId = projectInfo.creator,
-//                    projectId = projectInfo.projectId,
-//                    projectInfo = ProjectCreateInfo(
-//                        projectName = projectInfo.projectName,
-//                        englishName = projectInfo.englishName,
-//                        projectType = projectInfo.projectType,
-//                        description = projectInfo.description,
-//                        bgId = projectInfo.bgId,
-//                        bgName = projectInfo.bgName,
-//                        deptId = projectInfo.deptId,
-//                        deptName = projectInfo.deptName,
-//                        centerId = projectInfo.centerId,
-//                        centerName= projectInfo.centerName,
-//                        secrecy = projectInfo.isSecrecy,
-//                        kind = projectInfo.kind
-//                    )
-//                )
-//            )
+            if (isRefresh!!) {
+                projectDispatcher.dispatch(
+                    ProjectCreateBroadCastEvent(
+                        userId = projectInfo.creator,
+                        projectId = projectInfo.projectId,
+                        projectInfo = ProjectCreateInfo(
+                            projectName = projectInfo.projectName,
+                            englishName = projectInfo.englishName,
+                            projectType = projectInfo.projectType,
+                            description = projectInfo.description,
+                            bgId = projectInfo.bgId,
+                            bgName = projectInfo.bgName,
+                            deptId = projectInfo.deptId,
+                            deptName = projectInfo.deptName,
+                            centerId = projectInfo.centerId,
+                            centerName = projectInfo.centerName,
+                            secrecy = projectInfo.isSecrecy,
+                            kind = projectInfo.kind
+                        )
+                    )
+                )
+            }
             isSyn = true
         }
         val authProjectInfo = bkAuthProjectApi.getProjectInfo(bsPipelineAuthServiceCode, projectCode)
-        if(authProjectInfo == null){
+        if (authProjectInfo == null) {
             logger.info("synProject projectCode:$projectCode, authCenter is not exist. start Syn")
+            if (isRefresh!!) {
 //            projectPermissionService.createResources(
 //                userId = projectInfo.creator,
 //                projectList = listOf(
@@ -183,17 +220,18 @@ class OpProjectServiceImpl @Autowired constructor(
 //                    )
 //                )
 //            )
+            }
             logger.info("project syn success, projectCode[$projectCode]")
             isSyn = true
         }
-        if(!isSyn){
-            redisOperation.set(REDIS_PROJECT_KEY+projectCode, projectCode, null, true)
+        if (!isSyn) {
+            redisOperation.set(REDIS_PROJECT_KEY + projectCode, projectCode, null, true)
         }
 
         return Result(isSyn)
     }
 
-    override fun synProjectInit(): Result<List<String>> {
+    override fun synProjectInit(isRefresh: Boolean?): Result<List<String>> {
         logger.info("synProject time: ${System.currentTimeMillis()}")
         val synProject = mutableListOf<String>()
         val startTime = System.currentTimeMillis()
@@ -229,16 +267,16 @@ class OpProjectServiceImpl @Autowired constructor(
                 offset = SQLLimit.offset
             )
 
-            if(lastPageInfos == null || lastPageInfos.size < limit){
+            if (lastPageInfos == null || lastPageInfos.size < limit) {
                 isContinue = false
             }
-            if(page <= 1){
+            if (page <= 1) {
                 logger.info("project List: ${projectInfos[1]}")
             }
             for (i in projectInfos.indices) {
                 val projectData = projectInfos[i]
-                val isSyn = synProject(projectData.englishName)
-                if(isSyn.data!!){
+                val isSyn = synProject(projectData.englishName, isRefresh)
+                if (isSyn.data!!) {
                     logger.info("project ${projectData.englishName} need syn authCenter or Paas")
                     synProject.add(projectData.englishName)
                 }
