@@ -221,7 +221,7 @@ class OpProjectServiceImpl @Autowired constructor(
 //                )
 //            )
             }
-            logger.info("project syn success, projectCode[$projectCode]")
+            logger.info("project syn success, projectCode[$projectCode], creator[${projectInfo.creator}]")
             isSyn = true
         }
         if (!isSyn) {

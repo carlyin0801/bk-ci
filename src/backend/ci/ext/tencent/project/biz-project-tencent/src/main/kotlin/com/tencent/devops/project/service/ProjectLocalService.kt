@@ -507,14 +507,16 @@ class ProjectLocalService @Autowired constructor(
                 ?: throw NotFoundException("项目 - $englishName 不存在")
 
             //刷新auth不存在的項目,同步完，可下掉
-            synAuthProject(userId, accessToken, englishName, projectUpdateInfo)
+            val synAuth = synAuthProject(userId, accessToken, englishName, projectUpdateInfo)
 
             projectUpdateInfo.ccAppName = appName
             projectDao.update(dslContext, userId, projectId, projectUpdateInfo)
-            projectPermissionService.modifyResource(
-                projectCode = projectUpdateInfo.englishName,
-                projectName = projectUpdateInfo.projectName
-            )
+            if(!synAuth) {
+                projectPermissionService.modifyResource(
+                    projectCode = projectUpdateInfo.englishName,
+                    projectName = projectUpdateInfo.projectName
+                )
+            }
             projectDispatcher.dispatch(
                 ProjectUpdateBroadCastEvent(
                     userId = userId,
