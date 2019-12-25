@@ -1338,7 +1338,8 @@ class TemplateService @Autowired constructor(
             labels = labels
         )
 
-        val instanceModel = pipelineResDao.getLatestVersionModelString(dslContext, pipelineId) as Model
+        val instanceModelStr = pipelineResDao.getLatestVersionModelString(dslContext, pipelineId)
+        val instanceModel = objectMapper.readValue(instanceModelStr, Model::class.java)
         var codeCCTaskId: String? = null
         var codeCCTaskCnName: String? = null
         var codeCCTaskName: String? = null
@@ -1348,7 +1349,7 @@ class TemplateService @Autowired constructor(
                 container.elements.forEach { element ->
                     if (element is LinuxPaasCodeCCScriptElement) {
                         codeCCTaskId = element.codeCCTaskId
-                        codeCCTaskCnName = element.codeCCTaskCnName,
+                        codeCCTaskCnName = element.codeCCTaskCnName
                         codeCCTaskName = element.codeCCTaskName
                         return@forEach
                     }
