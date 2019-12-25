@@ -506,6 +506,9 @@ class ProjectLocalService @Autowired constructor(
             val projectId = projectDao.getByEnglishName(dslContext, englishName)?.projectId
                 ?: throw NotFoundException("项目 - $englishName 不存在")
 
+            //刷新auth不存在的項目,同步完，可下掉
+            synAuthProject(userId, accessToken, englishName, projectUpdateInfo)
+
             projectUpdateInfo.ccAppName = appName
             projectDao.update(dslContext, userId, projectId, projectUpdateInfo)
             projectPermissionService.modifyResource(
@@ -923,6 +926,22 @@ class ProjectLocalService @Autowired constructor(
             }
         }
         return bkAuthProjectApi.createProjectUser(userId, bsPipelineAuthServiceCode, projectInfo.projectId, roleId!!)
+    }
+
+    private fun synAuthProject(userId: String, accessToken: String, englishName: String, projectUpdateInfo: ProjectUpdateInfo): Boolean {
+        val projectInfo = bkAuthProjectApi.getProjectInfo(bsPipelineAuthServiceCode, englishName)
+        if(projectInfo == null){
+            projectPermissionService.createResources(
+                userId = userId,
+                accessToken = accessToken,
+                resourceRegisterInfo = ResourceRegisterInfo(
+                    projectUpdateInfo.englishName,
+                    projectUpdateInfo.projectName
+                )
+
+            )
+        }
+        return true
     }
 
     companion object {
