@@ -60,14 +60,6 @@ class JobService @Autowired constructor(
         return historyBuildResult.data?.userId
     }
 
-    // 根据pipelineId查出最后修改人
-    private fun getLastUpdateUserId(pipelineId: String): String? {
-        logger.info("getLastUpdateUserId(pipelineId=$pipelineId)=")
-        val updateUser = client.get(ServiceOperationResource::class).getUpdateUser(pipelineId)
-        logger.info("userId=${updateUser.data}|====end==getUserId====(pipelineId=$pipelineId)")
-        return updateUser.data
-    }
-
     fun listUsableServerEnvs(projectId: String, buildId: String): Result<List<EnvWithPermission>> {
         logger.info("listUsableServerEnvs(projectId=$projectId,buildId=$buildId)=")
         val userId = getUserId(buildId) ?: return Result(500, "服务端内部异常，buildId=${buildId}的构建未查到")
@@ -101,12 +93,20 @@ class JobService @Autowired constructor(
         return result
     }
 
-    fun listUsableServerEnvsByLastUpdateUser(projectId: String, pipelineId: String): Result<List<EnvWithPermission>>{
+    fun listUsableServerEnvsByLastUpdateUser(projectId: String, pipelineId: String): Result<List<EnvWithPermission>> {
         logger.info("listUsableServerEnvsByLastUpdateUser(projectId=$projectId, pipelineId=$pipelineId")
         val userId = getLastUpdateUserId(pipelineId) ?: return Result(500, "服务端内部异常，pipelineId=${pipelineId}的构建未查到")
         // 以流水线最后修改人的身份调用service接口获取信息
         val result = client.get(ServiceEnvironmentResource::class).listUsableServerEnvs(userId, projectId)
         logger.info("listUsableServerEnvs==Return===\n${jacksonObjectMapper().writeValueAsString(result)}")
         return result
+    }
+
+    // 根据pipelineId查出最后修改人
+    private fun getLastUpdateUserId(pipelineId: String): String? {
+        logger.info("getLastUpdateUserId(pipelineId=$pipelineId)=")
+        val updateUser = client.get(ServiceOperationResource::class).getUpdateUser(pipelineId)
+        logger.info("userId=${updateUser.data}|====end==getUserId====(pipelineId=$pipelineId)")
+        return updateUser.data
     }
 }
