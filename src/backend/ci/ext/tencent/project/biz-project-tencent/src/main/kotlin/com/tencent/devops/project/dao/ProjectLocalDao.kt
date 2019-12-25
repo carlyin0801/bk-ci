@@ -78,7 +78,10 @@ class ProjectLocalDao {
         }
         if(englishNamesExclude != null && englishNamesExclude.size >0){
             englishNamesExclude.forEach { name ->
-                conditions.add(ENGLISH_NAME.notLike(URLDecoder.decode(name, "UTF-8")))
+                conditions.add(ENGLISH_NAME.notLike("%" + URLDecoder.decode(
+                    name,
+                    "UTF-8"
+                ) + "%"))
             }
         }
         return conditions
