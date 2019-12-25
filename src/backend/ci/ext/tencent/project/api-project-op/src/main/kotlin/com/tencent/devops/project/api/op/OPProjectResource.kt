@@ -257,12 +257,18 @@ interface OPProjectResource {
     fun synProject(
         @ApiParam(value = "项目code", required = true)
         @PathParam("projectId")
-        projectCode: String
+        projectCode: String,
+        @ApiParam(value = "是否触发刷数据 true：是 false：否", defaultValue = false.toString())
+        @QueryParam(value = "isRefresh")
+        isRefresh: Boolean
     ): Result<Boolean>
 
     @ApiOperation("同步项目初始化")
     @PUT
     @Path("/init/syn")
     fun synProjectInit(
+        @ApiParam(value = "是否触发刷数据 true：是 false：否", defaultValue = false.toString())
+        @QueryParam(value = "isRefresh")
+        isRefresh: Boolean
     ): Result<List<String>>
 }
