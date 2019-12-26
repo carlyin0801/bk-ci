@@ -76,12 +76,16 @@ class ProjectLocalDao {
                 conditions.add(ENGLISH_NAME.`in`(englishNames))
             }
         }
-        if(englishNamesExclude != null && englishNamesExclude.size >0){
+        if (englishNamesExclude != null && englishNamesExclude.size > 0) {
             englishNamesExclude.forEach { name ->
-                conditions.add(ENGLISH_NAME.notLike("%" + URLDecoder.decode(
-                    name,
-                    "UTF-8"
-                ) + "%"))
+                conditions.add(
+                    ENGLISH_NAME.notLike(
+                        "%" + URLDecoder.decode(
+                            name,
+                            "UTF-8"
+                        ) + "%"
+                    )
+                )
             }
         }
         return conditions

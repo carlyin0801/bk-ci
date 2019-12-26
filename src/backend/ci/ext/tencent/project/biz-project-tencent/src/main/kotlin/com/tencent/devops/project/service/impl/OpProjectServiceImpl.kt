@@ -30,7 +30,6 @@ import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.util.PageUtil
 import com.tencent.devops.common.auth.api.AuthProjectApi
 import com.tencent.devops.common.auth.api.AuthTokenApi
-import com.tencent.devops.common.auth.api.pojo.ResourceRegisterInfo
 import com.tencent.devops.common.auth.code.AuthServiceCode
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.gray.Gray
@@ -70,9 +69,9 @@ class OpProjectServiceImpl @Autowired constructor(
     private val paasCCService: ProjectPaasCCService,
     private val bkAuthProjectApi: AuthProjectApi,
     private val bsAuthTokenApi: AuthTokenApi,
+    private val repoGray: RepoGray,
     private val projectPermissionService: ProjectPermissionService,
-    private val bsPipelineAuthServiceCode: AuthServiceCode,
-    private val repoGray: RepoGray
+    private val bsPipelineAuthServiceCode: AuthServiceCode
 ) : AbsOpProjectServiceImpl(dslContext, projectDao, projectLabelRelDao, redisOperation, gray, repoGray, projectDispatcher) {
 
     private final val REDIS_PROJECT_KEY = "BK:PROJECT:INFO:"
