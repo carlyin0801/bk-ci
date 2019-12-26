@@ -132,9 +132,9 @@ class ProjectLocalService @Autowired constructor(
                     userId = userId,
                     accessToken = accessToken,
                     resourceRegisterInfo = ResourceRegisterInfo(
-                            projectCreateInfo.englishName,
-                            projectCreateInfo.projectName
-                        )
+                        projectCreateInfo.englishName,
+                        projectCreateInfo.projectName
+                    )
 
                 )
                 val userDeptDetail = tofService.getUserDeptDetail(userId, "") // 获取用户机构信息
@@ -331,12 +331,12 @@ class ProjectLocalService @Autowired constructor(
                 rabbitTemplate.convertAndSend(
                     EXCHANGE_PAASCC_PROJECT_CREATE,
                     ROUTE_PAASCC_PROJECT_CREATE, PaasCCCreateProject(
-                    userId = userId,
-                    accessToken = accessToken,
-                    projectId = projectId,
-                    retryCount = 0,
-                    projectCreateInfo = projectCreateInfo
-                )
+                        userId = userId,
+                        accessToken = accessToken,
+                        projectId = projectId,
+                        retryCount = 0,
+                        projectCreateInfo = projectCreateInfo
+                    )
                 )
                 success = true
             } finally {
@@ -506,12 +506,12 @@ class ProjectLocalService @Autowired constructor(
             val projectId = projectDao.getByEnglishName(dslContext, englishName)?.projectId
                 ?: throw NotFoundException("项目 - $englishName 不存在")
 
-            //刷新auth不存在的項目,同步完，可下掉
+            // 刷新auth不存在的項目,同步完，可下掉
             val synAuth = synAuthProject(userId, accessToken, englishName, projectUpdateInfo)
 
             projectUpdateInfo.ccAppName = appName
             projectDao.update(dslContext, userId, projectId, projectUpdateInfo)
-            if(!synAuth) {
+            if (!synAuth) {
                 projectPermissionService.modifyResource(
                     projectCode = projectUpdateInfo.englishName,
                     projectName = projectUpdateInfo.projectName
@@ -950,9 +950,14 @@ class ProjectLocalService @Autowired constructor(
         return bkAuthProjectApi.createProjectUser(userId, bsPipelineAuthServiceCode, projectInfo.projectId, roleId!!)
     }
 
-    private fun synAuthProject(userId: String, accessToken: String, englishName: String, projectUpdateInfo: ProjectUpdateInfo): Boolean {
+    private fun synAuthProject(
+        userId: String,
+        accessToken: String,
+        englishName: String,
+        projectUpdateInfo: ProjectUpdateInfo
+    ): Boolean {
         val projectInfo = bkAuthProjectApi.getProjectInfo(bsPipelineAuthServiceCode, englishName)
-        if(projectInfo == null){
+        if (projectInfo == null) {
             projectPermissionService.createResources(
                 userId = userId,
                 accessToken = accessToken,
