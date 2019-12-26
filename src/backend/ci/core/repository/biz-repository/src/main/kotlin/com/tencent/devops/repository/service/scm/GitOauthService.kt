@@ -54,6 +54,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.net.URLDecoder
 import java.net.URLEncoder
+import java.time.LocalDateTime
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.UriBuilder
 
@@ -191,6 +192,8 @@ class GitOauthService @Autowired constructor(
 
     private fun isTokenExpire(accessToken: GitToken): Boolean {
         // 提前半个小时刷新token
+        logger.info("accessToken.createTime: ${accessToken.createTime}")
+        logger.info("accessToken.expiresIn: ${accessToken.expiresIn}")
         return (accessToken.createTime ?: 0) + accessToken.expiresIn * 1000 <= System.currentTimeMillis() - 1800 * 1000
     }
 
