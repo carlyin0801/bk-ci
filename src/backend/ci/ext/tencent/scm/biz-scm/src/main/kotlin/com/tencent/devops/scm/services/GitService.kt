@@ -539,6 +539,7 @@ class GitService @Autowired constructor(
                 if (!atomFrontendFileDir.exists()){
                     atomFrontendFileDir.mkdirs()
                 }
+                logger.info("frontendSampleProjectUrl is:${gitConfig.frontendSampleProjectUrl}")
                 CommonScriptUtils.execute("git clone ${credentialSetter.getCredentialUrl(gitConfig.frontendSampleProjectUrl)}", atomFrontendFileDir)
                 val frontendProjectDir = atomFrontendFileDir.listFiles()?.firstOrNull()
                 logger.info("initRepositoryInfo frontendProjectDir is:${frontendProjectDir?.absolutePath}")
