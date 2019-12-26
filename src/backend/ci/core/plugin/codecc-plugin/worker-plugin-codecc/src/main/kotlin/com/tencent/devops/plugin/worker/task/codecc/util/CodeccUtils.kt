@@ -80,7 +80,7 @@ object CodeccUtils {
             initData(codeccExecuteConfig.scriptType, codeccWorkspace)
             return doRun(codeccExecuteConfig)
         } finally {
-            if (codeccWorkspace.exists() && codeccWorkspace.isDirectory) codeccWorkspace.deleteRecursively()
+//            if (codeccWorkspace.exists() && codeccWorkspace.isDirectory) codeccWorkspace.deleteRecursively()
         }
     }
 
