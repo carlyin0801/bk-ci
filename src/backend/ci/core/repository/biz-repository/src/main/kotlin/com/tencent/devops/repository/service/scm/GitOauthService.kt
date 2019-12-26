@@ -194,7 +194,7 @@ class GitOauthService @Autowired constructor(
         // 提前半个小时刷新token
         logger.info("accessToken.createTime: ${accessToken.createTime}")
         logger.info("accessToken.expiresIn: ${accessToken.expiresIn}")
-        return (accessToken.createTime ?: 0) + accessToken.expiresIn * 1000 <= System.currentTimeMillis() - 1800 * 1000
+        return (accessToken.createTime ?: 0) + accessToken.expiresIn * 1000  - 1800 * 1000 <= System.currentTimeMillis()
     }
 
     private fun doGetAccessToken(userId: String): GitToken? {
