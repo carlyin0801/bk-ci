@@ -54,7 +54,6 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.net.URLDecoder
 import java.net.URLEncoder
-import java.time.LocalDateTime
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.UriBuilder
 
@@ -192,20 +191,18 @@ class GitOauthService @Autowired constructor(
 
     private fun isTokenExpire(accessToken: GitToken): Boolean {
         // 提前半个小时刷新token
-        logger.info("accessToken.createTime: ${accessToken.createTime}")
-        logger.info("accessToken.expiresIn: ${accessToken.expiresIn}")
-        return (accessToken.createTime ?: 0) + accessToken.expiresIn * 1000  - 1800 * 1000 <= System.currentTimeMillis()
+        return (accessToken.createTime ?: 0) + accessToken.expiresIn * 1000 - 1800 * 1000 <= System.currentTimeMillis()
     }
 
     private fun doGetAccessToken(userId: String): GitToken? {
         return gitTokenDao.getAccessToken(dslContext, userId)?.map {
             with(TRepositoryGtiToken.T_REPOSITORY_GTI_TOKEN) {
                 GitToken(
-                    AESUtil.decrypt(aesKey!!, it.get(ACCESS_TOKEN)),
-                    AESUtil.decrypt(aesKey!!, it.get(REFRESH_TOKEN)),
-                    it.get(TOKEN_TYPE),
-                    it.get(EXPIRES_IN),
-                    it.get(CREATE_TIME).timestampmilli()
+                    accessToken = AESUtil.decrypt(aesKey!!, it.get(ACCESS_TOKEN)),
+                    refreshToken = AESUtil.decrypt(aesKey!!, it.get(REFRESH_TOKEN)),
+                    tokenType = it.get(TOKEN_TYPE),
+                    expiresIn = it.get(EXPIRES_IN),
+                    createTime = it.get(CREATE_TIME).timestampmilli()
                 )
             }
         }
