@@ -293,7 +293,7 @@ class LogServiceV2 @Autowired constructor(
 
     fun queryLineNoByKeywords(
         buildId: String,
-        keywordsStr: String?,
+        keywordsStr: String,
         tag: String? = null,
         jobId: String? = null,
         executeCount: Int?
@@ -307,17 +307,12 @@ class LogServiceV2 @Autowired constructor(
             if (keywordsStr == null || keywordsStr.isBlank()) {
                 return QueryLineNo(buildId)
             }
-            val keywords =
-                Arrays.asList(*(keywordsStr.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()))
-                    .stream()
-                    .filter { k -> k.isNotBlank() }
-                    .collect(Collectors.toList())
 
             val result = getLogsByKeywords(
                 buildId = buildId,
                 index = index,
                 type = type,
-                keywords = keywords,
+                keywords = keywordsStr,
                 tag = tag,
                 jobId = jobId,
                 executeCount = executeCount
@@ -1041,7 +1036,7 @@ class LogServiceV2 @Autowired constructor(
         buildId: String,
         index: String,
         type: String,
-        keywords: List<String>,
+        keywords: String,
         tag: String?,
         jobId: String?,
         executeCount: Int?
@@ -1064,26 +1059,10 @@ class LogServiceV2 @Autowired constructor(
         val query = getQuery(buildId, tag, jobId, executeCount)
         val multiSearchRequestBuilder = client.prepareMultiSearch()
 
-        val logRange =
-            if (tag.isNullOrBlank()) Pair(1L, size)
-            else getLogRange(
-                buildId = buildId,
-                index = index,
-                type = type,
-                tag = tag!!,
-                jobId = jobId,
-                executeCount = executeCount,
-                size = size
-            )
-
         keywords.forEach {
             val srbKeyword = client.prepareSearch(index)
                 .setTypes(type)
-                .setQuery(
-                    query
-                        .must(QueryBuilders.matchQuery("message", it).operator(Operator.AND))
-                        .must(QueryBuilders.rangeQuery("lineNo").gte(logRange.first))
-                )
+                .setQuery(query.must(QueryBuilders.matchQuery("message", it).operator(Operator.AND)))
                 .addDocValueField("lineNo")
                 .setSize(50)
             multiSearchRequestBuilder.add(srbKeyword)
