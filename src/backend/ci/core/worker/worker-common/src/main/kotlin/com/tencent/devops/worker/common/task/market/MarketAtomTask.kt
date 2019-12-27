@@ -146,6 +146,7 @@ open class MarketAtomTask : ITask() {
                 }
             }
             LoggerService.addNormalLine("测试2：$atomParams")
+            LoggerService.addNormalLine("atomParams is：${JsonUtil.toJson(atomParams)}")
         } catch (e: Throwable) {
             logger.error("plugin input illegal! ", e)
             throw TaskExecuteException(
