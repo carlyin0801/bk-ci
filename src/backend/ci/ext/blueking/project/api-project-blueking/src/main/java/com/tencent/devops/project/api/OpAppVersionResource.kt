@@ -23,7 +23,7 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.tencent.devops.project.api.op
+package com.tencent.devops.project.api
 
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.project.pojo.AppVersion
@@ -45,7 +45,7 @@ import javax.ws.rs.core.MediaType
 @Path("/op/app/version")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-interface pAppVersionResource {
+interface OpAppVersionResource {
 
     @ApiOperation("获取所有app版本日志")
     @GET
