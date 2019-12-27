@@ -136,16 +136,15 @@ open class MarketAtomTask : ITask() {
         val atomParams = mutableMapOf<String, String>()
         try {
             val inputMap = map["input"] as Map<String, Any>?
-            LoggerService.addNormalLine("测试：$inputMap")
             inputMap?.forEach { (name, value) ->
+                LoggerService.addNormalLine("name is:$name, value is：${JsonUtil.toJson(value)}")
                 // 只有构建机插件才有workspace变量
                 if (buildTask.type == MarketBuildAtomElement.classType) {
-                    atomParams[name] = EnvUtils.parseEnv(value.toString(), systemVariables)
+                    atomParams[name] = EnvUtils.parseEnv(JsonUtil.toJson(value), systemVariables)
                 } else {
                     atomParams[name] = JsonUtil.toJson(value)
                 }
             }
-            LoggerService.addNormalLine("测试2：$atomParams")
             LoggerService.addNormalLine("atomParams is：${JsonUtil.toJson(atomParams)}")
         } catch (e: Throwable) {
             logger.error("plugin input illegal! ", e)
