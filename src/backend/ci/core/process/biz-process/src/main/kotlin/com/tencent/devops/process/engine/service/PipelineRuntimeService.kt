@@ -1898,6 +1898,7 @@ class PipelineRuntimeService @Autowired constructor(
     }
 
     fun saveBuildVmInfo(projectId: String, pipelineId: String, buildId: String, vmSeqId: String, vmInfo: VmInfo) {
+        logger.info("saveBuildVmInfo, projectId: $projectId, pipelineId: $pipelineId, buildId: $buildId, vmSeqId: $vmSeqId, vmInfo: $vmInfo")
         val record = buildDetailDao.get(dslContext, buildId)
         if (record == null) {
             logger.warn("build not exists, buildId: $buildId")
