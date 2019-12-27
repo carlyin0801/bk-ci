@@ -929,7 +929,7 @@ class ProjectLocalService @Autowired constructor(
         }
         var roles = mutableListOf<BKAuthProjectRolesResources>()
         if(queryProject != null){
-            val roles = bkAuthProjectApi.getProjectRoles(bsPipelineAuthServiceCode, queryProject!!.englishName, queryProject!!.projectId)
+            roles = bkAuthProjectApi.getProjectRoles(bsPipelineAuthServiceCode, queryProject!!.englishName, queryProject!!.projectId)
         }
         return roles
     }
