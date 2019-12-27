@@ -930,6 +930,7 @@ class ProjectLocalService @Autowired constructor(
         var roles = mutableListOf<BKAuthProjectRolesResources>()
         if(queryProject != null){
             roles = bkAuthProjectApi.getProjectRoles(bsPipelineAuthServiceCode, queryProject!!.englishName, queryProject!!.projectId)
+                .toMutableList()
         }
         return roles
     }
