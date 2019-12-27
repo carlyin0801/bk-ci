@@ -304,9 +304,7 @@ class LogServiceV2 @Autowired constructor(
             val indexAndType = indexServiceV2.getIndexAndType(buildId)
             val index = indexAndType.index
             val type = indexAndType.type
-            if (keywordsStr == null || keywordsStr.isBlank()) {
-                return QueryLineNo(buildId)
-            }
+            if (keywordsStr.isBlank()) return QueryLineNo(buildId)
 
             val result = getLogsByKeywords(
                 buildId = buildId,
@@ -1052,21 +1050,18 @@ class LogServiceV2 @Autowired constructor(
             jobId = jobId,
             executeCount = executeCount
         )
-        if (size == 0L) {
-            return TreeSet()
-        }
+        if (size == 0L) return TreeSet()
 
         val query = getQuery(buildId, tag, jobId, executeCount)
         val multiSearchRequestBuilder = client.prepareMultiSearch()
 
-        keywords.forEach {
-            val srbKeyword = client.prepareSearch(index)
-                .setTypes(type)
-                .setQuery(query.must(QueryBuilders.matchQuery("message", it).operator(Operator.AND)))
-                .addDocValueField("lineNo")
-                .setSize(50)
-            multiSearchRequestBuilder.add(srbKeyword)
-        }
+        val srbKeyword = client.prepareSearch(index)
+            .setTypes(type)
+            .setQuery(query.must(QueryBuilders.matchQuery("message", keywords).operator(Operator.AND)))
+            .addDocValueField("lineNo")
+            .setSize(50)
+        multiSearchRequestBuilder.add(srbKeyword)
+
 
         val lineNoSet = TreeSet<Long>()
 
