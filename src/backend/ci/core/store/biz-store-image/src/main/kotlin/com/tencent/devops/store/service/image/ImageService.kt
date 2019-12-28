@@ -1071,6 +1071,8 @@ abstract class ImageService @Autowired constructor() {
                     imageStatusMsg = null,
                     imageSize = imageSize?.toString(),
                     imageTag = imageUpdateRequest.imageTag,
+                    dockerFileType = imageUpdateRequest.dockerFileType,
+                    dockerFileContent = imageUpdateRequest.dockerFileContent,
                     agentTypeList = imageUpdateRequest.agentTypeScope,
                     logoUrl = imageUpdateRequest.logoUrl,
                     icon = imageUpdateRequest.icon,
