@@ -29,7 +29,6 @@ package com.tencent.devops.process.engine.service
 import com.fasterxml.jackson.core.type.TypeReference
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.exception.ErrorCodeException
-import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.model.SQLPage
 import com.tencent.devops.common.api.pojo.BuildHistoryPage
 import com.tencent.devops.common.api.pojo.IdValue
@@ -852,12 +851,11 @@ class PipelineBuildService(
                             if (superPipeline != null) {
                                 logger.info("[$pipelineId]|SERVICE_SHUTDOWN|super_build=${superPipeline.buildId}|super_pipeline=${superPipeline.pipelineId}")
                                 serviceShutdown(
-                                    projectId,
-                                    superPipeline.pipelineId,
-                                    superPipeline.buildId,
-                                    channelCode
+                                    projectId = projectId,
+                                    pipelineId = superPipeline.pipelineId,
+                                    buildId = superPipeline.buildId,
+                                    channelCode = channelCode
                                 )
-                                return
                             }
                         }
                     }
@@ -866,13 +864,13 @@ class PipelineBuildService(
 
             try {
                 pipelineRuntimeService.cancelBuild(
-                    projectId,
-                    pipelineId,
-                    buildId,
-                    buildInfo.startUser,
-                    BuildStatus.FAILED
+                    projectId = projectId,
+                    pipelineId = pipelineId,
+                    buildId = buildId,
+                    userId = buildInfo.startUser,
+                    buildStatus = BuildStatus.FAILED
                 )
-                buildDetailService.updateBuildCancelUser(buildId, buildInfo.startUser)
+                buildDetailService.updateBuildCancelUser(buildId = buildId, cancelUserId = buildInfo.startUser)
                 logger.info("Cancel the pipeline($pipelineId) of instance($buildId) by the user(${buildInfo.startUser})")
             } catch (t: Throwable) {
                 logger.warn("Fail to shutdown the build($buildId) of pipeline($pipelineId)", t)
@@ -1514,8 +1512,14 @@ class PipelineBuildService(
             }
 
             try {
-                pipelineRuntimeService.cancelBuild(projectId, pipelineId, buildId, userId, BuildStatus.CANCELED)
-                buildDetailService.updateBuildCancelUser(buildId, userId)
+                pipelineRuntimeService.cancelBuild(
+                    projectId = projectId,
+                    pipelineId = pipelineId,
+                    buildId = buildId,
+                    userId = userId,
+                    buildStatus = BuildStatus.CANCELED
+                )
+                buildDetailService.updateBuildCancelUser(buildId = buildId, cancelUserId = userId)
                 logger.info("Cancel the pipeline($pipelineId) of instance($buildId) by the user($userId)")
             } catch (t: Throwable) {
                 logger.warn("Fail to shutdown the build($buildId) of pipeline($pipelineId)", t)

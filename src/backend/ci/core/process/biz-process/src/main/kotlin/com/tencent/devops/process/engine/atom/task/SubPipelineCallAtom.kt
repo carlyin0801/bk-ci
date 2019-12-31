@@ -76,7 +76,8 @@ class SubPipelineCallAtom constructor(
                 errorMsg = "找不到对应子流水线"
             )
         } else {
-            val buildInfo = pipelineRuntimeService.getBuildInfo(task.subBuildId!!)
+            val subBuildId = task.subBuildId!!
+            val buildInfo = pipelineRuntimeService.getBuildInfo(subBuildId)
             return if (buildInfo == null) {
                 LogUtils.addRedLine(
                     rabbitTemplate = rabbitTemplate,
@@ -96,13 +97,19 @@ class SubPipelineCallAtom constructor(
                 // 如果要终止，则也一并终止子流水线
                 if (force || BuildStatus.isFinish(task.status)) {
                     logger.info("[${task.buildId}]|SHUTDOWN_SUB_PIPELINE|subPipelineId=${param.subPipelineId}|subBuildId=${task.subBuildId}")
-                    val channelCode = ChannelCode.valueOf(runVariables[PIPELINE_START_CHANNEL]!!)
-                    pipelineBuildService.serviceShutdown(
-                        projectId = task.projectId,
-                        pipelineId = param.subPipelineId,
-                        buildId = task.subBuildId!!,
-                        channelCode = channelCode
-                    )
+
+                    val subBuildInfo = pipelineRuntimeService.getBuildInfo(subBuildId)
+
+                    if (subBuildInfo != null) {
+                        pipelineBuildService.buildManualShutdown(
+                            userId = subBuildInfo.startUser,
+                            projectId = subBuildInfo.projectId,
+                            pipelineId = subBuildInfo.pipelineId,
+                            buildId = subBuildId,
+                            channelCode = subBuildInfo.channelCode,
+                            checkPermission = false
+                        )
+                    }
                     return AtomResponse(task.status)
                 }
                 when {
@@ -151,7 +158,6 @@ class SubPipelineCallAtom constructor(
         }
     }
 
-    // TODO Exception中的错误码对应提示信息修改提取
     override fun execute(task: PipelineBuildTask, param: SubPipelineCallElement, runVariables: Map<String, String>): AtomResponse {
         logger.info("Enter SubPipelineCallAtom run...")
 
