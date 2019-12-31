@@ -95,6 +95,7 @@ class SubPipelineCallAtom constructor(
             } else {
                 // 如果要终止，则也一并终止子流水线
                 if (force || BuildStatus.isFinish(task.status)) {
+                    logger.info("[${task.buildId}]|SHUTDOWN_SUB_PIPELINE|subPipelineId=${param.subPipelineId}|subBuildId=${task.subBuildId}")
                     val channelCode = ChannelCode.valueOf(runVariables[PIPELINE_START_CHANNEL]!!)
                     pipelineBuildService.serviceShutdown(
                         projectId = task.projectId,
