@@ -37,11 +37,13 @@ import com.tencent.devops.process.engine.control.lock.BuildIdLock
 import com.tencent.devops.process.engine.control.lock.PipelineBuildStartLock
 import com.tencent.devops.process.engine.pojo.BuildInfo
 import com.tencent.devops.process.engine.pojo.LatestRunningBuild
+import com.tencent.devops.process.engine.pojo.PipelineBuildTask
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildAtomTaskEvent
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildFinishEvent
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildStartEvent
 import com.tencent.devops.process.engine.service.PipelineBuildDetailService
 import com.tencent.devops.process.engine.service.PipelineBuildTaskService
+import com.tencent.devops.process.engine.service.PipelineBuildService
 import com.tencent.devops.process.engine.service.PipelineRuntimeExtService
 import com.tencent.devops.process.engine.service.PipelineRuntimeService
 import com.tencent.devops.process.pojo.ErrorType
@@ -57,6 +59,7 @@ import org.springframework.stereotype.Service
 class BuildEndControl @Autowired constructor(
     private val pipelineEventDispatcher: PipelineEventDispatcher,
     private val redisOperation: RedisOperation,
+    private val pipelineBuildService: PipelineBuildService,
     private val pipelineRuntimeService: PipelineRuntimeService,
     private val pipelineBuildDetailService: PipelineBuildDetailService,
     private val pipelineRuntimeExtService: PipelineRuntimeExtService,
@@ -108,7 +111,7 @@ class BuildEndControl @Autowired constructor(
 
         logger.info("[$pipelineId]|BUILD_FINISH| finish the build[$buildId] event ($status)")
 
-        fixTask(buildInfo)
+        fixTask(buildInfo, buildStatus)
 
         // 记录本流水线最后一次构建的状态
         pipelineRuntimeService.finishLatestRunningBuild(
@@ -152,7 +155,7 @@ class BuildEndControl @Autowired constructor(
         )
     }
 
-    private fun PipelineBuildFinishEvent.fixTask(buildInfo: BuildInfo) {
+    private fun PipelineBuildFinishEvent.fixTask(buildInfo: BuildInfo, buildStatus: BuildStatus) {
         val allBuildTask = pipelineRuntimeService.getAllBuildTask(buildId)
 
         allBuildTask.forEach {
@@ -175,6 +178,11 @@ class BuildEndControl @Autowired constructor(
                             taskParam = it.taskParams, actionType = ActionType.TERMINATE
                         )
                     )
+
+                    // 如果是取消的构建，则会统一取消子流水线的构建
+                    if (BuildStatus.isCancel(buildStatus)) {
+                        terminateSubPipeline(buildInfo.buildId, it)
+                    }
                 }
             }
             // 优先保存SYSTEM错误，若无SYSTEM错误，将BuildData中错误信息更新为编排顺序的最后一个Element错误
@@ -182,6 +190,27 @@ class BuildEndControl @Autowired constructor(
                 buildInfo.errorType = it.errorType
                 buildInfo.errorCode = it.errorCode
                 buildInfo.errorMsg = it.errorMsg
+            }
+        }
+    }
+
+    private fun terminateSubPipeline(buildId: String, buildTask: PipelineBuildTask) {
+
+        if (!buildTask.subBuildId.isNullOrBlank()) {
+            val subBuildInfo = pipelineRuntimeService.getBuildInfo(buildTask.subBuildId!!)
+            if (subBuildInfo != null && !BuildStatus.isFinish(subBuildInfo.status)) {
+                try {
+                    pipelineBuildService.buildManualShutdown(
+                        userId = subBuildInfo.startUser,
+                        projectId = subBuildInfo.projectId,
+                        pipelineId = subBuildInfo.pipelineId,
+                        buildId = subBuildInfo.buildId,
+                        channelCode = subBuildInfo.channelCode,
+                        checkPermission = false
+                    )
+                } catch (e: Throwable) {
+                    logger.warn("[$buildId]|TerminateSubPipeline|subBuildId=${subBuildInfo.buildId}|e=$e")
+                }
             }
         }
     }

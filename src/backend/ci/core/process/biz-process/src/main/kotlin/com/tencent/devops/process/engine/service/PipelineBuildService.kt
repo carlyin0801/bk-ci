@@ -596,14 +596,7 @@ class PipelineBuildService(
             startParams[PIPELINE_START_PARENT_BUILD_TASK_ID] = parentTaskId
             // 子流水线的调用不受频率限制
             val startParamsWithType = mutableListOf<BuildParameters>()
-            startParams.forEach { t, u ->
-                startParamsWithType.add(
-                    BuildParameters(
-                        t,
-                        u
-                    )
-                )
-            }
+            startParams.forEach { (t, u) -> startParamsWithType.add(BuildParameters(key = t, value = u)) }
 
             val subBuildId = startPipeline(
                 userId = readyToBuildPipelineInfo.lastModifyUser,

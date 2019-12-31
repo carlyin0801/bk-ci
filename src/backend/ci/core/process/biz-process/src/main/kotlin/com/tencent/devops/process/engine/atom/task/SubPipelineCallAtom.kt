@@ -68,7 +68,7 @@ class SubPipelineCallAtom constructor(
     override fun tryFinish(task: PipelineBuildTask, param: SubPipelineCallElement, runVariables: Map<String, String>, force: Boolean): AtomResponse {
         logger.info("[${task.buildId}]|ATOM_SUB_PIPELINE_FINISH|status=${task.status}")
 
-        return if (task.subBuildId == null || task.subBuildId.isNullOrBlank()) {
+        return if (task.subBuildId.isNullOrBlank()) {
             AtomResponse(
                 buildStatus = BuildStatus.FAILED,
                 errorType = ErrorType.USER,
@@ -77,8 +77,8 @@ class SubPipelineCallAtom constructor(
             )
         } else {
             val subBuildId = task.subBuildId!!
-            val buildInfo = pipelineRuntimeService.getBuildInfo(subBuildId)
-            return if (buildInfo == null) {
+            val subBuildInfo = pipelineRuntimeService.getBuildInfo(subBuildId)
+            return if (subBuildInfo == null) {
                 LogUtils.addRedLine(
                     rabbitTemplate = rabbitTemplate,
                     buildId = task.buildId,
@@ -94,26 +94,8 @@ class SubPipelineCallAtom constructor(
                     errorMsg = "找不到对应子流水线"
                 )
             } else {
-                // 如果要终止，则也一并终止子流水线
-                if (force || BuildStatus.isFinish(task.status)) {
-                    logger.info("[${task.buildId}]|SHUTDOWN_SUB_PIPELINE|subPipelineId=${param.subPipelineId}|subBuildId=${task.subBuildId}")
-
-                    val subBuildInfo = pipelineRuntimeService.getBuildInfo(subBuildId)
-
-                    if (subBuildInfo != null) {
-                        pipelineBuildService.buildManualShutdown(
-                            userId = subBuildInfo.startUser,
-                            projectId = subBuildInfo.projectId,
-                            pipelineId = subBuildInfo.pipelineId,
-                            buildId = subBuildId,
-                            channelCode = subBuildInfo.channelCode,
-                            checkPermission = false
-                        )
-                    }
-                    return AtomResponse(task.status)
-                }
                 when {
-                    BuildStatus.isCancel(buildInfo.status) ->
+                    BuildStatus.isCancel(subBuildInfo.status) ->
                         LogUtils.addYellowLine(
                             rabbitTemplate = rabbitTemplate,
                             buildId = task.buildId,
@@ -122,7 +104,7 @@ class SubPipelineCallAtom constructor(
                             jobId = task.containerHashId,
                             executeCount = task.executeCount ?: 1
                         )
-                    BuildStatus.isFailure(buildInfo.status) ->
+                    BuildStatus.isFailure(subBuildInfo.status) ->
                         LogUtils.addYellowLine(
                             rabbitTemplate = rabbitTemplate,
                             buildId = task.buildId,
@@ -131,7 +113,7 @@ class SubPipelineCallAtom constructor(
                             jobId = task.containerHashId,
                             executeCount = task.executeCount ?: 1
                         )
-                    BuildStatus.isSuccess(buildInfo.status) ->
+                    BuildStatus.isSuccess(subBuildInfo.status) ->
                         LogUtils.addLine(
                             rabbitTemplate = rabbitTemplate,
                             buildId = task.buildId,
@@ -149,10 +131,10 @@ class SubPipelineCallAtom constructor(
                         )
                 }
                 AtomResponse(
-                    buildStatus = buildInfo.status,
-                    errorType = buildInfo.errorType,
-                    errorCode = buildInfo.errorCode,
-                    errorMsg = buildInfo.errorMsg
+                    buildStatus = subBuildInfo.status,
+                    errorType = subBuildInfo.errorType,
+                    errorCode = subBuildInfo.errorCode,
+                    errorMsg = subBuildInfo.errorMsg
                 )
             }
         }
