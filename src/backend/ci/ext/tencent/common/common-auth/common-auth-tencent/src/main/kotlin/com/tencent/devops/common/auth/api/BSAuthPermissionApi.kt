@@ -356,11 +356,11 @@ class BSAuthPermissionApi @Autowired constructor(
             "${bkAuthProperties.url}/permission/project/service/policy/resource/users/grant?access_token=$accessToken"
         val userList = mutableListOf<String>()
         userList.add(userId)
-        val grantRequest = BkAuthPermissionsGrantRequest(
+        val grantRequest = BkAuthPermissionGrantRequest(
             projectCode = projectCode,
             serviceCode = serviceCode.id(),
             policyCode = permission.value,
-            resourceCode = resourceType.value,
+            resourceCode = resourceCode,
             resourceType = resourceType.value,
             userIdList = userList
         )
