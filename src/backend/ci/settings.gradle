@@ -120,6 +120,12 @@ include ":core:image:biz-image"
 include ":core:image:boot-image"
 include ":core:image:model-image"
 
+include ":core:message"
+include ":core:message:api-message"
+include ":core:message:biz-message"
+include ":core:message:boot-message"
+include ":core:message:model-message"
+
 include ":core:store"
 include ":core:store:api-store"
 include ":core:store:api-store-sample"

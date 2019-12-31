@@ -26,7 +26,6 @@
 
 package com.tencent.devops.repository.service.scm
 
-import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.repository.pojo.enums.GitAccessLevelEnum
 import com.tencent.devops.repository.pojo.enums.RepoAuthType
@@ -40,7 +39,6 @@ import com.tencent.devops.repository.pojo.git.UpdateGitProjectInfo
 import com.tencent.devops.repository.pojo.oauth.GitToken
 import com.tencent.devops.scm.code.git.api.GitBranch
 import com.tencent.devops.scm.code.git.api.GitTag
-import com.tencent.devops.scm.pojo.GitRepositoryDirItem
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import com.tencent.devops.scm.pojo.Project
 import javax.servlet.http.HttpServletResponse
@@ -77,18 +75,8 @@ interface IGitService {
         sampleProjectPath: String?,
         namespaceId: Int?,
         visibilityLevel: VisibilityLevelEnum?,
-        tokenType: TokenTypeEnum,
-        frontendType: FrontendTypeEnum? = null
-    ): Result<GitRepositoryResp?>
-
-    fun getGitRepositoryTreeInfo(
-        userId: String,
-        repoName: String,
-        refName: String?,
-        path: String?,
-        token: String,
         tokenType: TokenTypeEnum
-    ): Result<List<GitRepositoryDirItem>?>
+    ): Result<GitRepositoryResp?>
 
     fun addGitProjectMember(
         userIdList: List<String>,

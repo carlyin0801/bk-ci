@@ -26,7 +26,6 @@
 
 package com.tencent.devops.store.pojo.atom
 
-import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.store.pojo.common.Label
 import com.tencent.devops.store.pojo.common.StoreUserCommentInfo
 import io.swagger.annotations.ApiModelProperty
@@ -101,7 +100,5 @@ data class AtomVersion(
     @ApiModelProperty("插件代码库不开源原因")
     val privateReason: String?,
     @ApiModelProperty("是否推荐标识 true：推荐，false：不推荐", required = false)
-    val recommendFlag: Boolean? = null,
-    @ApiModelProperty(value = "前端UI渲染方式", required = false)
-    val frontendType: FrontendTypeEnum?
+    val recommendFlag: Boolean? = null
 )

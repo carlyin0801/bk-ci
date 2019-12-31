@@ -31,7 +31,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.constant.DEFAULT
 import com.tencent.devops.common.api.constant.REQUIRED
-import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.common.api.util.JsonUtil
@@ -516,8 +515,7 @@ abstract class MarketAtomServiceImpl @Autowired constructor() : MarketAtomServic
                     userCommentInfo = userCommentInfo,
                     visibilityLevel = VisibilityLevelEnum.getVisibilityLevel(record["visibilityLevel"] as Int),
                     privateReason = record["privateReason"] as? String,
-                    recommendFlag = feature?.recommendFlag,
-                    frontendType = FrontendTypeEnum.getFrontendTypeObj(htmlTemplateVersion)
+                    recommendFlag = feature?.recommendFlag
                 )
             )
         }

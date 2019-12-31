@@ -29,7 +29,6 @@ package com.tencent.devops.store.service.atom.impl
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.tencent.devops.common.api.constant.CommonMessageCode
-import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.DateTimeUtil
@@ -301,7 +300,6 @@ abstract class AtomServiceImpl @Autowired constructor() : AtomService {
                     id = pipelineAtomRecord.id,
                     name = pipelineAtomRecord.name,
                     atomCode = pipelineAtomRecord.atomCode,
-                    version = pipelineAtomRecord.version,
                     classType = pipelineAtomRecord.classType,
                     logoUrl = pipelineAtomRecord.logoUrl,
                     icon = pipelineAtomRecord.icon,
@@ -327,8 +325,7 @@ abstract class AtomServiceImpl @Autowired constructor() : AtomService {
                     weight = pipelineAtomRecord.weight,
                     props = atomDao.convertString(pipelineAtomRecord.props),
                     data = atomDao.convertString(pipelineAtomRecord.data),
-                    recommendFlag = atomFeature?.recommendFlag,
-                    frontendType = FrontendTypeEnum.getFrontendTypeObj(pipelineAtomRecord.htmlTemplateVersion)
+                    recommendFlag = atomFeature?.recommendFlag
                 )
             }
         )

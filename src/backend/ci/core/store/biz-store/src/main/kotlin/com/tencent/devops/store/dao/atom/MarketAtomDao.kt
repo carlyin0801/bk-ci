@@ -321,7 +321,6 @@ class MarketAtomDao : AtomBaseDao() {
                 DOCS_LINK,
                 VISIBILITY_LEVEL,
                 PRIVATE_REASON,
-                HTML_TEMPLATE_VERSION,
                 PUBLISHER,
                 CREATOR,
                 MODIFIER
@@ -345,7 +344,6 @@ class MarketAtomDao : AtomBaseDao() {
                     docsLink,
                     marketAtomCreateRequest.visibilityLevel?.level,
                     marketAtomCreateRequest.privateReason,
-                    marketAtomCreateRequest.frontendType.typeVersion,
                     userId,
                     userId,
                     userId
@@ -382,7 +380,6 @@ class MarketAtomDao : AtomBaseDao() {
                 .set(PROPS, props)
                 .set(LOGO_URL, marketAtomUpdateRequest.logoUrl)
                 .set(ICON, iconData)
-                .set(HTML_TEMPLATE_VERSION, marketAtomUpdateRequest.frontendType.typeVersion)
                 .set(UPDATE_TIME, LocalDateTime.now())
                 .set(MODIFIER, userId)
                 .where(ID.eq(id))
@@ -463,7 +460,7 @@ class MarketAtomDao : AtomBaseDao() {
                     atomRequest.logoUrl,
                     classType,
                     atomRecord.buildLessRunFlag,
-                    atomRequest.frontendType.typeVersion,
+                    atomRecord.htmlTemplateVersion,
                     atomRecord.visibilityLevel,
                     atomRequest.publisher,
                     userId,

@@ -26,7 +26,6 @@
 
 package com.tencent.devops.repository.resources.scm
 
-import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.repository.api.scm.ServiceGitResource
@@ -138,19 +137,9 @@ class ServiceGitResourceImpl @Autowired constructor(
         sampleProjectPath: String,
         namespaceId: Int?,
         visibilityLevel: VisibilityLevelEnum?,
-        tokenType: TokenTypeEnum,
-        frontendType: FrontendTypeEnum?
+        tokenType: TokenTypeEnum
     ): Result<GitRepositoryResp?> {
-        return gitService.createGitCodeRepository(
-            userId = userId,
-            token = token,
-            repositoryName = repositoryName,
-            sampleProjectPath = sampleProjectPath,
-            namespaceId = namespaceId,
-            visibilityLevel = visibilityLevel,
-            tokenType = tokenType,
-            frontendType = frontendType
-        )
+        return gitService.createGitCodeRepository(userId, token, repositoryName, sampleProjectPath, namespaceId, visibilityLevel, tokenType)
     }
 
     override fun addGitProjectMember(

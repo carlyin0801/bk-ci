@@ -28,7 +28,6 @@ package com.tencent.devops.repository.service
 
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.constant.RepositoryMessageCode
-import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.common.api.enums.RepositoryConfig
 import com.tencent.devops.common.api.enums.RepositoryType
 import com.tencent.devops.common.api.enums.ScmType
@@ -71,7 +70,6 @@ import com.tencent.devops.repository.service.scm.IGitService
 import com.tencent.devops.repository.service.scm.IScmService
 import com.tencent.devops.repository.utils.CredentialUtils
 import com.tencent.devops.scm.enums.CodeSvnRegion
-import com.tencent.devops.scm.pojo.GitRepositoryDirItem
 import com.tencent.devops.scm.pojo.GitRepositoryResp
 import com.tencent.devops.ticket.api.ServiceCredentialResource
 import org.jooq.DSLContext
@@ -83,16 +81,6 @@ import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.util.Base64
 import javax.ws.rs.NotFoundException
-import kotlin.collections.ArrayList
-import kotlin.collections.Collection
-import kotlin.collections.List
-import kotlin.collections.Set
-import kotlin.collections.filter
-import kotlin.collections.map
-import kotlin.collections.setOf
-import kotlin.collections.toList
-import kotlin.collections.toMap
-import kotlin.collections.toSet
 
 @Service
 class RepositoryService @Autowired constructor(
@@ -136,11 +124,10 @@ class RepositoryService @Autowired constructor(
         sampleProjectPath: String?,
         namespaceId: Int?,
         visibilityLevel: VisibilityLevelEnum?,
-        tokenType: TokenTypeEnum,
-        frontendType: FrontendTypeEnum?
+        tokenType: TokenTypeEnum
     ): Result<RepositoryInfo?> {
         logger.info("createGitRepository userId is:$userId,projectCode is:$projectCode, repositoryName is:$repositoryName, sampleProjectPath is:$sampleProjectPath")
-        logger.info("createGitRepository namespaceId is:$namespaceId, visibilityLevel is:$visibilityLevel, tokenType is:$tokenType, frontendType is:$frontendType")
+        logger.info("createGitRepository  namespaceId is:$namespaceId, visibilityLevel is:$visibilityLevel, tokenType is:$tokenType")
         val getGitTokenResult = getGitToken(tokenType, userId)
         if (getGitTokenResult.isNotOk()) {
             return Result(status = getGitTokenResult.status, message = getGitTokenResult.message ?: "")
@@ -156,8 +143,7 @@ class RepositoryService @Autowired constructor(
                 sampleProjectPath = sampleProjectPath,
                 namespaceId = namespaceId,
                 visibilityLevel = visibilityLevel,
-                tokenType = tokenType,
-                frontendType = frontendType
+                tokenType = tokenType
             )
             logger.info("createGitCodeRepository gitRepositoryRespResult is :$gitRepositoryRespResult")
             if (gitRepositoryRespResult.isOk()) {
@@ -267,40 +253,6 @@ class RepositoryService @Autowired constructor(
             }
         } catch (e: Exception) {
             logger.error("updateGitCodeRepository error is :$e", e)
-            MessageCodeUtil.generateResponseDataObject(CommonMessageCode.SYSTEM_ERROR)
-        }
-    }
-
-    fun getGitRepositoryTreeInfo(
-        userId: String,
-        repositoryConfig: RepositoryConfig,
-        refName: String?,
-        path: String?,
-        tokenType: TokenTypeEnum
-    ): Result<List<GitRepositoryDirItem>?> {
-        logger.info("getGitRepositoryTreeInfo userId is:$userId,repositoryConfig is:$repositoryConfig,refName is:$refName")
-        logger.info("getGitRepositoryTreeInfo path is:$path,tokenType is:$tokenType")
-        val repo: CodeGitRepository = serviceGet("", repositoryConfig) as CodeGitRepository
-        logger.info("the repo is:$repo")
-        val finalTokenType = generateFinalTokenType(tokenType, repo.projectName)
-        val getGitTokenResult = getGitToken(finalTokenType, userId)
-        if (getGitTokenResult.isNotOk()) {
-            return Result(status = getGitTokenResult.status, message = getGitTokenResult.message, data = null)
-        }
-        val token = getGitTokenResult.data!!
-        return try {
-            val getGitRepositoryTreeInfoResult = gitService.getGitRepositoryTreeInfo(
-                userId = userId,
-                repoName = repo.projectName,
-                refName = null,
-                path = null,
-                token = token,
-                tokenType = tokenType
-            )
-            logger.info("getGitRepositoryTreeInfo getGitRepositoryTreeInfoResult is :$getGitRepositoryTreeInfoResult")
-            getGitRepositoryTreeInfoResult
-        } catch (e: Exception) {
-            logger.error("getGitRepositoryTreeInfo error is :$e", e)
             MessageCodeUtil.generateResponseDataObject(CommonMessageCode.SYSTEM_ERROR)
         }
     }
