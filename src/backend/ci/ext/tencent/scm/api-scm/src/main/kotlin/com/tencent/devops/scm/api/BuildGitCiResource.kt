@@ -50,6 +50,6 @@ interface BuildGitCiResource {
     fun getToken(
         @ApiParam("gitProjectId", required = true)
         @QueryParam("gitProjectId")
-        gitProjectId: Long
+        gitProjectId: String
     ): Result<GitToken>
 }
