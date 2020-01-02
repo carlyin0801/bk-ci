@@ -49,6 +49,11 @@ class ServiceDockerHostResourceImpl @Autowired constructor(
     private val dockerService: DockerService,
     private val dockerHostBuildService: DockerHostBuildService
 ) : ServiceDockerHostResource {
+    override fun test(): Result<Boolean> {
+        dockerHostBuildService.clearLocalImages()
+        return Result(true)
+    }
+
     override fun dockerBuild(
         projectId: String,
         pipelineId: String,

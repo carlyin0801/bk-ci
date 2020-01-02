@@ -169,4 +169,9 @@ interface ServiceDockerHostResource {
         containerId: String,
         @Context request: HttpServletRequest
     ): Result<Boolean>
+
+    @ApiOperation("test")
+    @GET
+    @Path("/test/clearLocalImages")
+    fun test(): Result<Boolean>
 }
