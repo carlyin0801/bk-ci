@@ -24,29 +24,36 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.plugin.api
+package com.tencent.devops.experience.api.builds
 
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.plugin.pojo.TaskData
+import com.tencent.devops.experience.pojo.ExperienceServiceCreate
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
 import javax.ws.rs.POST
 import javax.ws.rs.Path
+import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 
-@Api(tags = ["SERVICE_TASK"], description = "服务-创建异步任务")
-@Path("/service/task")
+@Api(tags = ["BUILD_EXPERIENCE"], description = "版本体验-发布体验")
+@Path("/build/experiences")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-interface ServiceTaskResource {
-    @ApiOperation("生成任务")
+interface BuildExperienceResource {
+    @ApiOperation("创建体验")
+    @Path("/projects/{projectId}/users/{userId}/")
     @POST
-    @Path("/create")
     fun create(
-        @ApiParam("任务数据", required = true)
-        taskData: TaskData
+        @ApiParam("用户ID", required = true)
+        @PathParam("userId")
+        userId: String,
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("发布详情", required = true)
+        experience: ExperienceServiceCreate
     ): Result<Boolean>
 }

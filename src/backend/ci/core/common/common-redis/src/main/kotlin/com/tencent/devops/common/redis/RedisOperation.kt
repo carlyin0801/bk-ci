@@ -74,10 +74,6 @@ class RedisOperation(private val redisTemplate: RedisTemplate<String, String>) {
         return redisTemplate.hasKey(key)
     }
 
-    fun keys(pattern: String): Set<String> {
-        return redisTemplate.keys(pattern) ?: emptySet()
-    }
-
     fun scan(pattern: String): Set<String> {
         val connection = redisTemplate.connectionFactory.connection
         val keys = hashSetOf<String>()

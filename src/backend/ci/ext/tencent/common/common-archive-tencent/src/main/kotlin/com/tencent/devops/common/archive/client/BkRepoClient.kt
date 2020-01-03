@@ -68,7 +68,7 @@ class BkRepoClient @Autowired constructor(
 ) {
 
     private fun getGatewaytUrl(): String {
-        return if (commonConfig.devopsHostGateway!!.startsWith("http://")) {
+        return if (commonConfig.devopsHostGateway!!.startsWith("http")) {
             commonConfig.devopsHostGateway!!
         } else {
             "http://${commonConfig.devopsHostGateway!!}"

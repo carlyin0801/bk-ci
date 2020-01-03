@@ -24,21 +24,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.plugin.resources
+package com.tencent.devops.experience.resources.builds
 
+import com.tencent.devops.common.api.exception.ParamBlankException
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.RestResource
-import com.tencent.devops.plugin.api.ServiceTaskResource
-import com.tencent.devops.plugin.pojo.TaskData
-import com.tencent.devops.plugin.service.TaskService
+import com.tencent.devops.experience.api.builds.BuildExperienceResource
+import com.tencent.devops.experience.pojo.ExperienceServiceCreate
+import com.tencent.devops.experience.service.ExperienceService
 import org.springframework.beans.factory.annotation.Autowired
 
 @RestResource
-class ServiceTaskResourceImpl @Autowired constructor(
-    private val taskService: TaskService
-) : ServiceTaskResource {
-    override fun create(taskData: TaskData): Result<Boolean> {
-        taskService.create(taskData)
+class BuildExperienceResourceImpl @Autowired constructor(private val experienceService: ExperienceService) :
+    BuildExperienceResource {
+
+    override fun create(userId: String, projectId: String, experience: ExperienceServiceCreate): Result<Boolean> {
+        checkParam(userId, projectId)
+        experienceService.serviceCreate(userId, projectId, experience)
         return Result(true)
+    }
+
+    private fun checkParam(userId: String, projectId: String) {
+        if (userId.isBlank()) {
+            throw ParamBlankException("Invalid userId")
+        }
+        if (projectId.isBlank()) {
+            throw ParamBlankException("Invalid projectId")
+        }
     }
 }
