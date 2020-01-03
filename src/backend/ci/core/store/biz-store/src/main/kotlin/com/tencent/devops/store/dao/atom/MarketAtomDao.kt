@@ -434,6 +434,7 @@ class MarketAtomDao : AtomBaseDao() {
                 HTML_TEMPLATE_VERSION,
                 VISIBILITY_LEVEL,
                 PUBLISHER,
+                WEIGHT,
                 CREATOR,
                 MODIFIER
             )
@@ -466,6 +467,7 @@ class MarketAtomDao : AtomBaseDao() {
                     atomRequest.frontendType.typeVersion,
                     atomRecord.visibilityLevel,
                     atomRequest.publisher,
+                    atomRecord.weight,
                     userId,
                     userId
                 )
