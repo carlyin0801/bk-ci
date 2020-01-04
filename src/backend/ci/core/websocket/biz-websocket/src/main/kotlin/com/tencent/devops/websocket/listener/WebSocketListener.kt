@@ -49,6 +49,7 @@ class WebSocketListener @Autowired constructor(
     override fun execute(event: SendMessage) {
         logger.info("WebSocketListener: user:${event.userId},page:${event.page},sessionList:${event.sessionList}")
         try {
+            val startTime = System.currentTimeMillis()
             val sessionList = event.sessionList
             if (sessionList != null && sessionList.isNotEmpty()) {
                 if (sessionList.size > 20) {
@@ -57,21 +58,22 @@ class WebSocketListener @Autowired constructor(
                 }
 
                 sessionList.forEach { session ->
-                    if (!websocketService.getCacheSession().contains(session)) {
-                        return
+                    if (websocketService.isCacheSession(session)) {
+                        val pushStartTime = System.currentTimeMillis()
+                        messagingTemplate!!.convertAndSend(
+                            "/topic/bk/notify/$session",
+                            objectMapper.writeValueAsString(event.notifyPost)
+                        )
+                        if(System.currentTimeMillis() - pushStartTime > 500){
+                            logger.warn("WebSocketListener push msg consuming 500ms, page[$event.page], session[$session]")
+                        }
                     }
-                    val startTime = System.currentTimeMillis()
-                    messagingTemplate!!.convertAndSend(
-                        "/topic/bk/notify/$session",
-                        objectMapper.writeValueAsString(event.notifyPost)
-                    )
-                    if (System.currentTimeMillis() - startTime > 100) {
-                        logger.warn("websocketList: messagingTemplate spent more 100ms, page:${event.page}, sessionList:$sessionList}")
-                    }
-                    logger.info("[sendWebsocket] session:$session, type:${event.notifyPost.webSocketType}, page:${event.notifyPost.page}")
                 }
             } else {
                 logger.info("webSocketListener sessionList is empty. page:${event.page} user:${event.userId} ")
+            }
+            if(System.currentTimeMillis() - startTime > 1000){
+                logger.warn("WebSocketListener push all message consuming 1s, page[$event.page], session[${event.sessionList}]")
             }
         } catch (ex: Exception) {
             logger.error("webSocketListener error", ex)

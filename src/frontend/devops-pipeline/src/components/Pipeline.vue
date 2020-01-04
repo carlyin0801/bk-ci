@@ -15,7 +15,7 @@
         </div>
 
         <bk-dialog v-model="isStageShow"
-            width="620"
+            width="720"
             ext-cls="pipeline-type-container"
             title="请选择Job类型"
             :show-footer="false"

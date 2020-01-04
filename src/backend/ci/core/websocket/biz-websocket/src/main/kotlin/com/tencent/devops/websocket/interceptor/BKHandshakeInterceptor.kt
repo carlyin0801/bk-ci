@@ -58,9 +58,7 @@ class BKHandshakeInterceptor @Autowired constructor(
             val sessionId = request.servletRequest.getParameter("sessionId")
             var userId = request.servletRequest.getHeader(AUTH_HEADER_DEVOPS_USER_ID)
             if (userId != null && sessionId != null) {
-                if(websocketService.getCacheSession().contains(sessionId)){
-                    logger.warn("websocket connection: this session[$sessionId] exist")
-                }
+                websocketService.addCacheSession(sessionId)
                 RedisUtlis.writeSessionIdByRedis(redisOperation, userId, sessionId)
                 websocketService.createCacheSession(sessionId)
                 logger.info(
@@ -69,6 +67,7 @@ class BKHandshakeInterceptor @Autowired constructor(
                         userId
                     )}"
                 )
+                websocketService.createTimeoutSession(sessionId, userId)
             }
         }
     }
