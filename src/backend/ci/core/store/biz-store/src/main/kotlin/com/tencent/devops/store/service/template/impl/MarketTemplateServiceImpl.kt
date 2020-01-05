@@ -29,6 +29,7 @@ package com.tencent.devops.store.service.template.impl
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.PageUtil
 import com.tencent.devops.common.api.util.timestampmilli
@@ -61,14 +62,11 @@ import com.tencent.devops.store.pojo.common.KEY_CATEGORY_CODE
 import com.tencent.devops.store.pojo.common.LATEST
 import com.tencent.devops.store.pojo.common.MarketItem
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
-import com.tencent.devops.store.pojo.template.InstallTemplateReq
-import com.tencent.devops.store.pojo.template.MarketTemplateMain
-import com.tencent.devops.store.pojo.template.MarketTemplateResp
-import com.tencent.devops.store.pojo.template.MyTemplateItem
-import com.tencent.devops.store.pojo.template.TemplateDetail
+import com.tencent.devops.store.pojo.template.*
 import com.tencent.devops.store.pojo.template.enums.MarketTemplateSortTypeEnum
 import com.tencent.devops.store.pojo.template.enums.TemplateRdTypeEnum
 import com.tencent.devops.store.pojo.template.enums.TemplateStatusEnum
+import com.tencent.devops.store.pojo.template.enums.TemplateTypeEnum
 import com.tencent.devops.store.service.common.ClassifyService
 import com.tencent.devops.store.service.common.StoreCommentService
 import com.tencent.devops.store.service.common.StoreMemberService
@@ -412,7 +410,41 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
         ))
     }
 
-    /**
+    override fun getTemplateBaseInfoByCode(templateCode: String): Result<TemplateBaseInfo?> {
+        logger.info("getTemplateBaseInfoByCode templateCode is :$templateCode")
+        val templateRecord = marketTemplateDao.getLatestTemplateByCode(dslContext, templateCode)
+        logger.info("the templateRecord is :$templateRecord")
+        return if (null == templateRecord) {
+            Result(null)
+        } else {
+            Result(convertTemplateBaseInfo(templateRecord))
+        }
+    }
+
+    private fun convertTemplateBaseInfo(templateRecord: TTemplateRecord): TemplateBaseInfo {
+        return TemplateBaseInfo(
+                templateId = templateRecord.id,
+                templateCode = templateRecord.templateCode,
+                templateName = templateRecord.templateName,
+                logoUrl = templateRecord.logoUrl,
+                classifyId = templateRecord.classifyId,
+                summary = templateRecord.summary,
+                templateStatus = TemplateStatusEnum.getTemplateStatus(templateRecord.templateStatus.toInt()),
+                description = templateRecord.description,
+                version = templateRecord.version,
+                templateType = TemplateTypeEnum.getTemplateType(templateRecord.templateType.toInt()),
+                latestFlag = templateRecord.latestFlag,
+                publisher = templateRecord.publisher,
+                pubDescription = templateRecord.pubDescription,
+                creator = templateRecord.creator,
+                modifier = templateRecord.modifier,
+                createTime = DateTimeUtil.toDateTime(templateRecord.createTime),
+                updateTime = DateTimeUtil.toDateTime(templateRecord.createTime)
+        )
+    }
+
+
+        /**
      * 删除模版关联关系
      */
     override fun delete(userId: String, templateCode: String): Result<Boolean> {

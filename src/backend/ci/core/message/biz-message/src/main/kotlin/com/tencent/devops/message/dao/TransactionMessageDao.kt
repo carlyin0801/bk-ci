@@ -26,11 +26,13 @@
 
 package com.tencent.devops.message.dao
 
+import com.tencent.devops.message.config.TransactionMessageConfig
 import com.tencent.devops.message.pojo.QueryTransactionMessageParam
 import com.tencent.devops.message.pojo.TransactionMessage
 import com.tencent.devops.message.pojo.UpdateTransactionMessageParam
 import com.tencent.devops.message.pojo.enums.MessageDataTypeEnum
 import com.tencent.devops.message.pojo.enums.MessageStatusEnum
+import com.tencent.devops.message.service.TransactionMessageService
 import com.tencent.devops.model.message.tables.TTransactionMessage
 import com.tencent.devops.model.message.tables.records.TTransactionMessageRecord
 import org.jooq.Condition
@@ -39,11 +41,14 @@ import org.jooq.Field
 import org.jooq.Result
 import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 
 @Repository
-class TransactionMessageDao {
+class TransactionMessageDao@Autowired constructor(
+        private val transactionMessageConfig: TransactionMessageConfig
+) {
 
     private val logger = LoggerFactory.getLogger(TransactionMessageDao::class.java)
 
@@ -216,9 +221,9 @@ class TransactionMessageDao {
         }
     }
 
-    fun timestampSubMinute(minute: Field<Int>): Field<LocalDateTime> {
+    fun timestampSubMinute(sendTimes: Field<Int>): Field<LocalDateTime> {
         return DSL.field("date_sub(NOW(), interval {0} minute)",
-            LocalDateTime::class.java, minute)
+            LocalDateTime::class.java, sendTimes)
     }
 
     fun convert(record: TTransactionMessageRecord): TransactionMessage {

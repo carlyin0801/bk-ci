@@ -32,6 +32,7 @@ import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.store.api.template.ServiceTemplateResource
 import com.tencent.devops.store.pojo.template.InstallTemplateReq
 import com.tencent.devops.store.pojo.template.MarketTemplateResp
+import com.tencent.devops.store.pojo.template.TemplateBaseInfo
 import com.tencent.devops.store.service.template.MarketTemplateService
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -39,6 +40,7 @@ import org.springframework.beans.factory.annotation.Autowired
 class ServiceTemplateResourceImpl @Autowired constructor(
     private val marketTemplateService: MarketTemplateService
 ) : ServiceTemplateResource {
+
     override fun installTemplate(userId: String, installTemplateReq: InstallTemplateReq): Result<Boolean> {
         // 可见与可安装鉴权在marketTemplateService中实现
         return marketTemplateService.installTemplate(
@@ -63,5 +65,9 @@ class ServiceTemplateResourceImpl @Autowired constructor(
                 pageSize = 1
             )
         )
+    }
+
+    override fun getTemplateBaseInfoByCode(templateCode: String): Result<TemplateBaseInfo?> {
+        return  marketTemplateService.getTemplateBaseInfoByCode(templateCode)
     }
 }
