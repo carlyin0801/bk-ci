@@ -29,7 +29,12 @@ package com.tencent.devops.store.service.template
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.pipeline.enums.ChannelCode
-import com.tencent.devops.store.pojo.template.*
+import com.tencent.devops.store.pojo.template.InstallTemplateReq
+import com.tencent.devops.store.pojo.template.MarketTemplateMain
+import com.tencent.devops.store.pojo.template.MarketTemplateResp
+import com.tencent.devops.store.pojo.template.MyTemplateItem
+import com.tencent.devops.store.pojo.template.TemplateBaseInfo
+import com.tencent.devops.store.pojo.template.TemplateDetail
 import com.tencent.devops.store.pojo.template.enums.MarketTemplateSortTypeEnum
 import com.tencent.devops.store.pojo.template.enums.TemplateRdTypeEnum
 

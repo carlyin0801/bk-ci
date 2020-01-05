@@ -62,7 +62,12 @@ import com.tencent.devops.store.pojo.common.KEY_CATEGORY_CODE
 import com.tencent.devops.store.pojo.common.LATEST
 import com.tencent.devops.store.pojo.common.MarketItem
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
-import com.tencent.devops.store.pojo.template.*
+import com.tencent.devops.store.pojo.template.InstallTemplateReq
+import com.tencent.devops.store.pojo.template.MarketTemplateMain
+import com.tencent.devops.store.pojo.template.MarketTemplateResp
+import com.tencent.devops.store.pojo.template.MyTemplateItem
+import com.tencent.devops.store.pojo.template.TemplateBaseInfo
+import com.tencent.devops.store.pojo.template.TemplateDetail
 import com.tencent.devops.store.pojo.template.enums.MarketTemplateSortTypeEnum
 import com.tencent.devops.store.pojo.template.enums.TemplateRdTypeEnum
 import com.tencent.devops.store.pojo.template.enums.TemplateStatusEnum
@@ -415,7 +420,7 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
         val templateRecord = marketTemplateDao.getLatestTemplateByCode(dslContext, templateCode)
         logger.info("the templateRecord is :$templateRecord")
         return if (null == templateRecord) {
-            Result(null)
+            Result(data=null)
         } else {
             Result(convertTemplateBaseInfo(templateRecord))
         }

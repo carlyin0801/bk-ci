@@ -83,6 +83,7 @@ class MessageHandleJob @Autowired constructor(
         val queryTransactionMessageParam = QueryTransactionMessageParam(
                 status = MessageStatusEnum.SENDING,
                 createTime = createTimeBefore,
+                validFlag = true,
                 descFlag = false,
                 isDead = false
         )
@@ -111,7 +112,7 @@ class MessageHandleJob @Autowired constructor(
      */
     private fun getCreateTimeBefore(): LocalDateTime {
         val durationTime = transactionMessageConfig.messageHandleDuration
-        return LocalDateTime.now().minusMinutes(durationTime.toLong())
+        return LocalDateTime.now().minusSeconds(durationTime.toLong())
     }
 
     /**

@@ -24,47 +24,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.message.pojo
+package com.tencent.devops.message.resources
 
-import com.tencent.devops.message.pojo.enums.MessageDataTypeEnum
-import com.tencent.devops.message.pojo.enums.MessageStatusEnum
-import io.swagger.annotations.ApiModel
-import io.swagger.annotations.ApiModelProperty
-import java.time.LocalDateTime
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.message.api.ServiceTransactionMessageResource
+import com.tencent.devops.message.pojo.TransactionMessage
+import com.tencent.devops.message.service.TransactionMessageService
+import org.springframework.beans.factory.annotation.Autowired
 
-@ApiModel("查询事务消息参数")
-data class QueryTransactionMessageParam(
+@RestResource
+class ServiceTransactionMessageResourceImpl @Autowired constructor(
+    private val transactionMessageService: TransactionMessageService
+  ) : ServiceTransactionMessageResource {
 
-    @ApiModelProperty("消息数据类型", required = false)
-    val messageDataType: MessageDataTypeEnum ? = null,
+    override fun saveMessageWaitingConfirm(transactionMessage: TransactionMessage): Result<Boolean> {
+        return transactionMessageService.saveMessageWaitingConfirm(transactionMessage)
+    }
 
-    @ApiModelProperty("消息队列名称", required = false)
-    val consumerQueue: String ? = null,
+    override fun confirmAndSendMessage(messageId: String): Result<Boolean> {
+        return transactionMessageService.confirmAndSendMessage(messageId)
+    }
 
-    @ApiModelProperty("消息发送次数", required = false)
-    val messageSendTimes: Int ? = null,
-
-    @ApiModelProperty("消息是否死亡", required = false)
-    val isDead: Boolean ? = null,
-
-    @ApiModelProperty("消息状态", required = false)
-    val status: MessageStatusEnum ? = null,
-
-    @ApiModelProperty("创建时间", required = false)
-    val createTime: LocalDateTime ? = null,
-
-    @ApiModelProperty("修改时间", required = false)
-    val updateTime: LocalDateTime ? = null,
-
-    @ApiModelProperty("查询待发送消息开关", required = false)
-    val validFlag: Boolean ? = null,
-
-    @ApiModelProperty("是否倒序查询", required = false)
-    val descFlag: Boolean  = true,
-
-    @ApiModelProperty("页码", required = false)
-    val page: Int ? = null,
-
-    @ApiModelProperty("每页大小", required = false)
-    val pageSize: Int ? = null
-)
+    override fun deleteMessageByMessageId(messageId: String): Result<Boolean> {
+        return transactionMessageService.deleteMessageByMessageId(messageId)
+    }
+}

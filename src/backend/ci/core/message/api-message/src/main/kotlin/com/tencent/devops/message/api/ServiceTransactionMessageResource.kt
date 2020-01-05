@@ -24,47 +24,44 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.message.pojo
+package com.tencent.devops.message.api
 
-import com.tencent.devops.message.pojo.enums.MessageDataTypeEnum
-import com.tencent.devops.message.pojo.enums.MessageStatusEnum
-import io.swagger.annotations.ApiModel
-import io.swagger.annotations.ApiModelProperty
-import java.time.LocalDateTime
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.message.pojo.TransactionMessage
+import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
+import io.swagger.annotations.ApiParam
+import org.springframework.web.bind.annotation.PathVariable
+import javax.ws.rs.*
+import javax.ws.rs.core.MediaType
 
-@ApiModel("查询事务消息参数")
-data class QueryTransactionMessageParam(
+@Api(tags = ["SERVICE_MESSAGE"], description = "事务消息")
+@Path("/service/message/transaction")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+interface ServiceTransactionMessageResource {
 
-    @ApiModelProperty("消息数据类型", required = false)
-    val messageDataType: MessageDataTypeEnum ? = null,
+    @ApiOperation("预存储消息")
+    @POST
+    @Path("/saveMessageWaitingConfirm")
+    fun saveMessageWaitingConfirm(
+            @ApiParam("事务消息", required = true)
+            transactionMessage: TransactionMessage
+    ): Result<Boolean>
 
-    @ApiModelProperty("消息队列名称", required = false)
-    val consumerQueue: String ? = null,
+    @ApiOperation("确认并发送消息")
+    @POST
+    @Path("/ids/{messageId}/confirmAndSendMessage")
+    fun confirmAndSendMessage(
+            @ApiParam("消息ID", required = true)
+            @PathParam("messageId")
+            messageId: String
+    ): Result<Boolean>
 
-    @ApiModelProperty("消息发送次数", required = false)
-    val messageSendTimes: Int ? = null,
-
-    @ApiModelProperty("消息是否死亡", required = false)
-    val isDead: Boolean ? = null,
-
-    @ApiModelProperty("消息状态", required = false)
-    val status: MessageStatusEnum ? = null,
-
-    @ApiModelProperty("创建时间", required = false)
-    val createTime: LocalDateTime ? = null,
-
-    @ApiModelProperty("修改时间", required = false)
-    val updateTime: LocalDateTime ? = null,
-
-    @ApiModelProperty("查询待发送消息开关", required = false)
-    val validFlag: Boolean ? = null,
-
-    @ApiModelProperty("是否倒序查询", required = false)
-    val descFlag: Boolean  = true,
-
-    @ApiModelProperty("页码", required = false)
-    val page: Int ? = null,
-
-    @ApiModelProperty("每页大小", required = false)
-    val pageSize: Int ? = null
-)
+    @ApiOperation("删除消息")
+    @DELETE
+    @Path("/ids/{messageId}")
+    fun deleteMessageByMessageId(
+            @PathVariable("messageId") messageId: String
+    ): Result<Boolean>
+}
