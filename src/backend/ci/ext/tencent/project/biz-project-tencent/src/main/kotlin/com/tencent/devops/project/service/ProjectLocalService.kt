@@ -598,6 +598,10 @@ class ProjectLocalService @Autowired constructor(
 
             val grayProjectSet = grayProjectSet()
 
+            if(projectIdList == null || projectIdList.isEmpty()){
+                return emptyList()
+            }
+
             projectDao.list(dslContext, projectIdList).filter {
                 includeDisable == true || it.enabled == null || it.enabled
             }.map {
