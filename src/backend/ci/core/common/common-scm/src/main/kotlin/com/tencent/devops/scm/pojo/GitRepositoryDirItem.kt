@@ -24,11 +24,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.artifactory.pojo.enums
+package com.tencent.devops.scm.pojo
 
-enum class FileTypeEnum(val fileType: String) {
-    BK_ARCHIVE("bk-archive"), // 根据每次构建有独立的存储
-    BK_CUSTOM("bk-custom"), // 指定了自定义路径的归档类型，会覆盖
-    BK_REPORT("bk-report"), // 报告产出物
-    BK_PLUGIN_FE("bk-plugin-fe") // 插件自定义UI前端文件
-}
+import io.swagger.annotations.ApiModel
+import io.swagger.annotations.ApiModelProperty
+
+@ApiModel("git仓库文件和目录列表")
+class GitRepositoryDirItem(
+    @ApiModelProperty("ID", required = true)
+    val id: String,
+    @ApiModelProperty("文件或目录名称", required = true)
+    val name: String,
+    @ApiModelProperty("类型", required = true)
+    val type: String,
+    @ApiModelProperty("模式", required = true)
+    val mode: String
+)

@@ -24,11 +24,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.artifactory.pojo.enums
+package com.tencent.devops.common.api.enums
 
-enum class FileTypeEnum(val fileType: String) {
-    BK_ARCHIVE("bk-archive"), // 根据每次构建有独立的存储
-    BK_CUSTOM("bk-custom"), // 指定了自定义路径的归档类型，会覆盖
-    BK_REPORT("bk-report"), // 报告产出物
-    BK_PLUGIN_FE("bk-plugin-fe") // 插件自定义UI前端文件
+enum class FrontendTypeEnum(val typeVersion: String) {
+    NORMAL("1.1"),  // 官方提供典型的插件UI配置方式
+    SPECIAL("1.2");  // 定制插件UI方式
+
+
+    companion object {
+
+        fun getFrontendTypeObj(typeVersion: String): FrontendTypeEnum? {
+            values().forEach { enumObj ->
+                if (enumObj.typeVersion == typeVersion) {
+                    return enumObj
+                }
+            }
+            return null
+        }
+    }
 }

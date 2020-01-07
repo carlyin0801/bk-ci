@@ -334,6 +334,11 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
                 )
             }
         }
+        val validateResult = validateUpdateMarketAtomReq(userId, marketAtomUpdateRequest, atomRecord)
+        logger.info("validateUpdateMarketAtomReq validateResult is :$validateResult")
+        if (validateResult.isNotOk()) {
+            return Result(validateResult.status, validateResult.message, null)
+        }
         var atomId = UUIDUtil.generate()
         val getAtomConfResult = getAtomConfig(
             atomPackageSourceType = atomPackageSourceType,
@@ -443,6 +448,15 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
         }
         return Result(atomId)
     }
+
+    /**
+     * 校验升级插件参数
+     */
+    abstract fun validateUpdateMarketAtomReq(
+        userId: String,
+        marketAtomUpdateRequest: MarketAtomUpdateRequest,
+        atomRecord: TAtomRecord
+    ): Result<Boolean>
 
     /**
      * 异步处理上架插件信息

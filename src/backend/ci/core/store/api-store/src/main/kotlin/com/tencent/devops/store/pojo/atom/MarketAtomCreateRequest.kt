@@ -27,6 +27,7 @@
 package com.tencent.devops.store.pojo.atom
 
 import com.tencent.devops.repository.pojo.enums.VisibilityLevelEnum
+import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 
@@ -45,5 +46,7 @@ data class MarketAtomCreateRequest(
     @ApiModelProperty(value = "项目可视范围", required = false)
     val visibilityLevel: VisibilityLevelEnum? = null,
     @ApiModelProperty(value = "插件代码库不开源原因", required = false)
-    val privateReason: String? = null
+    val privateReason: String? = null,
+    @ApiModelProperty(value = "前端UI渲染方式", required = true)
+    val frontendType: FrontendTypeEnum = FrontendTypeEnum.NORMAL
 )
