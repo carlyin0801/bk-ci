@@ -95,7 +95,7 @@ class TaskControl @Autowired constructor(
             buildTask.taskParams.putAll(taskParam)
         }
 
-        logger.info("[$buildId]|[${buildInfo.status}]|ATOM_$actionType|taskId=$taskId|status=${buildTask.status}")
+        logger.info("[$buildId]|[${buildInfo.status}]|ATOM_$actionType|taskId=$taskId|status=${buildTask.status}|executeCount=${buildTask.executeCount}")
         val buildStatus = when {
             BuildStatus.isReadyToRun(buildTask.status) -> { // 准备启动执行
                 if (ActionType.isEnd(actionType)) {

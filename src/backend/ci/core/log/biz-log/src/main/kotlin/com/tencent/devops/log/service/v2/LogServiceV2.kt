@@ -107,6 +107,7 @@ class LogServiceV2 @Autowired constructor(
     }
 
     fun addLogEvent(event: LogEvent) {
+        with(event) { logger.info("[$buildId|${logs.first().tag}|${logs.first().jobId}|${logs.first().executeCount}] new log") }
         startLog(event.buildId)
         val logMessage = addLineNo(event.buildId, event.logs)
         LogDispatcher.dispatch(rabbitTemplate, LogBatchEvent(event.buildId, logMessage))

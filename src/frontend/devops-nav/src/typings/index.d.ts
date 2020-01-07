@@ -30,6 +30,9 @@ interface Window {
     serviceObject: ObjectMap
     currentPage: subService
     userInfo: User
+    vuexStore: any
+    setLsCacheItem: Function
+    getLsCacheItem: Function
     setProjectIdCookie: Function
     JSONP: Function
     GLOBAL_PID: string
@@ -58,9 +61,10 @@ interface Permission {
 }
 
 declare var LOGIN_SERVICE_URL: string
-declare var LOGOUT_SERVICE_URL: string
 declare var GW_URL_PREFIX: string
 declare var DOCS_URL_PREFIX: string
+declare var DEVOPS_LS_VERSION: string
+declare var ENTERPRISE_VERSION: string
 declare module '*.png'
 declare const require: any
 declare const X_DEVOPS_PROJECT_ID: string

@@ -69,20 +69,20 @@
                 gitPullModeVal: (this.value && this.value.value) || '',
                 gitPullModeList: {
                     BRANCH: {
-                        label: '分支名称',
-                        placeholder: '请输入分支',
+                        label: this.$t('editPage.branch'),
+                        placeholder: this.$t('editPage.branchTips'),
                         url: `/process/api/user/scm/{projectId}/{repositoryHashId}/branches`,
                         default: 'master'
                     },
                     TAG: {
                         label: 'Tag',
-                        placeholder: '请输入Tag',
+                        placeholder: this.$t('editPage.tagTips'),
                         url: `/process/api/user/scm/{projectId}/{repositoryHashId}/tags`,
                         default: ''
                     },
                     COMMIT_ID: {
                         label: 'CommitID',
-                        placeholder: '请输入指定CommitID',
+                        placeholder: this.$t('editPage.commitIdTips'),
                         default: ''
                     }
                 },
@@ -90,17 +90,17 @@
                     {
                         id: 'branch',
                         value: 'BRANCH',
-                        label: '按分支'
+                        label: this.$t('editPage.branchLabel')
                     },
                     {
                         id: 'tag',
                         value: 'TAG',
-                        label: '按TAG'
+                        label: this.$t('editPage.tagLabel')
                     },
                     {
                         id: 'commitId',
                         value: 'COMMIT_ID',
-                        label: '按CommitID'
+                        label: this.$t('editPage.commitIdLabel')
                     }
                 ]
             }

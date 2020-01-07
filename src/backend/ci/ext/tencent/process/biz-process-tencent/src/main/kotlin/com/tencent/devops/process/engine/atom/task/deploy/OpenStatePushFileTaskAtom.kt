@@ -26,6 +26,7 @@
 
 package com.tencent.devops.process.engine.atom.task.deploy
 
+import com.tencent.devops.common.api.pojo.ErrorType
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.archive.client.BkRepoClient
 import com.tencent.devops.common.archive.client.JfrogService
@@ -51,7 +52,6 @@ import com.tencent.devops.process.engine.common.BS_ATOM_START_TIME_MILLS
 import com.tencent.devops.process.engine.common.BS_TASK_HOST
 import com.tencent.devops.process.engine.exception.BuildTaskException
 import com.tencent.devops.process.engine.pojo.PipelineBuildTask
-import com.tencent.devops.process.pojo.ErrorType
 import com.tencent.devops.process.service.PipelineUserService
 import com.tencent.devops.process.util.CommonUtils
 import com.tencent.devops.project.api.service.ServiceProjectResource
@@ -178,9 +178,7 @@ class OpenStatePushFileTaskAtom @Autowired constructor(
 
         val srcPath = parseVariable(param.srcPath, runVariables)
         val isRepoGray = repoGray.isGray(projectId, redisOperation)
-        if (isRepoGray) {
-            LogUtils.addLine(rabbitTemplate, buildId, "use bkrepo: $isRepoGray", taskId, containerId, executeCount)
-        }
+        LogUtils.addLine(rabbitTemplate, buildId, "use bkrepo: $isRepoGray", taskId, containerId, executeCount)
 
         // 下载所有文件
         var count = 0
@@ -192,7 +190,7 @@ class OpenStatePushFileTaskAtom @Autowired constructor(
         }.forEach { path ->
             val files = if (isRepoGray) {
                 bkRepoClient.downloadFileByPattern(
-                    user = userId,
+                    userId = userId,
                     projectId = projectId,
                     pipelineId = pipelineId,
                     buildId = buildId,

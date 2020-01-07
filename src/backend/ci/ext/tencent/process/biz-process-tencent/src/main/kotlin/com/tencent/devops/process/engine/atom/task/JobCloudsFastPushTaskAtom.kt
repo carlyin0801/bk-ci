@@ -26,6 +26,8 @@
 
 package com.tencent.devops.process.engine.atom.task
 
+import com.tencent.devops.common.api.pojo.ErrorCode
+import com.tencent.devops.common.api.pojo.ErrorType
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.UUIDUtil
 import com.tencent.devops.common.archive.client.BkRepoClient
@@ -48,8 +50,6 @@ import com.tencent.devops.process.engine.pojo.PipelineBuildTask
 import com.tencent.devops.process.esb.JobCloudsFastPushFile
 import com.tencent.devops.process.esb.JobFastPushFile
 import com.tencent.devops.process.esb.SourceIp
-import com.tencent.devops.process.pojo.AtomErrorCode
-import com.tencent.devops.process.pojo.ErrorType
 import com.tencent.devops.process.util.CommonUtils
 import com.tencent.devops.project.api.service.ServiceProjectResource
 import org.apache.commons.codec.digest.DigestUtils
@@ -62,7 +62,7 @@ import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import java.nio.file.Files
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.util.*
 
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
@@ -101,7 +101,7 @@ class JobCloudsFastPushTaskAtom @Autowired constructor(
             ?: return if (force) AtomResponse(
                 buildStatus = BuildStatus.FAILED,
                 errorType = ErrorType.SYSTEM,
-                errorCode = AtomErrorCode.USER_INPUT_INVAILD,
+                errorCode = ErrorCode.USER_INPUT_INVAILD,
                 errorMsg = "JOB_TASK_ID is not correct"
             ) else AtomResponse(task.status)
         val firstStatus = task.taskParams[FIRST_STATUS] as String?
@@ -193,7 +193,7 @@ class JobCloudsFastPushTaskAtom @Autowired constructor(
                 AtomResponse(
                     buildStatus = BuildStatus.FAILED,
                     errorType = ErrorType.USER,
-                    errorCode = AtomErrorCode.USER_TASK_OPERATE_FAIL,
+                    errorCode = ErrorCode.USER_TASK_OPERATE_FAIL,
                     errorMsg = "send cloud stone file to Svr fail"
                 )
             else {
@@ -276,19 +276,20 @@ class JobCloudsFastPushTaskAtom @Autowired constructor(
         val isCustom = param.srcType.toUpperCase() == "CUSTOMIZE"
         val regexPathsStr = parseVariable(param.srcPath, runVariables)
         var count = 0
-        val isRepoGray = repoGray.isGray(projectId, redisOperation)
-        LogUtils.addLine(rabbitTemplate, buildId, "use bkrepo: $isRepoGray", taskId, containerId, executeCount)
+
         try {
-            if(isRepoGray){
+            val isRepoGray = repoGray.isGray(projectId, redisOperation)
+            LogUtils.addLine(rabbitTemplate, buildId, "use bkrepo: $isRepoGray", taskId, containerId, executeCount)
+            if (isRepoGray) {
                 regexPathsStr.split(",").forEach { regex ->
                     val files = bkRepoClient.downloadFileByPattern(
-                        userId,
-                        projectId,
-                        pipelineId,
-                        buildId,
-                        if(isCustom) "custom" else "pipeline",
-                        regex.trim(),
-                        workspace.canonicalPath
+                        userId = userId,
+                        projectId = projectId,
+                        pipelineId = pipelineId,
+                        buildId = buildId,
+                        repoName = if (isCustom) "custom" else "pipeline",
+                        pathPattern = regex.trim(),
+                        destPath = workspace.canonicalPath
                     )
                     count += files.size
                     files.forEach { file ->
@@ -297,9 +298,9 @@ class JobCloudsFastPushTaskAtom @Autowired constructor(
                     }
                 }
             } else {
-                val jfrogClient = JfrogClient(commonConfig.devopsHostGateway!!, projectId, pipelineId, buildId)
+                val jfrogClinet = JfrogClient(commonConfig.devopsHostGateway!!, projectId, pipelineId, buildId)
                 regexPathsStr.split(",").forEach { regex ->
-                    val files = jfrogClient.downloadFile(regex.trim(), isCustom, workspace.canonicalPath)
+                    val files = jfrogClinet.downloadFile(regex.trim(), isCustom, workspace.canonicalPath)
                     count += files.size
                     files.forEach { file ->
                         localFileList.add(file.absolutePath)
@@ -307,6 +308,7 @@ class JobCloudsFastPushTaskAtom @Autowired constructor(
                     }
                 }
             }
+
 
             LogUtils.addLine(rabbitTemplate, buildId, "Param cloudStonePath=$cloudStonePath", taskId, containerId, executeCount)
             LogUtils.addLine(rabbitTemplate, buildId, "Param isCustom=$isCustom", taskId, containerId, executeCount)

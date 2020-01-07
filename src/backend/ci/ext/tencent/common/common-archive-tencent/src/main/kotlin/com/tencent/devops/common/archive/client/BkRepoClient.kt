@@ -49,6 +49,7 @@ import com.tencent.devops.common.archive.pojo.BkRepoFile
 import com.tencent.devops.common.archive.pojo.CreateShareUriRequest
 import com.tencent.devops.common.archive.pojo.CreateShareUriResponse
 import com.tencent.devops.common.service.config.CommonConfig
+import com.tencent.devops.common.service.utils.HomeHostUtil
 import okhttp3.MediaType
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -62,17 +63,12 @@ import java.nio.file.FileSystems
 import java.nio.file.Paths
 import javax.ws.rs.NotFoundException
 
-class BkRepoClient @Autowired constructor(
+class BkRepoClient constructor(
     private val objectMapper: ObjectMapper,
     private val commonConfig: CommonConfig
 ) {
-
     private fun getGatewaytUrl(): String {
-        return if (commonConfig.devopsHostGateway!!.startsWith("http")) {
-            commonConfig.devopsHostGateway!!
-        } else {
-            "http://${commonConfig.devopsHostGateway!!}"
-        }
+        return HomeHostUtil.getHost(commonConfig.devopsHostGateway!!)
     }
 
     fun getFileSize(userId: String, projectId: String, repoName: String, path: String): NodeSizeInfo {
@@ -461,9 +457,10 @@ class BkRepoClient @Autowired constructor(
         buildId: String,
         isCustom: Boolean
     ): List<BkRepoFile> {
+        logger.info("matchBkRepoFile, userId: $userId, srcPath: $srcPath, projectId: $projectId, pipelineId: $pipelineId, buildId: $buildId, isCustom: $isCustom")
         val result = mutableListOf<BkRepoFile>()
         val bkRepoData = getAllBkRepoFiles(userId, projectId, pipelineId, buildId, isCustom)
-        val matcher = FileSystems.getDefault().getPathMatcher("glob:$srcPath")
+        val matcher = FileSystems.getDefault().getPathMatcher("glob:${srcPath.removePrefix("/")}")
         val pipelinePathPrefix = "/$pipelineId/$buildId/"
         bkRepoData.data?.forEach { bkrepoFile ->
             val repoPath = if (isCustom) {
@@ -584,7 +581,7 @@ class BkRepoClient @Autowired constructor(
     }
 
     fun downloadFileByPattern(
-        user: String,
+        userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String,
@@ -593,7 +590,7 @@ class BkRepoClient @Autowired constructor(
         destPath: String
     ): List<File> {
         val fileList = listFileByPattern(
-            user,
+            userId,
             projectId,
             pipelineId,
             buildId,
@@ -605,7 +602,7 @@ class BkRepoClient @Autowired constructor(
         val destFiles = mutableListOf<File>()
         fileList.forEach {
             val destFile = File(destPath, it.name)
-            downloadFile(user, projectId, repoName, it.fullPath, destFile)
+            downloadFile(userId, projectId, repoName, it.fullPath, destFile)
             destFiles.add(destFile)
             logger.info("save file : ${destFile.canonicalPath} (${destFile.length()})")
         }

@@ -182,8 +182,8 @@ object AgentEnv {
 
     private fun getProperty(prop: String): String? {
         val buildType = BuildEnv.getBuildType()
-        if (buildType == BuildType.DOCKER) {
-            logger.info("buildType is $buildType")
+        logger.info("buildType is $buildType")
+        if (buildType == BuildType.DOCKER || buildType == BuildType.MACOS) {
             return getEnv(prop)
         }
 

@@ -26,8 +26,13 @@
 
 package com.tencent.devops.plugin.quality
 
+import com.tencent.devops.common.client.Client
+import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
+import com.tencent.devops.plugin.quality.task.QualityGateInTaskAtom
+import com.tencent.devops.plugin.quality.task.QualityGateOutTaskAtom
 import com.tencent.devops.quality.QualityGateInElementBizPlugin
 import com.tencent.devops.quality.QualityGateOutElementBizPlugin
+import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.boot.autoconfigure.AutoConfigureOrder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -42,4 +47,18 @@ class QualityAutoConfiguration {
 
     @Bean
     fun qualityGateOutElementBizPlugin() = QualityGateOutElementBizPlugin()
+
+    @Bean
+    fun qualityGateInTaskAtom(
+        client: Client,
+        rabbitTemplate: RabbitTemplate,
+        pipelineEventDispatcher: PipelineEventDispatcher
+    ) = QualityGateInTaskAtom(client, rabbitTemplate, pipelineEventDispatcher)
+
+    @Bean
+    fun qualityGateOutTaskAtom(
+        client: Client,
+        rabbitTemplate: RabbitTemplate,
+        pipelineEventDispatcher: PipelineEventDispatcher
+    ) = QualityGateOutTaskAtom(client, rabbitTemplate, pipelineEventDispatcher)
 }
