@@ -43,12 +43,14 @@ import com.tencent.devops.common.api.constant.NUM_TWO
 import com.tencent.devops.common.api.constant.SUCCESS
 import com.tencent.devops.common.api.constant.TEST
 import com.tencent.devops.common.api.constant.UNDO
+import com.tencent.devops.common.api.enums.FrontendTypeEnum
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.pipeline.pojo.AtomBaseInfo
 import com.tencent.devops.common.pipeline.pojo.AtomMarketInitPipelineReq
 import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.model.store.tables.records.TAtomRecord
 import com.tencent.devops.process.api.service.ServiceBuildResource
 import com.tencent.devops.process.api.service.ServicePipelineInitResource
 import com.tencent.devops.repository.api.ServiceGitRepositoryResource
@@ -61,8 +63,10 @@ import com.tencent.devops.store.dao.atom.MarketAtomBuildInfoDao
 import com.tencent.devops.store.dao.common.StorePipelineBuildRelDao
 import com.tencent.devops.store.dao.common.StorePipelineRelDao
 import com.tencent.devops.store.pojo.atom.MarketAtomCreateRequest
+import com.tencent.devops.store.pojo.atom.MarketAtomUpdateRequest
 import com.tencent.devops.store.pojo.atom.enums.AtomPackageSourceTypeEnum
 import com.tencent.devops.store.pojo.atom.enums.AtomStatusEnum
+import com.tencent.devops.store.pojo.common.BK_FRONTEND_DIR_NAME
 import com.tencent.devops.store.pojo.common.ReleaseProcessItem
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.service.atom.TxAtomReleaseService
@@ -124,16 +128,17 @@ class TxAtomReleaseServiceImpl : TxAtomReleaseService, AtomReleaseServiceImpl() 
         // 远程调工蜂接口创建代码库
         try {
             val createGitRepositoryResult = client.get(ServiceGitRepositoryResource::class).createGitCodeRepository(
-                userId,
-                marketAtomCreateRequest.projectCode,
-                atomCode,
-                marketAtomBuildInfoDao.getAtomBuildInfoByLanguage(
+                userId = userId,
+                projectCode = marketAtomCreateRequest.projectCode,
+                repositoryName = atomCode,
+                sampleProjectPath = marketAtomBuildInfoDao.getAtomBuildInfoByLanguage(
                     dslContext,
                     marketAtomCreateRequest.language
                 ).sampleProjectPath,
-                pluginNameSpaceId.toInt(),
-                marketAtomCreateRequest.visibilityLevel,
-                TokenTypeEnum.PRIVATE_KEY
+                namespaceId = pluginNameSpaceId.toInt(),
+                visibilityLevel = marketAtomCreateRequest.visibilityLevel,
+                tokenType = TokenTypeEnum.PRIVATE_KEY,
+                frontendType = marketAtomCreateRequest.frontendType
             )
             logger.info("the createGitRepositoryResult is :$createGitRepositoryResult")
             if (createGitRepositoryResult.isOk()) {
@@ -183,6 +188,44 @@ class TxAtomReleaseServiceImpl : TxAtomReleaseService, AtomReleaseServiceImpl() 
     override fun asyncHandleUpdateAtom(context: DSLContext, atomId: String, userId: String) {
         // 执行构建流水线
         runPipeline(context, atomId, userId)
+    }
+
+    override fun validateUpdateMarketAtomReq(
+        userId: String,
+        marketAtomUpdateRequest: MarketAtomUpdateRequest,
+        atomRecord: TAtomRecord
+    ): Result<Boolean> {
+        logger.info("validateUpdateMarketAtomReq userId is:$userId,marketAtomUpdateRequest is:$marketAtomUpdateRequest")
+        val frontendType = marketAtomUpdateRequest.frontendType
+        if (frontendType == FrontendTypeEnum.SPECIAL) {
+            val repositoryTreeInfoResult = client.get(ServiceGitRepositoryResource::class).getGitRepositoryTreeInfo(
+                userId = userId,
+                repoId = atomRecord.repositoryHashId,
+                refName = null,
+                path = null,
+                tokenType = TokenTypeEnum.PRIVATE_KEY
+            )
+            logger.info("the repositoryTreeInfoResult is :$repositoryTreeInfoResult")
+            if (repositoryTreeInfoResult.isNotOk()) {
+                return Result(repositoryTreeInfoResult.status, repositoryTreeInfoResult.message, false)
+            }
+            val repositoryTreeInfoList = repositoryTreeInfoResult.data
+            var flag = false
+            repositoryTreeInfoList?.forEach {
+                if (it.name == BK_FRONTEND_DIR_NAME && it.type == "tree") {
+                    flag = true
+                    return@forEach
+                }
+            }
+            if (!flag) {
+                return MessageCodeUtil.generateResponseDataObject(
+                    StoreMessageCode.USER_REPOSITORY_BK_FRONTEND_DIR_IS_NULL,
+                    arrayOf(BK_FRONTEND_DIR_NAME),
+                    false
+                )
+            }
+        }
+        return Result(true)
     }
 
     override fun handleProcessInfo(isNormalUpgrade: Boolean, status: Int): List<ReleaseProcessItem> {
@@ -383,5 +426,95 @@ class TxAtomReleaseServiceImpl : TxAtomReleaseService, AtomReleaseServiceImpl() 
             storeWebsocketService.sendWebsocketMessage(userId, atomId)
         }
         return true
+    }
+
+    /**
+     * 检查版本发布过程中的操作权限
+     */
+    override fun checkAtomVersionOptRight(
+        userId: String,
+        atomId: String,
+        status: Byte,
+        isNormalUpgrade: Boolean?
+    ): Pair<Boolean, String> {
+        logger.info("checkAtomVersionOptRight, userId=$userId, atomId=$atomId, status=$status, isNormalUpgrade=$isNormalUpgrade")
+        val record =
+            marketAtomDao.getAtomRecordById(dslContext, atomId) ?: return Pair(false, CommonMessageCode.PARAMETER_IS_INVALID)
+        val atomCode = record.atomCode
+        val modifier = record.modifier
+        val recordStatus = record.atomStatus
+
+        // 判断用户是否有权限
+        if (!(storeMemberDao.isStoreAdmin(
+                dslContext,
+                userId,
+                atomCode,
+                StoreTypeEnum.ATOM.type.toByte()
+            ) || modifier == userId)
+        ) {
+            return Pair(false, CommonMessageCode.PERMISSION_DENIED)
+        }
+        logger.info("record status=$recordStatus, status=$status")
+        val allowReleaseStatus = if (isNormalUpgrade != null && isNormalUpgrade) AtomStatusEnum.TESTING
+        else AtomStatusEnum.AUDITING
+        var validateFlag = true
+        if (status == AtomStatusEnum.COMMITTING.status.toByte() &&
+            recordStatus != AtomStatusEnum.INIT.status.toByte()
+        ) {
+            validateFlag = false
+        } else if (status == AtomStatusEnum.BUILDING.status.toByte() &&
+            recordStatus !in (
+                listOf(
+                    AtomStatusEnum.COMMITTING.status.toByte(),
+                    AtomStatusEnum.BUILD_FAIL.status.toByte(),
+                    AtomStatusEnum.TESTING.status.toByte()
+                ))
+        ) {
+            validateFlag = false
+        } else if (status == AtomStatusEnum.BUILD_FAIL.status.toByte() &&
+            recordStatus !in (
+                listOf(
+                    AtomStatusEnum.COMMITTING.status.toByte(),
+                    AtomStatusEnum.BUILDING.status.toByte(),
+                    AtomStatusEnum.BUILD_FAIL.status.toByte(),
+                    AtomStatusEnum.TESTING.status.toByte()
+                ))
+        ) {
+            validateFlag = false
+        } else if (status == AtomStatusEnum.TESTING.status.toByte() &&
+            recordStatus != AtomStatusEnum.BUILDING.status.toByte()
+        ) {
+            validateFlag = false
+        } else if (status == AtomStatusEnum.AUDITING.status.toByte() &&
+            recordStatus != AtomStatusEnum.TESTING.status.toByte()
+        ) {
+            validateFlag = false
+        } else if (status == AtomStatusEnum.AUDIT_REJECT.status.toByte() &&
+            recordStatus != AtomStatusEnum.AUDITING.status.toByte()
+        ) {
+            validateFlag = false
+        } else if (status == AtomStatusEnum.RELEASED.status.toByte() &&
+            recordStatus != allowReleaseStatus.status.toByte()
+        ) {
+            validateFlag = false
+        } else if (status == AtomStatusEnum.GROUNDING_SUSPENSION.status.toByte() &&
+            recordStatus == AtomStatusEnum.RELEASED.status.toByte()
+        ) {
+            validateFlag = false
+        } else if (status == AtomStatusEnum.UNDERCARRIAGING.status.toByte() &&
+            recordStatus == AtomStatusEnum.RELEASED.status.toByte()
+        ) {
+            validateFlag = false
+        } else if (status == AtomStatusEnum.UNDERCARRIAGED.status.toByte() &&
+            recordStatus !in (
+                listOf(
+                    AtomStatusEnum.UNDERCARRIAGING.status.toByte(),
+                    AtomStatusEnum.RELEASED.status.toByte()
+                ))
+        ) {
+            validateFlag = false
+        }
+
+        return if (validateFlag) Pair(true, "") else Pair(false, StoreMessageCode.USER_ATOM_RELEASE_STEPS_ERROR)
     }
 }

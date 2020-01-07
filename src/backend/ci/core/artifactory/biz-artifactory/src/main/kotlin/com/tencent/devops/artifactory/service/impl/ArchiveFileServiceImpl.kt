@@ -289,9 +289,9 @@ abstract class ArchiveFileServiceImpl : ArchiveFileService {
 
     override fun archiveFile(
         userId: String,
-        projectId: String,
-        pipelineId: String,
-        buildId: String,
+        projectId: String?,
+        pipelineId: String?,
+        buildId: String?,
         fileType: FileTypeEnum,
         customFilePath: String?,
         inputStream: InputStream,
@@ -304,7 +304,10 @@ abstract class ArchiveFileServiceImpl : ArchiveFileService {
         if (result.isNotOk()) {
             return result
         }
-        val destPath = result.data + fileSeparator + disposition.fileName
+        var destPath = result.data!!
+        if (!destPath.endsWith(disposition.fileName)) {
+            destPath = result.data + fileSeparator + disposition.fileName
+        }
         val props: Map<String, String?>? = mapOf("pipelineId" to pipelineId, "buildId" to buildId)
         return uploadFile(
             userId = userId,
@@ -326,11 +329,13 @@ abstract class ArchiveFileServiceImpl : ArchiveFileService {
         buildId: String?
     ): Result<String> {
         val destPathBuilder = StringBuilder(getBasePath()).append(fileType.fileType).append(fileSeparator)
-        if (!projectId.isNullOrBlank()) {
-            destPathBuilder.append(projectId).append(fileSeparator)
+        if (FileTypeEnum.BK_PLUGIN_FE != fileType) {
+            if (!projectId.isNullOrBlank()) {
+                destPathBuilder.append(projectId).append(fileSeparator)
+            }
         }
 
-        if (FileTypeEnum.BK_CUSTOM == fileType) {
+        if (FileTypeEnum.BK_CUSTOM == fileType || FileTypeEnum.BK_PLUGIN_FE == fileType) {
             if (customFilePath == null) {
                 return MessageCodeUtil.generateResponseDataObject(
                     CommonMessageCode.PARAMETER_IS_NULL,
