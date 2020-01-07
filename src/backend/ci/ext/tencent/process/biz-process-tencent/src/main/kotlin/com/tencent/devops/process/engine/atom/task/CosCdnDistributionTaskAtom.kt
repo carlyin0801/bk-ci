@@ -29,6 +29,7 @@ package com.tencent.devops.process.engine.atom.task
 import com.tencent.devops.common.api.pojo.ErrorCode
 import com.tencent.devops.common.api.pojo.ErrorType
 import com.tencent.devops.common.api.util.JsonUtil
+import com.tencent.devops.common.archive.client.BkRepoClient
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.redis.RedisOperation
@@ -36,6 +37,7 @@ import com.tencent.devops.log.utils.LogUtils
 import com.tencent.devops.plugin.api.cos.ServicePluginCosResource
 import com.tencent.devops.plugin.pojo.cos.CdnUploadFileInfo
 import com.tencent.devops.common.pipeline.element.CosCdnDistributionElement
+import com.tencent.devops.common.service.gray.RepoGray
 import com.tencent.devops.process.engine.atom.AtomResponse
 import com.tencent.devops.process.engine.atom.IAtomTask
 import com.tencent.devops.process.engine.common.BS_ATOM_START_TIME_MILLS
