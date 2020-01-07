@@ -80,13 +80,14 @@ class QualityGateOutTaskAtom @Autowired constructor(
         force: Boolean
     ): AtomResponse {
         val pipelineId = task.pipelineId
-        logger.info("[$pipelineId]")
 
         val buildId = task.buildId
         val taskId = task.taskId
         val taskName = task.taskName
         val success = task.getTaskParam(BS_QUALITY_RESULT)
         val actionUser = task.getTaskParam(BS_MANUAL_ACTION_USERID)
+
+        LogUtils.addLine(rabbitTemplate, buildId, "try finish...", taskId, task.containerHashId, task.executeCount ?: 1)
 
         return if (success.isNotEmpty()) {
             logger.info("[$buildId]|QUALITY_FINISH|taskName=$taskName|taskId=$taskId|success=$success")
@@ -98,7 +99,7 @@ class QualityGateOutTaskAtom @Autowired constructor(
             }
         } else {
             val manualAction = task.getTaskParam(BS_MANUAL_ACTION)
-            logger.info("[$buildId]|QUALITY_FINISH|taskName=$taskName|taskId=${task.taskId}|action=$manualAction")
+            LogUtils.addLine(rabbitTemplate, buildId, "[$buildId]|QUALITY_FINISH|taskName=$taskName|taskId=${task.taskId}|action=$manualAction", taskId, task.containerHashId, task.executeCount ?: 1)
             if (manualAction.isNotEmpty()) {
                 when (ManualReviewAction.valueOf(manualAction)) {
                     ManualReviewAction.PROCESS -> {
