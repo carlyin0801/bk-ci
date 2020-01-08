@@ -88,7 +88,7 @@ class ClearTimeoutCron(
             if (redisData != null) {
                 val newSessionList = mutableListOf<String>()
                 val sessionList = redisData.split(",")
-                if (sessionList == null || sessionList.isEmpty()) {
+                if (sessionList == null || sessionList.isEmpty() ) {
                     logger.info("this bucket is empty,redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}]")
                     continue
                 }
