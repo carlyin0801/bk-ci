@@ -459,7 +459,8 @@ class PipelineService @Autowired constructor(
                 ?: throw ErrorCodeException(
                     statusCode = Response.Status.NOT_FOUND.statusCode,
                     errorCode = ProcessMessageCode.ERROR_PIPELINE_MODEL_NOT_EXISTS,
-                    defaultMessage = "指定要复制的流水线-模型不存在")
+                    defaultMessage = "指定要复制的流水线-模型不存在"
+                )
             // 对已经存在的模型做处理
             modelCheckPlugin.beforeDeleteElementInExistsModel(userId, existModel, model, pipelineId)
 

@@ -66,6 +66,7 @@ import com.tencent.devops.process.plugin.load.ElementBizRegistrar
 import com.tencent.devops.process.pojo.setting.PipelineRunLockType
 import com.tencent.devops.process.pojo.setting.PipelineSetting
 import com.tencent.devops.process.pojo.setting.Subscription
+import com.tencent.devops.process.utils.PipelineVarUtil
 import org.joda.time.LocalDateTime
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
@@ -118,8 +119,9 @@ class PipelineRepositoryService constructor(
             channelCode = channelCode
         )
 
-        val buildNo = (model.stages[0].containers[0] as TriggerContainer).buildNo
         val container = model.stages[0].containers[0] as TriggerContainer
+        val buildNo = container.buildNo
+        val params = container.params
         var canManualStartup = false
         var canElementSkip = false
         run lit@{
@@ -130,6 +132,23 @@ class PipelineRepositoryService constructor(
                     return@lit
                 }
             }
+        }
+
+        // 待开发
+        val allVars = mutableMapOf<String, String>()
+        params.forEach {
+            // 从新转旧: 新流水线产生的变量 兼容在旧流水线中已经使用到的旧变量
+            val oldVarName = PipelineVarUtil.newVarToOldVar(it.key)
+            if (!oldVarName.isNullOrBlank()) {
+                allVars[oldVarName!!] = it.value
+            } else {
+                // 从旧转新: 兼容从旧入口写入的数据转到新的流水线运行
+                val newVarName = PipelineVarUtil.oldVarToNewVar(it.key)
+                if (!newVarName.isNullOrBlank()) {
+                    allVars[newVarName!!] = it.value
+                }
+            }
+            allVars[it.key] = it.value
         }
 
         return if (!create) {
