@@ -298,8 +298,8 @@ class PipelineService @Autowired constructor(
     /**
      * 对于模板， 合并模板的参数，以流水线的为主，如果流水线的有就会覆盖模板的
      */
-    fun mergeProperties(from: List<BuildFormProperty>, to: List<BuildFormProperty>): List<BuildFormProperty> {
-        val result = ArrayList<BuildFormProperty>()
+    fun mergeProperties(from: List<BuildFormProperty>, to: List<BuildFormProperty>): MutableList<BuildFormProperty> {
+        val result = mutableListOf<BuildFormProperty>()
 
         from.forEach { f ->
             var override = false

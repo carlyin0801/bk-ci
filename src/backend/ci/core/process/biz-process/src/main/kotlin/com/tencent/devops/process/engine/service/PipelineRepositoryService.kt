@@ -40,6 +40,7 @@ import com.tencent.devops.common.pipeline.container.TriggerContainer
 import com.tencent.devops.common.pipeline.container.VMBuildContainer
 import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.pipeline.extend.ModelCheckPlugin
+import com.tencent.devops.common.pipeline.pojo.BuildFormProperty
 import com.tencent.devops.common.pipeline.pojo.BuildNo
 import com.tencent.devops.common.pipeline.pojo.element.SubPipelineCallElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGitWebHookTriggerElement
@@ -134,22 +135,30 @@ class PipelineRepositoryService constructor(
             }
         }
 
-        // 待开发
-        val allVars = mutableMapOf<String, String>()
+        val newParams = mutableListOf<BuildFormProperty>()
         params.forEach {
-            // 从新转旧: 新流水线产生的变量 兼容在旧流水线中已经使用到的旧变量
-            val oldVarName = PipelineVarUtil.newVarToOldVar(it.key)
-            if (!oldVarName.isNullOrBlank()) {
-                allVars[oldVarName!!] = it.value
-            } else {
-                // 从旧转新: 兼容从旧入口写入的数据转到新的流水线运行
-                val newVarName = PipelineVarUtil.oldVarToNewVar(it.key)
-                if (!newVarName.isNullOrBlank()) {
-                    allVars[newVarName!!] = it.value
-                }
+            // 变量名从旧转新: 兼容从旧入口写入的数据转到新的流水线运行
+            val newVarName = PipelineVarUtil.oldVarToNewVar(it.id)
+            if (!newVarName.isNullOrBlank()) {
+                newParams.add(
+                    BuildFormProperty(
+                        id = it.id,
+                        required = it.required,
+                        type = it.type,
+                        defaultValue = it.defaultValue,
+                        options = it.options,
+                        desc = it.desc,
+                        repoHashId = it.repoHashId,
+                        relativePath = it.relativePath,
+                        scmType = it.scmType,
+                        containerType = it.containerType,
+                        glob = it.glob,
+                        properties = it.properties
+                    )
+                )
             }
-            allVars[it.key] = it.value
         }
+        params.addAll(newParams)
 
         return if (!create) {
             update(

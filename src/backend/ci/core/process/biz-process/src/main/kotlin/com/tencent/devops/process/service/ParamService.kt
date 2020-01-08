@@ -59,7 +59,7 @@ class ParamService @Autowired constructor(
     private val bsPipelineAuthServiceCode: PipelineAuthServiceCode
 ) {
 
-    fun filterParams(userId: String?, projectId: String, pipelineId: String?, params: List<BuildFormProperty>): List<BuildFormProperty> {
+    fun filterParams(userId: String?, projectId: String, pipelineId: String?, params: List<BuildFormProperty>): MutableList<BuildFormProperty> {
         val filterParams = mutableListOf<BuildFormProperty>()
         params.forEach {
             if (it.type == BuildFormPropertyType.SVN_TAG && (!it.repoHashId.isNullOrBlank())) {

@@ -325,8 +325,6 @@ class PipelineRuntimeService @Autowired constructor(
         return allVars
     }
 
-    fun handleOldVars()
-
     fun getAllVariableWithType(buildId: String): List<BuildParameters> {
         return pipelineBuildVarDao.getVarsWithType(dslContext, buildId)
     }
