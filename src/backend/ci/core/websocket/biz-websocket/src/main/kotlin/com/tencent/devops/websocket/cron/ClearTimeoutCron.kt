@@ -110,8 +110,9 @@ class ClearTimeoutCron(
                                 RedisUtlis.cleanUserSessionBySessionId(redisOperation, userId, sessionId)
                                 websocketService.removeCacheSession(sessionId)
                                 logger.info("[clearTimeOutSession] sessionId:$sessionId,loadPage:$sessionPage,userId:$userId")
+                            }else {
+                                newSessionList.add(it)
                             }
-                            newSessionList.add(it)
                         }else{
                             logger.info("this it is null,it[$it] redisStr[$it],redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}")
                         }
