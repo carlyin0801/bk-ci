@@ -147,7 +147,7 @@ class PipelineRepositoryService constructor(
                         type = it.type,
                         defaultValue = it.defaultValue,
                         options = it.options,
-                        desc = it.desc,
+                        desc = newVarName,
                         repoHashId = it.repoHashId,
                         relativePath = it.relativePath,
                         scmType = it.scmType,
