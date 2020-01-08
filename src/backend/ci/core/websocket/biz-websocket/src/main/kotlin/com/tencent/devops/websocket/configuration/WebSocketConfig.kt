@@ -40,8 +40,7 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry
 @Configuration
 @EnableWebSocketMessageBroker
 class WebSocketConfig @Autowired constructor(
-    private val bkHandshake: BKHandshakeInterceptor,
-    private val cacheHandshake: CacheChannelInterceptor
+    private val bkHandshake: BKHandshakeInterceptor
 ) : AbstractWebSocketMessageBrokerConfigurer() {
 
     @Value("\${thread.min:8}")
@@ -57,7 +56,7 @@ class WebSocketConfig @Autowired constructor(
     }
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
-        registry.addEndpoint("/ws/user").addInterceptors(bkHandshake).addInterceptors(cacheHandshake).setAllowedOrigins("*").withSockJS()
+        registry.addEndpoint("/ws/user").addInterceptors(bkHandshake).setAllowedOrigins("*").withSockJS()
     }
 
     @Override

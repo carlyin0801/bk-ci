@@ -54,7 +54,6 @@ class WebSocketListener @Autowired constructor(
             if (sessionList != null && sessionList.isNotEmpty()) {
                 if (sessionList.size > 20) {
                     logger.warn("websocketList: sessionList is more limit,page:${event.page}, sessionList:$sessionList")
-                    websocketService.createWranPage(event.page!!)
                 }
 
                 sessionList.forEach { session ->

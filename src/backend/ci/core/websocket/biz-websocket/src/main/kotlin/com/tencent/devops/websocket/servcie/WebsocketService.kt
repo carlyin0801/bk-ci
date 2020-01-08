@@ -51,8 +51,6 @@ class WebsocketService @Autowired constructor(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(this::class.java)
-        private val sessionSet = mutableSetOf<String>()
-        private val moreLimitPage = mutableSetOf<String>()
     }
 
     @Value("\${transferData:false}")
@@ -174,7 +172,6 @@ class WebsocketService @Autowired constructor(
             RedisUtlis.deleteSigelSessionByUser(redisOperation, userId, sessionId)
 //            RedisUtlis.cleanSessionTimeOutBySession(redisOperation, sessionId)
             removeCacheSession(sessionId)
-            removeCacheSession(sessionId)
             logger.info("after clearUserSession:${RedisUtlis.getSessionIdByUserId(redisOperation, userId)}")
             if(needTransfer && transferData!!.isNotEmpty()){
                 transferDispatch.dispatch(
@@ -232,31 +229,6 @@ class WebsocketService @Autowired constructor(
             return false
         }
         return true
-    }
-
-    fun getWranPage(): Set<String>{
-        return moreLimitPage
-    }
-
-    fun createWranPage(page: String){
-        moreLimitPage.add(page)
-    }
-
-    fun removeWarnPage(page: String){
-        moreLimitPage.remove(page)
-    }
-
-
-    fun getCacheSession(): Set<String> {
-        return sessionSet
-    }
-
-    fun removeCacheSession(sessionId: String) {
-        sessionSet.remove(sessionId)
-    }
-
-    fun createCacheSession(sessionId: String) {
-        sessionSet.add(sessionId)
     }
 
     private fun lockUser(sessionId: String): RedisLock {
