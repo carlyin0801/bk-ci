@@ -92,6 +92,7 @@ class ClearTimeoutCron(
                     logger.info("this bucket is empty,redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}]")
                     continue
                 }
+                logger.info("clearTimeout sessionList[$sessionList]")
                 sessionList.forEach {
                     logger.info("clearTimeout redisStr[$it],redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}")
                     if (it != null && it.isNotEmpty()) {
@@ -110,6 +111,8 @@ class ClearTimeoutCron(
                             logger.info("[clearTimeOutSession] sessionId:$sessionId,loadPage:$sessionPage,userId:$userId")
                         }
                         newSessionList.add(it)
+                    }else{
+                        logger.info("clearTimeout it is null, redisStr[$it],redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}")
                     }
                 }
                 redisOperation.set(
