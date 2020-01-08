@@ -84,6 +84,7 @@ class ClearTimeoutCron(
         val nowTime = System.currentTimeMillis()
         for (bucket in 0..WebsocketKeys.REDIS_MO) {
             val redisData = redisOperation.get(WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket)
+            logger.info("this bucket redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}], redisData[$redisData]")
             if (redisData != null) {
                 val newSessionList = mutableListOf<String>()
                 val sessionList = redisData.split(",")
