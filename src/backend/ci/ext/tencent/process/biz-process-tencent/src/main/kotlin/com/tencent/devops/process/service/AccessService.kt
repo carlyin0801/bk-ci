@@ -146,7 +146,9 @@ class AccessService @Autowired constructor(
             startEpoch = null,
             systemElapsed = null,
             elementElapsed = null,
-            params = emptyList(), templateParams = null, buildNo = null
+            params = mutableListOf(),
+            templateParams = null,
+            buildNo = null
         )
         containerSeqId++
         val stageFirstContainers = listOf<Container>(stageFirstContainer)
