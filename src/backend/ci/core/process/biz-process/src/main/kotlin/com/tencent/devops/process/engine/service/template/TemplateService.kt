@@ -1491,7 +1491,8 @@ class TemplateService @Autowired constructor(
             startEpoch = null,
             systemElapsed = null,
             elementElapsed = null,
-            params = params, templateParams = templateParams,
+            params = params,
+            templateParams = templateParams,
             buildNo = triggerContainer.buildNo,
             canRetry = triggerContainer.canRetry,
             containerId = triggerContainer.containerId

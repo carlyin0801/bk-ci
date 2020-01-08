@@ -298,8 +298,8 @@ class PipelineService @Autowired constructor(
     /**
      * 对于模板， 合并模板的参数，以流水线的为主，如果流水线的有就会覆盖模板的
      */
-    fun mergeProperties(from: List<BuildFormProperty>, to: List<BuildFormProperty>): List<BuildFormProperty> {
-        val result = ArrayList<BuildFormProperty>()
+    fun mergeProperties(from: List<BuildFormProperty>, to: List<BuildFormProperty>): MutableList<BuildFormProperty> {
+        val result = mutableListOf<BuildFormProperty>()
 
         from.forEach { f ->
             var override = false
@@ -459,7 +459,8 @@ class PipelineService @Autowired constructor(
                 ?: throw ErrorCodeException(
                     statusCode = Response.Status.NOT_FOUND.statusCode,
                     errorCode = ProcessMessageCode.ERROR_PIPELINE_MODEL_NOT_EXISTS,
-                    defaultMessage = "指定要复制的流水线-模型不存在")
+                    defaultMessage = "指定要复制的流水线-模型不存在"
+                )
             // 对已经存在的模型做处理
             modelCheckPlugin.beforeDeleteElementInExistsModel(userId, existModel, model, pipelineId)
 
