@@ -112,11 +112,11 @@ class ClearTimeoutCron(
                                 logger.info("[clearTimeOutSession] sessionId:$sessionId,loadPage:$sessionPage,userId:$userId")
                             }
                             newSessionList.add(it)
+                        }else{
+                            logger.info("this it is null,it[$it] redisStr[$it],redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}")
                         }
                     } catch (e: Exception) {
                         logger.warn("fail msg: ${e.message}")
-                    }else{
-                        logger.info("clearTimeout it is null, redisStr[$it],redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}")
                     }
                 }
                 redisOperation.set(
