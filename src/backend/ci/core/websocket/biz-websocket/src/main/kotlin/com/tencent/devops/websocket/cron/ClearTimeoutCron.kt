@@ -86,7 +86,7 @@ class ClearTimeoutCron(
             val redisData = redisOperation.get(WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket)
             logger.info("this bucket redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}], redisData[$redisData]")
             if (redisData != null) {
-                val newSessionList = mutableListOf<String>()
+                var newSessionList :String? = null
                 val sessionList = redisData.split(",")
                 if (sessionList == null || sessionList.isEmpty() ) {
                     logger.info("this bucket is empty,redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}]")
@@ -111,7 +111,11 @@ class ClearTimeoutCron(
                                 websocketService.removeCacheSession(sessionId)
                                 logger.info("[clearTimeOutSession] sessionId:$sessionId,loadPage:$sessionPage,userId:$userId")
                             } else {
-                                newSessionList.add(it)
+                                newSessionList = if(newSessionList == null){
+                                    it
+                                }else{
+                                    "$newSessionList,$it"
+                                }
                             }
                         }else{
                             logger.info("this it is null,it[$it] redisStr[$it],redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}")
@@ -120,10 +124,10 @@ class ClearTimeoutCron(
                         logger.warn("fail msg: ${e.message}")
                     }
                 }
-                if (newSessionList.isNotEmpty() && newSessionList.size > 0) {
+                if (newSessionList != null) {
                     redisOperation.set(
                         WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket,
-                        objectMapper.writeValueAsString(newSessionList),
+                        newSessionList!!,
                         null,
                         true
                     )
