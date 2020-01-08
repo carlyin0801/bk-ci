@@ -60,6 +60,7 @@ import com.tencent.devops.repository.pojo.enums.VisibilityLevelEnum
 import com.tencent.devops.store.constant.StoreMessageCode
 import com.tencent.devops.store.dao.atom.MarketAtomBuildAppRelDao
 import com.tencent.devops.store.dao.atom.MarketAtomBuildInfoDao
+import com.tencent.devops.store.dao.common.StoreBuildInfoDao
 import com.tencent.devops.store.dao.common.StorePipelineBuildRelDao
 import com.tencent.devops.store.dao.common.StorePipelineRelDao
 import com.tencent.devops.store.pojo.atom.MarketAtomCreateRequest
@@ -90,6 +91,9 @@ class TxAtomReleaseServiceImpl : TxAtomReleaseService, AtomReleaseServiceImpl() 
 
     @Autowired
     lateinit var marketAtomBuildAppRelDao: MarketAtomBuildAppRelDao
+
+    @Autowired
+    lateinit var storeBuildInfoDao: StoreBuildInfoDao
 
     @Autowired
     lateinit var storePipelineBuildRelDao: StorePipelineBuildRelDao
@@ -131,9 +135,10 @@ class TxAtomReleaseServiceImpl : TxAtomReleaseService, AtomReleaseServiceImpl() 
                 userId = userId,
                 projectCode = marketAtomCreateRequest.projectCode,
                 repositoryName = atomCode,
-                sampleProjectPath = marketAtomBuildInfoDao.getAtomBuildInfoByLanguage(
+                sampleProjectPath = storeBuildInfoDao.getAtomBuildInfoByLanguage(
                     dslContext,
-                    marketAtomCreateRequest.language
+                    marketAtomCreateRequest.language,
+                    StoreTypeEnum.ATOM
                 ).sampleProjectPath,
                 namespaceId = pluginNameSpaceId.toInt(),
                 visibilityLevel = marketAtomCreateRequest.visibilityLevel,

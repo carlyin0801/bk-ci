@@ -27,23 +27,18 @@
 package com.tencent.devops.store.service.atom.impl
 
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.repository.api.ServiceGitRepositoryResource
-import com.tencent.devops.repository.pojo.enums.GitAccessLevelEnum
-import com.tencent.devops.repository.pojo.enums.TokenTypeEnum
 import com.tencent.devops.store.pojo.common.StoreMemberReq
-import com.tencent.devops.store.pojo.common.enums.StoreMemberTypeEnum
 import com.tencent.devops.store.service.common.TxStoreGitResitoryService
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
 @Service
 class TxAtomMemberServiceImpl @Autowired constructor(
     private val storeGitResitoryService: TxStoreGitResitoryService
-): AtomMemberServiceImpl() {
+) : AtomMemberServiceImpl() {
 
     override fun addRepoMember(storeMemberReq: StoreMemberReq, userId: String, repositoryHashId: String): Result<Boolean> {
-       return storeGitResitoryService.addRepoMember(storeMemberReq, userId, repositoryHashId)
+        return storeGitResitoryService.addRepDispatchVMShutdownTaskAtom.ktoMember(storeMemberReq, userId, repositoryHashId)
     }
 
     override fun deleteRepoMember(userId: String, username: String, repositoryHashId: String): Result<Boolean> {

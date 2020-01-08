@@ -5,7 +5,6 @@ import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.store.api.UserExtServiceMembersResource
 import com.tencent.devops.store.pojo.common.StoreMemberItem
 import com.tencent.devops.store.pojo.common.StoreMemberReq
-import com.tencent.devops.store.pojo.common.enums.StoreMemberTypeEnum
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.service.TxExtServiceMemberImpl
 import org.springframework.beans.factory.annotation.Autowired
@@ -13,9 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired
 @RestResource
 class UserExtServiceMemberResourceImpl @Autowired constructor(
     private val txExtServiceMemberImpl: TxExtServiceMemberImpl
-): UserExtServiceMembersResource {
+) : UserExtServiceMembersResource {
     override fun list(userId: String, serviceCode: String): Result<List<StoreMemberItem?>> {
-        return txExtServiceMemberImpl.list(userId, serviceCode)
+        return txExtServiceMemberImpl.list(
+            userId = userId,
+            storeCode = serviceCode,
+            // TODO: 此处需在core内添加服务扩展类型
+            storeType = StoreTypeEnum.ATOM
+        )
     }
 
     override fun add(userId: String, storeMemberReq: StoreMemberReq): Result<Boolean> {
@@ -23,7 +27,7 @@ class UserExtServiceMemberResourceImpl @Autowired constructor(
             userId = userId,
             storeMemberReq = storeMemberReq,
             sendNotify = true,
-            //TODO: 此处需在core内添加服务扩展类型
+            // TODO: 此处需在core内添加服务扩展类型
             storeType = StoreTypeEnum.ATOM,
             collaborationFlag = true
 
@@ -34,8 +38,9 @@ class UserExtServiceMemberResourceImpl @Autowired constructor(
         return txExtServiceMemberImpl.delete(
             userId = userId,
             storeCode = serviceCode,
-            //TODO: 此处需在core内添加服务扩展类型
-            storeType = StoreTypeEnum.ATOM
+            // TODO: 此处需在core内添加服务扩展类型
+            storeType = StoreTypeEnum.ATOM,
+            id = id
             )
     }
 
@@ -43,7 +48,7 @@ class UserExtServiceMemberResourceImpl @Autowired constructor(
         return txExtServiceMemberImpl.viewMemberInfo(
             userId = userId,
             storeCode = serviceCode,
-            //TODO: 此处需在core内添加服务扩展类型
+            // TODO: 此处需在core内添加服务扩展类型
             storeType = StoreTypeEnum.ATOM
             )
     }
@@ -59,7 +64,7 @@ class UserExtServiceMemberResourceImpl @Autowired constructor(
             userId = userId,
             projectCode = projectCode,
             storeCode = serviceCode,
-            //TODO: 此处需在core内添加服务扩展类型
+            // TODO: 此处需在core内添加服务扩展类型
             storeType = StoreTypeEnum.ATOM
         )
     }

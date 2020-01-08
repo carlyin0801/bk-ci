@@ -283,8 +283,16 @@ class LogServiceV2 @Autowired constructor(
                     .stream()
                     .filter { k -> k.isNotBlank() }
                     .collect(Collectors.toList())
-
-            val result = doQueryByKeywords(buildId, index, type, start, keywords, tag, jobId, executeCount)
+            val result = doQueryByKeywords(
+                buildId = buildId,
+                index = index,
+                type = type,
+                start = start,
+                keywords = keywords,
+                tag = tag,
+                jobId = jobId,
+                executeCount = executeCount
+            )
             success = true
             return result
         } finally {
@@ -337,13 +345,13 @@ class LogServiceV2 @Autowired constructor(
             val index = indexAndType.index
             val type = indexAndType.type
             val result = doQueryMoreOriginLogsAfterLine(
-                buildId,
-                index,
-                type,
-                start,
-                tag,
-                jobId,
-                executeCount
+                buildId = buildId,
+                index = index,
+                type = type,
+                start = start,
+                tag = tag,
+                jobId = jobId,
+                executeCount = executeCount
             )
             success = logStatusSuccess(result.status)
             return result

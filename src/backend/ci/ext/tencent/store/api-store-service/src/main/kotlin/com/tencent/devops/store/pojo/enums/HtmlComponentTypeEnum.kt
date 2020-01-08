@@ -24,36 +24,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.store.pojo.common.enums
+package com.tencent.devops.store.pojo.enums
 
-enum class StoreTypeEnum(val type: Int) {
-    ATOM(0), // 插件
-    TEMPLATE(1), // 模板
-    IMAGE(2), // 镜像
-    IDE_ATOM(3), // IDE插件
-    SERVICE(4); // 扩展服务
-
-    companion object {
-        fun getStoreType(type: Int): String {
-            return when (type) {
-                0 -> StoreTypeEnum.ATOM.name
-                1 -> StoreTypeEnum.TEMPLATE.name
-                2 -> StoreTypeEnum.IMAGE.name
-                3 -> StoreTypeEnum.IDE_ATOM.name
-                4 -> StoreTypeEnum.SERVICE.name
-                else -> StoreTypeEnum.ATOM.name
-            }
-        }
-
-        fun getStoreTypeObj(type: Int): StoreTypeEnum? {
-            return when (type) {
-                0 -> ATOM
-                1 -> TEMPLATE
-                2 -> IMAGE
-                3 -> IDE_ATOM
-                4 -> SERVICE
-                else -> null
-            }
-        }
-    }
+enum class HtmlComponentTypeEnum {
+    SIMPLE, // 简单的前端组件类型
+    IFRAME  // ifrmae前端组件类型
 }
