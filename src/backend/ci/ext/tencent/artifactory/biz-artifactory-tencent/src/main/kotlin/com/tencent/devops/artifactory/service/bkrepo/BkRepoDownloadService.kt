@@ -120,8 +120,7 @@ class BkRepoDownloadService @Autowired constructor(
         userId: String,
         projectId: String,
         artifactoryType: ArtifactoryType,
-        argPath: String,
-        channelCode: ChannelCode?
+        argPath: String
     ): Url {
         logger.info("getDownloadUrl, userId: $userId, projectId: $projectId, artifactoryType: $artifactoryType, " +
             "argPath: $argPath")
