@@ -24,33 +24,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.store.dao.common
+package com.tencent.devops.store.pojo.enums
 
-import com.tencent.devops.model.store.tables.TStoreBuildInfo
-import com.tencent.devops.model.store.tables.records.TStoreBuildInfoRecord
-import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
-import org.jooq.DSLContext
-import org.jooq.Result
-import org.springframework.stereotype.Repository
-
-@Repository
-class StoreBuildInfoDao {
-
-    fun list(dslContext: DSLContext, storeType: StoreTypeEnum): Result<TStoreBuildInfoRecord>? {
-        with(TStoreBuildInfo.T_STORE_BUILD_INFO) {
-            return dslContext.selectFrom(this)
-                    .where(ENABLE.eq(true))
-                    .and(STORE_TYPE.eq(storeType.type.toByte()))
-                    .orderBy(CREATE_TIME.asc()).fetch()
-        }
-    }
-
-    fun getStoreBuildInfoByLanguage(dslContext: DSLContext, language: String, storeType: StoreTypeEnum): TStoreBuildInfoRecord {
-        return with(TStoreBuildInfo.T_STORE_BUILD_INFO) {
-            dslContext.selectFrom(this)
-                .where(LANGUAGE.eq(language))
-                .and(STORE_TYPE.eq(storeType.type.toByte()))
-                .fetchOne()
-        }
-    }
+enum class ExtServicePackageSourceTypeEnum {
+    REPO, // 代码库打包
+    UPLOAD; // 上传包
 }

@@ -24,33 +24,47 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.store.dao.common
+package com.tencent.devops.store.pojo.enums
 
-import com.tencent.devops.model.store.tables.TStoreBuildInfo
-import com.tencent.devops.model.store.tables.records.TStoreBuildInfoRecord
-import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
-import org.jooq.DSLContext
-import org.jooq.Result
-import org.springframework.stereotype.Repository
+enum class ExtServiceStatusEnum(val status: Int) {
+    INIT(0), // 初始化
+    COMMITTING(1), // 提交中
+    BUILDING(2), // 构建中
+    BUILD_FAIL(3), // 构建失败
+    TESTING(4), // 测试中
+    AUDITING(5), // 审核中
+    AUDIT_REJECT(6), // 审核驳回
+    RELEASED(7), // 已发布
+    GROUNDING_SUSPENSION(8), // 上架中止
+    UNDERCARRIAGING(9), // 下架中
+    UNDERCARRIAGED(10); // 已下架
 
-@Repository
-class StoreBuildInfoDao {
+    companion object {
 
-    fun list(dslContext: DSLContext, storeType: StoreTypeEnum): Result<TStoreBuildInfoRecord>? {
-        with(TStoreBuildInfo.T_STORE_BUILD_INFO) {
-            return dslContext.selectFrom(this)
-                    .where(ENABLE.eq(true))
-                    .and(STORE_TYPE.eq(storeType.type.toByte()))
-                    .orderBy(CREATE_TIME.asc()).fetch()
+        fun getServiceStatus(name: String): ExtServiceStatusEnum? {
+            ExtServiceStatusEnum.values().forEach { enumObj ->
+                if (enumObj.name == name) {
+                    return enumObj
+                }
+            }
+            return null
         }
-    }
 
-    fun getStoreBuildInfoByLanguage(dslContext: DSLContext, language: String, storeType: StoreTypeEnum): TStoreBuildInfoRecord {
-        return with(TStoreBuildInfo.T_STORE_BUILD_INFO) {
-            dslContext.selectFrom(this)
-                .where(LANGUAGE.eq(language))
-                .and(STORE_TYPE.eq(storeType.type.toByte()))
-                .fetchOne()
+        fun getServiceStatus(status: Int): String {
+            return when (status) {
+                0 -> INIT.name
+                1 -> COMMITTING.name
+                2 -> BUILDING.name
+                3 -> BUILD_FAIL.name
+                4 -> TESTING.name
+                5 -> AUDITING.name
+                6 -> AUDIT_REJECT.name
+                7 -> RELEASED.name
+                8 -> GROUNDING_SUSPENSION.name
+                9 -> UNDERCARRIAGING.name
+                10 -> UNDERCARRIAGED.name
+                else -> INIT.name
+            }
         }
     }
 }
