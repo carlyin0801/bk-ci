@@ -78,8 +78,9 @@ class LinuxPaasCodeCCScriptElementBizPlugin constructor(
                 val task = coverityApi.createTask(projectId, pipelineId, pipelineName, userId, element)
                 logger.info("Create the coverity task($task)")
                 val dataMap = task.data as Map<String, Any>
+                val taskName = dataMap["nameEn"] as String?
                 codeCCTaskId = (dataMap["taskId"] as Int).toString()
-                codeCCTaskName = dataMap["nameEn"] as String
+                if (!taskName.isNullOrBlank()) codeCCTaskName = taskName
                 codeCCTaskCnName = pipelineName
             } catch (e: Exception) {
                 logger.warn(
