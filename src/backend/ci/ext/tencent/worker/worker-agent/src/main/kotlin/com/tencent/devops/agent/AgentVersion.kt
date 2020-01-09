@@ -1,3 +1,4 @@
+
 /*
  * Tencent is pleased to support the open source community by making BK-CI 蓝鲸持续集成平台 available.
  *
@@ -26,7 +27,7 @@
 
 package com.tencent.devops.agent
 
-const val AGENT_VERSION = 11.0
+const val AGENT_VERSION = 11.1
 
 fun main(argv: Array<String>) {
     println(AGENT_VERSION)
