@@ -26,9 +26,11 @@
 
 package com.tencent.devops.gitci.service
 
+import com.tencent.devops.artifactory.api.service.ServiceArtifactoryResource
 import com.tencent.devops.artifactory.api.user.UserArtifactoryResource
 import com.tencent.devops.artifactory.pojo.FileInfo
 import com.tencent.devops.artifactory.pojo.FileInfoPage
+import com.tencent.devops.artifactory.pojo.Property
 import com.tencent.devops.artifactory.pojo.SearchProps
 import com.tencent.devops.artifactory.pojo.Url
 import com.tencent.devops.artifactory.pojo.enums.ArtifactoryType
@@ -134,13 +136,13 @@ class CurrentBuildService @Autowired constructor(
         propMap["buildId"] = buildId
         val searchProps = SearchProps(emptyList(), propMap)
 
-        return client.get(UserArtifactoryResource::class).search(
-            userId,
+        val prop = listOf(Property("pipelineId", pipelineId), Property("buildId", buildId))
+
+        return client.get(ServiceArtifactoryResource::class).search(
             conf.projectCode!!,
             page,
             pageSize,
-            ChannelCode.GIT,
-            searchProps
+            prop
         ).data!!
     }
 
@@ -155,12 +157,13 @@ class CurrentBuildService @Autowired constructor(
             "项目未开启工蜂CI，无法查询"
         )
 
-        return client.get(UserArtifactoryResource::class).downloadUrl(
-            userId,
+        return client.get(ServiceArtifactoryResource::class).downloadUrl(
             conf.projectCode!!,
             artifactoryType,
+            userId,
             path,
-            ChannelCode.GIT
+            60,
+            false
         ).data!!
     }
 

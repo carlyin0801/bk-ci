@@ -282,8 +282,11 @@ class BuildStartControl @Autowired constructor(
         if (triggerContainer.buildNo != null) {
             val buildNo = pipelineRuntimeService.getBuildNo(pipelineId)
             pipelineRuntimeService.setVariable(
-                projectId = projectId, pipelineId = pipelineId,
-                buildId = buildId, varName = BUILD_NO, varValue = buildNo
+                projectId = projectId,
+                pipelineId = pipelineId,
+                buildId = buildId,
+                varName = BUILD_NO,
+                varValue = buildNo
             )
         }
         // 写

@@ -135,12 +135,12 @@ class PipelineRepositoryService constructor(
             }
         }
 
-        val newParams = mutableListOf<BuildFormProperty>()
         params.forEach {
             // 变量名从旧转新: 兼容从旧入口写入的数据转到新的流水线运行
             val newVarName = PipelineVarUtil.oldVarToNewVar(it.id)
             if (!newVarName.isNullOrBlank()) {
-                val newVar = BuildFormProperty(
+                params.remove(it)
+                params.add(BuildFormProperty(
                     id = newVarName!!,
                     required = it.required,
                     type = it.type,
@@ -153,11 +153,9 @@ class PipelineRepositoryService constructor(
                     containerType = it.containerType,
                     glob = it.glob,
                     properties = it.properties
-                )
-                if (!params.contains(newVar)) newParams.add(newVar)
+                ))
             }
         }
-        params.addAll(newParams)
 
         return if (!create) {
             update(
