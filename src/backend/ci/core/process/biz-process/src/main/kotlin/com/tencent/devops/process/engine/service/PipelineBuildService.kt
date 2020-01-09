@@ -346,6 +346,7 @@ class PipelineBuildService(
                     logger.warn("Fail to get the startup param for the build($buildId)", e)
                 }
             }
+            logger.info("[$pipelineId]|RETRY_PIPELINE_ORIGIN|buildId=$buildId|originRetryCount=${params[PIPELINE_RETRY_COUNT]}|startParams=$params")
 
             params[PIPELINE_RETRY_COUNT] = if (params[PIPELINE_RETRY_COUNT] != null) {
                 params[PIPELINE_RETRY_COUNT].toString().toInt() + 1
