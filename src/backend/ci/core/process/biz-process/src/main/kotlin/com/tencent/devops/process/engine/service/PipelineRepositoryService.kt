@@ -142,7 +142,7 @@ class PipelineRepositoryService constructor(
             if (!newVarName.isNullOrBlank()) {
                 newParams.add(
                     BuildFormProperty(
-                        id = it.id,
+                        id = newVarName,
                         required = it.required,
                         type = it.type,
                         defaultValue = it.defaultValue,
