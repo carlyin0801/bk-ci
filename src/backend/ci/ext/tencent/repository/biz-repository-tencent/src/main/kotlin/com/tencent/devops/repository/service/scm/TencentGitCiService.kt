@@ -35,8 +35,8 @@ import org.springframework.stereotype.Service
 
 @Primary
 @Service
-class TencentGitCiServiceImpl @Autowired constructor(val client: Client) : IGitCiService {
-    override fun getToken(gitProjectId: String): GitToken? {
+class TencentGitCiService @Autowired constructor(val client: Client) {
+    fun getToken(gitProjectId: String): GitToken? {
         return client.getScm(SerivceGitCiResource::class).getToken(gitProjectId).data
     }
 }

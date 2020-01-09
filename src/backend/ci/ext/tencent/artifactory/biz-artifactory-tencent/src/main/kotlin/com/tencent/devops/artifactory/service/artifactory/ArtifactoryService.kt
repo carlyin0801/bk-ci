@@ -534,7 +534,7 @@ class ArtifactoryService @Autowired constructor(
         jFrogAQLFileInfoList: List<JFrogAQLFileInfo>,
         pipelineHasPermissionList: List<String>,
         checkPermission: Boolean = true,
-        channelCode: ChannelCode ?= ChannelCode.BS
+        channelCode: ChannelCode ? = ChannelCode.BS
     ): List<FileInfo> {
         val startTimestamp = System.currentTimeMillis()
 
