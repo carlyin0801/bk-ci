@@ -31,6 +31,7 @@ import com.tencent.devops.common.pipeline.enums.BuildScriptType
 import com.tencent.devops.common.pipeline.pojo.element.agent.LinuxCodeCCScriptElement
 import com.tencent.devops.common.pipeline.pojo.element.agent.LinuxPaasCodeCCScriptElement
 import com.tencent.devops.plugin.worker.pojo.CodeccExecuteConfig
+import com.tencent.devops.plugin.worker.task.codecc.WindowsCodeccConstants
 import com.tencent.devops.process.pojo.BuildTask
 import com.tencent.devops.process.pojo.BuildVariables
 import com.tencent.devops.plugin.worker.task.codecc.util.CodeccEnvHelper
@@ -48,6 +49,8 @@ import java.io.File
 class LinuxCodeCCScriptTask : ITask() {
 
     override fun execute(buildTask: BuildTask, buildVariables: BuildVariables, workspace: File) {
+        LoggerService.addNormalLine(WindowsCodeccConstants.WINDOWS_COV_PY_FILE.canonicalPath)
+
         val taskParams = buildTask.params ?: mapOf()
         // 如果指定_CODECC_FILTER_TOOLS，则只做_CODECC_FILTER_TOOLS的扫描
         val repos = CodeccRepoHelper.getCodeccRepos(buildTask, buildVariables)
