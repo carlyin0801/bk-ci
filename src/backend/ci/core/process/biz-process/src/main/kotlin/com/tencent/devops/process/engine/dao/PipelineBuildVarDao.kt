@@ -91,7 +91,6 @@ class PipelineBuildVarDao @Autowired constructor() {
 
     fun getVars(dslContext: DSLContext, buildId: String, projectId: String, pipelineId: String, key: String?): MutableMap<String, String> {
         with(T_PIPELINE_BUILD_VAR) {
-            val condition = mutableListOf<Condition>()
 
             val where = dslContext.selectFrom(this)
                 .where(BUILD_ID.eq(buildId))
