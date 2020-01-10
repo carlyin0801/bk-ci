@@ -99,10 +99,10 @@ class PipelineBuildVarDao @Autowired constructor() {
                 condition.add(PIPELINE_ID.eq(pipelineId))
             if (key != null)
                 condition.add(KEY.eq(key))
-            val where = dslContext.selectFrom(this)
+            val result = dslContext.selectFrom(this)
                 .where(condition)
+                .fetch()
 
-            val result = where.fetch()
             val map = mutableMapOf<String, String>()
             result?.forEach {
                 map[it[KEY]] = it[VALUE]
