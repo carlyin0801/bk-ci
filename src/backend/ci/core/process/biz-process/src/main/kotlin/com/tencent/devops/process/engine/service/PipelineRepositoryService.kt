@@ -140,25 +140,23 @@ class PipelineRepositoryService constructor(
             // 变量名从旧转新: 兼容从旧入口写入的数据转到新的流水线运行
             val newVarName = PipelineVarUtil.oldVarToNewVar(it.id)
             if (!newVarName.isNullOrBlank()) {
-                newParams.add(
-                    BuildFormProperty(
-                        id = newVarName,
-                        required = it.required,
-                        type = it.type,
-                        defaultValue = it.defaultValue,
-                        options = it.options,
-                        desc = it.desc,
-                        repoHashId = it.repoHashId,
-                        relativePath = it.relativePath,
-                        scmType = it.scmType,
-                        containerType = it.containerType,
-                        glob = it.glob,
-                        properties = it.properties
-                    )
-                )
-            }
+                newParams.add(BuildFormProperty(
+                    id = newVarName!!,
+                    required = it.required,
+                    type = it.type,
+                    defaultValue = it.defaultValue,
+                    options = it.options,
+                    desc = it.desc,
+                    repoHashId = it.repoHashId,
+                    relativePath = it.relativePath,
+                    scmType = it.scmType,
+                    containerType = it.containerType,
+                    glob = it.glob,
+                    properties = it.properties
+                ))
+            } else newParams.add(it)
         }
-        params.addAll(newParams)
+        container.params = newParams
 
         return if (!create) {
             update(
