@@ -1949,12 +1949,11 @@ class PipelineRuntimeService @Autowired constructor(
         }.toMutableMap()
 
         if (triggerContainer.buildNo != null) {
-            val buildNo = getBuildNo(pipelineId)
             setVariable(
                 projectId = projectId, pipelineId = pipelineId,
-                buildId = buildId, varName = BUILD_NO, varValue = buildNo
+                buildId = buildId, varName = BUILD_NO, varValue = triggerContainer.buildNo!!.buildNo
             )
-            params[BUILD_NO] = buildNo.toString()
+            params[BUILD_NO] = triggerContainer.buildNo!!.buildNo.toString()
         }
 
         if (triggerContainer.params.isNotEmpty())
