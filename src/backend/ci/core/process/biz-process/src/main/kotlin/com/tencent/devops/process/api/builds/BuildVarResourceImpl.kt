@@ -13,6 +13,7 @@ class BuildVarResourceImpl @Autowired constructor(
     private val pipelineRuntimeService: PipelineRuntimeService
 ) : BuildVarResource {
     override fun getBuildVar(buildId: String?, projectId: String?, pipelineId: String?, key: String?): Result<MutableMap<String, String>> {
+        throw ParamBlankException("buildId && projectId && pipelineId are all null or blank")
         checkParam(buildId = buildId, projectId = projectId, pipelineId = pipelineId)
         return Result(pipelineRuntimeService.getVariable(buildId = buildId, projectId = projectId, pipelineId = pipelineId, key = key))
     }
