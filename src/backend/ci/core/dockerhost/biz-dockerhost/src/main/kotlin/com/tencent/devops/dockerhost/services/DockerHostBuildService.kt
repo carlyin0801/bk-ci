@@ -219,7 +219,6 @@ class DockerHostBuildService(
             } else {
                 try {
                     logger.error("xxxxxxxxx")
-                    throw NotFoundException("xxxx")
                     LocalImageCache.saveOrUpdate(imageName)
                     pullImage(
                         imageType = dockerBuildInfo.imageType,
