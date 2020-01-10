@@ -24,8 +24,8 @@ interface BuildVarResource {
     @Path("/getBuildVariable")
     @GET
     fun getBuildVar(
-            @ApiParam(value = "构建ID", required = true)
-            @HeaderParam(AUTH_HEADER_DEVOPS_BUILD_ID)
-            buildId: String
+        @ApiParam(value = "构建ID", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_BUILD_ID)
+        buildId: String
     ): Result<Map<String, String>>
 }
