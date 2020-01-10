@@ -14,8 +14,8 @@ import javax.ws.rs.Produces
 import javax.ws.rs.Consumes
 import javax.ws.rs.core.MediaType
 
-@Api(tags = ["BUILD_TASK"], description = "构建-任务资源")
-@Path("/build/task")
+@Api(tags = ["BUILD_VARIABLE"], description = "构建-构建参数")
+@Path("/build/variable")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 interface BuildVarResource {
