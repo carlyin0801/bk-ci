@@ -31,7 +31,7 @@ class BuildVarResourceImpl @Autowired constructor(
                 projectId = projectId,
                 pipelineId = pipelineId,
                 permission = AuthPermission.EXECUTE))
-            throw PermissionForbiddenException("用户无权获取此流水线构建信息")
+            throw PermissionForbiddenException("用户${userId}无权获取此流水线构建信息")
     }
 
     fun checkParam(buildId: String, projectId: String, pipelineId: String) {
