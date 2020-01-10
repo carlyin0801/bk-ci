@@ -152,7 +152,7 @@ abstract class TemplateReleaseServiceImpl @Autowired constructor() : TemplateRel
                     TemplateStatusEnum.UNDERCARRIAGED.status.toByte()
             )
             if (templateRecords.size == 1) {
-                // 如果是首次发布，只有处于初始化的模板状态才允许添加新的版本
+                // 如果是首次发布，处于初始化的模板状态也允许添加新的版本
                 templateFinalStatusList.add(TemplateStatusEnum.INIT.status.toByte())
             }
             if (!templateFinalStatusList.contains(templateRecord.templateStatus)) {
@@ -339,7 +339,7 @@ abstract class TemplateReleaseServiceImpl @Autowired constructor() : TemplateRel
                 storeId = templateId,
                 storeCode = templateCode,
                 storeType = StoreTypeEnum.TEMPLATE,
-                modifier = record.modifier,
+                creator = record.creator,
                 processInfo = processInfo
             )
             logger.info("getProcessInfo storeProcessInfo: $storeProcessInfo")
@@ -439,7 +439,7 @@ abstract class TemplateReleaseServiceImpl @Autowired constructor() : TemplateRel
                 }
             }
         } else {
-            // 把IDE插件所有已发布的版本全部下架
+            // 把所有已发布的版本全部下架
             dslContext.transaction { t ->
                 val context = DSL.using(t)
                 marketTemplateDao.updateTemplateStatusByCode(
