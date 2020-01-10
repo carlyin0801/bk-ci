@@ -28,7 +28,6 @@ package com.tencent.devops.process.engine.service
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.tencent.devops.artifactory.pojo.FileInfo
-import com.tencent.devops.common.api.exception.PermissionForbiddenException
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
@@ -98,8 +97,6 @@ import com.tencent.devops.process.engine.pojo.event.PipelineBuildStartEvent
 import com.tencent.devops.process.pojo.BuildBasicInfo
 import com.tencent.devops.process.pojo.BuildHistory
 import com.tencent.devops.common.api.pojo.ErrorType
-import com.tencent.devops.common.auth.api.AuthPermission
-import com.tencent.devops.process.permission.PipelinePermissionService
 import com.tencent.devops.process.pojo.PipelineBuildMaterial
 import com.tencent.devops.process.pojo.ReviewParam
 import com.tencent.devops.process.pojo.VmInfo
@@ -163,8 +160,7 @@ class PipelineRuntimeService @Autowired constructor(
     private val pipelineBuildVarDao: PipelineBuildVarDao,
     private val buildDetailDao: BuildDetailDao,
     private val buildStartupParamService: BuildStartupParamService,
-    private val redisOperation: RedisOperation,
-    private val pipelinePermissionService: PipelinePermissionService
+    private val redisOperation: RedisOperation
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PipelineRuntimeService::class.java)
@@ -304,17 +300,6 @@ class PipelineRuntimeService @Autowired constructor(
     fun getVariable(buildId: String, varName: String): String? {
         val vars = getAllVariable(buildId)
         return if (vars.isNotEmpty()) vars[varName] else null
-    }
-
-    fun getAllVariable(buildId: String, projectId: String, pipelineId: String, userId: String): Map<String, String> {
-        if (!pipelinePermissionService.checkPipelinePermission(
-                userId = userId,
-                projectId = projectId,
-                pipelineId = pipelineId,
-                permission = AuthPermission.EXECUTE))
-            throw PermissionForbiddenException("用户无权获取此流水线构建信息")
-
-        return getAllVariable(buildId)
     }
 
     fun getAllVariable(buildId: String): Map<String, String> {
@@ -1959,17 +1944,19 @@ class PipelineRuntimeService @Autowired constructor(
         if (allVariable[PIPELINE_RETRY_COUNT] == null) return
 
         val triggerContainer = model.stages[0].containers[0] as TriggerContainer
-        val params = allVariable.filter {
-            it.key.startsWith(SkipElementUtils.prefix) || it.key == BUILD_NO || it.key == PIPELINE_RETRY_COUNT
-        }.toMutableMap()
-
+        val params = mutableMapOf<String, String>()
         if (triggerContainer.buildNo != null) {
+            val buildNo = getBuildNo(pipelineId)
             setVariable(
                 projectId = projectId, pipelineId = pipelineId,
-                buildId = buildId, varName = BUILD_NO, varValue = triggerContainer.buildNo!!.buildNo
+                buildId = buildId, varName = BUILD_NO, varValue = buildNo
             )
-            params[BUILD_NO] = triggerContainer.buildNo!!.buildNo.toString()
+            params[BUILD_NO] = buildNo.toString()
         }
+
+        params.putAll(allVariable.filter {
+            it.key.startsWith(SkipElementUtils.prefix) || it.key == BUILD_NO || it.key == PIPELINE_RETRY_COUNT
+        }.toMap())
 
         if (triggerContainer.params.isNotEmpty())
             params.plus(triggerContainer.params.map {
