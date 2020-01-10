@@ -30,6 +30,7 @@ import com.tencent.devops.common.pipeline.enums.BuildFormPropertyType
 import com.tencent.devops.common.pipeline.pojo.BuildParameters
 import com.tencent.devops.model.process.Tables.T_PIPELINE_BUILD_VAR
 import com.tencent.devops.model.process.tables.records.TPipelineBuildVarRecord
+import org.apache.commons.lang.StringUtils
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.InsertOnDuplicateSetMoreStep
@@ -88,21 +89,19 @@ class PipelineBuildVarDao @Autowired constructor() {
         }
     }
 
-    fun getVars(dslContext: DSLContext, buildId: String?, projectId: String?, pipelineId: String?, key: String?): MutableMap<String, String> {
+    fun getVars(dslContext: DSLContext, buildId: String, projectId: String, pipelineId: String, key: String?): MutableMap<String, String> {
         with(T_PIPELINE_BUILD_VAR) {
-            val condition = mutableListOf<Condition>()
-            if (buildId != null)
-                condition.add(BUILD_ID.eq(buildId))
-            if (projectId != null)
-                condition.add(PROJECT_ID.eq(projectId))
-            if (pipelineId != null)
-                condition.add(PIPELINE_ID.eq(pipelineId))
-            if (key != null)
-                condition.add(KEY.eq(key))
-            val result = dslContext.selectFrom(this)
-                .where(condition)
-                .fetch()
 
+            val where = dslContext.selectFrom(this)
+                .where(BUILD_ID.eq(buildId))
+            if (StringUtils.isNotBlank(projectId))
+                where.and(PROJECT_ID.eq(projectId))
+            if (StringUtils.isNotBlank(pipelineId))
+                where.and(PIPELINE_ID.eq(pipelineId))
+            if (StringUtils.isNotBlank(key))
+                where.and(KEY.eq(key))
+
+            val result = where.fetch()
             val map = mutableMapOf<String, String>()
             result?.forEach {
                 map[it[KEY]] = it[VALUE]
