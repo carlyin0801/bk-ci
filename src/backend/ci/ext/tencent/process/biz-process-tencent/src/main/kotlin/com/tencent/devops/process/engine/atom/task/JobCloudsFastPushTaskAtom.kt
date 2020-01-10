@@ -62,7 +62,7 @@ import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import java.nio.file.Files
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
 
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
@@ -309,11 +309,9 @@ class JobCloudsFastPushTaskAtom @Autowired constructor(
                 }
             }
 
-
             LogUtils.addLine(rabbitTemplate, buildId, "Param cloudStonePath=$cloudStonePath", taskId, containerId, executeCount)
             LogUtils.addLine(rabbitTemplate, buildId, "Param isCustom=$isCustom", taskId, containerId, executeCount)
             LogUtils.addLine(rabbitTemplate, buildId, "Param cloudStoneFileList=$cloudStoneFileList", taskId, containerId, executeCount)
-
             LogUtils.addLine(rabbitTemplate, buildId, "$count 个文件将被分发/$count file(s) will be distribute...", taskId, containerId, executeCount)
             if (count == 0) {
                 LogUtils.addRedLine(
