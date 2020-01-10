@@ -755,3 +755,18 @@ class DockerHostBuildService(
         }
     }
 }
+
+fun main(args: Array<String>) {
+    try {
+        try {
+            throw Exception("hey")
+        } catch (e: Exception) {
+            println("hello")
+            throw RuntimeException("world")
+        } catch (t: Throwable) {
+            println("world")
+        }
+    } catch (t: Throwable) {
+        println("world2")
+    }
+}
