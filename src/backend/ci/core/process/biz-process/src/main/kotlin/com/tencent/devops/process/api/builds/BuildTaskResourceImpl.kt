@@ -39,4 +39,8 @@ class BuildTaskResourceImpl @Autowired constructor(
     override fun getAllBuildTask(buildId: String): Result<List<PipelineBuildTaskInfo>> {
         return Result(pipelineBuildTaskService.getAllBuildTask(buildId))
     }
+
+    override fun getBuildVar(buildId: String?, projectId: String?, pipelineId: String?, key: String?): Result<MutableMap<String, String>> {
+        return Result(mutableMapOf<String, String>())
+    }
 }
