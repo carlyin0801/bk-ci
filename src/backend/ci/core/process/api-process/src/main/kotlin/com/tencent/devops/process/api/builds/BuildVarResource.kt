@@ -20,7 +20,7 @@ import javax.ws.rs.core.MediaType
 @Consumes(MediaType.APPLICATION_JSON)
 interface BuildVarResource {
     @ApiOperation("获取指定构建或指定流水线下的构建变量")
-    @Path("/getBuildVar")
+    @Path("/getBuildVariable")
     @GET
     fun getBuildVar(
             @ApiParam(value = "构建ID", required = false)
