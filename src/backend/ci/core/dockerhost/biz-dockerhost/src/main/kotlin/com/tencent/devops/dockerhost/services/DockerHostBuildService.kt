@@ -64,6 +64,7 @@ import com.tencent.devops.dockerhost.pojo.DockerBuildParam
 import com.tencent.devops.dockerhost.pojo.DockerRunParam
 import com.tencent.devops.dockerhost.utils.CommonUtils
 import com.tencent.devops.dockerhost.utils.ENTRY_POINT_CMD
+import com.tencent.devops.log.utils.LogUtils
 import com.tencent.devops.store.pojo.image.enums.ImageRDTypeEnum
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
@@ -218,6 +219,8 @@ class DockerHostBuildService(
                 log(dockerBuildInfo.buildId, "自研公共镜像，不从仓库拉取，直接从本地启动...", dockerBuildInfo.containerHashId)
             } else {
                 try {
+                    logger.error("xxxxxxxxx")
+                    throw NotFoundException("xxxx")
                     LocalImageCache.saveOrUpdate(imageName)
                     pullImage(
                         imageType = dockerBuildInfo.imageType,
