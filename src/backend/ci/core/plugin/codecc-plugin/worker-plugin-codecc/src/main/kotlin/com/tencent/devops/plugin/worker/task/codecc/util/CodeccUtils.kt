@@ -123,13 +123,7 @@ object CodeccUtils {
         val taskParams = codeccExecuteConfig.buildTask.params ?: mapOf()
         val script = taskParams["script"] ?: ""
         val scriptType = codeccExecuteConfig.scriptType
-        val scriptFile = ShellUtil.getCommandFile(
-            buildId = codeccExecuteConfig.buildTask.buildId,
-            script = script,
-            dir = workspace,
-            buildEnvs = codeccExecuteConfig.buildVariables.buildEnvs,
-            runtimeVariables = codeccExecuteConfig.buildVariables.variables
-        )
+        val scriptFile = getScriptFile(codeccExecuteConfig, script)
         logger.info("Start to execute the script file for script($script)")
 
         val list = mutableListOf<String>()
@@ -192,6 +186,26 @@ object CodeccUtils {
         printLog(list, tag)
 
         return executeScript(codeccExecuteConfig, list, "[cov] ")
+    }
+
+    private fun getScriptFile(codeccExecuteConfig: CodeccExecuteConfig, script: String): File {
+        return if (AgentEnv.getOS() == OSType.WINDOWS) {
+            BatScriptUtil.getCommandFile(
+                buildId = codeccExecuteConfig.buildTask.buildId,
+                script = script,
+                dir = codeccExecuteConfig.workspace,
+                buildEnvs = codeccExecuteConfig.buildVariables.buildEnvs,
+                runtimeVariables = codeccExecuteConfig.buildVariables.variables
+            )
+        } else {
+            ShellUtil.getCommandFile(
+                buildId = codeccExecuteConfig.buildTask.buildId,
+                script = script,
+                dir = codeccExecuteConfig.workspace,
+                buildEnvs = codeccExecuteConfig.buildVariables.buildEnvs,
+                runtimeVariables = codeccExecuteConfig.buildVariables.variables
+            )
+        }
     }
 
     private fun doCodeccToolCommand(

@@ -26,9 +26,11 @@
 
 package com.tencent.devops.worker.common.utils
 
+import com.tencent.devops.common.log.Ansi
 import com.tencent.devops.store.pojo.app.BuildEnv
 import com.tencent.devops.worker.common.CommonEnv
 import com.tencent.devops.worker.common.WORKSPACE_ENV
+import com.tencent.devops.worker.common.logger.LoggerService
 import com.tencent.devops.worker.common.task.script.ScriptEnvUtils
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -68,83 +70,8 @@ object BatScriptUtil {
         prefix: String = ""
     ): String {
         try {
-            val tmpDir = System.getProperty("java.io.tmpdir")
-            val file = if (tmpDir.isNullOrBlank()) {
-                File.createTempFile("paas_build_script_", ".bat")
-            } else {
-                File(tmpDir).mkdirs()
-                File.createTempFile("paas_build_script_", ".bat", File(tmpDir))
-            }
-            file.deleteOnExit()
-
-            val command = StringBuilder()
-
-            command.append("@echo off")
-                .append("\r\n")
-                .append("set $WORKSPACE_ENV=${dir.absolutePath}\r\n")
-                .append("set DEVOPS_BUILD_SCRIPT_FILE=${file.absolutePath}\r\n")
-                .append("\r\n")
-
-            runtimeVariables.plus(CommonEnv.getCommonEnv())
-                .filter { !specialEnv(it.key, it.value) }
-                .forEach { (name, value) ->
-                    // 特殊保留字符转义
-                    val clean = escapeEnv(value)
-                    command.append("set $name=\"$clean\"\r\n") // 双引号防止变量值有空格而意外截断定义
-                    command.append("set $name=%$name:~1,-1%\r\n") // 去除双引号，防止被程序读到有双引号的变量值
-                }
-            if (buildEnvs.isNotEmpty()) {
-                var path = ""
-                buildEnvs.forEach { buildEnv ->
-                    val home = File(getEnvironmentPathPrefix(), "${buildEnv.name}/${buildEnv.version}/")
-                    if (!home.exists()) {
-                        LoggerService.addNormalLine(
-                            Ansi().fgRed().a(
-                                "环境变量路径(${home.absolutePath})不存在"
-                            ).reset().toString()
-                        )
-                    }
-                    val envFile = File(home, buildEnv.binPath)
-                    if (!envFile.exists()) {
-                        LoggerService.addNormalLine(
-                            Ansi().fgRed().a(
-                                "环境变量路径(${envFile.absolutePath})不存在"
-                            ).reset().toString()
-                        )
-                        return@forEach
-                    }
-                    // command.append("export $name=$path")
-                    path = if (path.isEmpty()) {
-                        envFile.absolutePath
-                    } else {
-                        "${envFile.absolutePath}:$path"
-                    }
-                    if (buildEnv.env.isNotEmpty()) {
-                        buildEnv.env.forEach { (name, path) ->
-                            val p = File(home, path)
-                            command.append("name $name=${p.absolutePath}\n")
-                        }
-                    }
-                }
-                if (path.isNotEmpty()) {
-                    path = "$path:\$PATH"
-                    command.append("name PATH=$path\n")
-                }
-            }
-
-            command.append(script.replace("\n", "\r\n"))
-                .append("\r\n")
-                .append("exit")
-                .append("\r\n")
-                .append(setEnv.replace("##resultFile##", File(dir, ScriptEnvUtils.getEnvFile(buildId)).absolutePath))
-                .append(setGateValue.replace("##gateValueFile##", File(dir, ScriptEnvUtils.getQualityGatewayEnvFile()).canonicalPath))
-
-            val charset = Charset.defaultCharset()
-            logger.info("The default charset is $charset")
-
-            file.writeText(command.toString(), charset)
-            logger.info("start to run windows script - ($command)")
-            return CommandLineUtils.execute("cmd.exe /C \"${file.canonicalPath}\"", dir, true, prefix)
+            val commandFile = getCommandFile(buildId, script, dir, buildEnvs, runtimeVariables)
+            return CommandLineUtils.execute("cmd.exe /C \"${commandFile.canonicalPath}\"", dir, true, prefix)
         } catch (e: Throwable) {
             logger.warn("Fail to execute bat script $script", e)
             throw e
@@ -172,5 +99,91 @@ object BatScriptUtil {
             result = result.replace(k, v)
         }
         return result
+    }
+
+    fun getCommandFile(
+        buildId: String,
+        script: String,
+        dir: File,
+        buildEnvs: List<BuildEnv>,
+        runtimeVariables: Map<String, String>
+    ): File {
+        val tmpDir = System.getProperty("java.io.tmpdir")
+        val file = if (tmpDir.isNullOrBlank()) {
+            File.createTempFile("paas_build_script_", ".bat")
+        } else {
+            File(tmpDir).mkdirs()
+            File.createTempFile("paas_build_script_", ".bat", File(tmpDir))
+        }
+        file.deleteOnExit()
+
+        val command = StringBuilder()
+
+        command.append("@echo off")
+            .append("\r\n")
+            .append("set $WORKSPACE_ENV=${dir.absolutePath}\r\n")
+            .append("set DEVOPS_BUILD_SCRIPT_FILE=${file.absolutePath}\r\n")
+            .append("\r\n")
+
+        runtimeVariables.plus(CommonEnv.getCommonEnv())
+            .filter { !specialEnv(it.key, it.value) }
+            .forEach { (name, value) ->
+                // 特殊保留字符转义
+                val clean = escapeEnv(value)
+                command.append("set $name=\"$clean\"\r\n") // 双引号防止变量值有空格而意外截断定义
+                command.append("set $name=%$name:~1,-1%\r\n") // 去除双引号，防止被程序读到有双引号的变量值
+            }
+        if (buildEnvs.isNotEmpty()) {
+            var path = ""
+            buildEnvs.forEach { buildEnv ->
+                val home = File(getEnvironmentPathPrefix(), "${buildEnv.name}/${buildEnv.version}/")
+                if (!home.exists()) {
+                    LoggerService.addNormalLine(
+                        Ansi().fgRed().a(
+                            "环境变量路径(${home.absolutePath})不存在"
+                        ).reset().toString()
+                    )
+                }
+                val envFile = File(home, buildEnv.binPath)
+                if (!envFile.exists()) {
+                    LoggerService.addNormalLine(
+                        Ansi().fgRed().a(
+                            "环境变量路径(${envFile.absolutePath})不存在"
+                        ).reset().toString()
+                    )
+                    return@forEach
+                }
+                // command.append("export $name=$path")
+                path = if (path.isEmpty()) {
+                    envFile.absolutePath
+                } else {
+                    "${envFile.absolutePath}:$path"
+                }
+                if (buildEnv.env.isNotEmpty()) {
+                    buildEnv.env.forEach { (name, path) ->
+                        val p = File(home, path)
+                        command.append("name $name=${p.absolutePath}\n")
+                    }
+                }
+            }
+            if (path.isNotEmpty()) {
+                path = "$path:\$PATH"
+                command.append("name PATH=$path\n")
+            }
+        }
+
+        command.append(script.replace("\n", "\r\n"))
+            .append("\r\n")
+            .append("exit")
+            .append("\r\n")
+            .append(setEnv.replace("##resultFile##", File(dir, ScriptEnvUtils.getEnvFile(buildId)).absolutePath))
+            .append(setGateValue.replace("##gateValueFile##", File(dir, ScriptEnvUtils.getQualityGatewayEnvFile()).canonicalPath))
+
+        val charset = Charset.defaultCharset()
+        logger.info("The default charset is $charset")
+
+        file.writeText(command.toString(), charset)
+        logger.info("start to run windows script - ($command)")
+        return file
     }
 }

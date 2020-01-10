@@ -52,7 +52,8 @@ open class CodeccApi constructor(
     private val existPath: String = "/ms/task/api/service/task/exists",
     private val deletePath: String = "/ms/task/api/service/task",
     private val report: String = "/api",
-    private val getRuleSetsPath: String = "/ms/defect/api/service/checker/tools/{toolName}/pipelineCheckerSets"
+    private val getRuleSetsPath: String = "/ms/defect/api/service/checker/tools/{toolName}/pipelineCheckerSets",
+    private val languageRuleSetsPath: String = "/ms/defect/api/service/checkerSet/categoryList"
 ) {
 
     companion object {
@@ -310,6 +311,19 @@ open class CodeccApi constructor(
             if (!pinpointToolSetId.isNullOrBlank()) map["PINPOINT"] = pinpointToolSetId!!
         }
         return map
+    }
+
+    fun getLanguageRuleSets(projectId: String, userId: String): Result<Map<String, Any>> {
+        val headers = mapOf(
+            AUTH_HEADER_DEVOPS_PROJECT_ID to projectId
+        )
+        val result = taskExecution(
+            body = mapOf(),
+            path = "/ms/defect/api/service/checkerSet/categoryList",
+            headers = headers,
+            method = "GET"
+        )
+        return objectMapper.readValue(result)
     }
 
     private data class DevOpsToolParams(

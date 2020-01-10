@@ -49,7 +49,6 @@ import java.io.File
 class LinuxCodeCCScriptTask : ITask() {
 
     override fun execute(buildTask: BuildTask, buildVariables: BuildVariables, workspace: File) {
-        LoggerService.addNormalLine(WindowsCodeccConstants.WINDOWS_COV_PY_FILE.canonicalPath)
 
         val taskParams = buildTask.params ?: mapOf()
         // 如果指定_CODECC_FILTER_TOOLS，则只做_CODECC_FILTER_TOOLS的扫描
