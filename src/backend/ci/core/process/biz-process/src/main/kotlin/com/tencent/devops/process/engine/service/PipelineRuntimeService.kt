@@ -160,7 +160,9 @@ class PipelineRuntimeService @Autowired constructor(
     private val pipelineBuildVarDao: PipelineBuildVarDao,
     private val buildDetailDao: BuildDetailDao,
     private val buildStartupParamService: BuildStartupParamService,
-    private val redisOperation: RedisOperation
+    private val redisOperation: RedisOperation,
+    private val pipelinePermissionService: PipelinePermissionService,
+    private val pipelineRepositoryService: PipelineRepositoryService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PipelineRuntimeService::class.java)
@@ -302,6 +304,18 @@ class PipelineRuntimeService @Autowired constructor(
         return if (vars.isNotEmpty()) vars[varName] else null
     }
 
+    fun getAllVariable(buildId: String, projectId: String, pipelineId: String): Map<String, String> {
+        val userId = pipelineRepositoryService.getPipelineInfo(projectId, pipelineId)?.lastModifyUser?:""
+        if (!pipelinePermissionService.checkPipelinePermission(
+                userId = userId,
+                projectId = projectId,
+                pipelineId = pipelineId,
+                permission = AuthPermission.EXECUTE))
+            throw PermissionForbiddenException("用户无权获取此流水线构建信息")
+
+        return getAllVariable(buildId)
+    }
+    
     fun getAllVariable(buildId: String): Map<String, String> {
         val vars = pipelineBuildVarDao.getVars(dslContext, buildId)
         // 旧流水线的前缀变量追加 未来旧版下线该调用会移除
