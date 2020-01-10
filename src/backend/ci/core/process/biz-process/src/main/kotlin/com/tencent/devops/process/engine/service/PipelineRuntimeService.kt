@@ -301,7 +301,7 @@ class PipelineRuntimeService @Autowired constructor(
         val vars = getAllVariable(buildId)
         return if (vars.isNotEmpty()) vars[varName] else null
     }
-
+    
     fun getAllVariable(buildId: String): Map<String, String> {
         val vars = pipelineBuildVarDao.getVars(dslContext, buildId)
         // 旧流水线的前缀变量追加 未来旧版下线该调用会移除
@@ -1944,10 +1944,7 @@ class PipelineRuntimeService @Autowired constructor(
         if (allVariable[PIPELINE_RETRY_COUNT] == null) return
 
         val triggerContainer = model.stages[0].containers[0] as TriggerContainer
-        val params = allVariable.filter {
-            it.key.startsWith(SkipElementUtils.prefix) || it.key == BUILD_NO || it.key == PIPELINE_RETRY_COUNT
-        }.toMutableMap()
-
+        val params = mutableMapOf<String, String>()
         if (triggerContainer.buildNo != null) {
             val buildNo = getBuildNo(pipelineId)
             setVariable(
@@ -1956,6 +1953,10 @@ class PipelineRuntimeService @Autowired constructor(
             )
             params[BUILD_NO] = buildNo.toString()
         }
+
+        params.putAll(allVariable.filter {
+            it.key.startsWith(SkipElementUtils.prefix) || it.key == BUILD_NO || it.key == PIPELINE_RETRY_COUNT
+        }.toMap())
 
         if (triggerContainer.params.isNotEmpty())
             params.plus(triggerContainer.params.map {
