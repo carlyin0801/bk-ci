@@ -7,19 +7,22 @@ import com.tencent.devops.process.engine.service.PipelineRuntimeService
 
 import org.apache.commons.lang.StringUtils
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Service
 
 @RestResource
 class BuildVarResourceImpl @Autowired constructor(
     private val pipelineRuntimeService: PipelineRuntimeService
 ) : BuildVarResource {
-    override fun getBuildVar(buildId: String?, projectId: String?, pipelineId: String?, key: String?): Result<MutableMap<String, String>> {
+    override fun getBuildVar(buildId: String, projectId: String, pipelineId: String, key: String?): Result<MutableMap<String, String>> {
         checkParam(buildId = buildId, projectId = projectId, pipelineId = pipelineId)
         return Result(pipelineRuntimeService.getVariable(buildId = buildId, projectId = projectId, pipelineId = pipelineId, key = key))
     }
 
-    fun checkParam(buildId: String?, projectId: String?, pipelineId: String?) {
-        if (StringUtils.isBlank(buildId) && StringUtils.isBlank(projectId) && StringUtils.isBlank(pipelineId))
-            throw ParamBlankException("buildId && projectId && pipelineId are all null or blank")
+    fun checkParam(buildId: String, projectId: String, pipelineId: String) {
+        if (StringUtils.isBlank(buildId))
+            throw ParamBlankException("build Id is null or blank")
+        if (StringUtils.isBlank(projectId))
+            throw ParamBlankException("project Id is null or blank")
+        if (StringUtils.isBlank(pipelineId))
+            throw ParamBlankException("pipeline Id is null or blank")
     }
 }

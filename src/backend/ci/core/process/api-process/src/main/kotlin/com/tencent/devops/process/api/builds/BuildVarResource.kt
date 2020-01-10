@@ -24,15 +24,15 @@ interface BuildVarResource {
     @Path("/getBuildVariable")
     @GET
     fun getBuildVar(
-            @ApiParam(value = "构建ID", required = false)
+            @ApiParam(value = "构建ID", required = true)
             @HeaderParam(AUTH_HEADER_DEVOPS_BUILD_ID)
-            buildId: String?,
-            @ApiParam(value = "项目ID", required = false)
+            buildId: String,
+            @ApiParam(value = "项目ID", required = true)
             @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
-            projectId: String?,
-            @ApiParam(value = "流水线ID", required = false)
+            projectId: String,
+            @ApiParam(value = "流水线ID", required = true)
             @HeaderParam(AUTH_HEADER_DEVOPS_PIPELINE_ID)
-            pipelineId: String?,
+            pipelineId: String,
             @ApiParam(value = "构建参数key值", required = false)
             @QueryParam("key")
             key: String?

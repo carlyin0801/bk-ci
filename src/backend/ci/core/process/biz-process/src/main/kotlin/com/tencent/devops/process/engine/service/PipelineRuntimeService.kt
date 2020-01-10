@@ -325,7 +325,7 @@ class PipelineRuntimeService @Autowired constructor(
         return allVars
     }
 
-    fun getVariable(buildId: String?, projectId: String?, pipelineId: String?, key: String?): MutableMap<String, String> {
+    fun getVariable(buildId: String, projectId: String, pipelineId: String, key: String?): MutableMap<String, String> {
         logger.info("get build var: $buildId  |  $projectId  |  $pipelineId  |  $key")
         val res = pipelineBuildVarDao.getVars(
             dslContext = dslContext,
@@ -335,8 +335,6 @@ class PipelineRuntimeService @Autowired constructor(
             key = key
         )
         logger.info("get build var: $res")
-        val rest = pipelineBuildVarDao.getVarsT(dslContext)
-        logger.info("get build var t: $rest")
         return res
     }
 
