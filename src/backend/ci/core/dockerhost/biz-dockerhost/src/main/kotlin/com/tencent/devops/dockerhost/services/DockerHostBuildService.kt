@@ -64,7 +64,6 @@ import com.tencent.devops.dockerhost.pojo.DockerBuildParam
 import com.tencent.devops.dockerhost.pojo.DockerRunParam
 import com.tencent.devops.dockerhost.utils.CommonUtils
 import com.tencent.devops.dockerhost.utils.ENTRY_POINT_CMD
-import com.tencent.devops.log.utils.LogUtils
 import com.tencent.devops.store.pojo.image.enums.ImageRDTypeEnum
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
@@ -243,6 +242,7 @@ class DockerHostBuildService(
                 } catch (t: Throwable) {
                     logger.warn("Fail to pull the image $imageName of build ${dockerBuildInfo.buildId}", t)
                     log(dockerBuildInfo.buildId, "拉取镜像失败，错误信息：${t.message}", dockerBuildInfo.containerHashId)
+                    logger.error("yyyyyyyyyyyy")
                     log(dockerBuildInfo.buildId, "尝试使用本地镜像启动...", dockerBuildInfo.containerHashId)
                 }
             }
