@@ -32,9 +32,6 @@ interface BuildVarResource {
         projectId: String,
         @ApiParam(value = "流水线ID", required = true)
         @HeaderParam(AUTH_HEADER_DEVOPS_PIPELINE_ID)
-        pipelineId: String,
-        @ApiParam(value = "用户ID", required = true)
-        @HeaderParam(AUTH_HEADER_DEVOPS_USER_ID)
-        userId: String
+        pipelineId: String
     ): Result<Map<String, String>>
 }

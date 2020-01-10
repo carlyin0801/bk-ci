@@ -164,7 +164,8 @@ class PipelineRuntimeService @Autowired constructor(
     private val buildDetailDao: BuildDetailDao,
     private val buildStartupParamService: BuildStartupParamService,
     private val redisOperation: RedisOperation,
-    private val pipelinePermissionService: PipelinePermissionService
+    private val pipelinePermissionService: PipelinePermissionService,
+    private val pipelineRepositoryService: PipelineRepositoryService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(PipelineRuntimeService::class.java)
@@ -306,7 +307,8 @@ class PipelineRuntimeService @Autowired constructor(
         return if (vars.isNotEmpty()) vars[varName] else null
     }
 
-    fun getAllVariable(buildId: String, projectId: String, pipelineId: String, userId: String): Map<String, String> {
+    fun getAllVariable(buildId: String, projectId: String, pipelineId: String): Map<String, String> {
+        val userId = pipelineRepositoryService.getPipelineInfo(projectId, pipelineId)?.lastModifyUser?:""
         if (!pipelinePermissionService.checkPipelinePermission(
                 userId = userId,
                 projectId = projectId,
