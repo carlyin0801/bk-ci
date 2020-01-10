@@ -87,6 +87,28 @@ class PipelineBuildVarDao @Autowired constructor() {
         }
     }
 
+    fun getVars(dslContext: DSLContext, buildId: String?, projectId: String?, pipelineId: String?, key: String?): MutableMap<String, String> {
+        with(T_PIPELINE_BUILD_VAR) {
+            val where = dslContext.selectFrom(this)
+                .where()
+            if (buildId != null)
+                where.and(BUILD_ID.eq(buildId))
+            if (projectId != null)
+                where.and(PROJECT_ID.eq(projectId))
+            if (pipelineId != null)
+                where.and(PIPELINE_ID.eq(pipelineId))
+            if (key != null)
+                where.and(KEY.eq(key))
+
+            val result = where.fetch()
+            val map = mutableMapOf<String, String>()
+            result?.forEach {
+                map[it[KEY]] = it[VALUE]
+            }
+            return map
+        }
+    }
+
     fun getVarsByProjectAndPipeline(dslContext: DSLContext, projectId: String, pipelineId: String, key: String? = null): Result<TPipelineBuildVarRecord>? {
         return with(T_PIPELINE_BUILD_VAR) {
             val condition = PROJECT_ID.eq(projectId).and(PIPELINE_ID.eq(pipelineId))
