@@ -30,6 +30,7 @@ import com.tencent.devops.common.pipeline.enums.BuildFormPropertyType
 import com.tencent.devops.common.pipeline.pojo.BuildParameters
 import com.tencent.devops.model.process.Tables.T_PIPELINE_BUILD_VAR
 import com.tencent.devops.model.process.tables.records.TPipelineBuildVarRecord
+import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.InsertOnDuplicateSetMoreStep
 import org.jooq.Result
@@ -89,18 +90,19 @@ class PipelineBuildVarDao @Autowired constructor() {
 
     fun getVars(dslContext: DSLContext, buildId: String?, projectId: String?, pipelineId: String?, key: String?): MutableMap<String, String> {
         with(T_PIPELINE_BUILD_VAR) {
-            val where = dslContext.selectFrom(this)
-                .where()
+            val condition = mutableListOf<Condition>()
             if (buildId != null)
-                where.and(BUILD_ID.eq(buildId))
+                condition.add(BUILD_ID.eq(buildId))
             if (projectId != null)
-                where.and(PROJECT_ID.eq(projectId))
+                condition.add(PROJECT_ID.eq(projectId))
             if (pipelineId != null)
-                where.and(PIPELINE_ID.eq(pipelineId))
+                condition.add(PIPELINE_ID.eq(pipelineId))
             if (key != null)
-                where.and(KEY.eq(key))
+                condition.add(KEY.eq(key))
+            val result = dslContext.selectFrom(this)
+                .where(condition)
+                .fetch()
 
-            val result = where.fetch()
             val map = mutableMapOf<String, String>()
             result?.forEach {
                 map[it[KEY]] = it[VALUE]
