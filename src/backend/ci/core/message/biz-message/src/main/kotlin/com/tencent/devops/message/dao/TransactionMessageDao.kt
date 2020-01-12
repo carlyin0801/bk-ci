@@ -32,7 +32,6 @@ import com.tencent.devops.message.pojo.TransactionMessage
 import com.tencent.devops.message.pojo.UpdateTransactionMessageParam
 import com.tencent.devops.message.pojo.enums.MessageDataTypeEnum
 import com.tencent.devops.message.pojo.enums.MessageStatusEnum
-import com.tencent.devops.message.service.TransactionMessageService
 import com.tencent.devops.model.message.tables.TTransactionMessage
 import com.tencent.devops.model.message.tables.records.TTransactionMessageRecord
 import org.jooq.Condition

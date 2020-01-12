@@ -24,49 +24,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.message.api
-
-import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.message.pojo.TransactionMessage
-import io.swagger.annotations.Api
-import io.swagger.annotations.ApiOperation
-import io.swagger.annotations.ApiParam
-import org.springframework.web.bind.annotation.PathVariable
-import javax.ws.rs.Consumes
-import javax.ws.rs.DELETE
-import javax.ws.rs.POST
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
-import javax.ws.rs.Produces
-import javax.ws.rs.core.MediaType
-
-@Api(tags = ["SERVICE_MESSAGE"], description = "事务消息")
-@Path("/service/message/transaction")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
-interface ServiceTransactionMessageResource {
-
-    @ApiOperation("预存储消息")
-    @POST
-    @Path("/saveMessageWaitingConfirm")
-    fun saveMessageWaitingConfirm(
-            @ApiParam("事务消息", required = true)
-            transactionMessage: TransactionMessage
-    ): Result<Boolean>
-
-    @ApiOperation("确认并发送消息")
-    @POST
-    @Path("/ids/{messageId}/confirmAndSendMessage")
-    fun confirmAndSendMessage(
-            @ApiParam("消息ID", required = true)
-            @PathParam("messageId")
-            messageId: String
-    ): Result<Boolean>
-
-    @ApiOperation("删除消息")
-    @DELETE
-    @Path("/ids/{messageId}")
-    fun deleteMessageByMessageId(
-            @PathVariable("messageId") messageId: String
-    ): Result<Boolean>
+subprojects {
+    dependencies {
+        compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+        compile "org.jetbrains.kotlin:kotlin-reflect"
+        testCompile "junit:junit"
+        testCompile "org.springframework.boot:spring-boot-starter-test"
+    }
 }
+
+apply from: "$rootDir/task_deploy_to_maven.gradle"
