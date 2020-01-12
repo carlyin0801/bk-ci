@@ -30,6 +30,7 @@ import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.store.pojo.template.InstallTemplateReq
 import com.tencent.devops.store.pojo.template.MarketTemplateResp
+import com.tencent.devops.store.pojo.template.TemplateBaseInfo
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
@@ -38,6 +39,7 @@ import javax.ws.rs.GET
 import javax.ws.rs.HeaderParam
 import javax.ws.rs.POST
 import javax.ws.rs.Path
+import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 
@@ -66,4 +68,13 @@ interface ServiceTemplateResource {
         @ApiParam("安装模板到项目请求报文体", required = true)
         installTemplateReq: InstallTemplateReq
     ): Result<Boolean>
+
+    @ApiOperation("根据模板代码查看模板详情")
+    @GET
+    @Path("/template/templateCodes/{templateCode}/base/info")
+    fun getTemplateBaseInfoByCode(
+            @ApiParam("模板代码", required = true)
+            @PathParam("templateCode")
+            templateCode: String
+    ): Result<TemplateBaseInfo?>
 }
