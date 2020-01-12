@@ -268,6 +268,9 @@ include ":ext:tencent:image:biz-image-tencent"
 include ":ext:tencent:image:boot-image-tencent"
 include ":ext:tencent:image:boot-image-tencentyun"
 
+include ":ext:tencent:message"
+include ":ext:tencent:message:boot-message-tencent"
+
 include ":ext:tencent:store"
 include ":ext:tencent:store:api-store-tencent"
 include ":ext:tencent:store:api-store-op"

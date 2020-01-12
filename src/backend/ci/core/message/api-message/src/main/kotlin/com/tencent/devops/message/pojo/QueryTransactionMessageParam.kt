@@ -60,7 +60,7 @@ data class QueryTransactionMessageParam(
     val validFlag: Boolean ? = null,
 
     @ApiModelProperty("是否倒序查询", required = false)
-    val descFlag: Boolean  = true,
+    val descFlag: Boolean = true,
 
     @ApiModelProperty("页码", required = false)
     val page: Int ? = null,

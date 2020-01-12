@@ -45,23 +45,23 @@ interface ServiceTransactionMessageResource {
     @POST
     @Path("/saveMessageWaitingConfirm")
     fun saveMessageWaitingConfirm(
-            @ApiParam("事务消息", required = true)
-            transactionMessage: TransactionMessage
+        @ApiParam("事务消息", required = true)
+        transactionMessage: TransactionMessage
     ): Result<Boolean>
 
     @ApiOperation("确认并发送消息")
     @POST
     @Path("/ids/{messageId}/confirmAndSendMessage")
     fun confirmAndSendMessage(
-            @ApiParam("消息ID", required = true)
-            @PathParam("messageId")
-            messageId: String
+        @ApiParam("消息ID", required = true)
+        @PathParam("messageId")
+        messageId: String
     ): Result<Boolean>
 
     @ApiOperation("删除消息")
     @DELETE
     @Path("/ids/{messageId}")
     fun deleteMessageByMessageId(
-            @PathVariable("messageId") messageId: String
+        @PathVariable("messageId") messageId: String
     ): Result<Boolean>
 }
