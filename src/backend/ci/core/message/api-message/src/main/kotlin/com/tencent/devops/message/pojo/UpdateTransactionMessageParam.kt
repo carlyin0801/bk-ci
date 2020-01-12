@@ -24,19 +24,40 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-dependencies {
-    compile project(":core:common:common-client")
-    compile project(":core:common:common-service")
-    compile project(":core:common:common-db")
-    compile project(":core:common:common-websocket")
-    compile project(":core:store:api-store")
-    compile project(":core:project:api-project")
-    compile project(":core:process:api-process")
-    compile project(":core:quality:api-quality")
-    compile project(":core:artifactory:api-artifactory-store")
-    compile project(":core:message:api-message")
-    compile project(":core:store:model-store")
-    testCompile project(":core:common:common-test")
-}
+package com.tencent.devops.message.pojo
 
-apply from: "$rootDir/task_deploy_to_maven.gradle"
+import com.tencent.devops.message.pojo.enums.MessageDataTypeEnum
+import com.tencent.devops.message.pojo.enums.MessageStatusEnum
+import io.swagger.annotations.ApiModel
+import io.swagger.annotations.ApiModelProperty
+
+@ApiModel("更新事务消息参数")
+data class UpdateTransactionMessageParam(
+
+    @ApiModelProperty("消息内容", required = false)
+    val messageBody: String ? = null,
+
+    @ApiModelProperty("版本号", required = false)
+    val version: Int ? = null,
+
+    @ApiModelProperty("消息数据类型", required = false)
+    val messageDataType: MessageDataTypeEnum ? = null,
+
+    @ApiModelProperty("消息队列名称", required = false)
+    val consumerQueue: String ? = null,
+
+    @ApiModelProperty("消息发送次数", required = false)
+    val messageSendTimes: Int ? = null,
+
+    @ApiModelProperty("消息是否死亡", required = false)
+    var isDead: Boolean ? = null,
+
+    @ApiModelProperty("消息状态", required = false)
+    val status: MessageStatusEnum ? = null,
+
+    @ApiModelProperty("备注", required = false)
+    val remark: String ? = null,
+
+    @ApiModelProperty("扩展字段，存贮用来查询接口发起方业务逻辑处理结果的关键信息", required = false)
+    val data: String ? = null
+)

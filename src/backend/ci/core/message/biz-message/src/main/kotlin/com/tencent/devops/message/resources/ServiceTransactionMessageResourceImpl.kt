@@ -24,19 +24,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-dependencies {
-    compile project(":core:common:common-client")
-    compile project(":core:common:common-service")
-    compile project(":core:common:common-db")
-    compile project(":core:common:common-websocket")
-    compile project(":core:store:api-store")
-    compile project(":core:project:api-project")
-    compile project(":core:process:api-process")
-    compile project(":core:quality:api-quality")
-    compile project(":core:artifactory:api-artifactory-store")
-    compile project(":core:message:api-message")
-    compile project(":core:store:model-store")
-    testCompile project(":core:common:common-test")
-}
+package com.tencent.devops.message.resources
 
-apply from: "$rootDir/task_deploy_to_maven.gradle"
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.message.api.ServiceTransactionMessageResource
+import com.tencent.devops.message.pojo.TransactionMessage
+import com.tencent.devops.message.service.TransactionMessageService
+import org.springframework.beans.factory.annotation.Autowired
+
+@RestResource
+class ServiceTransactionMessageResourceImpl @Autowired constructor(
+    private val transactionMessageService: TransactionMessageService
+  ) : ServiceTransactionMessageResource {
+
+    override fun saveMessageWaitingConfirm(transactionMessage: TransactionMessage): Result<Boolean> {
+        return transactionMessageService.saveMessageWaitingConfirm(transactionMessage)
+    }
+
+    override fun confirmAndSendMessage(messageId: String): Result<Boolean> {
+        return transactionMessageService.confirmAndSendMessage(messageId)
+    }
+
+    override fun deleteMessageByMessageId(messageId: String): Result<Boolean> {
+        return transactionMessageService.deleteMessageByMessageId(messageId)
+    }
+}

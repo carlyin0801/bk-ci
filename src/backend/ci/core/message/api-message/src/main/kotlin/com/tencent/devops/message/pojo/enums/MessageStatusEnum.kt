@@ -24,19 +24,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-dependencies {
-    compile project(":core:common:common-client")
-    compile project(":core:common:common-service")
-    compile project(":core:common:common-db")
-    compile project(":core:common:common-websocket")
-    compile project(":core:store:api-store")
-    compile project(":core:project:api-project")
-    compile project(":core:process:api-process")
-    compile project(":core:quality:api-quality")
-    compile project(":core:artifactory:api-artifactory-store")
-    compile project(":core:message:api-message")
-    compile project(":core:store:model-store")
-    testCompile project(":core:common:common-test")
-}
+package com.tencent.devops.message.pojo.enums
 
-apply from: "$rootDir/task_deploy_to_maven.gradle"
+enum class MessageStatusEnum {
+
+    WAITING_CONFIRM, // 待确认
+
+    SENDING // 待发送
+}

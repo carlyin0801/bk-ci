@@ -24,19 +24,39 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-dependencies {
-    compile project(":core:common:common-client")
-    compile project(":core:common:common-service")
-    compile project(":core:common:common-db")
-    compile project(":core:common:common-websocket")
-    compile project(":core:store:api-store")
-    compile project(":core:project:api-project")
-    compile project(":core:process:api-process")
-    compile project(":core:quality:api-quality")
-    compile project(":core:artifactory:api-artifactory-store")
-    compile project(":core:message:api-message")
-    compile project(":core:store:model-store")
-    testCompile project(":core:common:common-test")
-}
+package com.tencent.devops.message.config
 
-apply from: "$rootDir/task_deploy_to_maven.gradle"
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.AutoConfigureOrder
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
+import org.springframework.context.annotation.Configuration
+import org.springframework.core.Ordered
+
+/**
+ * 事务消息配置
+ */
+@Configuration
+@ConditionalOnWebApplication
+@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)
+class TransactionMessageConfig {
+
+    // 消息最多发送次数
+    @Value("\${message.maxSendTimes}")
+    val messageMaxSendTimes: Int = 5
+
+    // 消息间隔发送时间(单位:分)
+    @Value("\${message.messageSendFirstIntervalTime}")
+    val messageFirstSendIntervalTime = 0
+    @Value("\${message.messageSecondSendIntervalTime}")
+    val messageSecondSendIntervalTime = 1
+    @Value("\${message.messageThirdSendIntervalTime}")
+    val messageThirdSendIntervalTime = 2
+    @Value("\${message.messageFourthSendIntervalTime}")
+    val messageFourthSendIntervalTime = 5
+    @Value("\${message.messageFifthSendIntervalTime}")
+    val messageFifthSendIntervalTime = 10
+
+    // 消息存放超过下面设置的时间才可以取出处理(单位:秒)
+    @Value("\${message.messageHandleDuration}")
+    val messageHandleDuration = 180
+}

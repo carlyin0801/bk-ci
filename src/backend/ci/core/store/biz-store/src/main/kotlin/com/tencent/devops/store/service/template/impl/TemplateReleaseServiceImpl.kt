@@ -28,9 +28,15 @@ package com.tencent.devops.store.service.template.impl
 
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.UUIDUtil
 import com.tencent.devops.common.client.Client
+import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
 import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.message.api.ServiceTransactionMessageResource
+import com.tencent.devops.message.pojo.TransactionMessage
+import com.tencent.devops.message.pojo.enums.MessageDataTypeEnum
+import com.tencent.devops.message.pojo.enums.MessageStatusEnum
 import com.tencent.devops.model.store.tables.records.TTemplateRecord
 import com.tencent.devops.process.api.template.ServiceTemplateResource
 import com.tencent.devops.process.pojo.template.AddMarketTemplateRequest
@@ -103,6 +109,30 @@ abstract class TemplateReleaseServiceImpl @Autowired constructor() : TemplateRel
             // 抛出错误提示
             return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_EXIST, arrayOf(templateName), false)
         }
+        // 预发送【待确认】消息给消息服务
+        val messageId = UUIDUtil.generate()
+        val messageMap = mapOf(
+                "messageId" to messageId,
+                "templateCode" to templateCode,
+                "userId" to userId
+        )
+        val transactionMessage = TransactionMessage(
+                messageId = UUIDUtil.generate(),
+                version = 1,
+                messageBody = JsonUtil.toJson(messageMap),
+                messageDataType = MessageDataTypeEnum.JSON,
+                consumerQueue = MQ.QUEUE_TEMPLATE_REL,
+                messageSendTimes = 0,
+                isDead = false,
+                status = MessageStatusEnum.WAITING_CONFIRM,
+                data = templateCode,
+                creator = userId,
+                createTime = LocalDateTime.now(),
+                modifier = userId,
+                updateTime = LocalDateTime.now()
+        )
+        client.get(ServiceTransactionMessageResource::class).saveMessageWaitingConfirm(transactionMessage)
+        var flag = false
         dslContext.transaction { t ->
             val context = DSL.using(t)
             val templateId = UUIDUtil.generate()
@@ -125,7 +155,16 @@ abstract class TemplateReleaseServiceImpl @Autowired constructor() : TemplateRel
                 type = StoreMemberTypeEnum.ADMIN.type.toByte(),
                 storeType = StoreTypeEnum.TEMPLATE.type.toByte()
             )
-            client.get(ServiceTemplateResource::class).updateStoreFlag(userId, templateCode, true)
+            flag = true
+        }
+        if (flag) {
+            // 业务处理成功则告知消息服务把消息投递出去
+            logger.info("insert template success, messageId:$messageId has send!")
+            client.get(ServiceTransactionMessageResource::class).confirmAndSendMessage(messageId)
+        } else {
+            // 业务处理失败则告知消息服务把消息从数据库删除
+            logger.warn("insert template fail, messageId:$messageId delete!")
+            client.get(ServiceTransactionMessageResource::class).deleteMessageByMessageId(messageId)
         }
         return Result(true)
     }

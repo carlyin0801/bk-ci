@@ -120,6 +120,12 @@ include ":core:image:biz-image"
 include ":core:image:boot-image"
 include ":core:image:model-image"
 
+include ":core:message"
+include ":core:message:api-message"
+include ":core:message:biz-message"
+include ":core:message:boot-message"
+include ":core:message:model-message"
+
 include ":core:store"
 include ":core:store:api-store"
 include ":core:store:api-store-sample"
@@ -261,6 +267,9 @@ include ":ext:tencent:image:api-image-tencent"
 include ":ext:tencent:image:biz-image-tencent"
 include ":ext:tencent:image:boot-image-tencent"
 include ":ext:tencent:image:boot-image-tencentyun"
+
+include ":ext:tencent:message"
+include ":ext:tencent:message:boot-message-tencent"
 
 include ":ext:tencent:store"
 include ":ext:tencent:store:api-store-tencent"

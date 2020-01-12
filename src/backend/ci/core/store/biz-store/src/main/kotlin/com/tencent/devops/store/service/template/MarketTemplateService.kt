@@ -33,6 +33,7 @@ import com.tencent.devops.store.pojo.template.InstallTemplateReq
 import com.tencent.devops.store.pojo.template.MarketTemplateMain
 import com.tencent.devops.store.pojo.template.MarketTemplateResp
 import com.tencent.devops.store.pojo.template.MyTemplateItem
+import com.tencent.devops.store.pojo.template.TemplateBaseInfo
 import com.tencent.devops.store.pojo.template.TemplateDetail
 import com.tencent.devops.store.pojo.template.enums.MarketTemplateSortTypeEnum
 import com.tencent.devops.store.pojo.template.enums.TemplateRdTypeEnum
@@ -79,6 +80,11 @@ interface MarketTemplateService {
         userId: String,
         templateId: String
     ): Result<TemplateDetail?>
+
+    /**
+     * 根据模版标识获取模版基本信息
+     */
+    fun getTemplateBaseInfoByCode(templateCode: String): Result<TemplateBaseInfo?>
 
     /**
      * 删除模版关联关系
