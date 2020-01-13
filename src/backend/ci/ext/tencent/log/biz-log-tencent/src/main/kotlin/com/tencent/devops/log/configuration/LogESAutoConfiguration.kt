@@ -57,16 +57,16 @@ class LogESAutoConfiguration {
     @Value("\${elasticsearch.cluster}")
     private val e1Cluster: String? = null
 
-    @Value("\${elasticsearch2.ip}")
-    private val e2IP: String? = null
-    @Value("\${elasticsearch2.port}")
-    private val e2Port: Int? = 0
-    @Value("\${elasticsearch2.cluster}")
-    private val e2Cluster: String? = null
-    @Value("\${elasticsearch2.username}")
-    private val e2Username: String? = null
-    @Value("\${elasticsearch2.password}")
-    private val e2Password: String? = null
+//    @Value("\${elasticsearch2.ip}")
+//    private val e2IP: String? = null
+//    @Value("\${elasticsearch2.port}")
+//    private val e2Port: Int? = 0
+//    @Value("\${elasticsearch2.cluster}")
+//    private val e2Cluster: String? = null
+//    @Value("\${elasticsearch2.username}")
+//    private val e2Username: String? = null
+//    @Value("\${elasticsearch2.password}")
+//    private val e2Password: String? = null
 
     @Bean
     @Primary
