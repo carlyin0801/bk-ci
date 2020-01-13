@@ -24,47 +24,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.store.pojo.enums
+package com.tencent.devops.message.api
 
-enum class ExtServiceStatusEnum(val status: Int) {
-    INIT(0), // 初始化
-    COMMITTING(1), // 提交中
-    BUILDING(2), // 构建中
-    BUILD_FAIL(3), // 构建失败
-    TESTING(4), // 测试中
-    AUDITING(5), // 审核中
-    AUDIT_REJECT(6), // 审核驳回
-    RELEASED(7), // 已发布
-    GROUNDING_SUSPENSION(8), // 上架中止
-    UNDERCARRIAGING(9), // 下架中
-    UNDERCARRIAGED(10); // 已下架
+import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.message.pojo.TransactionMessage
+import com.tencent.devops.message.pojo.enums.MessageStatusEnum
+import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
+import io.swagger.annotations.ApiParam
+import javax.ws.rs.Consumes
+import javax.ws.rs.GET
+import javax.ws.rs.HeaderParam
+import javax.ws.rs.Path
+import javax.ws.rs.Produces
+import javax.ws.rs.QueryParam
+import javax.ws.rs.core.MediaType
 
-    companion object {
+@Api(tags = ["USER_MESSAGE"], description = "事务消息")
+@Path("/user/message/transaction")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+interface UserTransactionMessageResource {
 
-        fun getServiceStatus(name: String): ExtServiceStatusEnum? {
-            ExtServiceStatusEnum.values().forEach { enumObj ->
-                if (enumObj.name == name) {
-                    return enumObj
-                }
-            }
-            return null
-        }
-
-        fun getServiceStatus(status: Int): String {
-            return when (status) {
-                0 -> INIT.name
-                1 -> COMMITTING.name
-                2 -> BUILDING.name
-                3 -> BUILD_FAIL.name
-                4 -> TESTING.name
-                5 -> AUDITING.name
-                6 -> AUDIT_REJECT.name
-                7 -> RELEASED.name
-                8 -> GROUNDING_SUSPENSION.name
-                9 -> UNDERCARRIAGING.name
-                10 -> UNDERCARRIAGED.name
-                else -> INIT.name
-            }
-        }
-    }
+    @ApiOperation("查询事务消息列表")
+    @GET
+    @Path("/list")
+    fun getTransactionMessages(
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("状态", required = false)
+        @QueryParam("status")
+        status: MessageStatusEnum?
+    ): Result<List<TransactionMessage>?>
 }

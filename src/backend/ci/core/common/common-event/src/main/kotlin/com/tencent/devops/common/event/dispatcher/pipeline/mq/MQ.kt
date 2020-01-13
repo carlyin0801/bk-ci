@@ -209,4 +209,7 @@ object MQ {
     const val QUEUE_PROJECT_CREATE_EVENT = "q.project.create.project.queue"
     const val QUEUE_PROJECT_UPDATE_EVENT = "q.project.update.project.queue"
     const val QUEUE_PROJECT_UPDATE_LOGO_EVENT = "q.project.update.logo.project.queue"
+
+    // 分布式事务队列
+    const val QUEUE_TEMPLATE_REL = "q.store.template.rel"
 }

@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: message
+    desc: DevOps Message Service
+    version: 4.0
+    packageName: com.tencent.devops.message
+  cloud:
+    consul:
+      discovery:
+        tags: local
+
+server:
+  port: 21936

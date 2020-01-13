@@ -47,6 +47,7 @@ dependencies {
     compile project(":core:store:biz-store-sample")
     compile project(":core:ticket:biz-ticket-sample")
     compile project(":core:websocket:biz-websocket")
+    compile project(":core:message:biz-message")
 }
 
 apply from: "$rootDir/task_spring_boot_package.gradle"
