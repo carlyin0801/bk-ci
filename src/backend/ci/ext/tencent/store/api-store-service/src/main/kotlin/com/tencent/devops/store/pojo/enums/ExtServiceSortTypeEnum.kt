@@ -26,45 +26,10 @@
 
 package com.tencent.devops.store.pojo.enums
 
-enum class ExtServiceStatusEnum(val status: Int) {
-    INIT(0), // 初始化
-    COMMITTING(1), // 提交中
-    BUILDING(2), // 构建中
-    BUILD_FAIL(3), // 构建失败
-    TESTING(4), // 测试中
-    AUDITING(5), // 审核中
-    AUDIT_REJECT(6), // 审核驳回
-    RELEASED(7), // 已发布
-    GROUNDING_SUSPENSION(8), // 上架中止
-    UNDERCARRIAGING(9), // 下架中
-    UNDERCARRIAGED(10); // 已下架
-
-    companion object {
-
-        fun getServiceStatus(name: String): ExtServiceStatusEnum? {
-            ExtServiceStatusEnum.values().forEach { enumObj ->
-                if (enumObj.name == name) {
-                    return enumObj
-                }
-            }
-            return null
-        }
-
-        fun getServiceStatus(status: Int): String {
-            return when (status) {
-                0 -> INIT.name
-                1 -> COMMITTING.name
-                2 -> BUILDING.name
-                3 -> BUILD_FAIL.name
-                4 -> TESTING.name
-                5 -> AUDITING.name
-                6 -> AUDIT_REJECT.name
-                7 -> RELEASED.name
-                8 -> GROUNDING_SUSPENSION.name
-                9 -> UNDERCARRIAGING.name
-                10 -> UNDERCARRIAGED.name
-                else -> INIT.name
-            }
-        }
-    }
+enum class ExtServiceSortTypeEnum() {
+    NAME,
+    CREATE_TIME,
+    UPDATE_TIME,
+    PUBLISHER,
+    DOWNLOAD_COUNT
 }
