@@ -86,7 +86,7 @@ class ExtServiceBuildArchiveTask : ITask() {
         val file = File(filePath)
         val mediaType = MediaType.parse("application/octet-stream")
         val fileBody = RequestBody.create(mediaType, file)
-        val uploadFileRequest = Request.Builder().url(HomeHostUtil.bkrepoApiUrl())
+        val uploadFileRequest = Request.Builder().url("${HomeHostUtil.bkrepoApiUrl()}/bk-extension/generic-local/$destPath")
             .header("Authorization", Credentials.basic("bk_extension", "blueking"))
             .header("X-BKREPO-OVERWRITE", "true")
             .put(fileBody)
