@@ -1148,6 +1148,7 @@ class TemplateService @Autowired constructor(
 
         val successPipelines = ArrayList<String>()
         val failurePipelines = ArrayList<String>()
+        val successPipelinesId = ArrayList<String>()
         val messages = HashMap<String, String>()
 
         instances.forEach { instance ->
@@ -1207,6 +1208,7 @@ class TemplateService @Autowired constructor(
                         )
                     }
                     successPipelines.add(instance.pipelineName)
+                    successPipelinesId.add(pipelineId)
                 }
             } catch (t: DuplicateKeyException) {
                 logger.warn("Fail to update the pipeline $instance of project $projectId by user $userId", t)
@@ -1219,7 +1221,12 @@ class TemplateService @Autowired constructor(
             }
         }
 
-        return TemplateOperationRet(0, TemplateOperationMessage(successPipelines, failurePipelines, messages), "")
+        return TemplateOperationRet(0, TemplateOperationMessage(
+            successPipelines = successPipelines,
+            failurePipelines = failurePipelines,
+            failureMessages = messages,
+            successPipelinesId = successPipelinesId
+        ), "")
     }
 
     /**
