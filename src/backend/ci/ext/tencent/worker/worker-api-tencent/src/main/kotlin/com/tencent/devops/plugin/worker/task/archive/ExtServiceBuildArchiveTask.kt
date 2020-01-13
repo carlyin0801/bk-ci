@@ -63,12 +63,12 @@ class ExtServiceBuildArchiveTask : ITask() {
         LoggerService.addNormalLine("buildId:$buildId begin archive extService package")
         val buildVariableMap = buildTask.buildVariable!!
         val serviceCode = buildVariableMap["serviceCode"] ?: throw TaskExecuteException(
-            errorMsg = "param [filePath] is empty",
+            errorMsg = "param [serviceCode] is empty",
             errorType = ErrorType.SYSTEM,
             errorCode = ErrorCode.SYSTEM_SERVICE_ERROR
         )
         val serviceVersion = buildVariableMap["serviceVersion"] ?: throw TaskExecuteException(
-            errorMsg = "param [filePath] is empty",
+            errorMsg = "param [serviceVersion] is empty",
             errorType = ErrorType.SYSTEM,
             errorCode = ErrorCode.SYSTEM_SERVICE_ERROR
         )
@@ -78,7 +78,7 @@ class ExtServiceBuildArchiveTask : ITask() {
             errorCode = ErrorCode.SYSTEM_SERVICE_ERROR
         )
         val destPath = buildVariableMap["destPath"] ?: throw TaskExecuteException(
-            errorMsg = "param [filePath] is empty",
+            errorMsg = "param [destPath] is empty",
             errorType = ErrorType.SYSTEM,
             errorCode = ErrorCode.SYSTEM_SERVICE_ERROR
         )
