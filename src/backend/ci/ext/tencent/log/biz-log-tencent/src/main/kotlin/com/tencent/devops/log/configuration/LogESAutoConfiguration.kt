@@ -30,7 +30,7 @@ import com.floragunn.searchguard.ssl.SearchGuardSSLPlugin
 import com.floragunn.searchguard.ssl.util.SSLConfigConstants
 import com.tencent.devops.common.es.ESProperties
 import com.tencent.devops.common.web.WebAutoConfiguration
-import org.elasticsearch.client.transport.TransportClient
+import org.elasticsearch.client.support.AbstractClient
 import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
 import org.elasticsearch.plugins.Plugin
@@ -68,7 +68,7 @@ class LogESAutoConfiguration {
 
     @Bean
     @Primary
-    fun transportClient(): TransportClient {
+    fun abstractClient(): AbstractClient {
         if (ip.isNullOrBlank()) {
             throw IllegalArgumentException("ES集群地址尚未配置")
         }
