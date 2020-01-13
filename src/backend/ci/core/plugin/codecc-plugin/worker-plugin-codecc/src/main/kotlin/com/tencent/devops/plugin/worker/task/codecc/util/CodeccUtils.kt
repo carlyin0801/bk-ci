@@ -62,7 +62,7 @@ import kotlin.math.max
  * deng
  * 26/01/2018
  */
-object CodeccUtils {
+open class CodeccUtils {
 
     private lateinit var coverityStartFile: String
     private lateinit var toolsStartFile: String
@@ -83,7 +83,7 @@ object CodeccUtils {
         return doRun(codeccExecuteConfig)
     }
 
-    fun getCodeccWorkspace(codeccExecuteConfig: CodeccExecuteConfig): File {
+    private fun getCodeccWorkspace(codeccExecuteConfig: CodeccExecuteConfig): File {
         val buildId = codeccExecuteConfig.buildVariables.buildId
         val workspace = codeccExecuteConfig.workspace
 
@@ -104,8 +104,8 @@ object CodeccUtils {
     private fun doRun(codeccExecuteConfig: CodeccExecuteConfig): String {
         return CodeccExecuteHelper.executeCodecc(
             codeccExecuteConfig = codeccExecuteConfig,
-            covFun = CodeccUtils::doCoverityCommand,
-            toolFun = CodeccUtils::doCodeccToolCommand
+            covFun = this::doCoverityCommand,
+            toolFun = this::doCodeccToolCommand
         )
     }
 
@@ -118,6 +118,17 @@ object CodeccUtils {
         )
     }
 
+    open fun coverityPreExecute(list: MutableList<String>) {
+        list.add("export PATH=${getPython2Path(BuildScriptType.SHELL)}:\$PATH\n")
+        list.add("export LANG=zh_CN.UTF-8\n")
+        CommonEnv.getCommonEnv().forEach { (key, value) ->
+            list.add("export $key=$value\n")
+        }
+
+        list.add("python -V\n")
+        list.add("pwd\n")
+    }
+
     private fun doCoverityCommand(codeccExecuteConfig: CodeccExecuteConfig): String {
         val workspace = codeccExecuteConfig.workspace
         val taskParams = codeccExecuteConfig.buildTask.params ?: mapOf()
@@ -127,21 +138,7 @@ object CodeccUtils {
         logger.info("Start to execute the script file for script($script)")
 
         val list = mutableListOf<String>()
-        list.add("export PATH=${getPython2Path(scriptType)}:\$PATH\n")
-        list.add("export LANG=zh_CN.UTF-8\n")
-        val scanTools = if (codeccExecuteConfig.filterTools.isNotEmpty()) {
-            codeccExecuteConfig.filterTools
-        } else {
-            codeccExecuteConfig.tools
-        }
-        val finalScanTools = scanTools.filter { it in COV_TOOLS }
-
-        CommonEnv.getCommonEnv().forEach { (key, value) ->
-            list.add("export $key=$value\n")
-        }
-
-        list.add("python -V\n")
-        list.add("pwd\n")
+        coverityPreExecute(list)
 
         list.add("python")
         list.add(coverityStartFile)
@@ -150,6 +147,13 @@ object CodeccUtils {
         addCommonParams(list, codeccExecuteConfig)
 
         // 添加具体业务参数
+        val scanTools = if (codeccExecuteConfig.filterTools.isNotEmpty()) {
+            codeccExecuteConfig.filterTools
+        } else {
+            codeccExecuteConfig.tools
+        }
+        val finalScanTools = scanTools.filter { it in COV_TOOLS }
+
         list.add("-DIS_SPEC_CONFIG=true")
         list.add("-DSCAN_TOOLS=${finalScanTools.joinToString(",").toLowerCase()}")
         list.add("-DCOVERITY_RESULT_PATH=${File(coverityStartFile).parent}")
@@ -208,6 +212,19 @@ object CodeccUtils {
         }
     }
 
+    open fun toolPreExecute(list: MutableList<String>) {
+        list.add("export PATH=${getPython3Path(BuildScriptType.SHELL)}:\$PATH\n")
+        list.add("export LANG=zh_CN.UTF-8\n")
+        list.add("export PATH=/data/bkdevops/apps/codecc/go/bin:/data/bkdevops/apps/codecc/gometalinter/bin:\$PATH\n")
+
+        CommonEnv.getCommonEnv().forEach { (key, value) ->
+            list.add("export $key=$value\n")
+        }
+
+        list.add("python -V\n")
+        list.add("pwd\n")
+    }
+
     private fun doCodeccToolCommand(
         codeccExecuteConfig: CodeccExecuteConfig
     ): String {
@@ -215,13 +232,8 @@ object CodeccUtils {
         val scriptType = codeccExecuteConfig.scriptType
 
         val list = mutableListOf<String>()
-        list.add("export PATH=${getPython3Path(scriptType)}:\$PATH\n")
-        list.add("export LANG=zh_CN.UTF-8\n")
-        list.add("export PATH=/data/bkdevops/apps/codecc/go/bin:/data/bkdevops/apps/codecc/gometalinter/bin:\$PATH\n")
+        toolPreExecute(list)
 
-        CommonEnv.getCommonEnv().forEach { (key, value) ->
-            list.add("export $key=$value\n")
-        }
         val scanTools = if (codeccExecuteConfig.filterTools.isNotEmpty()) {
             codeccExecuteConfig.filterTools
         } else {
@@ -231,8 +243,6 @@ object CodeccUtils {
 
         val finalScanTools = scanTools.minus(COV_TOOLS)
 
-        list.add("python -V\n")
-        list.add("pwd\n")
         list.add("python")
         list.add(toolsStartFile)
 

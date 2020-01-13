@@ -9,7 +9,6 @@ import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import javax.ws.rs.GET
 import javax.ws.rs.HeaderParam
-import javax.ws.rs.QueryParam
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.Consumes
@@ -24,17 +23,14 @@ interface BuildVarResource {
     @Path("/getBuildVariable")
     @GET
     fun getBuildVar(
-            @ApiParam(value = "构建ID", required = false)
-            @HeaderParam(AUTH_HEADER_DEVOPS_BUILD_ID)
-            buildId: String?,
-            @ApiParam(value = "项目ID", required = false)
-            @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
-            projectId: String?,
-            @ApiParam(value = "流水线ID", required = false)
-            @HeaderParam(AUTH_HEADER_DEVOPS_PIPELINE_ID)
-            pipelineId: String?,
-            @ApiParam(value = "构建参数key值", required = false)
-            @QueryParam("key")
-            key: String?
-    ): Result<MutableMap<String, String>>
+        @ApiParam(value = "构建ID", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_BUILD_ID)
+        buildId: String,
+        @ApiParam(value = "项目ID", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
+        projectId: String,
+        @ApiParam(value = "流水线ID", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_PIPELINE_ID)
+        pipelineId: String
+    ): Result<Map<String, String>>
 }
