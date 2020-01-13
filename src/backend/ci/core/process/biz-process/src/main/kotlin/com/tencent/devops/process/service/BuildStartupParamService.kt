@@ -27,7 +27,9 @@
 package com.tencent.devops.process.service
 
 import com.tencent.devops.process.dao.BuildStartupParamDao
+import com.tencent.devops.process.engine.service.PipelineRuntimeService
 import org.jooq.DSLContext
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
@@ -36,8 +38,11 @@ class BuildStartupParamService @Autowired constructor(
     private val dslContext: DSLContext,
     private val buildStartupParamDao: BuildStartupParamDao
 ) {
-
-    fun addParam(projectId: String, pipelineId: String, buildId: String, param: String) =
+    companion object {
+        private val logger = LoggerFactory.getLogger(BuildStartupParamService::class.java)
+    }
+    fun addParam(projectId: String, pipelineId: String, buildId: String, param: String) {
+        logger.info("[$pipelineId|$buildId] addParam: $param")
         buildStartupParamDao.add(
             dslContext = dslContext,
             buildId = buildId,
@@ -45,6 +50,7 @@ class BuildStartupParamService @Autowired constructor(
             projectId = projectId,
             pipelineId = pipelineId
         )
+    }
 
     fun getParam(buildId: String) =
         buildStartupParamDao.get(dslContext, buildId)
