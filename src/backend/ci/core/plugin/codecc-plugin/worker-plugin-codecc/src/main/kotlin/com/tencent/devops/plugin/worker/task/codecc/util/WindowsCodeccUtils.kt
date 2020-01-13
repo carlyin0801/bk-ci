@@ -30,11 +30,7 @@ import com.tencent.devops.plugin.worker.task.codecc.WindowsCodeccConstants.WINDO
 import com.tencent.devops.plugin.worker.task.codecc.WindowsCodeccConstants.WINDOWS_GOROOT_PATH
 import com.tencent.devops.worker.common.CommonEnv
 
-/**
- * deng
- * 26/01/2018
- */
-class WindowsCodeccUtils: CodeccUtils() {
+class WindowsCodeccUtils : CodeccUtils() {
 
     override fun coverityPreExecute(list: MutableList<String>) {
         CommonEnv.getCommonEnv().forEach { (key, value) ->
