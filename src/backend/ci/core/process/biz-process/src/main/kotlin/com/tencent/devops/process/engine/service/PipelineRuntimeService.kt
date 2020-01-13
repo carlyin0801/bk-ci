@@ -1970,6 +1970,7 @@ class PipelineRuntimeService @Autowired constructor(
             )
             params[BUILD_NO] = buildNo.toString()
         }
+        logger.info("[$pipelineId]|buildId=$buildId|writeStartParam|BEFORE_FILTER|allVariable=$allVariable|startParams=$params")
 
         params.putAll(allVariable.filter {
             it.key.startsWith(SkipElementUtils.prefix) || it.key == BUILD_NO || it.key == PIPELINE_RETRY_COUNT
@@ -1981,6 +1982,9 @@ class PipelineRuntimeService @Autowired constructor(
                 if (allVariable.containsKey(it.id)) it.id to allVariable[it.id]
                 else it.id to it.defaultValue
             }.toMap())
+
+        logger.info("[$pipelineId]|buildId=$buildId|writeStartParam|AFTER_FILTER|startParams=$params")
+
         buildStartupParamService.addParam(
             projectId = projectId,
             pipelineId = pipelineId,
