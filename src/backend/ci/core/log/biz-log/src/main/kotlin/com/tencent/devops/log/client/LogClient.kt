@@ -1,4 +1,3 @@
-
 /*
  * Tencent is pleased to support the open source community by making BK-CI 蓝鲸持续集成平台 available.
  *
@@ -25,10 +24,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.agent
+package com.tencent.devops.log.client
 
-const val AGENT_VERSION = 11.2
+import org.elasticsearch.client.Client
+import org.elasticsearch.client.support.AbstractClient
 
-fun main(argv: Array<String>) {
-    println(AGENT_VERSION)
+interface LogClient {
+
+    fun admin(buildId: String) = getClient(buildId).admin()
+
+    fun prepareBulk(buildId: String) = getClient(buildId).prepareBulk()
+
+    fun prepareSearch(buildId: String, index: String) = getClient(buildId).prepareSearch()
+
+    fun prepareMultiSearch(buildId: String) = getClient(buildId).prepareMultiSearch()
+
+    fun prepareSearchScroll(buildId: String, scrollId: String) = getClient(buildId).prepareSearchScroll(buildId)
+
+    fun prepareIndex(buildId: String, index: String, type: String) = getClient(buildId).prepareIndex(index, type)
+
+    private fun getClient(buildId: String): Client {
+        return hashClient(buildId, getClients())
+    }
+
+    fun getClients(): Set<Client>
+
+    fun hashClient(buildId: String, client: Set<Client>): Client
 }

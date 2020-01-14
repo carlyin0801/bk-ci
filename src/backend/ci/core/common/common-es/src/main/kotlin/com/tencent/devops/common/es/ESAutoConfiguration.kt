@@ -27,10 +27,11 @@
 package com.tencent.devops.common.es
 
 import com.tencent.devops.common.web.WebAutoConfiguration
-import org.elasticsearch.client.transport.TransportClient
+import org.elasticsearch.client.Client
 import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
 import org.elasticsearch.transport.client.PreBuiltTransportClient
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.AutoConfigureBefore
 import org.springframework.boot.autoconfigure.AutoConfigureOrder
@@ -54,8 +55,7 @@ class ESAutoConfiguration {
     private val cluster: String? = null
 
     @Bean
-    @Primary
-    fun transportClient(): TransportClient {
+    fun client(): Client {
         if (ip == null || ip!!.isBlank()) {
             throw IllegalArgumentException("ES集群地址尚未配置")
         }
@@ -71,6 +71,10 @@ class ESAutoConfiguration {
         for (ipAddress in ips) {
             client.addTransportAddress(InetSocketTransportAddress(InetAddress.getByName(ipAddress), port!!))
         }
+        logger.info("Init the log es transport client with host($ip:$port), cluster($cluster)")
         return client
+    }
+    companion object {
+        private val logger = LoggerFactory.getLogger(ESAutoConfiguration::class.java)
     }
 }

@@ -1,4 +1,3 @@
-
 /*
  * Tencent is pleased to support the open source community by making BK-CI 蓝鲸持续集成平台 available.
  *
@@ -25,10 +24,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.agent
+package com.tencent.devops.log.client.impl
 
-const val AGENT_VERSION = 11.2
+import com.tencent.devops.log.client.LogClient
+import org.elasticsearch.client.Client
+import java.lang.RuntimeException
 
-fun main(argv: Array<String>) {
-    println(AGENT_VERSION)
+class LogClientImpl constructor(private val client: Client) : LogClient {
+    override fun getClients(): Set<Client> {
+        return setOf(client)
+    }
+
+    override fun hashClient(buildId: String, client: Set<Client>): Client {
+        if (client.isEmpty()) {
+            throw RuntimeException("Fail to get the log client")
+        }
+        return client.first()
+    }
 }

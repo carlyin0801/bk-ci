@@ -30,7 +30,7 @@ import com.floragunn.searchguard.ssl.SearchGuardSSLPlugin
 import com.floragunn.searchguard.ssl.util.SSLConfigConstants
 import com.tencent.devops.common.es.ESProperties
 import com.tencent.devops.common.web.WebAutoConfiguration
-import org.elasticsearch.client.transport.TransportClient
+import org.elasticsearch.client.Client
 import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
 import org.elasticsearch.plugins.Plugin
@@ -51,6 +51,7 @@ import java.net.InetAddress
 @AutoConfigureBefore(WebAutoConfiguration::class)
 @EnableConfigurationProperties(ESProperties::class)
 class LogESAutoConfiguration {
+
     @Value("\${elasticsearch.ip}")
     private val ip: String? = null
     @Value("\${elasticsearch.port}")
@@ -68,7 +69,7 @@ class LogESAutoConfiguration {
 
     @Bean
     @Primary
-    fun transportClient(): TransportClient {
+    fun client(): Client {
         if (ip.isNullOrBlank()) {
             throw IllegalArgumentException("ES集群地址尚未配置")
         }

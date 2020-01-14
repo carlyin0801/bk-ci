@@ -140,7 +140,10 @@ class BkAtomReleaseServiceImpl : BkAtomReleaseService, AtomReleaseServiceImpl() 
     ): Pair<Boolean, String> {
         logger.info("checkAtomVersionOptRight, userId=$userId, atomId=$atomId, status=$status, isNormalUpgrade=$isNormalUpgrade")
         val record =
-            marketAtomDao.getAtomRecordById(dslContext, atomId) ?: return Pair(false, CommonMessageCode.PARAMETER_IS_INVALID)
+            marketAtomDao.getAtomRecordById(dslContext, atomId) ?: return Pair(
+                false,
+                CommonMessageCode.PARAMETER_IS_INVALID
+            )
         val atomCode = record.atomCode
         val creator = record.creator
         val recordStatus = record.atomStatus
