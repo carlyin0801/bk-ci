@@ -51,4 +51,12 @@ class WindowsCodeccUtils : CodeccUtils() {
         list.add("python -V\n")
         list.add("cd\n")
     }
+
+    override fun doPreCodeccSingleCommand(command: MutableList<String>) {
+        CommonEnv.getCommonEnv().forEach { (key, value) ->
+            command.add("set $key=$value\n")
+        }
+        command.add("python -V\n")
+        command.add("cd\n")
+    }
 }
