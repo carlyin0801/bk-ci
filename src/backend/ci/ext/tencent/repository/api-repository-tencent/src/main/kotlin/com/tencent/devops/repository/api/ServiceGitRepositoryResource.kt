@@ -251,4 +251,14 @@ interface ServiceGitRepositoryResource {
         @QueryParam("tokenType")
         tokenType: TokenTypeEnum
     ): Result<List<GitRepositoryDirItem>?>
+
+    @ApiOperation("获取授权路径")
+    @GET
+    @Path("/getAuthUrl")
+    fun getAuthUrl(
+        @ApiParam("参数json串", required = true)
+        @QueryParam("authParamJsonStr")
+        authParamJsonStr: String
+    ): Result<String>
+
 }
