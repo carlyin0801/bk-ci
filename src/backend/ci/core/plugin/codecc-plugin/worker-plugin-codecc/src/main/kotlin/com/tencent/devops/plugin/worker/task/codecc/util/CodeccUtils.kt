@@ -253,8 +253,8 @@ open class CodeccUtils {
         CommonEnv.getCommonEnv().forEach { (key, value) ->
             command.add("export $key=$value\n")
         }
-        command.add("python -V")
-        command.add("pwd")
+        command.add("python -V\n")
+        command.add("pwd\n")
     }
 
     fun doCodeccSingleCommand(
@@ -319,8 +319,6 @@ open class CodeccUtils {
         val coreCount = if (channelCode == ChannelCode.GONGFENGSCAN.name) Runtime.getRuntime().availableProcessors()
         else max(Runtime.getRuntime().availableProcessors() / 2, 1) // 用一半的核
 
-        command.add("-DPROJECT_BUILD_COMMAND=\"--parallel-translate=$coreCount $buildCmd\"")
-        if (!BuildEnv.isThirdParty()) command.add("-DCOVERITY_HOME_BIN=${getCovToolPath(scriptType)}/bin")
         command.add("-DPROJECT_BUILD_COMMAND=\"--parallel-translate=$coreCount $buildCmd\"")
         if (!BuildEnv.isThirdParty()) command.add("-DCOVERITY_HOME_BIN=${getCovToolPath(scriptType)}/bin")
         command.add("-DPROJECT_BUILD_PATH=${workspace.canonicalPath}")
