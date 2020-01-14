@@ -71,7 +71,7 @@ class ESAutoConfiguration {
         for (ipAddress in ips) {
             client.addTransportAddress(InetSocketTransportAddress(InetAddress.getByName(ipAddress), port!!))
         }
-        logger.info("Init the log es transport client with host($ip:$port), cluster($cluster)"）
+        logger.info("Init the log es transport client with host($ip:$port), cluster($cluster)")
         return client
     }
     companion object {
