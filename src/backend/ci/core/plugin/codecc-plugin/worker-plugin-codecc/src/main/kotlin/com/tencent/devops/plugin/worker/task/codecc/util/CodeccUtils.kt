@@ -247,11 +247,14 @@ open class CodeccUtils {
     }
 
     open fun doPreCodeccSingleCommand(command: MutableList<String>) {
+        command.add("export PATH=${getPython3Path(BuildScriptType.SHELL)}:\$PATH\n")
+        command.add("export LANG=zh_CN.UTF-8\n")
+        command.add("export PATH=/data/bkdevops/apps/codecc/go/bin:/data/bkdevops/apps/codecc/gometalinter/bin:\$PATH\n")
         CommonEnv.getCommonEnv().forEach { (key, value) ->
             command.add("export $key=$value\n")
         }
-        command.add("python -V")
-        command.add("pwd")
+        command.add("python -V\n")
+        command.add("pwd\n")
     }
 
     fun doCodeccSingleCommand(
@@ -272,8 +275,6 @@ open class CodeccUtils {
         }
         if (scanTools.isEmpty()) return "scan tools is empty"
 
-        val finalScanTools = scanTools.minus(COV_TOOLS)
-
         command.add("python")
         command.add(toolsStartFile)
 
@@ -281,13 +282,13 @@ open class CodeccUtils {
         addCommonParams(command, codeccExecuteConfig)
 
         // 添加具体业务参数
-        command.add("-DSCAN_TOOLS=${finalScanTools.joinToString(",").toLowerCase()}")
+        command.add("-DSCAN_TOOLS=${scanTools.joinToString(",").toLowerCase()}")
         command.add("-DOFFLINE=true")
         command.add("-DDATA_ROOT_PATH=${File(toolsStartFile).parent}")
         command.add("-DSTREAM_CODE_PATH=${workspace.canonicalPath}")
         command.add("-DPY27_PATH=${getPython2Path(scriptType)}")
         command.add("-DPY35_PATH=${getPython3Path(scriptType)}")
-        if (finalScanTools.contains("PYLINT")) {
+        if (scanTools.contains("PYLINT")) {
             command.add("-DPY27_PYLINT_PATH=${getPyLint2Path(scriptType)}")
             command.add("-DPY35_PYLINT_PATH=${getPyLint3Path(scriptType)}")
         } else {
@@ -318,8 +319,6 @@ open class CodeccUtils {
         val coreCount = if (channelCode == ChannelCode.GONGFENGSCAN.name) Runtime.getRuntime().availableProcessors()
         else max(Runtime.getRuntime().availableProcessors() / 2, 1) // 用一半的核
 
-        command.add("-DPROJECT_BUILD_COMMAND=\"--parallel-translate=$coreCount $buildCmd\"")
-        if (!BuildEnv.isThirdParty()) command.add("-DCOVERITY_HOME_BIN=${getCovToolPath(scriptType)}/bin")
         command.add("-DPROJECT_BUILD_COMMAND=\"--parallel-translate=$coreCount $buildCmd\"")
         if (!BuildEnv.isThirdParty()) command.add("-DCOVERITY_HOME_BIN=${getCovToolPath(scriptType)}/bin")
         command.add("-DPROJECT_BUILD_PATH=${workspace.canonicalPath}")
