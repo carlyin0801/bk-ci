@@ -24,10 +24,28 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-dependencies {
-    compile project(":core:artifactory:biz-artifactory-store") // 对接研发商店
-    compile project(":ext:tencent:artifactory:biz-artifactory-store")
-    compile project(":ext:tencent:artifactory:biz-artifactory-tencent")
-}
+package com.tencent.devops.process.listener
 
-apply from: "$rootDir/task_spring_boot_package.gradle"
+import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
+import com.tencent.devops.common.event.listener.pipeline.BaseListener
+import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildFinishBroadCastEvent
+import com.tencent.devops.process.service.PipelineFailureBuildService
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
+
+/**
+ *  MQ实现的流水线构建完成事件
+ * @author irwinsun
+ * @version 1.0
+ */
+@Component
+class PipelineFailureBuildFinishListener @Autowired constructor(
+    private val pipelineFailureBuildService: PipelineFailureBuildService,
+    pipelineEventDispatcher: PipelineEventDispatcher
+) : BaseListener<PipelineBuildFinishBroadCastEvent>(pipelineEventDispatcher) {
+
+    override fun run(event: PipelineBuildFinishBroadCastEvent) {
+        logger.info("[${event.projectId}|${event.pipelineId}|${event.buildId}] Pipeline failure build finish listener")
+        pipelineFailureBuildService.onPipelineFinish(event)
+    }
+}

@@ -24,10 +24,34 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-dependencies {
-    compile project(":core:artifactory:biz-artifactory-store") // 对接研发商店
-    compile project(":ext:tencent:artifactory:biz-artifactory-store")
-    compile project(":ext:tencent:artifactory:biz-artifactory-tencent")
-}
+package com.tencent.devops.process.dao
 
-apply from: "$rootDir/task_spring_boot_package.gradle"
+import com.tencent.devops.model.process.tables.TPipelineFailureBuild
+import org.jooq.DSLContext
+import org.springframework.stereotype.Repository
+
+@Repository
+class PipelineFailureBuildDao {
+
+    fun insert(dslContext: DSLContext, projectId: String, pipelineId: String, buildId: String) {
+        with(TPipelineFailureBuild.T_PIPELINE_FAILURE_BUILD) {
+            dslContext.insertInto(this,
+                PROJECT_ID,
+                PIPELINE_ID,
+                BUILD_ID)
+                .values(
+                    projectId,
+                    pipelineId,
+                    buildId
+                ).execute()
+        }
+    }
+
+    fun delete(dslContext: DSLContext, pipelineId: String): Int {
+        with(TPipelineFailureBuild.T_PIPELINE_FAILURE_BUILD) {
+            return dslContext.deleteFrom(this)
+                .where(PIPELINE_ID.eq(pipelineId))
+                .execute()
+        }
+    }
+}

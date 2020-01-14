@@ -24,10 +24,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-dependencies {
-    compile project(":core:artifactory:biz-artifactory-store") // 对接研发商店
-    compile project(":ext:tencent:artifactory:biz-artifactory-store")
-    compile project(":ext:tencent:artifactory:biz-artifactory-tencent")
-}
+package com.tencent.devops.common
 
-apply from: "$rootDir/task_spring_boot_package.gradle"
+object TencentMQ {
+    const val QUEUE_PIPELINE_FAILURE_BUILD = "q.engine.pipeline.failure.build"
+}
