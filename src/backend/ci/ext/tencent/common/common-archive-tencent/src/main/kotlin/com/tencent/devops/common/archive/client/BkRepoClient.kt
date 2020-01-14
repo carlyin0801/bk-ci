@@ -44,12 +44,13 @@ import com.tencent.bkrepo.repository.pojo.share.ShareRecordCreateRequest
 import com.tencent.bkrepo.repository.pojo.share.ShareRecordInfo
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.OkhttpUtils
-import com.tencent.devops.common.archive.pojo.ArtifactorySearchParam
 import com.tencent.devops.common.archive.config.ArtifactoryConfig
+import com.tencent.devops.common.archive.pojo.ArtifactorySearchParam
 import com.tencent.devops.common.archive.pojo.BkRepoData
 import com.tencent.devops.common.archive.pojo.BkRepoFile
 import com.tencent.devops.common.service.config.CommonConfig
 import com.tencent.devops.common.service.utils.HomeHostUtil
+import okhttp3.Credentials
 import okhttp3.MediaType
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -285,11 +286,13 @@ class BkRepoClient constructor(
         val url = "$repoUrlPrefix/$projectId/$repoName/${path.removePrefix("/")}"
         val requestBuilder = Request.Builder()
             .url(url)
-            // .header("Authorization", makeCredential())
-            .header(AUTH_HEADER_UID, userId)
+        if (userName != null && password != null) {
+            requestBuilder.header("Authorization", Credentials.basic(userName, password))
+        }
+        requestBuilder.header(AUTH_HEADER_UID, userId)
             .header(BK_REPO_OVERRIDE, "true")
             .put(RequestBody.create(MediaType.parse("application/octet-stream"), file))
-            .build()
+        val request = requestBuilder.build()
         OkhttpUtils.doHttp(request).use { response ->
             if (!response.isSuccessful) {
                 logger.error("upload file failed, responseContent: ${response.body()!!.string()}")
