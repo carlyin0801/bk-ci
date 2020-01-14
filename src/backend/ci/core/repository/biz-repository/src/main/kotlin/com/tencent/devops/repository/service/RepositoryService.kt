@@ -38,11 +38,11 @@ import com.tencent.devops.common.api.exception.PermissionForbiddenException
 import com.tencent.devops.common.api.exception.RemoteServiceException
 import com.tencent.devops.common.api.model.SQLPage
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.api.util.PageUtil
 import com.tencent.devops.common.api.util.DHUtil
 import com.tencent.devops.common.api.util.HashUtil
-import com.tencent.devops.common.api.util.timestamp
 import com.tencent.devops.common.api.util.JsonUtil
+import com.tencent.devops.common.api.util.PageUtil
+import com.tencent.devops.common.api.util.timestamp
 import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.client.Client
@@ -68,6 +68,7 @@ import com.tencent.devops.repository.pojo.enums.TokenTypeEnum
 import com.tencent.devops.repository.pojo.enums.VisibilityLevelEnum
 import com.tencent.devops.repository.pojo.git.GitProjectInfo
 import com.tencent.devops.repository.pojo.git.UpdateGitProjectInfo
+import com.tencent.devops.repository.resources.scm.ServiceGitResourceImpl
 import com.tencent.devops.repository.service.scm.IGitOauthService
 import com.tencent.devops.repository.service.scm.IGitService
 import com.tencent.devops.repository.service.scm.IScmService
@@ -1129,6 +1130,12 @@ class RepositoryService @Autowired constructor(
             region = CodeSvnRegion.getRegion(record.url),
             userName = record.userId
         )
+    }
+
+    fun getAuthUrl(
+        authParamJsonStr: String
+    ): Result<String>{
+        return client.get(ServiceGitResourceImpl::class).getAuthUrl(authParamJsonStr)
     }
 
     private fun validatePermission(user: String, projectId: String, authPermission: AuthPermission): Boolean {
