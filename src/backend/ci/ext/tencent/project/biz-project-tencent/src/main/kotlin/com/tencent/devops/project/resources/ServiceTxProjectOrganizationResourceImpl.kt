@@ -1,6 +1,5 @@
 package com.tencent.devops.project.resources
 
-import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.project.api.service.service.ServiceTxProjectOrganizationResource
 import com.tencent.devops.project.pojo.DeptInfo
 import com.tencent.devops.project.pojo.OrganizationInfo
