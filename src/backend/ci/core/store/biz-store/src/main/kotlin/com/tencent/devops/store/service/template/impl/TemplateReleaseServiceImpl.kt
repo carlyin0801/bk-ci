@@ -119,7 +119,7 @@ abstract class TemplateReleaseServiceImpl @Autowired constructor() : TemplateRel
                 "userId" to userId
         )
         val transactionMessage = TransactionMessage(
-                messageId = UUIDUtil.generate(),
+                messageId = messageId,
                 version = 1,
                 messageBody = JsonUtil.toJson(messageMap),
                 messageDataType = MessageDataTypeEnum.JSON,
