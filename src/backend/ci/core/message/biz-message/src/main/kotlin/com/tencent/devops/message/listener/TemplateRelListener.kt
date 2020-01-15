@@ -51,10 +51,9 @@ class TemplateRelListener @Autowired constructor(
         logger.info("templateRel messageBody is:$messageBody")
         val templateInfoMap = JsonUtil.to(messageBody, Map::class.java)
         // 把process服务的源模板的状态改为已关联商店
-        val userId = templateInfoMap["useId"] as String
+        val userId = templateInfoMap["userId"] as String
         val templateCode = templateInfoMap["templateCode"] as String
-        val storeFlag = templateInfoMap["storeFlag"] as Boolean
-        val updateResult = client.get(ServiceTemplateResource::class).updateStoreFlag(userId, templateCode, storeFlag)
+        val updateResult = client.get(ServiceTemplateResource::class).updateStoreFlag(userId, templateCode, true)
         logger.info("updateResult is:$updateResult")
         if (updateResult.isOk()) {
             // 如果process服务修改状态成功，则把消息服务的该条消息从数据库删除
