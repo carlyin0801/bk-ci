@@ -16,7 +16,7 @@ class UserExtServiceVisibleDeptResourceImpl @Autowired constructor(
 ): UserExtServiceVisibleDeptResource {
 
     override fun addVisibleDept(userId: String, serviceVisibleDeptRequest: ExtsionServiceVisibleDeptReq): Result<Boolean> {
-        return storeVisibleDeptService.addVisibleDept(userId, serviceVisibleDeptRequest.serviceCode, serviceVisibleDeptRequest.deptInfos, StoreTypeEnum.SERVICE)
+        return storeVisibleDeptService.addVisibleDepts(userId, serviceVisibleDeptRequest.serviceCode, serviceVisibleDeptRequest.deptInfos, StoreTypeEnum.SERVICE)
     }
 
     override fun deleteVisibleDept(userId: String, atomCode: String, deptIds: String): Result<Boolean> {
