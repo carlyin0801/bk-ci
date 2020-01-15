@@ -315,7 +315,7 @@ class PipelineBuildDetailService @Autowired constructor(
             var update = false
 
             override fun onFindContainer(id: Int, container: Container): Traverse {
-                if (container is NormalContainer) {
+                if (container !is TriggerContainer) {
                     // 兼容id字段
                     if (container.id == containerId || container.containerId == containerId) {
                         update = true
