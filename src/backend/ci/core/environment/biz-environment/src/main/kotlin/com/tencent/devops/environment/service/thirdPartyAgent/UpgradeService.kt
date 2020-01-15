@@ -127,7 +127,7 @@ class UpgradeService @Autowired constructor(
             agentVersion.isNullOrBlank() || masterVersion.isNullOrBlank() -> true
             else -> (currentVersion != agentVersion || currentMasterVersion != masterVersion) && agentGrayUtils.getCanUpgradeAgents().contains(HashUtil.decodeIdToLong(agentId))
         }
-
+        logger.info("upgrade $upgrade")
         if (upgrade) {
             logger.info("The agent($agentId) can upgrade from $masterVersion|$agentVersion to $currentMasterVersion|$currentVersion")
         }
