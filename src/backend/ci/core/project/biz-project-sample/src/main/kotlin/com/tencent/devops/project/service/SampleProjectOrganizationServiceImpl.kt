@@ -31,7 +31,7 @@ import com.tencent.devops.project.pojo.OrganizationInfo
 import com.tencent.devops.project.pojo.enums.OrganizationType
 import org.springframework.stereotype.Service
 
-@Service
+// Todo @Service
 class SampleProjectOrganizationServiceImpl : ProjectOrganizationService {
     override fun getDeptInfo(userId: String, id: Int): DeptInfo {
         return DeptInfo(
