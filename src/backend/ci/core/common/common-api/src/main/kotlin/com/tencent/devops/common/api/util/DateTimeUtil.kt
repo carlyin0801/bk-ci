@@ -27,12 +27,16 @@
 package com.tencent.devops.common.api.util
 
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
+import java.time.Instant.ofEpochMilli
+
+
 
 /**
  *
@@ -148,5 +152,11 @@ object DateTimeUtil {
     fun stringToLocalDateTime(dateTimeStr: String, formatStr: String = "yyyy-MM-dd HH:mm:ss"): LocalDateTime {
         val formatter = DateTimeFormatter.ofPattern(formatStr)
         return LocalDateTime.parse(dateTimeStr, formatter)
+    }
+
+    fun timestampToDateTime(timestamp: Long): LocalDateTime {
+        val instant = Instant.ofEpochMilli(timestamp)
+        val zone = ZoneId.systemDefault()
+        return LocalDateTime.ofInstant(instant, zone)
     }
 }
