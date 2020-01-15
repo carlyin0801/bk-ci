@@ -44,7 +44,7 @@ class MessageHandleJob @Autowired constructor(
     private val transactionMessageService: TransactionMessageService,
     private val transactionMessageConfig: TransactionMessageConfig,
     private val client: Client
-  ) {
+) {
 
     private val logger = LoggerFactory.getLogger(MessageHandleJob::class.java)
 
@@ -57,9 +57,9 @@ class MessageHandleJob @Autowired constructor(
         // 获取配置的开始处理的时间
         val createTimeBefore = getCreateTimeBefore()
         val queryTransactionMessageParam = QueryTransactionMessageParam(
-                status = MessageStatusEnum.WAITING_CONFIRM,
-                createTime = createTimeBefore,
-                descFlag = false
+            status = MessageStatusEnum.WAITING_CONFIRM,
+            createTime = createTimeBefore,
+            descFlag = false
         )
         logger.info("handleWaitingConfirmTimeOutMessages queryTransactionMessageParam is:$queryTransactionMessageParam")
         try {
@@ -70,7 +70,6 @@ class MessageHandleJob @Autowired constructor(
         }
     }
 
-
     /**
      * 处理状态为“待发送”但超时没有被成功消费确认的消息
      */
@@ -80,11 +79,11 @@ class MessageHandleJob @Autowired constructor(
         // 获取配置的开始处理的时间
         val createTimeBefore = getCreateTimeBefore()
         val queryTransactionMessageParam = QueryTransactionMessageParam(
-                status = MessageStatusEnum.SENDING,
-                createTime = createTimeBefore,
-                validFlag = true,
-                descFlag = false,
-                isDead = false
+            status = MessageStatusEnum.SENDING,
+            createTime = createTimeBefore,
+            validFlag = true,
+            descFlag = false,
+            isDead = false
         )
         logger.info("handleSendingTimeOutMessage queryTransactionMessageParam is:$queryTransactionMessageParam")
         try {
@@ -93,9 +92,7 @@ class MessageHandleJob @Autowired constructor(
         } catch (e: Exception) {
             logger.error("handleSendingTimeOutMessage has error：", e)
         }
-
     }
-
 
     private fun getMessageMap(queryTransactionMessageParam: QueryTransactionMessageParam): Map<String, TransactionMessage> {
         val messageMap = HashMap<String, TransactionMessage>()

@@ -36,35 +36,35 @@ import java.time.LocalDateTime
 data class QueryTransactionMessageParam(
 
     @ApiModelProperty("消息数据类型", required = false)
-    val messageDataType: MessageDataTypeEnum ? = null,
+    val messageDataType: MessageDataTypeEnum? = null,
 
     @ApiModelProperty("消息队列名称", required = false)
-    val consumerQueue: String ? = null,
+    val consumerQueue: String? = null,
 
     @ApiModelProperty("消息发送次数", required = false)
-    val messageSendTimes: Int ? = null,
+    val messageSendTimes: Int? = null,
 
     @ApiModelProperty("消息是否死亡", required = false)
-    val isDead: Boolean ? = null,
+    val isDead: Boolean? = null,
 
     @ApiModelProperty("消息状态", required = false)
-    val status: MessageStatusEnum ? = null,
+    val status: MessageStatusEnum? = null,
 
     @ApiModelProperty("创建时间", required = false)
-    val createTime: LocalDateTime ? = null,
+    val createTime: LocalDateTime? = null,
 
     @ApiModelProperty("修改时间", required = false)
-    val updateTime: LocalDateTime ? = null,
+    val updateTime: LocalDateTime? = null,
 
     @ApiModelProperty("查询待发送消息开关", required = false)
-    val validFlag: Boolean ? = null,
+    val validFlag: Boolean? = null,
 
     @ApiModelProperty("是否倒序查询", required = false)
-    val descFlag: Boolean  = true,
+    val descFlag: Boolean = true,
 
     @ApiModelProperty("页码", required = false)
-    val page: Int ? = null,
+    val page: Int? = null,
 
     @ApiModelProperty("每页大小", required = false)
-    val pageSize: Int ? = null
+    val pageSize: Int? = null
 )

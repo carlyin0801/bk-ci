@@ -36,7 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired
 @RestResource
 class ServiceTransactionMessageResourceImpl @Autowired constructor(
     private val transactionMessageService: TransactionMessageService
-  ) : ServiceTransactionMessageResource {
+) : ServiceTransactionMessageResource {
 
     override fun saveMessageWaitingConfirm(transactionMessage: TransactionMessage): Result<Boolean> {
         return transactionMessageService.saveMessageWaitingConfirm(transactionMessage)

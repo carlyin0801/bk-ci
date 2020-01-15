@@ -69,11 +69,11 @@ data class TransactionMessage(
     val creator: String,
 
     @ApiModelProperty("创建时间", required = true)
-    val createTime: LocalDateTime,
+    val createTime: String,
 
     @ApiModelProperty("修改人", required = true)
     val modifier: String,
 
     @ApiModelProperty("修改时间", required = true)
-    var updateTime: LocalDateTime
+    var updateTime: String
 )
