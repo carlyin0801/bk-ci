@@ -30,8 +30,4 @@ class ChildDeptResponse(
     val TypeId: Int,
     val Name: String,
     val ID: String
-) {
-    override fun toString(): String {
-        return "$TypeId $Name $ID"
-    }
-}
+)
