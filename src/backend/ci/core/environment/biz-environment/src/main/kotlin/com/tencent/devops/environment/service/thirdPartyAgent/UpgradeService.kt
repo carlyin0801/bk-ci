@@ -121,16 +121,11 @@ class UpgradeService @Autowired constructor(
             return AgentResult(AgentStatus.IMPORT_OK, false)
         }
 
-        val agentNeedUpgrade = when {
-            agentVersion.isNullOrBlank() -> true
-            masterVersion.isNullOrBlank() -> (currentVersion != agentVersion)
-            else -> (currentVersion != agentVersion) || (currentMasterVersion != masterVersion)
-        }
-
         val upgrade = when {
             agentGrayUtils.checkLockUpgrade(agentId) -> false
             agentGrayUtils.checkForceUpgrade(agentId) -> true
-            else -> agentNeedUpgrade && agentGrayUtils.getCanUpgradeAgents().contains(HashUtil.decodeIdToLong(agentId))
+            agentVersion.isNullOrBlank() || masterVersion.isNullOrBlank() -> true
+            else -> (currentVersion != agentVersion || currentMasterVersion != masterVersion) && agentGrayUtils.getCanUpgradeAgents().contains(HashUtil.decodeIdToLong(agentId))
         }
 
         if (upgrade) {
