@@ -26,6 +26,8 @@
 
 package com.tencent.devops.message.dao
 
+import com.tencent.devops.common.api.util.DateTimeUtil
+import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.message.config.TransactionMessageConfig
 import com.tencent.devops.message.pojo.QueryTransactionMessageParam
 import com.tencent.devops.message.pojo.TransactionMessage
@@ -45,8 +47,8 @@ import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 
 @Repository
-class TransactionMessageDao@Autowired constructor(
-        private val transactionMessageConfig: TransactionMessageConfig
+class TransactionMessageDao @Autowired constructor(
+    private val transactionMessageConfig: TransactionMessageConfig
 ) {
 
     private val logger = LoggerFactory.getLogger(TransactionMessageDao::class.java)
@@ -56,7 +58,8 @@ class TransactionMessageDao@Autowired constructor(
      */
     fun addTransactionMessage(dslContext: DSLContext, transactionMessage: TransactionMessage) {
         with(TTransactionMessage.T_TRANSACTION_MESSAGE) {
-            dslContext.insertInto(this,
+            dslContext.insertInto(
+                this,
                 MESSAGE_ID,
                 MESSAGE_BODY,
                 VERSION,
@@ -85,8 +88,8 @@ class TransactionMessageDao@Autowired constructor(
                     transactionMessage.data,
                     transactionMessage.creator,
                     transactionMessage.modifier,
-                    transactionMessage.createTime,
-                    transactionMessage.updateTime
+                    DateTimeUtil.stringToLocalDateTime(transactionMessage.createTime),
+                    DateTimeUtil.stringToLocalDateTime(transactionMessage.updateTime)
                 ).execute()
         }
     }
@@ -117,9 +120,9 @@ class TransactionMessageDao@Autowired constructor(
      * 更新事务消息
      */
     fun updateTransactionMessage(
-        dslContext: DSLContext, 
+        dslContext: DSLContext,
         userId: String,
-        messageId: String, 
+        messageId: String,
         updateTransactionMessageParam: UpdateTransactionMessageParam
     ) {
         with(TTransactionMessage.T_TRANSACTION_MESSAGE) {
@@ -166,7 +169,6 @@ class TransactionMessageDao@Autowired constructor(
                 .execute()
         }
     }
-
 
     fun getTransactionMessages(
         dslContext: DSLContext,
@@ -221,8 +223,21 @@ class TransactionMessageDao@Autowired constructor(
     }
 
     fun timestampSubMinute(sendTimes: Field<Int>): Field<LocalDateTime> {
-        return DSL.field("date_sub(NOW(), interval {0} minute)",
-            LocalDateTime::class.java, sendTimes)
+        return DSL.field(
+            "CASE\n" +
+                "when MESSAGE_SEND_TIMES = 1 then date_sub(NOW(), interval {0} minute)\n" +
+                "when MESSAGE_SEND_TIMES = 2 then date_sub(NOW(), interval {1} minute)\n" +
+                "when MESSAGE_SEND_TIMES = 3 then date_sub(NOW(), interval {2} minute)\n" +
+                "when MESSAGE_SEND_TIMES = 4 then date_sub(NOW(), interval {3} minute)\n" +
+                "when MESSAGE_SEND_TIMES = 5 then date_sub(NOW(), interval {4} minute)\n" +
+                "END",
+            LocalDateTime::class.java,
+            sendTimes.multiply(transactionMessageConfig.messageFirstSendIntervalTime),
+            sendTimes.multiply(transactionMessageConfig.messageSecondSendIntervalTime),
+            sendTimes.multiply(transactionMessageConfig.messageThirdSendIntervalTime),
+            sendTimes.multiply(transactionMessageConfig.messageFourthSendIntervalTime),
+            sendTimes.multiply(transactionMessageConfig.messageFifthSendIntervalTime)
+        )
     }
 
     fun convert(record: TTransactionMessageRecord): TransactionMessage {
@@ -239,9 +254,9 @@ class TransactionMessageDao@Autowired constructor(
                 remark = remark,
                 data = data,
                 creator = creator,
-                createTime = createTime,
+                createTime = DateTimeUtil.toDateTime(createTime),
                 modifier = modifier,
-                updateTime = updateTime
+                updateTime = DateTimeUtil.toDateTime(updateTime)
             )
         }
     }
