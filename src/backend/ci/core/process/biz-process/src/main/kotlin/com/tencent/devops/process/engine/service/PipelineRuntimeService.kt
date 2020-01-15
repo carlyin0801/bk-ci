@@ -97,6 +97,7 @@ import com.tencent.devops.process.engine.pojo.event.PipelineBuildStartEvent
 import com.tencent.devops.process.pojo.BuildBasicInfo
 import com.tencent.devops.process.pojo.BuildHistory
 import com.tencent.devops.common.api.pojo.ErrorType
+import com.tencent.devops.common.service.utils.SpringContextUtil
 import com.tencent.devops.process.pojo.PipelineBuildMaterial
 import com.tencent.devops.process.pojo.ReviewParam
 import com.tencent.devops.process.pojo.VmInfo
@@ -897,6 +898,10 @@ class PipelineRuntimeService @Autowired constructor(
                             BuildStatus.SKIP // 跳过
                         } else {
                             BuildStatus.QUEUE
+                        }
+
+                        if (status == BuildStatus.SKIP) {
+                            SpringContextUtil.getBean(PipelineBuildDetailService::class.java).taskSkip(buildId, atomElement.id!!)
                         }
 
                         if (lastTimeBuildTaskRecords.isNotEmpty()) {
