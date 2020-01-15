@@ -353,6 +353,8 @@ class PipelineVMBuildService @Autowired(required = false) constructor(
                         ) {
                             if (!checkCustomVariableSkip(buildId, additionalOptions, allVariable)) {
                                 queueTasks.add(task)
+                            } else {
+                                buildDetailService.taskSkip(buildId, task.taskId)
                             }
                         }
                     }

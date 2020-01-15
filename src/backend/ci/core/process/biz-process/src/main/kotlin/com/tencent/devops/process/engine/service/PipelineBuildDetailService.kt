@@ -309,7 +309,7 @@ class PipelineBuildDetailService @Autowired constructor(
     }
 
     fun normalContainerSkip(buildId: String, containerId: String) {
-        logger.info("Normal container skip of build $buildId")
+        logger.info("[$buildId|$containerId] Normal container skip")
         update(buildId, object : ModelInterface {
 
             var update = false
