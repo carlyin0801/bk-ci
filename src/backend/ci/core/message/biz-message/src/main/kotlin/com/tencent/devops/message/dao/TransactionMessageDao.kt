@@ -225,6 +225,7 @@ class TransactionMessageDao @Autowired constructor(
     fun timestampSubMinute(sendTimes: Field<Int>): Field<LocalDateTime> {
         return DSL.field(
             "CASE\n" +
+                "when MESSAGE_SEND_TIMES = 0 then date_sub(NOW(), interval {0} minute)\n" +
                 "when MESSAGE_SEND_TIMES = 1 then date_sub(NOW(), interval {0} minute)\n" +
                 "when MESSAGE_SEND_TIMES = 2 then date_sub(NOW(), interval {1} minute)\n" +
                 "when MESSAGE_SEND_TIMES = 3 then date_sub(NOW(), interval {2} minute)\n" +
