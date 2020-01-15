@@ -62,7 +62,7 @@ class BuildDetailDao {
         model: String,
         buildStatus: BuildStatus = BuildStatus.RUNNING
     ) {
-        logger.info("Create the build detail of build $buildId")
+        logger.info("Create the build detail of build $buildId - ($model)")
         with(TPipelineBuildDetail.T_PIPELINE_BUILD_DETAIL) {
             dslContext.insertInto(
                 this,

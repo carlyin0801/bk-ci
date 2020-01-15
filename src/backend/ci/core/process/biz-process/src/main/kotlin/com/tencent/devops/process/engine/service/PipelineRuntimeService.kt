@@ -900,6 +900,7 @@ class PipelineRuntimeService @Autowired constructor(
                         }
 
                         if (status == BuildStatus.SKIP) {
+                            logger.info("[$buildId|${atomElement.id}] The element is skip")
                             atomElement.status = BuildStatus.SKIP.name
                         }
 
