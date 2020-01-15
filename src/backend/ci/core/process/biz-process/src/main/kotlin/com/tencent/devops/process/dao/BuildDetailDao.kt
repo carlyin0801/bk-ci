@@ -62,7 +62,7 @@ class BuildDetailDao {
         model: String,
         buildStatus: BuildStatus = BuildStatus.RUNNING
     ) {
-        logger.info("Create the build detail of build $buildId")
+        logger.info("Create the build detail of build $buildId - ($model)")
         with(TPipelineBuildDetail.T_PIPELINE_BUILD_DETAIL) {
             dslContext.insertInto(
                 this,
@@ -124,7 +124,7 @@ class BuildDetailDao {
         buildStatus: BuildStatus,
         cancelUser: String? = null
     ): Int {
-        logger.info("Update the build detail of build $buildId")
+        logger.info("Update the build detail of build $buildId - ($model)")
         val count = with(TPipelineBuildDetail.T_PIPELINE_BUILD_DETAIL) {
             if (BuildStatus.isFinish(buildStatus)) {
                 val update = dslContext.update(this)
@@ -176,7 +176,7 @@ class BuildDetailDao {
         buildId: String,
         model: String
     ) {
-        logger.info("Update build detail model of build $buildId")
+        logger.info("Update build detail model of build $buildId - ($model)")
         with(TPipelineBuildDetail.T_PIPELINE_BUILD_DETAIL) {
             dslContext.update(this).set(MODEL, model).where(BUILD_ID.eq(buildId)).execute()
         }

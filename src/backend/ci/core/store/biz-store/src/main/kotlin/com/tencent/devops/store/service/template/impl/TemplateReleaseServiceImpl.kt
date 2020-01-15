@@ -28,8 +28,10 @@ package com.tencent.devops.store.service.template.impl
 
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.UUIDUtil
+import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
 import com.tencent.devops.common.service.utils.MessageCodeUtil
@@ -117,7 +119,7 @@ abstract class TemplateReleaseServiceImpl @Autowired constructor() : TemplateRel
                 "userId" to userId
         )
         val transactionMessage = TransactionMessage(
-                messageId = UUIDUtil.generate(),
+                messageId = messageId,
                 version = 1,
                 messageBody = JsonUtil.toJson(messageMap),
                 messageDataType = MessageDataTypeEnum.JSON,
@@ -127,9 +129,9 @@ abstract class TemplateReleaseServiceImpl @Autowired constructor() : TemplateRel
                 status = MessageStatusEnum.WAITING_CONFIRM,
                 data = templateCode,
                 creator = userId,
-                createTime = LocalDateTime.now(),
+                createTime = DateTimeUtil.toDateTime(LocalDateTime.now()),
                 modifier = userId,
-                updateTime = LocalDateTime.now()
+                updateTime = DateTimeUtil.toDateTime(LocalDateTime.now())
         )
         client.get(ServiceTransactionMessageResource::class).saveMessageWaitingConfirm(transactionMessage)
         var flag = false

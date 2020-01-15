@@ -97,6 +97,7 @@ import com.tencent.devops.process.engine.pojo.event.PipelineBuildStartEvent
 import com.tencent.devops.process.pojo.BuildBasicInfo
 import com.tencent.devops.process.pojo.BuildHistory
 import com.tencent.devops.common.api.pojo.ErrorType
+import com.tencent.devops.common.service.utils.SpringContextUtil
 import com.tencent.devops.process.pojo.PipelineBuildMaterial
 import com.tencent.devops.process.pojo.ReviewParam
 import com.tencent.devops.process.pojo.VmInfo
@@ -899,6 +900,11 @@ class PipelineRuntimeService @Autowired constructor(
                             BuildStatus.QUEUE
                         }
 
+                        if (status == BuildStatus.SKIP) {
+                            logger.info("[$buildId|${atomElement.id}] The element is skip")
+                            atomElement.status = BuildStatus.SKIP.name
+                        }
+
                         if (lastTimeBuildTaskRecords.isNotEmpty()) {
                             if (!retryStartTaskId.isNullOrBlank()) {
                                 if (retryStartTaskId == atomElement.id) {
@@ -1667,19 +1673,19 @@ class PipelineRuntimeService @Autowired constructor(
     }
 
     fun getRecommendVersion(buildParameters: List<BuildParameters>): String? {
-        val majorVersion = if (!buildParameters.none { it.key == MAJORVERSION || it.key == "MajorVersion"}) {
+        val majorVersion = if (!buildParameters.none { it.key == MAJORVERSION || it.key == "MajorVersion" }) {
             buildParameters.filter { it.key == MAJORVERSION || it.key == "MajorVersion" }[0].value.toString()
         } else return null
 
-        val minorVersion = if (!buildParameters.none { it.key == MINORVERSION || it.key == "MinorVersion"}) {
+        val minorVersion = if (!buildParameters.none { it.key == MINORVERSION || it.key == "MinorVersion" }) {
             buildParameters.filter { it.key == MINORVERSION || it.key == "MinorVersion" }[0].value.toString()
         } else return null
 
-        val fixVersion = if (!buildParameters.none { it.key == FIXVERSION || it.key == "FixVersion"}) {
+        val fixVersion = if (!buildParameters.none { it.key == FIXVERSION || it.key == "FixVersion" }) {
             buildParameters.filter { it.key == FIXVERSION || it.key == "FixVersion" }[0].value.toString()
         } else return null
 
-        val buildNo = if (!buildParameters.none { it.key == BUILD_NO || it.key == "BuildNo"}) {
+        val buildNo = if (!buildParameters.none { it.key == BUILD_NO || it.key == "BuildNo" }) {
             buildParameters.filter { it.key == BUILD_NO || it.key == "BuildNo" }[0].value.toString()
         } else return null
 
@@ -1772,7 +1778,12 @@ class PipelineRuntimeService @Autowired constructor(
     ) {
         logger.info("[ERRORCODE] updateTaskStatus <$buildId>[$errorType][$errorCode][$errorMsg] ")
         val task = getBuildTask(buildId, taskId)
-        if (task != null) updateTaskStatus(buildId, task, userId, buildStatus, errorType, errorCode, errorMsg)
+        if (task != null) {
+            updateTaskStatus(buildId, task, userId, buildStatus, errorType, errorCode, errorMsg)
+            if (buildStatus == BuildStatus.SKIP) {
+                SpringContextUtil.getBean(PipelineBuildDetailService::class.java).taskSkip(buildId, taskId)
+            }
+        }
     }
 
     private fun updateTaskStatus(
