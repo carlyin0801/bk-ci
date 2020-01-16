@@ -24,41 +24,39 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.message.listener
+package com.tencent.devops.message.biz.service.impl
 
-import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
+import com.tencent.devops.message.biz.service.AbstractMessageBusinessHandleService
+import com.tencent.devops.message.pojo.TransactionMessage
 import com.tencent.devops.message.service.TransactionMessageService
-import com.tencent.devops.process.api.template.ServiceTemplateResource
+import com.tencent.devops.store.api.template.ServiceTemplateResource
 import org.slf4j.LoggerFactory
-import org.springframework.amqp.rabbit.annotation.RabbitHandler
-import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 
-@Component
-@RabbitListener(queues = [MQ.QUEUE_TEMPLATE_REL])
-class TemplateRelListener @Autowired constructor(
+@Service(MQ.QUEUE_TEMPLATE_REL)
+class TemplateRelMessageBusinessHandleServiceImpl @Autowired constructor(
     private val transactionMessageService: TransactionMessageService,
     private val client: Client
-) {
+) : AbstractMessageBusinessHandleService() {
 
-    private val logger = LoggerFactory.getLogger(TemplateRelListener::class.java)
+    private val logger = LoggerFactory.getLogger(TemplateRelMessageBusinessHandleServiceImpl::class.java)
 
-    @RabbitHandler
-    fun templateRel(messageBody: String) {
-        logger.info("templateRel messageBody is:$messageBody")
-        val templateInfoMap = JsonUtil.to(messageBody, Map::class.java)
-        // 把process服务的源模板的状态改为已关联商店
-        val userId = templateInfoMap["userId"] as String
-        val templateCode = templateInfoMap["templateCode"] as String
-        val updateResult = client.get(ServiceTemplateResource::class).updateStoreFlag(userId, templateCode, true)
-        logger.info("updateResult is:$updateResult")
-        if (updateResult.isOk()) {
-            // 如果process服务修改状态成功，则把消息服务的该条消息从数据库删除
-            val messageId = templateInfoMap["messageId"] as String
-            logger.warn("update process template success, messageId:$messageId delete!")
+    override fun handleWaitingConfirmTimeOutMessages(transactionMessage: TransactionMessage) {
+        logger.info("handleWaitingConfirmTimeOutMessages transactionMessage is:$transactionMessage")
+        val messageId = transactionMessage.messageId
+        logger.info("begin handle the message, messageId is:$messageId")
+        val templateCode = transactionMessage.data
+        val template = client.get(ServiceTemplateResource::class).getTemplateBaseInfoByCode(templateCode!!).data
+        // 如果模板关联成功，把消息改为待处理，并发送消息
+        if (template != null) {
+            // 确认并发送消息
+            transactionMessageService.confirmAndSendMessage(messageId)
+        } else {
+            // 模板关联失败，则直接删除消息数据
+            logger.info("template rel fail, messageId:$messageId delete")
             transactionMessageService.deleteMessageByMessageId(messageId)
         }
     }

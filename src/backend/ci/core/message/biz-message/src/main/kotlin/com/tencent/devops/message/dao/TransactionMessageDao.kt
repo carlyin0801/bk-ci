@@ -27,7 +27,6 @@
 package com.tencent.devops.message.dao
 
 import com.tencent.devops.common.api.util.DateTimeUtil
-import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.message.config.TransactionMessageConfig
 import com.tencent.devops.message.pojo.QueryTransactionMessageParam
 import com.tencent.devops.message.pojo.TransactionMessage
