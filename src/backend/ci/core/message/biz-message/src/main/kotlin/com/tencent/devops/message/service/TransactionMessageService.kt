@@ -42,42 +42,35 @@ interface TransactionMessageService {
      */
     fun saveMessageWaitingConfirm(message: TransactionMessage): Result<Boolean>
 
-
     /**
      * 确认并发送消息.
      */
     fun confirmAndSendMessage(messageId: String): Result<Boolean>
-
 
     /**
      * 存储并发送消息.
      */
     fun saveAndSendMessage(message: TransactionMessage): Result<Boolean>
 
-
     /**
      * 直接发送消息.
      */
     fun directSendMessage(message: TransactionMessage): Result<Boolean>
-
 
     /**
      * 重发消息.
      */
     fun reSendMessage(message: TransactionMessage): Result<Boolean>
 
-
     /**
      * 根据messageId重发某条消息.
      */
     fun reSendMessageByMessageId(messageId: String): Result<Boolean>
 
-
     /**
      * 将消息标记为死亡消息.
      */
     fun setMessageToDead(messageId: String): Result<Boolean>
-
 
     /**
      * 根据消息ID获取消息
@@ -89,12 +82,10 @@ interface TransactionMessageService {
      */
     fun deleteMessageByMessageId(messageId: String): Result<Boolean>
 
-
     /**
      * 重发某个消息队列中的全部已死亡的消息.
      */
     fun reSendAllDeadMessageByQueueName(queueName: String): Result<Boolean>
-
 
     /**
      * 查找事务消息列表

@@ -30,7 +30,6 @@ import com.tencent.devops.message.pojo.enums.MessageDataTypeEnum
 import com.tencent.devops.message.pojo.enums.MessageStatusEnum
 import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
-import java.time.LocalDateTime
 
 @ApiModel("事务消息")
 data class TransactionMessage(
