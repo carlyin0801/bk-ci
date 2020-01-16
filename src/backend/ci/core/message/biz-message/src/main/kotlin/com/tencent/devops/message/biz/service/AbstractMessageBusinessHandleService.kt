@@ -24,26 +24,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.message.resources
+package com.tencent.devops.message.biz.service
 
-import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.web.RestResource
-import com.tencent.devops.message.api.UserTransactionMessageResource
-import com.tencent.devops.message.pojo.QueryTransactionMessageParam
 import com.tencent.devops.message.pojo.TransactionMessage
-import com.tencent.devops.message.pojo.enums.MessageStatusEnum
-import com.tencent.devops.message.service.TransactionMessageService
-import org.springframework.beans.factory.annotation.Autowired
 
-@RestResource
-class UserTransactionMessageResourceImpl @Autowired constructor(
-    private val transactionMessageService: TransactionMessageService
-) : UserTransactionMessageResource {
+abstract class AbstractMessageBusinessHandleService {
 
-    override fun getTransactionMessages(
-        userId: String,
-        status: MessageStatusEnum?
-    ): Result<List<TransactionMessage>?> {
-        return transactionMessageService.getTransactionMessages(QueryTransactionMessageParam(status = status))
-    }
+    /**
+     * 处理待确认状态的消息
+     * @param transactionMessage 事务消息
+     */
+    abstract fun handleWaitingConfirmTimeOutMessages(
+        transactionMessage: TransactionMessage
+    )
 }
