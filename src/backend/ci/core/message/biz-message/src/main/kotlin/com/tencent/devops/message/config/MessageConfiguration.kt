@@ -34,7 +34,6 @@ import org.springframework.stereotype.Component
 @Component
 class MessageConfiguration {
 
-
     @Bean
     fun templateRelQueue() = Queue(MQ.QUEUE_TEMPLATE_REL)
 }

@@ -53,7 +53,7 @@ class TransactionMessageServiceImpl @Autowired constructor(
     private val transactionMessageDao: TransactionMessageDao,
     private val rabbitTemplate: RabbitTemplate,
     private val transactionMessageConfig: TransactionMessageConfig
-    ) : TransactionMessageService {
+) : TransactionMessageService {
 
     private val logger = LoggerFactory.getLogger(TransactionMessageServiceImpl::class.java)
 
@@ -62,7 +62,6 @@ class TransactionMessageServiceImpl @Autowired constructor(
         transactionMessageDao.addTransactionMessage(dslContext, message)
         return Result(true)
     }
-
 
     override fun confirmAndSendMessage(messageId: String): Result<Boolean> {
         logger.info("confirmAndSendMessage messageId is:$messageId")
@@ -77,13 +76,12 @@ class TransactionMessageServiceImpl @Autowired constructor(
             userId = message.creator,
             messageId = messageId,
             updateTransactionMessageParam = UpdateTransactionMessageParam(
-              status = MessageStatusEnum.SENDING
+                status = MessageStatusEnum.SENDING
             )
         )
         rabbitTemplate.convertAndSend(message.consumerQueue, message.messageBody)
         return Result(true)
     }
-
 
     override fun saveAndSendMessage(message: TransactionMessage): Result<Boolean> {
         logger.info("saveAndSendMessage message is:$message")
@@ -92,13 +90,11 @@ class TransactionMessageServiceImpl @Autowired constructor(
         return Result(true)
     }
 
-
     override fun directSendMessage(message: TransactionMessage): Result<Boolean> {
         logger.info("directSendMessage message is:$message")
         rabbitTemplate.convertAndSend(message.consumerQueue, message.messageBody)
         return Result(true)
     }
-
 
     override fun reSendMessage(message: TransactionMessage): Result<Boolean> {
         logger.info("reSendMessage message is:$message")
@@ -114,7 +110,6 @@ class TransactionMessageServiceImpl @Autowired constructor(
         return Result(true)
     }
 
-
     override fun reSendMessageByMessageId(messageId: String): Result<Boolean> {
         logger.info("reSendMessageByMessageId messageId is:$messageId")
         val message = getMessageByMessageId(messageId).data ?: return MessageCodeUtil.generateResponseDataObject(
@@ -123,12 +118,12 @@ class TransactionMessageServiceImpl @Autowired constructor(
             false
         )
         logger.info("reSendMessageByMessageId message is:$message")
-        val  updateTransactionMessageParam = UpdateTransactionMessageParam(
+        val updateTransactionMessageParam = UpdateTransactionMessageParam(
             messageSendTimes = message.messageSendTimes + 1
         )
         val maxTimes = transactionMessageConfig.messageMaxSendTimes
         if (message.messageSendTimes >= maxTimes) {
-            updateTransactionMessageParam.isDead = true  // 重发五次失败则设置为死亡队列
+            updateTransactionMessageParam.isDead = true // 重发五次失败则设置为死亡队列
         }
         logger.info("reSendMessageByMessageId updateTransactionMessageParam is:$updateTransactionMessageParam")
         transactionMessageDao.updateTransactionMessage(
@@ -140,7 +135,6 @@ class TransactionMessageServiceImpl @Autowired constructor(
         rabbitTemplate.convertAndSend(message.consumerQueue, message.messageBody)
         return Result(true)
     }
-
 
     override fun setMessageToDead(messageId: String): Result<Boolean> {
         logger.info("setMessageToDead messageId is:$messageId")
@@ -161,7 +155,6 @@ class TransactionMessageServiceImpl @Autowired constructor(
         return Result(true)
     }
 
-
     override fun getMessageByMessageId(messageId: String): Result<TransactionMessage?> {
         logger.info("getMessageByMessageId messageId is:$messageId")
         val messageRecord = transactionMessageDao.getTransactionMessageById(dslContext, messageId)
@@ -175,13 +168,11 @@ class TransactionMessageServiceImpl @Autowired constructor(
         )
     }
 
-
     override fun deleteMessageByMessageId(messageId: String): Result<Boolean> {
         logger.info("deleteMessageByMessageId messageId is:$messageId")
         transactionMessageDao.deleteTransactionMessageById(dslContext, messageId)
         return Result(true)
     }
-
 
     override fun reSendAllDeadMessageByQueueName(queueName: String): Result<Boolean> {
         logger.info("reSendAllDeadMessageByQueueName queueName is:$queueName")
@@ -205,11 +196,11 @@ class TransactionMessageServiceImpl @Autowired constructor(
         return Result(true)
     }
 
-
     override fun getTransactionMessages(queryTransactionMessageParam: QueryTransactionMessageParam): Result<List<TransactionMessage>?> {
         logger.info("getTransactionMessages queryTransactionMessageParam is :$queryTransactionMessageParam")
         val transactionMessageList = mutableListOf<TransactionMessage>()
-        val transactionMessageRecords = transactionMessageDao.getTransactionMessages(dslContext, queryTransactionMessageParam)
+        val transactionMessageRecords =
+            transactionMessageDao.getTransactionMessages(dslContext, queryTransactionMessageParam)
         transactionMessageRecords?.forEach {
             transactionMessageList.add(
                 transactionMessageDao.convert(it)

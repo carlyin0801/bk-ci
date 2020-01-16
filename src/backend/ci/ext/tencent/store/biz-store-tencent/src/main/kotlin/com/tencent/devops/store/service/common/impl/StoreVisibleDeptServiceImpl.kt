@@ -109,10 +109,9 @@ class StoreVisibleDeptServiceImpl @Autowired constructor(
         val resourceClient = client.get(ServiceProjectOrganizationResource::class)
         val result = resourceClient.getOrganizations(userId, OrganizationType.bg, 0)
         val deptInfoList = result.data
-        logger.info("deptInfo List: $deptInfoList")
         val approveList = mutableListOf<Int>()
         deptInfoList?.forEach {
-            approveList.add(Integer.parseInt(it.ID))
+            approveList.add(Integer.parseInt(it.id))
         }
         approveList.add(0)
         // 公司以及BG 范围的审核列表

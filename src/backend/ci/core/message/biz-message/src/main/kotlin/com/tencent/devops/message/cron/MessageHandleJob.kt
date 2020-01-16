@@ -26,13 +26,13 @@
 
 package com.tencent.devops.message.cron
 
-import com.tencent.devops.common.client.Client
+import com.tencent.devops.common.service.utils.SpringContextUtil
+import com.tencent.devops.message.biz.service.AbstractMessageBusinessHandleService
 import com.tencent.devops.message.config.TransactionMessageConfig
 import com.tencent.devops.message.pojo.QueryTransactionMessageParam
 import com.tencent.devops.message.pojo.TransactionMessage
 import com.tencent.devops.message.pojo.enums.MessageStatusEnum
 import com.tencent.devops.message.service.TransactionMessageService
-import com.tencent.devops.store.api.template.ServiceTemplateResource
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.scheduling.annotation.Scheduled
@@ -42,8 +42,7 @@ import java.time.LocalDateTime
 @Component
 class MessageHandleJob @Autowired constructor(
     private val transactionMessageService: TransactionMessageService,
-    private val transactionMessageConfig: TransactionMessageConfig,
-    private val client: Client
+    private val transactionMessageConfig: TransactionMessageConfig
 ) {
 
     private val logger = LoggerFactory.getLogger(MessageHandleJob::class.java)
@@ -116,21 +115,13 @@ class MessageHandleJob @Autowired constructor(
      */
     private fun handleWaitingConfirmTimeOutMessages(messageMap: Map<String, TransactionMessage>) {
         logger.info("handleWaitingConfirmTimeOutMessages begin,messageSize is: ${messageMap.size}")
-        // demo暂时只有一个消息队列，正式环境如果有多个队列，要按不同的队列做不同的逻辑处理
         messageMap.forEach { (messageId, message) ->
             try {
-                logger.info("begin handle the message, messageId is:$messageId")
-                val templateCode = message.data
-                val template = client.get(ServiceTemplateResource::class).getTemplateBaseInfoByCode(templateCode!!).data
-                // 如果模板关联成功，把消息改为待处理，并发送消息
-                if (template != null) {
-                    // 确认并发送消息
-                    transactionMessageService.confirmAndSendMessage(messageId)
-                } else {
-                    // 模板关联失败，则直接删除消息数据
-                    logger.info("template rel fail, messageId:$messageId delete")
-                    transactionMessageService.deleteMessageByMessageId(messageId)
-                }
+                // 根据队列名称获取队列对应的逻辑处理器
+                val messageBusinessHandleService =
+                    SpringContextUtil.getBean(AbstractMessageBusinessHandleService::class.java, message.consumerQueue)
+                // 处理逻辑
+                messageBusinessHandleService.handleWaitingConfirmTimeOutMessages(transactionMessage = message)
             } catch (e: Exception) {
                 logger.error("handle the message error, messageId is:$messageId", e)
             }

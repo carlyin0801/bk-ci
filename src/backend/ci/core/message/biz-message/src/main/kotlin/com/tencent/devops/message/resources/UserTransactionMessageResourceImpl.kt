@@ -38,12 +38,12 @@ import org.springframework.beans.factory.annotation.Autowired
 @RestResource
 class UserTransactionMessageResourceImpl @Autowired constructor(
     private val transactionMessageService: TransactionMessageService
-  ) : UserTransactionMessageResource {
+) : UserTransactionMessageResource {
 
     override fun getTransactionMessages(
         userId: String,
         status: MessageStatusEnum?
     ): Result<List<TransactionMessage>?> {
-       return transactionMessageService.getTransactionMessages(QueryTransactionMessageParam(status = status))
+        return transactionMessageService.getTransactionMessages(QueryTransactionMessageParam(status = status))
     }
 }
