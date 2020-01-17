@@ -1951,6 +1951,7 @@ class PipelineRuntimeService @Autowired constructor(
     }
 
     fun writeStartParam(projectId: String, pipelineId: String, buildId: String, model: Model) {
+        logger.info("[$projectId|$pipelineId|$buildId] writeStartParam with model: $model")
         val allVariable = getAllVariable(buildId)
         if (allVariable[PIPELINE_RETRY_COUNT] != null) return
 
@@ -1976,6 +1977,8 @@ class PipelineRuntimeService @Autowired constructor(
                     else it.id to it.defaultValue
                 }.toMap()
             )
+            logger.info("[$projectId|$pipelineId|$buildId] writeStartParam with param: $params")
+
             buildStartupParamService.addParam(
                 projectId = projectId,
                 pipelineId = pipelineId,
