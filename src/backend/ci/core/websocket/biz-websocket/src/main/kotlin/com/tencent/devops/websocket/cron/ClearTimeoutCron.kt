@@ -86,7 +86,7 @@ class ClearTimeoutCron(
             val redisData = redisOperation.get(WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket)
             logger.info("this bucket redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}], redisData[$redisData]")
             if (redisData != null) {
-                var newSessionList :String? = null
+                var newSessionList: String? = null
                 val sessionList = redisData.split(",")
                 if (sessionList == null || sessionList.isEmpty() ) {
                     logger.info("this bucket is empty,redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}]")
@@ -111,9 +111,9 @@ class ClearTimeoutCron(
                                 websocketService.removeCacheSession(sessionId)
                                 logger.info("[clearTimeOutSession] sessionId:$sessionId,loadPage:$sessionPage,userId:$userId")
                             } else {
-                                newSessionList = if(newSessionList == null){
+                                newSessionList = if (newSessionList == null) {
                                     it
-                                }else{
+                                } else {
                                     "$newSessionList,$it"
                                 }
                             }
