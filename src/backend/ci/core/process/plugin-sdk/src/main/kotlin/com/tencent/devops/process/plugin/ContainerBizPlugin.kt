@@ -70,5 +70,5 @@ interface ContainerBizPlugin<T : Container> {
      * @param container container
      * @param appearedCnt 出现次数
      */
-    fun check(container: T, appearedCnt: Int)
+    fun check(container: T, appearedCnt: Int, projectId: String, userId: String, pipelineId: String?)
 }

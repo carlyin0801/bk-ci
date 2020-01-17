@@ -32,8 +32,11 @@ import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.pipeline.type.StoreDispatchType
 import com.tencent.devops.common.pipeline.type.docker.ImageType
 import com.tencent.devops.process.constant.ProcessMessageCode
+import com.tencent.devops.process.engine.service.store.StoreImageService
 import com.tencent.devops.process.plugin.ContainerBizPlugin
 import com.tencent.devops.process.plugin.annotation.ContainerBiz
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 
 /**
  * @Description
@@ -41,7 +44,12 @@ import com.tencent.devops.process.plugin.annotation.ContainerBiz
  * @Version 1.0
  */
 @ContainerBiz
-class DispatchTypeBizPlugin : ContainerBizPlugin<VMBuildContainer> {
+class DispatchTypeBizPlugin @Autowired constructor(
+    val storeImageService: StoreImageService
+) : ContainerBizPlugin<VMBuildContainer> {
+
+    private val logger = LoggerFactory.getLogger(DispatchTypeBizPlugin::class.java)
+
     override fun containerClass(): Class<VMBuildContainer> {
         return VMBuildContainer::class.java
     }
@@ -52,7 +60,7 @@ class DispatchTypeBizPlugin : ContainerBizPlugin<VMBuildContainer> {
     override fun beforeDelete(container: VMBuildContainer, userId: String, pipelineId: String?) {
     }
 
-    override fun check(container: VMBuildContainer, appearedCnt: Int) {
+    override fun check(container: VMBuildContainer, appearedCnt: Int, projectId: String, userId: String, pipelineId: String?) {
         if (container.elements.isEmpty()) {
             throw ErrorCodeException(defaultMessage = "Job需要至少有一个任务插件", errorCode = ProcessMessageCode.ERROR_PIPELINE_JOB_NEED_TASK)
         }
@@ -65,6 +73,28 @@ class DispatchTypeBizPlugin : ContainerBizPlugin<VMBuildContainer> {
                 }
                 if (dispatchType.imageVersion.isNullOrBlank()) {
                     throw ErrorCodeException(defaultMessage = "从研发商店选择的镜像version不可为空", errorCode = ProcessMessageCode.ERROR_PIPELINE_DISPATCH_STORE_IMAGE_VERSION_BLANK)
+                }
+                //根据商店镜像信息回填value，兼容v1
+                val imageRepoInfo = storeImageService.getImageRepoInfo(
+                    userId = userId,
+                    projectId = projectId,
+                    pipelineId = pipelineId ?: "",
+                    buildId = "",
+                    imageCode = dispatchType.imageCode,
+                    imageVersion = dispatchType.imageVersion,
+                    defaultPrefix = ""
+                )
+                if (imageRepoInfo.sourceType == ImageType.BKDEVOPS) {
+                    var v1Value = imageRepoInfo.repoName + ":" + imageRepoInfo.repoTag
+                    v1Value = v1Value.removePrefix("paas/bkdevops/")
+                    dispatchType.value = v1Value
+                } else if (imageRepoInfo.sourceType == ImageType.THIRD) {
+                    dispatchType.credentialId = imageRepoInfo.ticketId
+                    if (imageRepoInfo.ticketId != projectId) {
+                        logger.warn("Pipeline $pipelineId use third image with ticket from other project:${imageRepoInfo.ticketId}, which should be used in v2")
+                    }
+                } else {
+                    logger.error("Unknown ImageSourceType:${imageRepoInfo.sourceType}")
                 }
             } else {
                 // 其余类型的镜像确保value不为空

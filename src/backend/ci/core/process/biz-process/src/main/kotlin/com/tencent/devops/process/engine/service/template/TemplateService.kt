@@ -144,7 +144,12 @@ class TemplateService @Autowired constructor(
     fun createTemplate(projectId: String, userId: String, template: Model): String {
         logger.info("Start to create the template $template by user $userId")
         checkPermission(projectId, userId)
-        checkTemplate(template)
+        checkTemplate(
+            template = template,
+            projectId = projectId,
+            userId = userId,
+            pipelineId = "not created template"
+        )
         val templateId = UUIDUtil.generate()
         dslContext.transaction { configuration ->
             val context = DSL.using(configuration)
@@ -354,7 +359,12 @@ class TemplateService @Autowired constructor(
     ): Boolean {
         logger.info("Start to update the template $templateId by user $userId - ($template)")
         checkPermission(projectId, userId)
-        checkTemplate(template)
+        checkTemplate(
+            template = template,
+            projectId = projectId,
+            userId = userId,
+            pipelineId = templateId
+        )
         val latestTemplate = templateDao.getLatestTemplate(dslContext, projectId, templateId)
         dslContext.transaction { configuration ->
             val context = DSL.using(configuration)
@@ -1715,14 +1725,19 @@ class TemplateService @Autowired constructor(
     /**
      * 检查模板是不是合法
      */
-    private fun checkTemplate(template: Model) {
+    private fun checkTemplate(template: Model, projectId: String, userId: String, pipelineId: String?) {
         if (template.name.isBlank()) {
             throw ErrorCodeException(
                 defaultMessage = "模板名不能为空字符串",
                 errorCode = ProcessMessageCode.TEMPLATE_NAME_CAN_NOT_NULL
             )
         }
-        modelCheckPlugin.checkModelIntegrity(model = template)
+        modelCheckPlugin.checkModelIntegrity(
+            model = template,
+            projectId = projectId,
+            userId = userId,
+            pipelineId = pipelineId
+        )
         checkPipelineParam(template)
     }
 
