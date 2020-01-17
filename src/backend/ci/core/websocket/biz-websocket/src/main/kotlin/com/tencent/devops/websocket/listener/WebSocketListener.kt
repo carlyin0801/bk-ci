@@ -52,10 +52,7 @@ class WebSocketListener @Autowired constructor(
             val startTime = System.currentTimeMillis()
             val sessionList = event.sessionList
             if (sessionList != null && sessionList.isNotEmpty()) {
-                if (sessionList.size > 20) {
-                    logger.warn("websocketList: sessionList is more limit,page:${event.page}, sessionList:$sessionList")
-                }
-
+                addLongSession(sessionList, event.page ?: "")
                 sessionList.forEach { session ->
                     if (websocketService.isCacheSession(session)) {
                         val pushStartTime = System.currentTimeMillis()
@@ -77,5 +74,12 @@ class WebSocketListener @Autowired constructor(
         } catch (ex: Exception) {
             logger.error("webSocketListener error", ex)
         }
+    }
+
+    private fun addLongSession(sessionList: List<String>, page: String) {
+        if (sessionList.size < 20) {
+            return
+        }
+        websocketService.createLongSessionPage(page)
     }
 }
