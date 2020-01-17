@@ -101,6 +101,7 @@ class DispatchTypeBizPlugin @Autowired constructor(
                 } else {
                     logger.error("Unknown ImageSourceType:${imageRepoInfo.sourceType}")
                 }
+                dispatchType.dockerBuildVersion = dispatchType.value
             } else {
                 // 其余类型的镜像确保value不为空
                 if (dispatchType.value.isBlank()) {
