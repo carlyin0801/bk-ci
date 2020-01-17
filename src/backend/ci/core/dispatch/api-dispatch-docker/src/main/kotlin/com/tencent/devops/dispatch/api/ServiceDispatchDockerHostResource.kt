@@ -24,40 +24,35 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.common.pipeline.pojo
+package com.tencent.devops.dispatch.api
 
-import com.tencent.devops.common.api.enums.ScmType
-import com.tencent.devops.common.pipeline.enums.BuildFormPropertyType
-import io.swagger.annotations.ApiModel
-import io.swagger.annotations.ApiModelProperty
+import com.tencent.devops.common.api.pojo.Page
+import com.tencent.devops.dispatch.pojo.DockerHostZone
+import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
+import io.swagger.annotations.ApiParam
+import javax.ws.rs.Consumes
+import javax.ws.rs.GET
+import javax.ws.rs.Path
+import javax.ws.rs.Produces
+import javax.ws.rs.QueryParam
+import javax.ws.rs.core.MediaType
 
-@ApiModel("构建模型-表单元素属性")
-data class BuildFormProperty(
-    @ApiModelProperty("元素ID-标识符", required = true)
-    var id: String,
-    @ApiModelProperty("是否必须", required = true)
-    var required: Boolean,
-    @ApiModelProperty("元素类型", required = true)
-    val type: BuildFormPropertyType,
-    @ApiModelProperty("默认值", required = true)
-    var defaultValue: Any,
-    @ApiModelProperty("下拉框列表", required = false)
-    var options: List<BuildFormValue>?,
-    @ApiModelProperty("描述", required = false)
-    var desc: String?,
+@Api(tags = ["SERVICE_DOCKER_HOST"], description = "服务-获取构建容器信息")
+@Path("/service/dockerhost")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+interface ServiceDispatchDockerHostResource {
 
-    // 针对 SVN_TAG 新增字段
-    @ApiModelProperty("repoHashId", required = false)
-    val repoHashId: String?,
-    @ApiModelProperty("relativePath", required = false)
-    val relativePath: String?,
-    @ApiModelProperty("代码库类型下拉", required = false)
-    val scmType: ScmType?,
-    @ApiModelProperty("构建机类型下拉", required = false)
-    val containerType: BuildContainerType?,
-
-    @ApiModelProperty("自定义仓库通配符", required = false)
-    val glob: String?,
-    @ApiModelProperty("文件元数据", required = false)
-    val properties: Map<String, String>?
-)
+    @ApiOperation("获取dockerhost列表")
+    @GET
+    @Path("/list")
+    fun list(
+        @ApiParam("第几页", required = false)
+        @QueryParam("page")
+        page: Int?,
+        @ApiParam("每页条数", required = false)
+        @QueryParam("pageSize")
+        pageSize: Int?
+    ): Page<DockerHostZone>
+}

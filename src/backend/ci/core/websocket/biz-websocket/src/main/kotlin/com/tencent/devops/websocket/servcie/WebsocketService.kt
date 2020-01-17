@@ -61,6 +61,8 @@ class WebsocketService @Autowired constructor(
 
     private val cacheSessionList = mutableListOf<String>()
 
+    private val longSessionList = mutableSetOf<String>()
+
     // 用户切换页面，需调整sessionId-page,page-sessionIdList两个map
     fun changePage(
         userId: String,
@@ -68,7 +70,7 @@ class WebsocketService @Autowired constructor(
         newPage: String,
         projectId: String,
         needCheckProject: Boolean,
-        transferData: Map<String, Any>?= emptyMap()
+        transferData: Map<String, Any>? = emptyMap()
     ) {
         if (needCheckProject && projectId.isNotEmpty()) {
             if (!projectProxyService.checkProject(projectId, userId)) {
@@ -109,7 +111,7 @@ class WebsocketService @Autowired constructor(
                 )}]"
             )
             logger.info("sessionPage[session:$sessionId,page:$normalPage]")
-            if(needTransfer && transferData!!.isNotEmpty()){
+            if (needTransfer && transferData!!.isNotEmpty()) {
                 transferDispatch.dispatch(
                     ChangePageTransferEvent(
                         userId = userId,
@@ -127,7 +129,7 @@ class WebsocketService @Autowired constructor(
         userId: String,
         sessionId: String,
         oldPage: String?,
-        transferData: Map<String, Any>?= emptyMap()
+        transferData: Map<String, Any>? = emptyMap()
     ) {
         if (!checkParams(userId, sessionId)) {
             logger.warn("loginOut checkFail: [userId:$userId,sessionId:$sessionId")
@@ -149,7 +151,7 @@ class WebsocketService @Autowired constructor(
             } else if (page != null) {
                 RedisUtlis.cleanPageSessionBySessionId(redisOperation, page, sessionId)
             }
-            if(needTransfer && transferData!!.isNotEmpty()){
+            if (needTransfer && transferData!!.isNotEmpty()) {
                 transferDispatch.dispatch(
                     LoginOutTransferEvent(
                         userId = userId,
@@ -173,7 +175,7 @@ class WebsocketService @Autowired constructor(
 //            RedisUtlis.cleanSessionTimeOutBySession(redisOperation, sessionId)
             removeCacheSession(sessionId)
             logger.info("after clearUserSession:${RedisUtlis.getSessionIdByUserId(redisOperation, userId)}")
-            if(needTransfer && transferData!!.isNotEmpty()){
+            if (needTransfer && transferData!!.isNotEmpty()) {
                 transferDispatch.dispatch(
                     ClearUserSessionTransferEvent(
                         userId = userId,
@@ -207,18 +209,30 @@ class WebsocketService @Autowired constructor(
         return false
     }
 
-    fun createTimeoutSession(sessionId: String, userId: String){
+    fun createLongSessionPage(page: String) {
+        longSessionList.add(page)
+    }
+
+    fun getLongSessionPage(): Set<String> {
+        return longSessionList
+    }
+
+    fun clearLongSessionPage() {
+        longSessionList.clear()
+    }
+
+    fun createTimeoutSession(sessionId: String, userId: String) {
         val timeout = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(sessionTimeOut!!)
         val redisData = "$sessionId#$userId&$timeout"
-        //hash后对1000取模，将数据打散到1000个桶内
+        // hash后对1000取模，将数据打散到1000个桶内
         var bucket = redisData.hashCode().rem(WebsocketKeys.REDIS_MO)
-        if(bucket < 0) bucket *= -1
-        val redisHashKey = WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY+bucket
+        if (bucket < 0) bucket *= -1
+        val redisHashKey = WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket
         logger.info("redis hash sessionId[$sessionId] userId[$userId] redisHashKey[$redisHashKey]")
         var timeoutData = redisOperation.get(redisHashKey)
-        if(timeoutData != null) {
-            redisOperation.set(redisHashKey, timeoutData, null, true)
-        }else{
+        if (timeoutData == null) {
+            redisOperation.set(redisHashKey, redisData, null, true)
+        } else {
             timeoutData = "$timeoutData,$redisData"
             redisOperation.set(redisHashKey, timeoutData, null, true)
         }

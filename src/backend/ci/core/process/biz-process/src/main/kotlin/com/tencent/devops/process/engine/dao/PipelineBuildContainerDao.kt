@@ -37,6 +37,7 @@ import com.tencent.devops.model.process.tables.records.TPipelineBuildContainerRe
 import com.tencent.devops.process.engine.pojo.PipelineBuildContainer
 import com.tencent.devops.process.engine.pojo.PipelineBuildContainerControlOption
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
@@ -139,7 +140,9 @@ class PipelineBuildContainerDao {
             if (endTime != null) {
                 update.set(END_TIME, endTime)
                 if (BuildStatus.isFinish(buildStatus)) {
-                    update.set(COST, COST + END_TIME - START_TIME)
+                    val endTimeFiled = DSL.field("UNIX_TIMESTAMP(END_TIME)")
+                    val startTimeFiled = DSL.field("UNIX_TIMESTAMP(START_TIME)")
+                    update.set(COST, COST + endTimeFiled - startTimeFiled)
                 }
             }
 

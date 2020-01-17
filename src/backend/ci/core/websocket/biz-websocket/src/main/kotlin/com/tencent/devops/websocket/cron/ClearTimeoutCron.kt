@@ -81,12 +81,27 @@ class ClearTimeoutCron(
      */
     @Scheduled(cron = "0 */1 * * * ?")
     fun newClearTimeoutCache() {
+        longSessionLog()
+        clearTimeoutSession()
+    }
+
+    private fun longSessionLog() {
+        val longSessionList = websocketService.getLongSessionPage()
+        longSessionList.forEach {
+            logger.warn("this page[$it] sessionSize more 20")
+        }
+        if (longSessionList.size > 20) {
+            websocketService.clearLongSessionPage()
+        }
+    }
+
+    private fun clearTimeoutSession() {
         val nowTime = System.currentTimeMillis()
         for (bucket in 0..WebsocketKeys.REDIS_MO) {
             val redisData = redisOperation.get(WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket)
             logger.info("this bucket redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}], redisData[$redisData]")
             if (redisData != null) {
-                var newSessionList :String? = null
+                var newSessionList: String? = null
                 val sessionList = redisData.split(",")
                 if (sessionList == null || sessionList.isEmpty() ) {
                     logger.info("this bucket is empty,redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}]")
@@ -94,7 +109,6 @@ class ClearTimeoutCron(
                 }
                 logger.info("clearTimeout sessionList[$sessionList]")
                 sessionList.forEach {
-                    logger.info("clearTimeout redisStr[$it],redisKey[${WebsocketKeys.HASH_USER_TIMEOUT_REDIS_KEY + bucket}")
                     try {
                         if (it != null) {
                             val timeout: Long = it.substringAfter("&").toLong()
@@ -111,9 +125,9 @@ class ClearTimeoutCron(
                                 websocketService.removeCacheSession(sessionId)
                                 logger.info("[clearTimeOutSession] sessionId:$sessionId,loadPage:$sessionPage,userId:$userId")
                             } else {
-                                newSessionList = if(newSessionList == null){
+                                newSessionList = if (newSessionList == null) {
                                     it
-                                }else{
+                                } else {
                                     "$newSessionList,$it"
                                 }
                             }

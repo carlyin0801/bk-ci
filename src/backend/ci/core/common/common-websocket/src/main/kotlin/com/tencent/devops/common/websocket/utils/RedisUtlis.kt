@@ -25,9 +25,6 @@
  */
 
 package com.tencent.devops.common.websocket.utils
-
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.redis.RedisOperation
 
 object RedisUtlis {
@@ -239,7 +236,7 @@ object RedisUtlis {
 //            if (sessionMap.containsKey(sessionId)) {
 //                sessionMap.remove(sessionId)
 //            }
-////            saveSessionTimeOutAll(redisOperation, objectMapper.writeValueAsString(sessionMap))
+//            saveSessionTimeOutAll(redisOperation, objectMapper.writeValueAsString(sessionMap))
 //        }
 //    }
 

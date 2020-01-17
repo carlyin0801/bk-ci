@@ -52,10 +52,7 @@ class WebSocketListener @Autowired constructor(
             val startTime = System.currentTimeMillis()
             val sessionList = event.sessionList
             if (sessionList != null && sessionList.isNotEmpty()) {
-                if (sessionList.size > 20) {
-                    logger.warn("websocketList: sessionList is more limit,page:${event.page}, sessionList:$sessionList")
-                }
-
+                addLongSession(sessionList, event.page ?: "")
                 sessionList.forEach { session ->
                     if (websocketService.isCacheSession(session)) {
                         val pushStartTime = System.currentTimeMillis()
@@ -63,7 +60,7 @@ class WebSocketListener @Autowired constructor(
                             "/topic/bk/notify/$session",
                             objectMapper.writeValueAsString(event.notifyPost)
                         )
-                        if(System.currentTimeMillis() - pushStartTime > 500){
+                        if (System.currentTimeMillis() - pushStartTime > 500) {
                             logger.warn("WebSocketListener push msg consuming 500ms, page[$event.page], session[$session]")
                         }
                     }
@@ -71,11 +68,18 @@ class WebSocketListener @Autowired constructor(
             } else {
                 logger.info("webSocketListener sessionList is empty. page:${event.page} user:${event.userId} ")
             }
-            if(System.currentTimeMillis() - startTime > 1000){
+            if (System.currentTimeMillis() - startTime > 1000) {
                 logger.warn("WebSocketListener push all message consuming 1s, page[$event.page], session[${event.sessionList}]")
             }
         } catch (ex: Exception) {
             logger.error("webSocketListener error", ex)
         }
+    }
+
+    private fun addLongSession(sessionList: List<String>, page: String) {
+        if (sessionList.size < 20) {
+            return
+        }
+        websocketService.createLongSessionPage(page)
     }
 }
