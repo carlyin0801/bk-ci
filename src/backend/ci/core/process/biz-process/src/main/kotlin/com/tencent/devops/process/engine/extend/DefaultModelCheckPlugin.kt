@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory
 
 class DefaultModelCheckPlugin constructor(val client: Client) : ModelCheckPlugin {
 
-    override fun checkModelIntegrity(model: Model) {
+    override fun checkModelIntegrity(model: Model, projectId: String, userId: String, pipelineId: String?) {
 
         val stage = model.stages.getOrNull(0)
             ?: throw ErrorCodeException(
@@ -79,7 +79,13 @@ class DefaultModelCheckPlugin constructor(val client: Client) : ModelCheckPlugin
             s.containers.forEach { c ->
                 val cCnt = containerCnt.computeIfPresent(c.getClassType()) { _, oldValue -> oldValue + 1 }
                     ?: containerCnt.computeIfAbsent(c.getClassType()) { 1 } // 第一次时出现1次
-                ContainerBizRegistrar.getPlugin(c)?.check(c, cCnt)
+                ContainerBizRegistrar.getPlugin(c)?.check(
+                    container = c,
+                    appearedCnt = cCnt,
+                    projectId = projectId,
+                    userId = userId,
+                    pipelineId = pipelineId
+                )
                 c.elements.forEach { e ->
                     val eCnt = elementCnt.computeIfPresent(e.getAtomCode()) { _, oldValue -> oldValue + 1 }
                         ?: elementCnt.computeIfAbsent(e.getAtomCode()) { 1 } // 第一次时出现1次
