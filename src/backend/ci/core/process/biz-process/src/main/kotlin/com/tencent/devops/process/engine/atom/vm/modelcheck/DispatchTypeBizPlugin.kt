@@ -89,6 +89,11 @@ class DispatchTypeBizPlugin @Autowired constructor(
                     v1Value = v1Value.removePrefix("paas/bkdevops/")
                     dispatchType.value = v1Value
                 } else if (imageRepoInfo.sourceType == ImageType.THIRD) {
+                    if (imageRepoInfo.repoUrl.isBlank()) {
+                        dispatchType.value = imageRepoInfo.repoName + ":" + imageRepoInfo.repoTag
+                    } else {
+                        dispatchType.value = imageRepoInfo.repoUrl + "/" + imageRepoInfo.repoName + ":" + imageRepoInfo.repoTag
+                    }
                     dispatchType.credentialId = imageRepoInfo.ticketId
                     if (imageRepoInfo.ticketId != projectId) {
                         logger.warn("Pipeline $pipelineId use third image with ticket from other project:${imageRepoInfo.ticketId}, which should be used in v2")
