@@ -68,6 +68,6 @@ class ServiceTemplateResourceImpl @Autowired constructor(
     }
 
     override fun getTemplateBaseInfoByCode(templateCode: String): Result<TemplateBaseInfo?> {
-        return  marketTemplateService.getTemplateBaseInfoByCode(templateCode)
+        return marketTemplateService.getTemplateBaseInfoByCode(templateCode)
     }
 }
