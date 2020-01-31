@@ -73,8 +73,8 @@ interface ServiceTemplateResource {
     @GET
     @Path("/template/templateCodes/{templateCode}/base/info")
     fun getTemplateBaseInfoByCode(
-            @ApiParam("模板代码", required = true)
-            @PathParam("templateCode")
-            templateCode: String
+        @ApiParam("模板代码", required = true)
+        @PathParam("templateCode")
+        templateCode: String
     ): Result<TemplateBaseInfo?>
 }

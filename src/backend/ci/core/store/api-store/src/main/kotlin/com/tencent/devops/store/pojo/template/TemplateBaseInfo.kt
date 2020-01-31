@@ -26,8 +26,6 @@
 
 package com.tencent.devops.store.pojo.template
 
-import com.tencent.devops.store.pojo.common.Category
-import com.tencent.devops.store.pojo.common.Label
 import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 

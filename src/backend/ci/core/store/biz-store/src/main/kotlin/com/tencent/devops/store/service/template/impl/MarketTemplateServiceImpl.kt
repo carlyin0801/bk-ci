@@ -420,7 +420,7 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
         val templateRecord = marketTemplateDao.getLatestTemplateByCode(dslContext, templateCode)
         logger.info("the templateRecord is :$templateRecord")
         return if (null == templateRecord) {
-            Result(data=null)
+            Result(data = null)
         } else {
             Result(convertTemplateBaseInfo(templateRecord))
         }
@@ -447,7 +447,6 @@ abstract class MarketTemplateServiceImpl @Autowired constructor() : MarketTempla
                 updateTime = DateTimeUtil.toDateTime(templateRecord.createTime)
         )
     }
-
 
         /**
      * 删除模版关联关系
