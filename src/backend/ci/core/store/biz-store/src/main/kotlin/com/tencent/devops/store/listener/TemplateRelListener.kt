@@ -24,12 +24,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.message.listener
+package com.tencent.devops.store.listener
 
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.event.dispatcher.pipeline.mq.MQ
-import com.tencent.devops.message.service.TransactionMessageService
+import com.tencent.devops.message.api.ServiceTransactionMessageResource
 import com.tencent.devops.process.api.template.ServiceTemplateResource
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.annotation.RabbitHandler
@@ -40,7 +40,6 @@ import org.springframework.stereotype.Component
 @Component
 @RabbitListener(queues = [MQ.QUEUE_TEMPLATE_REL])
 class TemplateRelListener @Autowired constructor(
-    private val transactionMessageService: TransactionMessageService,
     private val client: Client
 ) {
 
@@ -59,7 +58,8 @@ class TemplateRelListener @Autowired constructor(
             // 如果process服务修改状态成功，则把消息服务的该条消息从数据库删除
             val messageId = templateInfoMap["messageId"] as String
             logger.warn("update process template success, messageId:$messageId delete!")
-            transactionMessageService.deleteMessageByMessageId(messageId)
+            val deleteMessageResult = client.get(ServiceTransactionMessageResource::class).deleteMessageByMessageId(messageId)
+            logger.info("deleteMessageResult is:$deleteMessageResult")
         }
     }
 }
