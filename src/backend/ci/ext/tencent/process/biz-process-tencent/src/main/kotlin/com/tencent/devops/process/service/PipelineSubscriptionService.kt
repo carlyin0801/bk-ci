@@ -230,6 +230,8 @@ class PipelineSubscriptionService @Autowired(required = false) constructor(
             setting.successContent = setting.successContent ?: ""
             setting.failContent = setting.failContent ?: ""
 
+            logger.info("build setting success receiver: $buildId, ${setting.successReceiver}, $vars")
+
             // 内容
             var emailSuccessContent = setting.successContent
             var emailFailContent = setting.failContent
