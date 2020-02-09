@@ -127,7 +127,7 @@ interface UserGitResource {
         userId: String
     ): Result<Int>
 
-    @ApiOperation("根据用户ID判断用户是否已经oauth认证")
+    @ApiOperation("根据用户ID判断用户是否已经oauth认证001")
     @GET
     @Path("/isOauth")
     fun isOAuth(
