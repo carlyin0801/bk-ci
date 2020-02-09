@@ -118,7 +118,7 @@ interface UserGitResource {
         pageSize: Int?
     ): Result<List<GitTag>>
 
-    @ApiOperation("删除用户的token ID")
+    @ApiOperation("删除用户的token ID001")
     @DELETE
     @Path("/deleteToken")
     fun deleteToken(
