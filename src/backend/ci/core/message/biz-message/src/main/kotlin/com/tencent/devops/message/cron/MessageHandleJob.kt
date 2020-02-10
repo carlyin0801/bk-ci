@@ -163,7 +163,7 @@ class MessageHandleJob @Autowired constructor(
                 // 判断发送次数
                 val maxTimes = transactionMessageConfig.messageMaxSendTimes
                 logger.info(" messageId:$messageId has send ${message.messageSendTimes} times")
-                if (maxTimes < message.messageSendTimes) {
+                if (maxTimes <= message.messageSendTimes) {
                     // 标记为死亡
                     transactionMessageService.setMessageToDead(messageId)
                     return@forEach
