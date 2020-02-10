@@ -109,9 +109,11 @@ class TransactionMessageDao @Autowired constructor(
      */
     fun deleteTransactionMessageById(dslContext: DSLContext, messageId: String) {
         with(TTransactionMessage.T_TRANSACTION_MESSAGE) {
-            dslContext.deleteFrom(this)
+            val baseStep = dslContext.delete(this)
                 .where(MESSAGE_ID.eq(messageId))
-                .execute()
+            logger.info(baseStep.getSQL(true))
+            val result = baseStep.execute()
+            logger.info("deleteTransactionMessageById result is:$result")
         }
     }
 
