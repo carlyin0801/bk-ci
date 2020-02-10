@@ -26,6 +26,8 @@
 
 package com.tencent.devops.message.cron
 
+import com.tencent.devops.common.redis.RedisLock
+import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.utils.SpringContextUtil
 import com.tencent.devops.message.biz.service.AbstractMessageBusinessHandleService
 import com.tencent.devops.message.config.TransactionMessageConfig
@@ -41,11 +43,16 @@ import java.time.LocalDateTime
 
 @Component
 class MessageHandleJob @Autowired constructor(
+    private val redisOperation: RedisOperation,
     private val transactionMessageService: TransactionMessageService,
     private val transactionMessageConfig: TransactionMessageConfig
 ) {
 
-    private val logger = LoggerFactory.getLogger(MessageHandleJob::class.java)
+    companion object {
+        private val logger = LoggerFactory.getLogger(MessageHandleJob::class.java)
+        private const val HANDLE_WAITING_CONFIRM_TIME_OUT_MESSAGES_REDIS_KEY = "message:handle:waiting:confirm:time:out:messages:lock:key"
+        private const val HANDLE_SENDING_CONFIRM_TIME_OUT_MESSAGES_REDIS_KEY = "message:handle:sending:confirm:time:out:messages:lock:key"
+    }
 
     /**
      * 处理状态为“待确认”但已超时的消息.
@@ -61,11 +68,19 @@ class MessageHandleJob @Autowired constructor(
             descFlag = false
         )
         logger.info("handleWaitingConfirmTimeOutMessages queryTransactionMessageParam is:$queryTransactionMessageParam")
+        val redisLock = RedisLock(redisOperation, HANDLE_WAITING_CONFIRM_TIME_OUT_MESSAGES_REDIS_KEY, 20)
         try {
+            val lockSuccess = redisLock.tryLock()
+            if (!lockSuccess) {
+                logger.info("the other process is processing the job")
+                return
+            }
             val messageMap = getMessageMap(queryTransactionMessageParam)
             handleWaitingConfirmTimeOutMessages(messageMap)
         } catch (e: Exception) {
             logger.error("handleWaitingConfirmTimeOutMessages has error：", e)
+        } finally {
+            redisLock.unlock()
         }
     }
 
@@ -85,11 +100,19 @@ class MessageHandleJob @Autowired constructor(
             isDead = false
         )
         logger.info("handleSendingTimeOutMessage queryTransactionMessageParam is:$queryTransactionMessageParam")
+        val redisLock = RedisLock(redisOperation, HANDLE_SENDING_CONFIRM_TIME_OUT_MESSAGES_REDIS_KEY, 20)
         try {
+            val lockSuccess = redisLock.tryLock()
+            if (!lockSuccess) {
+                logger.info("the other process is processing the job")
+                return
+            }
             val messageMap = getMessageMap(queryTransactionMessageParam)
             handleSendingTimeOutMessage(messageMap)
         } catch (e: Exception) {
             logger.error("handleSendingTimeOutMessage has error：", e)
+        } finally {
+            redisLock.unlock()
         }
     }
 
