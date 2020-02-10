@@ -31,7 +31,6 @@ import com.tencent.devops.message.pojo.TransactionMessage
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
-import org.springframework.web.bind.annotation.PathVariable
 import javax.ws.rs.Consumes
 import javax.ws.rs.DELETE
 import javax.ws.rs.POST
@@ -67,6 +66,6 @@ interface ServiceTransactionMessageResource {
     @DELETE
     @Path("/ids/{messageId}")
     fun deleteMessageByMessageId(
-        @PathVariable("messageId") messageId: String
+        @PathParam("messageId") messageId: String
     ): Result<Boolean>
 }
