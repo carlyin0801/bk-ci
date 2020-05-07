@@ -26,10 +26,13 @@
 
 package com.tencent.devops.process.service
 
+import com.tencent.devops.common.api.constant.CommonMessageCode
+import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.pipeline.pojo.BuildParameters
 import com.tencent.devops.process.engine.dao.PipelineBuildVarDao
 import com.tencent.devops.process.utils.PipelineVarUtil
 import org.jooq.DSLContext
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
@@ -38,6 +41,8 @@ class BuildVariableService @Autowired constructor(
     private val commonDslContext: DSLContext,
     private val pipelineBuildVarDao: PipelineBuildVarDao
 ) {
+
+    private val logger = LoggerFactory.getLogger(BuildVariableService::class.java)
 
     fun getVariable(buildId: String, varName: String): String? {
         val vars = getAllVariable(buildId)
@@ -76,7 +81,8 @@ class BuildVariableService @Autowired constructor(
     }
 
     // 保存方法需要提供事务保护的实现，传入特定dslContext
-    fun saveVariable(dslContext: DSLContext, buildId: String, projectId: String, pipelineId: String, name: String, value: Any) =
+    fun saveVariable(dslContext: DSLContext, buildId: String, projectId: String, pipelineId: String, name: String, value: Any) {
+        validateBuildVarCount(dslContext, buildId, 1)
         pipelineBuildVarDao.save(
             dslContext = dslContext,
             projectId = projectId,
@@ -85,8 +91,11 @@ class BuildVariableService @Autowired constructor(
             name = name,
             value = value
         )
+    }
 
     fun batchSetVariable(dslContext: DSLContext, projectId: String, pipelineId: String, buildId: String, variables: Map<String, Any>) {
+        val varCount = variables.size
+        validateBuildVarCount(dslContext, buildId, varCount)
         val vars = variables.map { it.key to it.value.toString() }.toMap().toMutableMap()
         PipelineVarUtil.replaceOldByNewVar(vars)
 
@@ -100,5 +109,16 @@ class BuildVariableService @Autowired constructor(
             buildId = buildId,
             variables = pipelineBuildParameters
         )
+    }
+
+    private fun validateBuildVarCount(dslContext: DSLContext, buildId: String, varCount: Int) {
+        val buildVarCount = pipelineBuildVarDao.getBuildVarCount(dslContext, buildId)
+        logger.info("buildId:$buildId, buildVarCount:$buildVarCount, varCount:$varCount")
+        if (varCount + buildVarCount > 512) {
+            throw ErrorCodeException(
+                errorCode = CommonMessageCode.ERROR_CLIENT_REST_ERROR,
+                defaultMessage = "too many build var,max is 512"
+            )
+        }
     }
 }

@@ -87,6 +87,12 @@ class PipelineBuildVarDao @Autowired constructor() {
         }
     }
 
+    fun getBuildVarCount(dslContext: DSLContext, buildId: String): Int {
+        with(T_PIPELINE_BUILD_VAR) {
+            return dslContext.selectCount().from(this).where(BUILD_ID.eq(buildId)).fetchOne(0, Int::class.java)
+        }
+    }
+
     fun getVarsByProjectAndPipeline(dslContext: DSLContext, projectId: String, pipelineId: String, key: String? = null): Result<TPipelineBuildVarRecord>? {
         return with(T_PIPELINE_BUILD_VAR) {
             val condition = PROJECT_ID.eq(projectId).and(PIPELINE_ID.eq(pipelineId))
