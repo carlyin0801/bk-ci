@@ -43,8 +43,8 @@ class BuildVariableService @Autowired constructor(
     private val pipelineBuildVarDao: PipelineBuildVarDao
 ) {
 
-    @Value("\${pipeline.build.maxBuildVar}")
-    private lateinit var maxBuildVar: String
+    @Value("\${pipeline.build.maxBuildVarNum}")
+    private lateinit var maxBuildVarNum: String
 
     private val logger = LoggerFactory.getLogger(BuildVariableService::class.java)
 
@@ -117,11 +117,10 @@ class BuildVariableService @Autowired constructor(
 
     private fun validateBuildVarCount(dslContext: DSLContext, buildId: String, varCount: Int) {
         val buildVarCount = pipelineBuildVarDao.getBuildVarCount(dslContext, buildId)
-        logger.info("buildId:$buildId, buildVarCount:$buildVarCount, varCount:$varCount")
-        if (varCount + buildVarCount > maxBuildVar.toInt()) {
+        if (varCount + buildVarCount > maxBuildVarNum.toInt()) {
             throw ErrorCodeException(
                 errorCode = CommonMessageCode.ERROR_CLIENT_REST_ERROR,
-                defaultMessage = "too many build var,max is $maxBuildVar"
+                defaultMessage = "too many buildVar,maxBuildVarNum is $maxBuildVarNum"
             )
         }
     }

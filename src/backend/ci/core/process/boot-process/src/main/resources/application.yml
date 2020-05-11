@@ -27,7 +27,7 @@ queueConcurrency:
 
 pipeline:
   build:
-    maxBuildVar: 512
+    maxBuildVarNum: 512
 
 server:
   port: 21921
