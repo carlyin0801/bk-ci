@@ -106,6 +106,25 @@ class BuildStartControl @Autowired constructor(
                 execute()
             } catch (e: Throwable) {
                 logger.error("[$buildId]|[$pipelineId]|$source| start fail $e", e)
+                LogUtils.addRedLine(
+                    rabbitTemplate = rabbitTemplate,
+                    buildId = buildId,
+                    message = e.message ?: "",
+                    tag = tag,
+                    jobId = "",
+                    executeCount = 1
+                )
+                // 结束构建
+                pipelineEventDispatcher.dispatch(
+                    PipelineBuildFinishEvent(
+                        source = tag,
+                        projectId = projectId,
+                        pipelineId = pipelineId,
+                        userId = userId,
+                        buildId = buildId,
+                        status = BuildStatus.FAILED
+                    )
+                )
             } finally {
                 pipelineBuildLock.unlock()
             }
