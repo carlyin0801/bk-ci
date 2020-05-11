@@ -25,5 +25,9 @@ queueConcurrency:
   heartBeat: 1
   timerChanger: 1
 
+pipeline:
+  build:
+    maxBuildVar: 512
+
 server:
   port: 21921

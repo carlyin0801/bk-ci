@@ -34,6 +34,7 @@ import com.tencent.devops.process.utils.PipelineVarUtil
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
 @Service
@@ -41,6 +42,9 @@ class BuildVariableService @Autowired constructor(
     private val commonDslContext: DSLContext,
     private val pipelineBuildVarDao: PipelineBuildVarDao
 ) {
+
+    @Value("\${pipeline.build.maxBuildVar}")
+    private lateinit var maxBuildVar: String
 
     private val logger = LoggerFactory.getLogger(BuildVariableService::class.java)
 
@@ -114,10 +118,10 @@ class BuildVariableService @Autowired constructor(
     private fun validateBuildVarCount(dslContext: DSLContext, buildId: String, varCount: Int) {
         val buildVarCount = pipelineBuildVarDao.getBuildVarCount(dslContext, buildId)
         logger.info("buildId:$buildId, buildVarCount:$buildVarCount, varCount:$varCount")
-        if (varCount + buildVarCount > 512) {
+        if (varCount + buildVarCount > maxBuildVar.toInt()) {
             throw ErrorCodeException(
                 errorCode = CommonMessageCode.ERROR_CLIENT_REST_ERROR,
-                defaultMessage = "too many build var,max is 512"
+                defaultMessage = "too many build var,max is $maxBuildVar"
             )
         }
     }

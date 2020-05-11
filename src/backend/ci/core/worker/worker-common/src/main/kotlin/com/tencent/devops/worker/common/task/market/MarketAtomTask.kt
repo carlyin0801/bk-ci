@@ -427,6 +427,17 @@ open class MarketAtomTask : ITask() {
             }
 
             val outputData = atomResult.data
+            val qualityData = atomResult.qualityData
+            // 判断插件的输出参数个数是否超出最大限制
+            val outputParamSize = (outputData?.size ?: 0) + (qualityData?.size ?: 0)
+            logger.info("outputParamSize is:$outputParamSize")
+            if (outputParamSize > MAX_OUTPUT_PARAM_SIZE) {
+                throw TaskExecuteException(
+                    errorMsg = "too many output params, currentSize is:$outputParamSize, maxSize is:$MAX_OUTPUT_PARAM_SIZE",
+                    errorType = ErrorType.USER,
+                    errorCode = ErrorCode.USER_DEFAULT_ERROR
+                )
+            }
             val env = mutableMapOf<String, String>()
             outputData?.forEach { varKey, output ->
                 val type = output["type"]
@@ -646,6 +657,7 @@ open class MarketAtomTask : ITask() {
         private const val DIR_ENV = "bk_data_dir"
         private const val INPUT_ENV = "bk_data_input"
         private const val OUTPUT_ENV = "bk_data_output"
+        private const val MAX_OUTPUT_PARAM_SIZE = 32
         private val logger = LoggerFactory.getLogger(MarketAtomTask::class.java)
     }
 }
