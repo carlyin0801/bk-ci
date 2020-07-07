@@ -35,6 +35,7 @@ import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
+import javax.validation.Valid
 import javax.ws.rs.Consumes
 import javax.ws.rs.DELETE
 import javax.ws.rs.GET
@@ -75,6 +76,7 @@ interface UserStoreMemberResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("添加成员请求报文")
+        @Valid
         storeMemberReq: StoreMemberReq
     ): Result<Boolean>
 
@@ -121,6 +123,9 @@ interface UserStoreMemberResource {
         @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
+        @ApiParam("store组件成员", required = true)
+        @QueryParam("storeMember")
+        storeMember: String,
         @ApiParam("项目代码", required = true)
         @QueryParam("projectCode")
         projectCode: String,

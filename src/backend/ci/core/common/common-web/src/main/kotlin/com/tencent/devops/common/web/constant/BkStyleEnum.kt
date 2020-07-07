@@ -31,6 +31,7 @@ enum class BkStyleEnum(val style: String) {
     NUMBER_STYLE("[0-9]*\$"), // 数字正则表达式
     STORE_NAME_STYLE("^[\\w-\\u4E00-\\u9FBB\\u3400-\\u4DBF\\uF900-\\uFAD9\\u3000-\\u303F\\u2000-\\u206F\\uFF00-\\uFFEF]{1,32}\$"), // 研发商店名称正则表达式
     STORE_CODE_STYLE("^[a-zA-Z_][\\w]{0,31}\$"), // 研发商店组件标识正则表达式
+    STORE_MEMBER_TYPE_STYLE("^ADMIN|DEVELOPER\$"), // 研发商店组件成员类型正则表达式
     SERVICE_CODE_STYLE("^[a-z][([-a-z-0-9]*[a-z-0-9])?]{0,31}\$"), // 研发商店扩展服务标识正则表达式
     EMAIL_STYLE("^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*\$"), // 电子邮箱正则表达式
     AUTH_STYLE("^HTTP|HTTPS|OAUTH|SSH\$"), // 权限认证类型正则表达式
