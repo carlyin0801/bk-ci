@@ -244,9 +244,6 @@ abstract class StoreMemberServiceImpl : StoreMemberService {
     ): Result<Boolean> {
         logger.info("changeMemberTestProjectCode userId is:$userId,accessToken is:$accessToken,storeMember is:$storeMember")
         logger.info("changeMemberTestProjectCode projectCode is:$projectCode,storeCode is:$storeCode,storeType is:$storeType")
-        if (!storeMemberDao.isStoreMember(dslContext, userId, storeMember, storeType.type.toByte())) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_INVALID, arrayOf(storeMember))
-        }
         if (userId != storeMember) {
             // 如果要修改其他插件成员的调试项目，则要求修改人是插件的管理员
             if (!storeMemberDao.isStoreAdmin(dslContext, userId, storeCode, storeType.type.toByte())) {
