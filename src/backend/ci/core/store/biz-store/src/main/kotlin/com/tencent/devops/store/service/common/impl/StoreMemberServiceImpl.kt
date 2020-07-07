@@ -276,7 +276,7 @@ abstract class StoreMemberServiceImpl : StoreMemberService {
             // 更新用户的调试项目
             storeProjectRelDao.updateUserStoreTestProject(
                 dslContext = context,
-                userId = userId,
+                userId = storeMember,
                 projectCode = projectCode,
                 storeProjectType = StoreProjectTypeEnum.TEST,
                 storeCode = storeCode,
