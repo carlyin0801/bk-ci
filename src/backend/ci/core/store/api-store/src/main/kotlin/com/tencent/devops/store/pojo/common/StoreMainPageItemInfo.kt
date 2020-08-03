@@ -24,20 +24,39 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.common.web.constant
+package com.tencent.devops.store.pojo.common
 
-enum class BkStyleEnum(val style: String) {
-    COMMON_STYLE("^(.|\\r|\\n)*\$"), // 通用正则表达式
-    NUMBER_STYLE("^[0-9]*\$"), // 数字正则表达式
-    ID_STYLE("^[\\w]{1,32}\$"), // ID正则表达式
-    CODE_STYLE("^[a-zA-Z_][\\w-]{0,31}\$"), // 标识正则表达式
-    NAME_STYLE("^[\\w-\\u4E00-\\u9FBB\\u3400-\\u4DBF\\uF900-\\uFAD9\\u3000-\\u303F\\u2000-\\u206F\\uFF00-\\uFFEF]{1,32}\$"), // 名称正则表达式
-    EMAIL_STYLE("^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*\$"), // 电子邮箱正则表达式
-    AUTH_STYLE("^HTTP|HTTPS|OAUTH|SSH\$"), // 权限认证类型正则表达式
-    NOTE_STYLE("^[A-Za-z0-9\\u4E00-\\u9FBB\\u3400-\\u4DBF\\uF900-\\uFAD9\\u3000-\\u303F\\u2000-\\u206F\\uFF00-\\uFFEF.。?？！!,()，、；;：:'‘’“”\"…\\s]{2,256}\$"), // 备注正则表达式
-    VISIBILITY_LEVEL_STYLE("^PRIVATE|LOGIN_PUBLIC\$"), // 项目可视范围正则表达式
-    LANGUAGE_STYLE("^java|python|nodejs|golang|c|c++|php|c#\$"), // 开发语言正则表达式
-    BOOLEAN_STYLE("^true|false\$"), // 布尔型正则表达式
-    SCOPE_STYLE("^TEST|PRD|ALL\$"), // 适用范围正则表达式
-    SERVICE_CODE_STYLE("^[a-z][([-a-z-0-9]*[a-z-0-9])?]{0,31}\$"), // 研发商店扩展服务标识正则表达式
-}
+import io.swagger.annotations.ApiModel
+import io.swagger.annotations.ApiModelProperty
+
+@ApiModel("研发商店组件页面展示项信息")
+data class StoreMainPageItemInfo(
+    @ApiModelProperty("组件ID", required = true)
+    val storeId: String,
+    @ApiModelProperty("组件名称", required = true)
+    val storeName: String,
+    @ApiModelProperty("组件标识", required = true)
+    val storeCode: String,
+    @ApiModelProperty("研发来源", required = true)
+    val rdType: String,
+    @ApiModelProperty("所属分类", required = false)
+    val classifyId: String? = null,
+    @ApiModelProperty("logo链接", required = false)
+    val logoUrl: String?,
+    @ApiModelProperty("发布者", required = false)
+    val publisher: String?,
+    @ApiModelProperty("发布时间，格式为yyyy-MM-dd HH:mm:ss", required = false)
+    val pubTime: String?,
+    @ApiModelProperty("下载量", required = false)
+    val downloads: Int? = 0,
+    @ApiModelProperty("评分", required = false)
+    val score: Double?,
+    @ApiModelProperty("简介", required = false)
+    val summary: String?,
+    @ApiModelProperty("是否是公共组件", required = true)
+    val publicFlag: Boolean,
+    @ApiModelProperty("帮助文档", required = false)
+    val docsLink: String? = null,
+    @ApiModelProperty("是否推荐标识 true：推荐，false：不推荐", required = false)
+    val recommendFlag: Boolean? = null
+)

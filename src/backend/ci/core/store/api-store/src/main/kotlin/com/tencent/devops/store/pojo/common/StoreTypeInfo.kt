@@ -24,20 +24,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.common.web.constant
+package com.tencent.devops.store.pojo.common
 
-enum class BkStyleEnum(val style: String) {
-    COMMON_STYLE("^(.|\\r|\\n)*\$"), // 通用正则表达式
-    NUMBER_STYLE("^[0-9]*\$"), // 数字正则表达式
-    ID_STYLE("^[\\w]{1,32}\$"), // ID正则表达式
-    CODE_STYLE("^[a-zA-Z_][\\w-]{0,31}\$"), // 标识正则表达式
-    NAME_STYLE("^[\\w-\\u4E00-\\u9FBB\\u3400-\\u4DBF\\uF900-\\uFAD9\\u3000-\\u303F\\u2000-\\u206F\\uFF00-\\uFFEF]{1,32}\$"), // 名称正则表达式
-    EMAIL_STYLE("^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*\$"), // 电子邮箱正则表达式
-    AUTH_STYLE("^HTTP|HTTPS|OAUTH|SSH\$"), // 权限认证类型正则表达式
-    NOTE_STYLE("^[A-Za-z0-9\\u4E00-\\u9FBB\\u3400-\\u4DBF\\uF900-\\uFAD9\\u3000-\\u303F\\u2000-\\u206F\\uFF00-\\uFFEF.。?？！!,()，、；;：:'‘’“”\"…\\s]{2,256}\$"), // 备注正则表达式
-    VISIBILITY_LEVEL_STYLE("^PRIVATE|LOGIN_PUBLIC\$"), // 项目可视范围正则表达式
-    LANGUAGE_STYLE("^java|python|nodejs|golang|c|c++|php|c#\$"), // 开发语言正则表达式
-    BOOLEAN_STYLE("^true|false\$"), // 布尔型正则表达式
-    SCOPE_STYLE("^TEST|PRD|ALL\$"), // 适用范围正则表达式
-    SERVICE_CODE_STYLE("^[a-z][([-a-z-0-9]*[a-z-0-9])?]{0,31}\$"), // 研发商店扩展服务标识正则表达式
-}
+import io.swagger.annotations.ApiModel
+import io.swagger.annotations.ApiModelProperty
+
+@ApiModel("组件类型信息")
+data class StoreTypeInfo(
+    @ApiModelProperty("主键ID", required = true)
+    val typeId: String,
+    @ApiModelProperty("组件类型名称", required = true)
+    val typeName: String,
+    @ApiModelProperty("组件类型代码", required = true)
+    val typeCode: String,
+    @ApiModelProperty("是否展示", required = true)
+    val showFlag: Boolean,
+    @ApiModelProperty("前端渲染模板版本（1.0代表历史存量组件渲染模板版本）")
+    val htmlTemplateVersion: String,
+    @ApiModelProperty("创建日期，格式为yyyy-MM-dd HH:mm:ss")
+    val createTime: String,
+    @ApiModelProperty("更新日期，格式为yyyy-MM-dd HH:mm:ss")
+    val updateTime: String,
+    @ApiModelProperty("创建人", required = true)
+    val creator: String,
+    @ApiModelProperty("最近修改人", required = true)
+    val modifier: String
+)
