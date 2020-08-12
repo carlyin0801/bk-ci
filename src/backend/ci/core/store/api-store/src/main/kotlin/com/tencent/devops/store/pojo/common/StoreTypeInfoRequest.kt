@@ -26,31 +26,26 @@
 
 package com.tencent.devops.store.pojo.common
 
+import com.tencent.devops.common.web.annotation.BkField
+import com.tencent.devops.common.web.constant.BkStyleEnum
 import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 
 @ApiModel("组件类型信息")
-data class StoreTypeInfo(
-    @ApiModelProperty("主键ID", required = true)
-    val typeId: String,
+data class StoreTypeInfoRequest(
     @ApiModelProperty("组件类型名称", required = true)
+    @field:BkField(patternStyle = BkStyleEnum.NAME_STYLE)
     val typeName: String,
     @ApiModelProperty("组件类型代码", required = true)
+    @field:BkField(patternStyle = BkStyleEnum.CODE_STYLE)
     val typeCode: String,
-    @ApiModelProperty("组件类型值", required = true)
-    val typeValue: Byte,
     @ApiModelProperty("是否展示", required = true)
+    @field:BkField(patternStyle = BkStyleEnum.BOOLEAN_STYLE)
     val showFlag: Boolean,
     @ApiModelProperty("是否显示工作台入口", required = true)
+    @field:BkField(patternStyle = BkStyleEnum.BOOLEAN_STYLE)
     val deskFlag: Boolean,
     @ApiModelProperty("前端渲染模板版本（1.0代表历史存量组件渲染模板版本）")
-    val htmlTemplateVersion: String,
-    @ApiModelProperty("创建日期，格式为yyyy-MM-dd HH:mm:ss")
-    val createTime: String,
-    @ApiModelProperty("更新日期，格式为yyyy-MM-dd HH:mm:ss")
-    val updateTime: String,
-    @ApiModelProperty("创建人", required = true)
-    val creator: String,
-    @ApiModelProperty("最近修改人", required = true)
-    val modifier: String
+    @field:BkField(patternStyle = BkStyleEnum.COMMON_STYLE)
+    val htmlTemplateVersion: String
 )

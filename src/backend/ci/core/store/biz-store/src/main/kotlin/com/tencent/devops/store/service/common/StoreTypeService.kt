@@ -24,33 +24,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.store.pojo.common
+package com.tencent.devops.store.service.common
 
-import io.swagger.annotations.ApiModel
-import io.swagger.annotations.ApiModelProperty
+import com.tencent.devops.common.api.pojo.Page
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.store.pojo.common.StoreTypeInfo
+import com.tencent.devops.store.pojo.common.StoreTypeInfoRequest
 
-@ApiModel("组件类型信息")
-data class StoreTypeInfo(
-    @ApiModelProperty("主键ID", required = true)
-    val typeId: String,
-    @ApiModelProperty("组件类型名称", required = true)
-    val typeName: String,
-    @ApiModelProperty("组件类型代码", required = true)
-    val typeCode: String,
-    @ApiModelProperty("组件类型值", required = true)
-    val typeValue: Byte,
-    @ApiModelProperty("是否展示", required = true)
-    val showFlag: Boolean,
-    @ApiModelProperty("是否显示工作台入口", required = true)
-    val deskFlag: Boolean,
-    @ApiModelProperty("前端渲染模板版本（1.0代表历史存量组件渲染模板版本）")
-    val htmlTemplateVersion: String,
-    @ApiModelProperty("创建日期，格式为yyyy-MM-dd HH:mm:ss")
-    val createTime: String,
-    @ApiModelProperty("更新日期，格式为yyyy-MM-dd HH:mm:ss")
-    val updateTime: String,
-    @ApiModelProperty("创建人", required = true)
-    val creator: String,
-    @ApiModelProperty("最近修改人", required = true)
-    val modifier: String
-)
+interface StoreTypeService {
+
+    /**
+     * 获取研发商店组件类型列表
+     */
+    fun getStoreTypes(
+        typeName: String?,
+        page: Int?,
+        pageSize: Int?
+    ): Result<Page<StoreTypeInfo>?>
+
+    /**
+     * 添加研发商店组件类型
+     */
+    fun addStoreType(
+        userId: String,
+        storeTypeInfoRequest: StoreTypeInfoRequest
+    ): Result<Boolean>
+
+    /**
+     * 更新研发商店组件类型
+     */
+    fun updateStoreType(
+        userId: String,
+        typeId: String,
+        storeTypeInfoRequest: StoreTypeInfoRequest
+    ) : Result<Boolean>
+}
