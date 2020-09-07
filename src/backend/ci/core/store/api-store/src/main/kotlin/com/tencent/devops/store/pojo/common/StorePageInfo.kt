@@ -24,38 +24,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.store.service.common
+package com.tencent.devops.store.pojo.common
 
-import com.tencent.devops.common.api.pojo.Page
-import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.store.pojo.common.StoreTypeInfo
-import com.tencent.devops.store.pojo.common.StoreTypeRequest
+import io.swagger.annotations.ApiModel
+import io.swagger.annotations.ApiModelProperty
 
-interface StoreTypeService {
-
-    /**
-     * 获取研发商店组件类型列表
-     */
-    fun getStoreTypes(
-        typeName: String?,
-        page: Int?,
-        pageSize: Int?
-    ): Result<Page<StoreTypeInfo>?>
-
-    /**
-     * 添加研发商店组件类型
-     */
-    fun addStoreType(
-        userId: String,
-        storeTypeRequest: StoreTypeRequest
-    ): Result<Boolean>
-
-    /**
-     * 更新研发商店组件类型
-     */
-    fun updateStoreType(
-        userId: String,
-        typeId: String,
-        storeTypeRequest: StoreTypeRequest
-    ) : Result<Boolean>
-}
+@ApiModel("store页面信息")
+data class StorePageInfo(
+    @ApiModelProperty("页面Id", required = true)
+    val pageId: String,
+    @ApiModelProperty("页面名称", required = true)
+    val pageName: String,
+    @ApiModelProperty("页面代码", required = true)
+    val pageCode: String,
+    @ApiModelProperty("页面路径", required = true)
+    val pagePath: String
+)

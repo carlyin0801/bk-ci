@@ -24,38 +24,26 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.store.service.common
+package com.tencent.devops.store.api.utils
 
-import com.tencent.devops.common.api.pojo.Page
-import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.store.pojo.common.StoreTypeInfo
-import com.tencent.devops.store.pojo.common.StoreTypeRequest
+import com.tencent.devops.common.api.constant.CommonMessageCode
+import com.tencent.devops.common.api.exception.ErrorCodeException
+import com.tencent.devops.common.redis.RedisOperation
+import com.tencent.devops.common.service.utils.SpringContextUtil
+import com.tencent.devops.store.pojo.common.BCI_STORE_TYPE_PREFIX
 
-interface StoreTypeService {
+object StoreTypeUtils {
 
-    /**
-     * 获取研发商店组件类型列表
-     */
-    fun getStoreTypes(
-        typeName: String?,
-        page: Int?,
-        pageSize: Int?
-    ): Result<Page<StoreTypeInfo>?>
+    fun getStoreTypeValueByCode(typeCode: String): Byte {
+        val redisOperation: RedisOperation = SpringContextUtil.getBean(RedisOperation::class.java)
+        val typeValue = redisOperation.get(BCI_STORE_TYPE_PREFIX + typeCode)
+            ?: throw ErrorCodeException(errorCode = CommonMessageCode.PARAMETER_IS_INVALID, params = arrayOf(typeCode))
+        return typeValue.toByte()
+    }
 
-    /**
-     * 添加研发商店组件类型
-     */
-    fun addStoreType(
-        userId: String,
-        storeTypeRequest: StoreTypeRequest
-    ): Result<Boolean>
-
-    /**
-     * 更新研发商店组件类型
-     */
-    fun updateStoreType(
-        userId: String,
-        typeId: String,
-        storeTypeRequest: StoreTypeRequest
-    ) : Result<Boolean>
+    fun getStoreTypeCodeByValue(typeValue: String): String {
+        val redisOperation: RedisOperation = SpringContextUtil.getBean(RedisOperation::class.java)
+        return redisOperation.get(BCI_STORE_TYPE_PREFIX + typeValue)
+            ?: throw ErrorCodeException(errorCode = CommonMessageCode.PARAMETER_IS_INVALID, params = arrayOf(typeValue))
+    }
 }

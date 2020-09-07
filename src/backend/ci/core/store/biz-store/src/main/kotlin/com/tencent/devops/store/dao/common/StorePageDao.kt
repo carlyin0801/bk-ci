@@ -27,53 +27,46 @@
 package com.tencent.devops.store.dao.common
 
 import com.tencent.devops.common.api.util.UUIDUtil
-import com.tencent.devops.model.store.tables.TStoreType
-import com.tencent.devops.model.store.tables.records.TStoreTypeRecord
-import com.tencent.devops.store.pojo.common.StoreTypeRequest
+import com.tencent.devops.model.store.tables.TStorePage
+import com.tencent.devops.model.store.tables.records.TStorePageRecord
+import com.tencent.devops.store.pojo.common.StorePageRequest
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Result
-import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 
 @Repository
-class StoreTypeDao {
+class StorePageDao {
 
-    fun countByName(dslContext: DSLContext, typeName: String): Int {
-        with(TStoreType.T_STORE_TYPE) {
-            return dslContext.selectCount().from(this).where(TYPE_NAME.eq(typeName)).fetchOne(0, Int::class.java)
+    fun countByName(dslContext: DSLContext, pageName: String): Int {
+        with(TStorePage.T_STORE_PAGE) {
+            return dslContext.selectCount().from(this).where(PAGE_NAME.eq(pageName)).fetchOne(0, Int::class.java)
         }
     }
 
-    fun countByCode(dslContext: DSLContext, typeCode: String): Int {
-        with(TStoreType.T_STORE_TYPE) {
-            return dslContext.selectCount().from(this).where(TYPE_CODE.eq(typeCode)).fetchOne(0, Int::class.java)
+    fun countByCode(dslContext: DSLContext, pageCode: String): Int {
+        with(TStorePage.T_STORE_PAGE) {
+            return dslContext.selectCount().from(this).where(PAGE_CODE.eq(pageCode)).fetchOne(0, Int::class.java)
         }
     }
 
-    fun getStoreTypeByCode(dslContext: DSLContext, typeCode: String): TStoreTypeRecord? {
-        with(TStoreType.T_STORE_TYPE) {
-            return dslContext.selectFrom(this).where(TYPE_CODE.eq(typeCode)).fetchOne()
+    fun getStorePageByCode(dslContext: DSLContext, pageCode: String): TStorePageRecord? {
+        with(TStorePage.T_STORE_PAGE) {
+            return dslContext.selectFrom(this).where(PAGE_CODE.eq(pageCode)).fetchOne()
         }
     }
 
-    fun getMaxTypeValue(dslContext: DSLContext): Byte {
-        with(TStoreType.T_STORE_TYPE) {
-            return dslContext.select(DSL.max(TYPE_VALUE)).from(this).fetchOne(0, Byte::class.java)
-        }
-    }
-
-    fun getStoreTypes(
+    fun getStorePages(
         dslContext: DSLContext,
-        typeName: String? = null,
+        pageName: String? = null,
         page: Int? = null,
         pageSize: Int? = null
-    ): Result<TStoreTypeRecord>? {
-        with(TStoreType.T_STORE_TYPE) {
+    ): Result<TStorePageRecord>? {
+        with(TStorePage.T_STORE_PAGE) {
             val conditions = mutableListOf<Condition>()
-            if (!typeName.isNullOrBlank()) {
-                conditions.add(TYPE_NAME.contains(typeName))
+            if (!pageName.isNullOrBlank()) {
+                conditions.add(PAGE_NAME.contains(pageName))
             }
             val baseStep = dslContext.selectFrom(this).where(conditions)
                 .orderBy(CREATE_TIME.desc())
@@ -85,67 +78,71 @@ class StoreTypeDao {
         }
     }
 
-    fun getStoreTypeCount(
+    fun getStorePageCount(
         dslContext: DSLContext,
-        typeName: String?
+        pageName: String?
     ): Long {
-        with(TStoreType.T_STORE_TYPE) {
+        with(TStorePage.T_STORE_PAGE) {
             val conditions = mutableListOf<Condition>()
-            if (!typeName.isNullOrBlank()) {
-                conditions.add(TYPE_NAME.contains(typeName))
+            if (!pageName.isNullOrBlank()) {
+                conditions.add(PAGE_NAME.contains(pageName))
             }
             return dslContext.selectCount().from(this).where(conditions)
                 .fetchOne(0, Long::class.java)
         }
     }
 
-    fun addStoreType(
+    fun addStorePage(
         dslContext: DSLContext,
         userId: String,
-        typeValue: Byte,
-        storeTypeRequest: StoreTypeRequest
+        pageId: String,
+        storePageRequest: StorePageRequest
     ) {
-        with(TStoreType.T_STORE_TYPE) {
+        with(TStorePage.T_STORE_PAGE) {
             dslContext.insertInto(
                 this,
                 ID,
-                TYPE_NAME,
-                TYPE_CODE,
-                TYPE_VALUE,
-                SHOW_FLAG,
-                DESK_FLAG,
-                HTML_TEMPLATE_VERSION,
+                PAGE_NAME,
+                PAGE_CODE,
+                PAGE_PATH,
                 CREATOR,
                 MODIFIER
             ).values(
                 UUIDUtil.generate(),
-                storeTypeRequest.typeName,
-                storeTypeRequest.typeCode,
-                typeValue,
-                storeTypeRequest.showFlag,
-                storeTypeRequest.deskFlag,
-                storeTypeRequest.htmlTemplateVersion,
+                storePageRequest.pageName,
+                storePageRequest.pageCode,
+                storePageRequest.pagePath,
                 userId,
                 userId
             ).execute()
         }
     }
 
-    fun updateStoreType(
+    fun updateStorePage(
         dslContext: DSLContext,
         userId: String,
-        typeId: String,
-        storeTypeRequest: StoreTypeRequest
+        pageId: String,
+        storePageRequest: StorePageRequest
     ) {
-        with(TStoreType.T_STORE_TYPE) {
+        with(TStorePage.T_STORE_PAGE) {
             dslContext.update(this)
-                .set(TYPE_NAME, storeTypeRequest.typeName)
-                .set(SHOW_FLAG, storeTypeRequest.showFlag)
-                .set(DESK_FLAG, storeTypeRequest.deskFlag)
-                .set(HTML_TEMPLATE_VERSION, storeTypeRequest.htmlTemplateVersion)
+                .set(PAGE_NAME, storePageRequest.pageName)
+                .set(PAGE_PATH, storePageRequest.pagePath)
                 .set(MODIFIER, userId)
                 .set(UPDATE_TIME, LocalDateTime.now())
-                .where(ID.eq(typeId))
+                .where(ID.eq(pageId))
+                .execute()
+        }
+    }
+
+    fun deleteStorePage(
+        dslContext: DSLContext,
+        userId: String,
+        pageId: String
+    ) {
+        with(TStorePage.T_STORE_PAGE) {
+            dslContext.deleteFrom(this)
+                .where(ID.eq(pageId))
                 .execute()
         }
     }

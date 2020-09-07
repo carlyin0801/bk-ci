@@ -24,28 +24,58 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.store.pojo.common
+package com.tencent.devops.store.service.common
 
-import com.tencent.devops.common.web.annotation.BkField
-import com.tencent.devops.common.web.constant.BkStyleEnum
-import io.swagger.annotations.ApiModel
-import io.swagger.annotations.ApiModelProperty
+import com.tencent.devops.common.api.pojo.Page
+import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.store.pojo.common.StorePageModelInfo
+import com.tencent.devops.store.pojo.common.StorePageModelRequest
 
-@ApiModel("组件类型信息")
-data class StoreTypeInfoRequest(
-    @ApiModelProperty("组件类型名称", required = true)
-    @field:BkField(patternStyle = BkStyleEnum.NAME_STYLE)
-    val typeName: String,
-    @ApiModelProperty("组件类型代码", required = true)
-    @field:BkField(patternStyle = BkStyleEnum.CODE_STYLE)
-    val typeCode: String,
-    @ApiModelProperty("是否展示", required = true)
-    @field:BkField(patternStyle = BkStyleEnum.BOOLEAN_STYLE)
-    val showFlag: Boolean,
-    @ApiModelProperty("是否显示工作台入口", required = true)
-    @field:BkField(patternStyle = BkStyleEnum.BOOLEAN_STYLE)
-    val deskFlag: Boolean,
-    @ApiModelProperty("前端渲染模板版本（1.0代表历史存量组件渲染模板版本）")
-    @field:BkField(patternStyle = BkStyleEnum.COMMON_STYLE)
-    val htmlTemplateVersion: String
-)
+interface StorePageModelService {
+
+    /**
+     * 获取研发商店页面模型列表
+     */
+    fun getStorePageModels(
+        userId: String,
+        modelName: String?,
+        page: Int?,
+        pageSize: Int?
+    ): Result<Page<StorePageModelInfo>?>
+
+    /**
+     * 添加研发商店页面模型
+     */
+    fun addStorePageModel(
+        userId: String,
+        storeType: String,
+        storePageModelRequest: StorePageModelRequest
+    ): Result<Boolean>
+
+    /**
+     * 更新研发商店页面模型
+     */
+    fun updateStorePageModel(
+        userId: String,
+        modelId: String,
+        storePageModelRequest: StorePageModelRequest
+    ) : Result<Boolean>
+
+    /**
+     * 删除研发商店页面模型
+     */
+    fun deleteStorePageModel(
+        userId: String,
+        modelId: String
+    ) : Result<Boolean>
+
+
+    /**
+     * 根据pageCode获取研发商店页面模型列表
+     */
+    fun getStorePageModelsByPageCode(
+        userId: String,
+        pageCode: String,
+        storeType: String
+    ): Result<List<StorePageModelInfo>?>
+}

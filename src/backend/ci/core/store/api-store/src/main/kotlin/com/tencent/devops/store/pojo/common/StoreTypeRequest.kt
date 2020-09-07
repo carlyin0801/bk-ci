@@ -24,44 +24,28 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.store.api.common
+package com.tencent.devops.store.pojo.common
 
-import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
-import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.annotation.BkField
 import com.tencent.devops.common.web.constant.BkStyleEnum
-import com.tencent.devops.store.pojo.common.StorePageModelInfo
-import io.swagger.annotations.Api
-import io.swagger.annotations.ApiOperation
-import io.swagger.annotations.ApiParam
-import javax.ws.rs.Consumes
-import javax.ws.rs.GET
-import javax.ws.rs.HeaderParam
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
-import javax.ws.rs.Produces
-import javax.ws.rs.core.MediaType
+import io.swagger.annotations.ApiModel
+import io.swagger.annotations.ApiModelProperty
 
-@Api(tags = ["USER_STORE_PAGE"], description = "研发商店-前端页面")
-@Path("/user/store/pages")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
-interface UserStorePageModelResource {
-
-    @ApiOperation("获取页面对应的model列表")
-    @Path("/{pageCode}/types/{storeType}/models/list")
-    @GET
-    fun getPageModelList(
-        @ApiParam("userId", required = true)
-        @HeaderParam(AUTH_HEADER_USER_ID)
-        userId: String,
-        @ApiParam("页面代码", required = true)
-        @PathParam("pageCode")
-        @BkField(patternStyle = BkStyleEnum.CODE_STYLE)
-        pageCode: String,
-        @ApiParam("组件类型", required = true)
-        @PathParam("storeType")
-        @BkField(patternStyle = BkStyleEnum.CODE_STYLE)
-        storeType: String
-    ): Result<List<StorePageModelInfo>?>
-}
+@ApiModel("组件类型信息")
+data class StoreTypeRequest(
+    @ApiModelProperty("组件类型名称", required = true)
+    @field:BkField(patternStyle = BkStyleEnum.NAME_STYLE)
+    val typeName: String,
+    @ApiModelProperty("组件类型代码", required = true)
+    @field:BkField(patternStyle = BkStyleEnum.CODE_STYLE)
+    val typeCode: String,
+    @ApiModelProperty("是否展示", required = true)
+    @field:BkField(patternStyle = BkStyleEnum.BOOLEAN_STYLE)
+    val showFlag: Boolean,
+    @ApiModelProperty("是否显示工作台入口", required = true)
+    @field:BkField(patternStyle = BkStyleEnum.BOOLEAN_STYLE)
+    val deskFlag: Boolean,
+    @ApiModelProperty("前端渲染模板版本（1.0代表历史存量组件渲染模板版本）")
+    @field:BkField(patternStyle = BkStyleEnum.COMMON_STYLE)
+    val htmlTemplateVersion: String
+)

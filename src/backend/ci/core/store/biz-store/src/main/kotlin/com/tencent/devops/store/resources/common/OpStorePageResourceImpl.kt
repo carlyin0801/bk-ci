@@ -23,45 +23,40 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+package com.tencent.devops.store.resources.common
 
-package com.tencent.devops.store.api.common
-
-import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.web.annotation.BkField
-import com.tencent.devops.common.web.constant.BkStyleEnum
-import com.tencent.devops.store.pojo.common.StorePageModelInfo
-import io.swagger.annotations.Api
-import io.swagger.annotations.ApiOperation
-import io.swagger.annotations.ApiParam
-import javax.ws.rs.Consumes
-import javax.ws.rs.GET
-import javax.ws.rs.HeaderParam
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
-import javax.ws.rs.Produces
-import javax.ws.rs.core.MediaType
+import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.store.api.common.OpStorePageResource
+import com.tencent.devops.store.pojo.common.StorePageInfo
+import com.tencent.devops.store.pojo.common.StorePageRequest
+import com.tencent.devops.store.service.common.StorePageService
+import org.springframework.beans.factory.annotation.Autowired
 
-@Api(tags = ["USER_STORE_PAGE"], description = "研发商店-前端页面")
-@Path("/user/store/pages")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
-interface UserStorePageModelResource {
+@RestResource
+class OpStorePageResourceImpl @Autowired constructor(
+    private val storePageService: StorePageService
+) : OpStorePageResource {
 
-    @ApiOperation("获取页面对应的model列表")
-    @Path("/{pageCode}/types/{storeType}/models/list")
-    @GET
-    fun getPageModelList(
-        @ApiParam("userId", required = true)
-        @HeaderParam(AUTH_HEADER_USER_ID)
+    override fun getPageList(
         userId: String,
-        @ApiParam("页面代码", required = true)
-        @PathParam("pageCode")
-        @BkField(patternStyle = BkStyleEnum.CODE_STYLE)
-        pageCode: String,
-        @ApiParam("组件类型", required = true)
-        @PathParam("storeType")
-        @BkField(patternStyle = BkStyleEnum.CODE_STYLE)
-        storeType: String
-    ): Result<List<StorePageModelInfo>?>
+        pageName: String?,
+        page: Int?,
+        pageSize: Int?
+    ): Result<Page<StorePageInfo>?> {
+        return storePageService.getStorePages(userId, pageName, page, pageSize)
+    }
+
+    override fun addStorePage(userId: String, storeType: String, storePageRequest: StorePageRequest): Result<Boolean> {
+        return storePageService.addStorePage(userId, storePageRequest)
+    }
+
+    override fun updateStorePage(userId: String, pageId: String, storePageRequest: StorePageRequest): Result<Boolean> {
+        return storePageService.updateStorePage(userId, pageId, storePageRequest)
+    }
+
+    override fun deleteStorePage(userId: String, pageId: String): Result<Boolean> {
+        return storePageService.deleteStorePage(userId, pageId)
+    }
 }

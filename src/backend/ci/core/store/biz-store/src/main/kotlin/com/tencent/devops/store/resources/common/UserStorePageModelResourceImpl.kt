@@ -23,45 +23,25 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+package com.tencent.devops.store.resources.common
 
-package com.tencent.devops.store.api.common
-
-import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.web.annotation.BkField
-import com.tencent.devops.common.web.constant.BkStyleEnum
+import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.store.api.common.UserStorePageModelResource
 import com.tencent.devops.store.pojo.common.StorePageModelInfo
-import io.swagger.annotations.Api
-import io.swagger.annotations.ApiOperation
-import io.swagger.annotations.ApiParam
-import javax.ws.rs.Consumes
-import javax.ws.rs.GET
-import javax.ws.rs.HeaderParam
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
-import javax.ws.rs.Produces
-import javax.ws.rs.core.MediaType
+import com.tencent.devops.store.service.common.StorePageModelService
+import org.springframework.beans.factory.annotation.Autowired
 
-@Api(tags = ["USER_STORE_PAGE"], description = "研发商店-前端页面")
-@Path("/user/store/pages")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
-interface UserStorePageModelResource {
+@RestResource
+class UserStorePageModelResourceImpl @Autowired constructor(
+    private val storePageModelService: StorePageModelService
+) : UserStorePageModelResource {
 
-    @ApiOperation("获取页面对应的model列表")
-    @Path("/{pageCode}/types/{storeType}/models/list")
-    @GET
-    fun getPageModelList(
-        @ApiParam("userId", required = true)
-        @HeaderParam(AUTH_HEADER_USER_ID)
+    override fun getPageModelList(
         userId: String,
-        @ApiParam("页面代码", required = true)
-        @PathParam("pageCode")
-        @BkField(patternStyle = BkStyleEnum.CODE_STYLE)
         pageCode: String,
-        @ApiParam("组件类型", required = true)
-        @PathParam("storeType")
-        @BkField(patternStyle = BkStyleEnum.CODE_STYLE)
         storeType: String
-    ): Result<List<StorePageModelInfo>?>
+    ): Result<List<StorePageModelInfo>?> {
+        return storePageModelService.getStorePageModelsByPageCode(userId, pageCode, storeType)
+    }
 }

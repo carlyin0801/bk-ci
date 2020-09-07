@@ -37,17 +37,15 @@ import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.store.dao.common.StoreTypeDao
 import com.tencent.devops.store.pojo.common.BCI_STORE_TYPE_PREFIX
 import com.tencent.devops.store.pojo.common.StoreTypeInfo
-import com.tencent.devops.store.pojo.common.StoreTypeInfoRequest
+import com.tencent.devops.store.pojo.common.StoreTypeRequest
 import com.tencent.devops.store.service.common.StoreTypeService
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.cloud.context.config.annotation.RefreshScope
 import org.springframework.stereotype.Service
 import javax.annotation.PostConstruct
 
 @Service
-@RefreshScope
 class StoreTypeServiceImpl @Autowired constructor(
     private val dslContext: DSLContext,
     private val redisOperation: RedisOperation,
@@ -89,24 +87,24 @@ class StoreTypeServiceImpl @Autowired constructor(
 
     override fun addStoreType(
         userId: String,
-        storeTypeInfoRequest: StoreTypeInfoRequest
+        storeTypeRequest: StoreTypeRequest
     ): Result<Boolean> {
-        logger.info("addStoreType userId is :$userId, storeTypeInfoRequest is :$storeTypeInfoRequest")
-        val typeCode = storeTypeInfoRequest.typeCode
-        validateStoreTypeInfoRequest(storeTypeInfoRequest, false)
+        logger.info("addStoreType userId is :$userId, storeTypeInfoRequest is :$storeTypeRequest")
+        val typeCode = storeTypeRequest.typeCode
+        validateStoreTypeInfoRequest(storeTypeRequest, false)
         val typeValue = storeTypeDao.getMaxTypeValue(dslContext) + 1
         storeTypeDao.addStoreType(
             dslContext = dslContext,
             userId = userId,
             typeValue = typeValue.toByte(),
-            storeTypeInfoRequest = storeTypeInfoRequest
+            storeTypeRequest = storeTypeRequest
         )
         setStoreTypeToRedis(typeCode, typeValue.toString())
         return Result(true)
     }
 
-    private fun validateStoreTypeInfoRequest(storeTypeInfoRequest: StoreTypeInfoRequest, updateFlag: Boolean) {
-        val typeCode = storeTypeInfoRequest.typeCode
+    private fun validateStoreTypeInfoRequest(storeTypeRequest: StoreTypeRequest, updateFlag: Boolean) {
+        val typeCode = storeTypeRequest.typeCode
         val storeTypeRecord = storeTypeDao.getStoreTypeByCode(dslContext, typeCode)
         val codeFlag = if (updateFlag) storeTypeRecord != null && storeTypeRecord.typeCode != typeCode else storeTypeRecord != null
         // 判断组件类型代码是否存在
@@ -117,7 +115,7 @@ class StoreTypeServiceImpl @Autowired constructor(
                 params = arrayOf(typeCode)
             )
         }
-        val typeName = storeTypeInfoRequest.typeName
+        val typeName = storeTypeRequest.typeName
         val nameFlag = if (updateFlag) storeTypeRecord != null && storeTypeRecord.typeName != typeName else storeTypeRecord != null
         // 判断组件类型名称是否存在
         if (nameFlag) {
@@ -132,15 +130,15 @@ class StoreTypeServiceImpl @Autowired constructor(
     override fun updateStoreType(
         userId: String,
         typeId: String,
-        storeTypeInfoRequest: StoreTypeInfoRequest
+        storeTypeRequest: StoreTypeRequest
     ): Result<Boolean> {
-        logger.info("updateStoreType userId is :$userId, typeId is :$typeId, storeTypeInfoRequest is :$storeTypeInfoRequest")
-        validateStoreTypeInfoRequest(storeTypeInfoRequest, true)
+        logger.info("updateStoreType userId is :$userId, typeId is :$typeId, storeTypeInfoRequest is :$storeTypeRequest")
+        validateStoreTypeInfoRequest(storeTypeRequest, true)
         storeTypeDao.updateStoreType(
             dslContext = dslContext,
             userId = userId,
             typeId = typeId,
-            storeTypeInfoRequest = storeTypeInfoRequest
+            storeTypeRequest = storeTypeRequest
         )
         return Result(true)
     }
