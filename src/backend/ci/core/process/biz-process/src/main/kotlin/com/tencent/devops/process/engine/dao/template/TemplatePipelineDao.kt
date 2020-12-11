@@ -31,13 +31,16 @@ import com.tencent.devops.common.api.model.SQLPage
 import com.tencent.devops.common.pipeline.enums.PipelineInstanceTypeEnum
 import com.tencent.devops.model.process.tables.TPipelineInfo
 import com.tencent.devops.model.process.tables.TPipelineSetting
+import com.tencent.devops.model.process.tables.TTemplate
 import com.tencent.devops.model.process.tables.TTemplatePipeline
 import com.tencent.devops.model.process.tables.records.TTemplatePipelineRecord
 import com.tencent.devops.process.pojo.template.TemplateInstanceUpdate
+import com.tencent.devops.process.utils.PIPELINE_TEMPLATE_ID
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Record1
 import org.jooq.Result
+import org.jooq.impl.DSL
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
@@ -300,5 +303,25 @@ class TemplatePipelineDao @Autowired constructor(private val objectMapper: Objec
             return dslContext.select(TEMPLATE_ID.countDistinct()).from(this)
                 .where(TEMPLATE_ID.`in`(srcTemplateIds)).fetchOne()
         }
+    }
+
+    fun countSrcTemplateInstancedByProject(
+        dslContext: DSLContext,
+        projectIds: Set<String>
+    ): Int {
+        val tt = TTemplate.T_TEMPLATE.`as`("tt")
+        val ttp = TTemplatePipeline.T_TEMPLATE_PIPELINE.`as`("ttp")
+        val t = dslContext.selectDistinct(tt.ID.`as`(PIPELINE_TEMPLATE_ID)).from(tt)
+            .where(tt.PROJECT_ID.`in`(projectIds))
+            .and(tt.TEMPLATE.isNotNull)
+            .union(
+                dslContext.selectDistinct(tt.SRC_TEMPLATE_ID.`as`(PIPELINE_TEMPLATE_ID)).from(tt)
+                    .where(tt.PROJECT_ID.`in`(projectIds))
+                    .and(tt.TEMPLATE.isNull)
+            ).asTable("t")
+        val templateIdFiled = t.field(PIPELINE_TEMPLATE_ID, String::class.java)
+        return dslContext.select(DSL.countDistinct(ttp.TEMPLATE_ID)).from(ttp).whereExists(
+            dslContext.select(templateIdFiled).from(t).where(ttp.TEMPLATE_ID.eq(templateIdFiled))
+        ).fetchOne(0, Int::class.java)
     }
 }

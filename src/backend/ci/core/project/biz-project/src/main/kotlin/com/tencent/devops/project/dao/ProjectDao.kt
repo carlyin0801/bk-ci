@@ -145,21 +145,73 @@ class ProjectDao {
         dslContext: DSLContext,
         bgName: String?,
         deptName: String?,
-        centerName: String?
-    ): Result<TProjectRecord> {
+        centerName: String?,
+        validFlag: Boolean? = null,
+        descFlag: Boolean = true,
+        page: Int,
+        pageSize: Int
+    ): Result<TProjectRecord>? {
         with(TProject.T_PROJECT) {
-            val conditions = mutableListOf<Condition>()
-            if (!bgName.isNullOrBlank()) {
-                conditions.add(BG_NAME.like("%${URLDecoder.decode(bgName, "UTF-8")}%"))
-            }
-            if (!deptName.isNullOrBlank()) {
-                conditions.add(DEPT_NAME.like("%${URLDecoder.decode(deptName, "UTF-8")}%"))
-            }
-            if (!centerName.isNullOrBlank()) {
-                conditions.add(CENTER_NAME.like("%${URLDecoder.decode(centerName, "UTF-8")}%"))
-            }
-            return dslContext.selectFrom(this).where(conditions).fetch()
+            val conditions = queryDeptByOrganizationNameCondition(
+                bgName = bgName,
+                deptName = deptName,
+                centerName = centerName,
+                validFlag = validFlag
+            )
+            return queryProject(
+                dslContext = dslContext,
+                conditions = conditions,
+                descFlag = descFlag,
+                page = page,
+                pageSize = pageSize
+            )
         }
+    }
+
+    fun listCountByGroup(
+        dslContext: DSLContext,
+        bgName: String?,
+        deptName: String?,
+        centerName: String?,
+        validFlag: Boolean? = null
+    ): Long {
+        with(TProject.T_PROJECT) {
+            val conditions = queryDeptByOrganizationNameCondition(
+                bgName = bgName,
+                deptName = deptName,
+                centerName = centerName,
+                validFlag = validFlag
+            )
+            return dslContext.selectCount().from(this)
+                .where(conditions)
+                .fetchOne(0, Long::class.java)
+        }
+    }
+
+    private fun TProject.queryDeptByOrganizationNameCondition(
+        bgName: String?,
+        deptName: String?,
+        centerName: String?,
+        validFlag: Boolean?
+    ): MutableList<Condition> {
+        val conditions = mutableListOf<Condition>()
+        if (!bgName.isNullOrBlank()) {
+            conditions.add(BG_NAME.like("%${URLDecoder.decode(bgName, "UTF-8")}%"))
+        }
+        if (!deptName.isNullOrBlank()) {
+            conditions.add(DEPT_NAME.like("%${URLDecoder.decode(deptName, "UTF-8")}%"))
+        }
+        if (!centerName.isNullOrBlank()) {
+            conditions.add(CENTER_NAME.like("%${URLDecoder.decode(centerName, "UTF-8")}%"))
+        }
+        if (validFlag != null) {
+            if (validFlag) {
+                conditions.add(ENABLED.eq(true).or(ENABLED.isNull))
+            } else {
+                conditions.add(ENABLED.eq(false))
+            }
+        }
+        return conditions
     }
 
     /**
@@ -167,39 +219,151 @@ class ProjectDao {
      */
     fun listByGroupId(
         dslContext: DSLContext,
+        bgId: Long? = null,
+        deptId: Long? = null,
+        centerId: Long? = null,
+        validFlag: Boolean? = null,
+        descFlag: Boolean = true,
+        page: Int,
+        pageSize: Int
+    ): Result<TProjectRecord>? {
+        with(TProject.T_PROJECT) {
+            val conditions = queryDeptByOrganizationIdCondition(
+                bgId = bgId,
+                deptId = deptId,
+                centerId = centerId,
+                validFlag = validFlag
+            )
+            return queryProject(
+                dslContext = dslContext,
+                conditions = conditions,
+                descFlag = descFlag,
+                page = page,
+                pageSize = pageSize
+            )
+        }
+    }
+
+    fun listCountByGroupId(
+        dslContext: DSLContext,
+        bgId: Long? = null,
+        deptId: Long? = null,
+        centerId: Long? = null,
+        validFlag: Boolean? = null
+    ): Long {
+        with(TProject.T_PROJECT) {
+            val conditions = queryDeptByOrganizationIdCondition(
+                bgId = bgId,
+                deptId = deptId,
+                centerId = centerId,
+                validFlag = validFlag
+            )
+            return dslContext.selectCount().from(this)
+                .where(conditions)
+                .fetchOne(0, Long::class.java)
+        }
+    }
+
+    private fun TProject.queryDeptByOrganizationIdCondition(
         bgId: Long?,
         deptId: Long?,
-        centerId: Long?
-    ): Result<TProjectRecord> {
-        with(TProject.T_PROJECT) {
-            val conditions = mutableListOf<Condition>()
-            if (bgId != null) {
-                conditions.add(BG_ID.eq(bgId))
-            }
-            if (deptId != null) {
-                conditions.add(DEPT_ID.eq(deptId))
-            }
-            if (centerId != null) {
-                conditions.add(CENTER_ID.eq(centerId))
-            }
-            return dslContext.selectFrom(this).where(conditions).fetch()
+        centerId: Long?,
+        validFlag: Boolean?
+    ): MutableList<Condition> {
+        val conditions = mutableListOf<Condition>()
+        if (bgId != null) {
+            conditions.add(BG_ID.eq(bgId))
         }
+        if (deptId != null) {
+            conditions.add(DEPT_ID.eq(deptId))
+        }
+        if (centerId != null) {
+            conditions.add(CENTER_ID.eq(centerId))
+        }
+        if (validFlag != null) {
+            if (validFlag) {
+                conditions.add(ENABLED.eq(true).or(ENABLED.isNull))
+            } else {
+                conditions.add(ENABLED.eq(false))
+            }
+        }
+        return conditions
     }
 
     /**
      * 根据deptId+centerName来查询
      */
-    fun listByOrganization(dslContext: DSLContext, deptId: Long?, centerName: String?): Result<TProjectRecord>? {
+    fun listByOrganization(
+        dslContext: DSLContext,
+        deptId: Long? = null,
+        centerName: String? = null,
+        validFlag: Boolean? = null,
+        descFlag: Boolean = true,
+        page: Int,
+        pageSize: Int
+    ): Result<TProjectRecord>? {
         with(TProject.T_PROJECT) {
-            val conditions = mutableListOf<Condition>()
-            if (deptId != null) {
-                conditions.add(DEPT_ID.eq(deptId))
-            }
-            if (!centerName.isNullOrBlank()) {
-                conditions.add(CENTER_NAME.like("%${URLDecoder.decode(centerName, "UTF-8")}%"))
-            }
-            return dslContext.selectFrom(this).where(conditions).fetch()
+            val conditions = queryDeptProjectCondition(deptId, centerName, validFlag)
+            return queryProject(
+                dslContext = dslContext,
+                conditions = conditions,
+                descFlag = descFlag,
+                page = page,
+                pageSize = pageSize
+            )
         }
+    }
+
+    private fun TProject.queryProject(
+        dslContext: DSLContext,
+        conditions: MutableList<Condition>,
+        descFlag: Boolean,
+        page: Int,
+        pageSize: Int
+    ): Result<TProjectRecord>? {
+        val baseStep = dslContext.selectFrom(this).where(conditions)
+        if (descFlag) {
+            baseStep.orderBy(CREATED_AT.desc())
+        } else {
+            baseStep.orderBy(CREATED_AT.asc())
+        }
+        return baseStep.limit((page - 1) * pageSize, pageSize).fetch()
+    }
+
+    fun listCountByOrganization(
+        dslContext: DSLContext,
+        deptId: Long? = null,
+        centerName: String? = null,
+        validFlag: Boolean? = null
+    ): Long {
+        with(TProject.T_PROJECT) {
+            val conditions = queryDeptProjectCondition(deptId, centerName, validFlag)
+            return dslContext.selectCount().from(this)
+                .where(conditions)
+                .fetchOne(0, Long::class.java)
+        }
+    }
+
+    private fun TProject.queryDeptProjectCondition(
+        deptId: Long? = null,
+        centerName: String? = null,
+        validFlag: Boolean? = null
+    ): MutableList<Condition> {
+        val conditions = mutableListOf<Condition>()
+        if (deptId != null) {
+            conditions.add(DEPT_ID.eq(deptId))
+        }
+        if (!centerName.isNullOrBlank()) {
+            conditions.add(CENTER_NAME.like("%${URLDecoder.decode(centerName, "UTF-8")}%"))
+        }
+        if (validFlag != null) {
+            if (validFlag) {
+                conditions.add(ENABLED.eq(true).or(ENABLED.isNull))
+            } else {
+                conditions.add(ENABLED.eq(false))
+            }
+        }
+        return conditions
     }
 
     /**
@@ -207,23 +371,75 @@ class ProjectDao {
      */
     fun listByOrganization(
         dslContext: DSLContext,
-        bgId: Long?,
-        deptName: String?,
-        centerName: String?
+        bgId: Long? = null,
+        deptName: String? = null,
+        centerName: String? = null,
+        validFlag: Boolean? = null,
+        descFlag: Boolean = true,
+        page: Int,
+        pageSize: Int
     ): Result<TProjectRecord>? {
         with(TProject.T_PROJECT) {
-            val conditions = mutableListOf<Condition>()
-            if (bgId != null) {
-                conditions.add(BG_ID.eq(bgId))
-            }
-            if (!deptName.isNullOrBlank()) {
-                conditions.add(DEPT_NAME.like("%${URLDecoder.decode(deptName, "UTF-8")}%"))
-            }
-            if (!centerName.isNullOrBlank()) {
-                conditions.add(CENTER_NAME.like("%${URLDecoder.decode(centerName, "UTF-8")}%"))
-            }
-            return dslContext.selectFrom(this).where(conditions).fetch()
+            val conditions = queryBgDeptCondition(
+                bgId = bgId,
+                deptName = deptName,
+                centerName = centerName,
+                validFlag = validFlag
+            )
+            return queryProject(
+                dslContext = dslContext,
+                conditions = conditions,
+                descFlag = descFlag,
+                page = page,
+                pageSize = pageSize
+            )
         }
+    }
+
+    fun listCountByOrganization(
+        dslContext: DSLContext,
+        bgId: Long? = null,
+        deptName: String? = null,
+        centerName: String? = null,
+        validFlag: Boolean? = null
+    ): Long {
+        with(TProject.T_PROJECT) {
+            val conditions = queryBgDeptCondition(
+                bgId = bgId,
+                deptName = deptName,
+                centerName = centerName,
+                validFlag = validFlag
+            )
+            return dslContext.selectCount().from(this)
+                .where(conditions)
+                .fetchOne(0, Long::class.java)
+        }
+    }
+
+    private fun TProject.queryBgDeptCondition(
+        bgId: Long?,
+        deptName: String?,
+        centerName: String?,
+        validFlag: Boolean?
+    ): MutableList<Condition> {
+        val conditions = mutableListOf<Condition>()
+        if (bgId != null) {
+            conditions.add(BG_ID.eq(bgId))
+        }
+        if (!deptName.isNullOrBlank()) {
+            conditions.add(DEPT_NAME.like("%${URLDecoder.decode(deptName, "UTF-8")}%"))
+        }
+        if (!centerName.isNullOrBlank()) {
+            conditions.add(CENTER_NAME.like("%${URLDecoder.decode(centerName, "UTF-8")}%"))
+        }
+        if (validFlag != null) {
+            if (validFlag) {
+                conditions.add(ENABLED.eq(true).or(ENABLED.isNull))
+            } else {
+                conditions.add(ENABLED.eq(false))
+            }
+        }
+        return conditions
     }
 
     fun updateAppName(dslContext: DSLContext, projectId: String, appName: String): Int {

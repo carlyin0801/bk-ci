@@ -598,4 +598,21 @@ class TemplateDao {
                 .fetch()
         }
     }
+
+    fun getSrcTemplateNum(
+        dslContext: DSLContext,
+        projectIds: Set<String>
+    ): Int {
+        with(TTemplate.T_TEMPLATE) {
+            val t = dslContext.selectDistinct(ID).from(this)
+                .where(PROJECT_ID.`in`(projectIds))
+                .and(TEMPLATE.isNotNull)
+                .union(
+                    dslContext.selectDistinct(SRC_TEMPLATE_ID).from(this)
+                        .where(PROJECT_ID.`in`(projectIds))
+                        .and(TEMPLATE.isNull)
+                ).asTable("t")
+            return dslContext.selectCount().from(t).fetchOne(0, Int::class.java)
+        }
+    }
 }

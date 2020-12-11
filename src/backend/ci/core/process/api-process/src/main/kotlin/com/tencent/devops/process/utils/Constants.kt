@@ -227,6 +227,8 @@ const val PIPELINE_BUILD_MSG = "BK_CI_BUILD_MSG"
  */
 const val PIPELINE_RES_NUM_MIN = 50
 
+const val PIPELINE_TEMPLATE_ID = "templateId"
+
 object PipelineVarUtil {
 
     /**
