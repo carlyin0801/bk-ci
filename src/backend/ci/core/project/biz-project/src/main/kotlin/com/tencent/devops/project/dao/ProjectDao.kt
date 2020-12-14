@@ -147,9 +147,9 @@ class ProjectDao {
         deptName: String?,
         centerName: String?,
         validFlag: Boolean? = null,
-        descFlag: Boolean = true,
-        page: Int,
-        pageSize: Int
+        descFlag: Boolean? = null,
+        page: Int? = null,
+        pageSize: Int? = null
     ): Result<TProjectRecord>? {
         with(TProject.T_PROJECT) {
             val conditions = queryDeptByOrganizationNameCondition(
@@ -223,9 +223,9 @@ class ProjectDao {
         deptId: Long? = null,
         centerId: Long? = null,
         validFlag: Boolean? = null,
-        descFlag: Boolean = true,
-        page: Int,
-        pageSize: Int
+        descFlag: Boolean? = null,
+        page: Int? = null,
+        pageSize: Int? = null
     ): Result<TProjectRecord>? {
         with(TProject.T_PROJECT) {
             val conditions = queryDeptByOrganizationIdCondition(
@@ -298,9 +298,9 @@ class ProjectDao {
         deptId: Long? = null,
         centerName: String? = null,
         validFlag: Boolean? = null,
-        descFlag: Boolean = true,
-        page: Int,
-        pageSize: Int
+        descFlag: Boolean? = null,
+        page: Int? = null,
+        pageSize: Int? = null
     ): Result<TProjectRecord>? {
         with(TProject.T_PROJECT) {
             val conditions = queryDeptProjectCondition(deptId, centerName, validFlag)
@@ -317,17 +317,23 @@ class ProjectDao {
     private fun TProject.queryProject(
         dslContext: DSLContext,
         conditions: MutableList<Condition>,
-        descFlag: Boolean,
-        page: Int,
-        pageSize: Int
+        descFlag: Boolean? = null,
+        page: Int? = null,
+        pageSize: Int? = null
     ): Result<TProjectRecord>? {
         val baseStep = dslContext.selectFrom(this).where(conditions)
-        if (descFlag) {
-            baseStep.orderBy(CREATED_AT.desc())
-        } else {
-            baseStep.orderBy(CREATED_AT.asc())
+        if (descFlag != null) {
+            if (descFlag) {
+                baseStep.orderBy(CREATED_AT.desc())
+            } else {
+                baseStep.orderBy(CREATED_AT.asc())
+            }
         }
-        return baseStep.limit((page - 1) * pageSize, pageSize).fetch()
+        return if (null != page && null != pageSize) {
+            baseStep.limit((page - 1) * pageSize, pageSize).fetch()
+        } else {
+            baseStep.fetch()
+        }
     }
 
     fun listCountByOrganization(
@@ -375,9 +381,9 @@ class ProjectDao {
         deptName: String? = null,
         centerName: String? = null,
         validFlag: Boolean? = null,
-        descFlag: Boolean = true,
-        page: Int,
-        pageSize: Int
+        descFlag: Boolean? = null,
+        page: Int? = null,
+        pageSize: Int? = null
     ): Result<TProjectRecord>? {
         with(TProject.T_PROJECT) {
             val conditions = queryBgDeptCondition(
