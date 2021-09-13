@@ -121,7 +121,7 @@ jooq {
                         }
 
                         driver = "com.mysql.jdbc.Driver"
-                        url = "jdbc:mysql://$mysqlURL/$databaseName?useSSL=false"
+                        url = "jdbc:mysql://$mysqlURL/$databaseName?useSSL=false&serverTimezone=GMT%2B8"
                         user = mysqlUser
                         password = mysqlPasswd
                     }

@@ -1,0 +1,42 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: sharding
+    desc: Devops Sharding Service
+    version: 4.0
+    packageName: com.tencent.devops.sharding
+  datasource:
+    url: jdbc:mysql://localhost:3306/devops_sharding?useSSL=false&autoReconnect=true&serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
+    username: root
+    password: root
+    process:
+      url: jdbc:mysql://localhost:3306/devops_sharding?useSSL=false&autoReconnect=true&serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
+      username: root
+      password: root
+    project:
+      url: jdbc:mysql://localhost:3306/devops_sharding2?useSSL=false&autoReconnect=true&serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
+      username: root
+      password: root
+  redis:
+    database: 2
+    host: 10.125.48.80
+    password: itdev@db
+  rabbitmq:
+    core:
+     virtual-host: soda4
+     username: soda
+     password: soda
+     addresses: 9.134.79.35:5672
+    extend:
+      virtual-host: soda4
+      username: soda
+      password: soda
+      addresses: 9.134.79.35:5672
+
+swagger:
+  append:
+     name: true
+
+server:
+  port: 21950
