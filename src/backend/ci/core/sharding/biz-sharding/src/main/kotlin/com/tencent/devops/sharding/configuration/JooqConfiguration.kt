@@ -25,59 +25,41 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.sharding.dao.process
+package com.tencent.devops.sharding.configuration
 
-import com.tencent.devops.model.sharding.tables.TPipelineInfo
-import com.tencent.devops.model.sharding.tables.records.TPipelineInfoRecord
 import org.jooq.DSLContext
-import org.jooq.Result
-import org.springframework.stereotype.Repository
+import org.jooq.SQLDialect
+import org.jooq.conf.Settings
+import org.jooq.impl.DSL
+import org.jooq.impl.DefaultConfiguration
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
+import javax.sql.DataSource
+import javax.validation.constraints.NotNull
 
-@Repository
-class ProcessDao {
+/**
+ *
+ * Powered By Tencent
+ */
+@Configuration
+@Import(BkShardingDataSourceConfiguration::class)
+class JooqConfiguration {
 
-    fun addPipelineInfo(
-        dslContext: DSLContext,
-        projectId: String,
-        pipelineId: String,
-        pipelineName: String,
-        pipelineDesc: String
-    ) {
-        with(TPipelineInfo.T_PIPELINE_INFO) {
-            dslContext.insertInto(
-                this,
-                PIPELINE_ID,
-                PROJECT_ID,
-                PIPELINE_NAME,
-                PIPELINE_DESC
-            ).values(
-                pipelineId,
-                projectId,
-                pipelineName,
-                pipelineDesc
-            ).execute()
-        }
-    }
-
-    fun getPipelineInfoByPipelineId(
-        dslContext: DSLContext,
-        pipelineId: String
-    ): TPipelineInfoRecord? {
-        with(TPipelineInfo.T_PIPELINE_INFO) {
-            return dslContext.selectFrom(this)
-                .where(PIPELINE_ID.eq(pipelineId))
-                .fetchAny()
-        }
-    }
-
-    fun getPipelineInfoByProjectId(
-        dslContext: DSLContext,
-        projectId: String
-    ): Result<TPipelineInfoRecord>? {
-        with(TPipelineInfo.T_PIPELINE_INFO) {
-            return dslContext.selectFrom(this)
-                .where(PROJECT_ID.eq(projectId))
-                .fetch()
-        }
+    @Bean
+    @NotNull
+    fun shardingDslContest(
+        @Qualifier("shardingDataSource")
+        shardingDataSource: DataSource
+    ): DSLContext {
+        val configuration: org.jooq.Configuration = DefaultConfiguration()
+            .set(shardingDataSource)
+            .set(Settings().withRenderSchema(false)
+                .withExecuteLogging(true)
+                .withRenderFormatted(false))
+            .set(SQLDialect.MYSQL)
+        return DSL.using(configuration)
     }
 }

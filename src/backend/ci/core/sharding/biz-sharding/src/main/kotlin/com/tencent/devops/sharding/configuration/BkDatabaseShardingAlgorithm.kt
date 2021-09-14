@@ -9,6 +9,7 @@ class BkDatabaseShardingAlgorithm : PreciseShardingAlgorithm<String> {
         availableTargetNames: MutableCollection<String>,
         shardingValue: PreciseShardingValue<String>
     ): String {
+        println("-------------doSharding shardingValue:$shardingValue")
         val suffix = if (shardingValue.value.contains("devops")) 0 else 1
         for (targetName in availableTargetNames) {
            if (targetName.endsWith(suffix.toString())) {

@@ -25,29 +25,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.sharding.resources
+package com.tencent.devops.sharding.util
 
-import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.web.RestResource
-import com.tencent.devops.sharding.api.ProcessResource
-import com.tencent.devops.sharding.pojo.process.PipelineInfo
-import com.tencent.devops.sharding.service.process.ProcessService
-import org.springframework.beans.factory.annotation.Autowired
+import com.mysql.cj.jdbc.Driver
+import com.zaxxer.hikari.HikariDataSource
 
-@RestResource
-class ProcessResourceImpl @Autowired constructor(
-    private val processService: ProcessService
-) : ProcessResource {
+object DataSourceUtil {
 
-    override fun addPipelineInfo(userId: String, pipelineInfo: PipelineInfo): Result<Boolean> {
-        return Result(processService.addPipelineInfo(pipelineInfo))
-    }
-
-    override fun getPipelineIdListByProjectId(projectId: String): Result<List<PipelineInfo>?> {
-        return Result(processService.getPipelineInfoListByProjectId(projectId))
-    }
-
-    override fun getPipelineInfoByPipelineId(pipelineId: String): Result<PipelineInfo?> {
-        return Result(processService.getPipelineInfoByPipelineId(pipelineId))
+    fun hikariDataSource(
+        datasourcePoolName: String,
+        datasourceUrl: String,
+        datasourceUsername: String,
+        datasourcePassword: String,
+        datasourceInitSql: String?,
+        datasouceLeakDetectionThreshold: Long
+    ): HikariDataSource {
+        return HikariDataSource().apply {
+            poolName = datasourcePoolName
+            jdbcUrl = datasourceUrl
+            username = datasourceUsername
+            password = datasourcePassword
+            driverClassName = Driver::class.java.name
+            minimumIdle = 10
+            maximumPoolSize = 50
+            idleTimeout = 60000
+            connectionInitSql = datasourceInitSql
+            leakDetectionThreshold = datasouceLeakDetectionThreshold
+        }
     }
 }

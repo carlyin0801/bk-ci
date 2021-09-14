@@ -27,9 +27,10 @@
 
 package com.tencent.devops.sharding.configuration
 
-import com.mysql.cj.jdbc.Driver
-import com.zaxxer.hikari.HikariDataSource
+import com.tencent.devops.sharding.util.DataSourceUtil
 import org.apache.shardingsphere.api.config.sharding.ShardingRuleConfiguration
+import org.apache.shardingsphere.api.config.sharding.TableRuleConfiguration
+import org.apache.shardingsphere.api.config.sharding.strategy.NoneShardingStrategyConfiguration
 import org.apache.shardingsphere.api.config.sharding.strategy.StandardShardingStrategyConfiguration
 import org.apache.shardingsphere.shardingjdbc.api.ShardingDataSourceFactory
 import org.springframework.beans.factory.annotation.Value
@@ -56,95 +57,66 @@ import javax.sql.DataSource
 @EnableTransactionManagement
 class BkShardingDataSourceConfiguration {
 
-    fun processDataSource1(
-        @Value("\${spring.datasource.process1.url}")
-        datasourceUrl: String = "",
-        @Value("\${spring.datasource.process1.username}")
-        datasourceUsername: String = "",
-        @Value("\${spring.datasource.process1.password}")
-        datasourcePassword: String = "",
-        @Value("\${spring.datasource.process1.initSql:#{null}}")
-        datasourceInitSql: String? = null,
-        @Value("\${spring.datasource.process1.leakDetectionThreshold:#{0}}")
-        datasouceLeakDetectionThreshold: Long = 0
-    ): DataSource {
-        if (datasourceUrl.isNullOrBlank()) {
-            throw IllegalArgumentException("Database connection address is not configured")
-        }
-        return hikariDataSource(
-            datasourcePoolName = "DBPool-Process1",
-            datasourceUrl = datasourceUrl,
-            datasourceUsername = datasourceUsername,
-            datasourcePassword = datasourcePassword,
-            datasourceInitSql = datasourceInitSql,
-            datasouceLeakDetectionThreshold = datasouceLeakDetectionThreshold
-        )
-    }
+    @Value("\${spring.datasource.process1.url}")
+    val processDatasourceUrl1: String = ""
+    @Value("\${spring.datasource.process1.username}")
+    val processDatasourceUsername1: String = ""
+    @Value("\${spring.datasource.process1.password}")
+    val processDatasourcePassword1: String = ""
+    @Value("\${spring.datasource.process1.initSql:#{null}}")
+    val processDatasourceInitSql1: String? = null
+    @Value("\${spring.datasource.process1.leakDetectionThreshold:#{0}}")
+    val processDatasourceLeakDetectionThreshold1: Long = 0
 
-    fun processDataSource2(
-        @Value("\${spring.datasource.process2.url}")
-        datasourceUrl: String = "",
-        @Value("\${spring.datasource.process2.username}")
-        datasourceUsername: String = "",
-        @Value("\${spring.datasource.process2.password}")
-        datasourcePassword: String = "",
-        @Value("\${spring.datasource.process2.initSql:#{null}}")
-        datasourceInitSql: String? = null,
-        @Value("\${spring.datasource.process2.leakDetectionThreshold:#{0}}")
-        datasouceLeakDetectionThreshold: Long = 0
-    ): DataSource {
-        if (datasourceUrl.isNullOrBlank()) {
-            throw IllegalArgumentException("Database connection address is not configured")
-        }
-        return hikariDataSource(
-            datasourcePoolName = "DBPool-Process2",
-            datasourceUrl = datasourceUrl,
-            datasourceUsername = datasourceUsername,
-            datasourcePassword = datasourcePassword,
-            datasourceInitSql = datasourceInitSql,
-            datasouceLeakDetectionThreshold = datasouceLeakDetectionThreshold
-        )
-    }
-
-    private fun hikariDataSource(
-        datasourcePoolName: String,
-        datasourceUrl: String,
-        datasourceUsername: String,
-        datasourcePassword: String,
-        datasourceInitSql: String?,
-        datasouceLeakDetectionThreshold: Long
-    ): HikariDataSource {
-        return HikariDataSource().apply {
-            poolName = datasourcePoolName
-            jdbcUrl = datasourceUrl
-            username = datasourceUsername
-            password = datasourcePassword
-            driverClassName = Driver::class.java.name
-            minimumIdle = 10
-            maximumPoolSize = 50
-            idleTimeout = 60000
-            connectionInitSql = datasourceInitSql
-            leakDetectionThreshold = datasouceLeakDetectionThreshold
-        }
-    }
+    @Value("\${spring.datasource.process2.url}")
+    val processDatasourceUrl2: String = ""
+    @Value("\${spring.datasource.process2.username}")
+    val processDatasourceUsername2: String = ""
+    @Value("\${spring.datasource.process2.password}")
+    val processDatasourcePassword2: String = ""
+    @Value("\${spring.datasource.process2.initSql:#{null}}")
+    val processDatasourceInitSql2: String? = null
+    @Value("\${spring.datasource.process2.leakDetectionThreshold:#{0}}")
+    val processDatasourceLeakDetectionThreshold2: Long = 0
 
     private fun dataSourceMap(): Map<String, DataSource> {
         val dataSourceMap: MutableMap<String, DataSource> = HashMap(2)
-        dataSourceMap["ds_0"] = processDataSource1()
-        dataSourceMap["ds_1"] = processDataSource2()
+        dataSourceMap["ds_0"] = DataSourceUtil.hikariDataSource(
+            datasourcePoolName = "DBPool-Process1",
+            datasourceUrl = processDatasourceUrl1,
+            datasourceUsername = processDatasourceUsername1,
+            datasourcePassword = processDatasourcePassword1,
+            datasourceInitSql = processDatasourceInitSql1,
+            datasouceLeakDetectionThreshold = processDatasourceLeakDetectionThreshold1
+        )
+        dataSourceMap["ds_1"] = DataSourceUtil.hikariDataSource(
+            datasourcePoolName = "DBPool-Process2",
+            datasourceUrl = processDatasourceUrl2,
+            datasourceUsername = processDatasourceUsername2,
+            datasourcePassword = processDatasourcePassword2,
+            datasourceInitSql = processDatasourceInitSql2,
+            datasouceLeakDetectionThreshold = processDatasourceLeakDetectionThreshold2
+        )
         return dataSourceMap
     }
 
     @Bean
     @Primary
-    fun dataSource(): DataSource {
+    fun shardingDataSource(): DataSource {
         println("------------------init dataSource-----------")
         val shardingRuleConfig = ShardingRuleConfiguration()
+        shardingRuleConfig.tableRuleConfigs.add(getPipelineInfoConfiguration())
+        shardingRuleConfig.defaultTableShardingStrategyConfig = NoneShardingStrategyConfiguration()
         shardingRuleConfig.defaultDatabaseShardingStrategyConfig =
             StandardShardingStrategyConfiguration("PROJECT_ID", BkDatabaseShardingAlgorithm())
         val properties = Properties()
         // 是否打印SQL解析和改写日志
         properties.setProperty("sql.show", "true")
         return ShardingDataSourceFactory.createDataSource(dataSourceMap(), shardingRuleConfig, properties)
+    }
+
+    fun getPipelineInfoConfiguration(): TableRuleConfiguration? {
+        val tableRuleConfig = TableRuleConfiguration("t_pipeline_info", "ds_\${0..1}.t_pipeline_info")
+        return tableRuleConfig
     }
 }

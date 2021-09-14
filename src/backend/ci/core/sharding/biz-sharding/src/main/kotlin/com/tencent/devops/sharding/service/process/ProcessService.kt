@@ -40,7 +40,20 @@ class ProcessService @Autowired constructor(
     private val processDao: ProcessDao
 ) {
 
-    fun getPipelineIdListByProjectId(
+    fun addPipelineInfo(
+        pipelineInfo: PipelineInfo
+    ): Boolean {
+        processDao.addPipelineInfo(
+            dslContext = dslContext,
+            projectId = pipelineInfo.projectId,
+            pipelineId = pipelineInfo.pipelineId,
+            pipelineName = pipelineInfo.pipelineName,
+            pipelineDesc = pipelineInfo.pipelineDesc
+        )
+        return true
+    }
+
+    fun getPipelineInfoListByProjectId(
         projectId: String
     ): List<PipelineInfo>? {
         val pipelineRecords = processDao.getPipelineInfoByProjectId(
@@ -59,6 +72,25 @@ class ProcessService @Autowired constructor(
             )
         }
         return dataList
+    }
+
+    fun getPipelineInfoByPipelineId(
+        pipelineId: String
+    ): PipelineInfo? {
+        val pipelineRecord = processDao.getPipelineInfoByPipelineId(
+            dslContext = dslContext,
+            pipelineId = pipelineId
+        )
+        return if (pipelineRecord != null) {
+            PipelineInfo(
+                projectId = pipelineRecord.projectId,
+                pipelineId = pipelineRecord.pipelineId,
+                pipelineName = pipelineRecord.pipelineName,
+                pipelineDesc = pipelineRecord.pipelineDesc
+            )
+        } else {
+            null
+        }
     }
 
     @PostConstruct
