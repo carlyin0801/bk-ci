@@ -120,8 +120,8 @@ jooq {
                             mysqlPasswd = project.extra["DB_PASSWORD"]?.toString()
                         }
 
-                        driver = "com.mysql.jdbc.Driver"
-                        url = "jdbc:mysql://$mysqlURL/$databaseName?useSSL=false&serverTimezone=GMT%2B8"
+                        driver = "com.mysql.cj.jdbc.Driver"
+                        url = "jdbc:mysql://$mysqlURL/$databaseName?useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true"
                         user = mysqlUser
                         password = mysqlPasswd
                     }
