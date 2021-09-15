@@ -28,6 +28,7 @@
 package com.tencent.devops.sharding.configuration
 
 import com.tencent.devops.sharding.util.DataSourceUtil
+import org.apache.shardingsphere.api.config.masterslave.MasterSlaveRuleConfiguration
 import org.apache.shardingsphere.api.config.sharding.ShardingRuleConfiguration
 import org.apache.shardingsphere.api.config.sharding.TableRuleConfiguration
 import org.apache.shardingsphere.api.config.sharding.strategy.NoneShardingStrategyConfiguration
@@ -57,46 +58,81 @@ import javax.sql.DataSource
 @EnableTransactionManagement
 class BkShardingDataSourceConfiguration {
 
-    @Value("\${spring.datasource.process1.url}")
-    val processDatasourceUrl1: String = ""
-    @Value("\${spring.datasource.process1.username}")
-    val processDatasourceUsername1: String = ""
-    @Value("\${spring.datasource.process1.password}")
-    val processDatasourcePassword1: String = ""
-    @Value("\${spring.datasource.process1.initSql:#{null}}")
-    val processDatasourceInitSql1: String? = null
-    @Value("\${spring.datasource.process1.leakDetectionThreshold:#{0}}")
-    val processDatasourceLeakDetectionThreshold1: Long = 0
+    @Value("\${spring.datasource.processMaster1.url}")
+    val processMasterDatasourceUrl1: String = ""
+    @Value("\${spring.datasource.processMaster1.username}")
+    val processMasterDatasourceUsername1: String = ""
+    @Value("\${spring.datasource.processMaster1.password}")
+    val processMasterDatasourcePassword1: String = ""
+    @Value("\${spring.datasource.processMaster1.initSql:#{null}}")
+    val processMasterDatasourceInitSql1: String? = null
+    @Value("\${spring.datasource.processMaster1.leakDetectionThreshold:#{0}}")
+    val processMasterDatasourceLeakDetectionThreshold1: Long = 0
 
-    @Value("\${spring.datasource.process2.url}")
+    @Value("\${spring.datasource.processSlave1.url}")
+    val processSlaveDatasourceUrl1: String = ""
+    @Value("\${spring.datasource.processSlave1.username}")
+    val processSlaveDatasourceUsername1: String = ""
+    @Value("\${spring.datasource.processSlave1.password}")
+    val processSlaveDatasourcePassword1: String = ""
+    @Value("\${spring.datasource.processSlave1.initSql:#{null}}")
+    val processSlaveDatasourceInitSql1: String? = null
+    @Value("\${spring.datasource.processSlave1.leakDetectionThreshold:#{0}}")
+    val processSlaveDatasourceLeakDetectionThreshold1: Long = 0
+
+    @Value("\${spring.datasource.processMaster2.url}")
     val processDatasourceUrl2: String = ""
-    @Value("\${spring.datasource.process2.username}")
+    @Value("\${spring.datasource.processMaster2.username}")
     val processDatasourceUsername2: String = ""
-    @Value("\${spring.datasource.process2.password}")
+    @Value("\${spring.datasource.processMaster2.password}")
     val processDatasourcePassword2: String = ""
-    @Value("\${spring.datasource.process2.initSql:#{null}}")
+    @Value("\${spring.datasource.processMaster2.initSql:#{null}}")
     val processDatasourceInitSql2: String? = null
-    @Value("\${spring.datasource.process2.leakDetectionThreshold:#{0}}")
+    @Value("\${spring.datasource.processMaster2.leakDetectionThreshold:#{0}}")
     val processDatasourceLeakDetectionThreshold2: Long = 0
 
     private fun dataSourceMap(): Map<String, DataSource> {
         val dataSourceMap: MutableMap<String, DataSource> = HashMap(2)
-        dataSourceMap["ds_0"] = DataSourceUtil.hikariDataSource(
-            datasourcePoolName = "DBPool-Process1",
-            datasourceUrl = processDatasourceUrl1,
-            datasourceUsername = processDatasourceUsername1,
-            datasourcePassword = processDatasourcePassword1,
-            datasourceInitSql = processDatasourceInitSql1,
-            datasouceLeakDetectionThreshold = processDatasourceLeakDetectionThreshold1
+        dataSourceMap["m1"] = DataSourceUtil.hikariDataSource(
+            datasourcePoolName = "m1",
+            datasourceUrl = processMasterDatasourceUrl1,
+            datasourceUsername = processMasterDatasourceUsername1,
+            datasourcePassword = processMasterDatasourcePassword1,
+            datasourceInitSql = processMasterDatasourceInitSql1,
+            datasouceLeakDetectionThreshold = processMasterDatasourceLeakDetectionThreshold1
+        )
+        dataSourceMap["s1"] = DataSourceUtil.hikariDataSource(
+            datasourcePoolName = "s1",
+            datasourceUrl = processSlaveDatasourceUrl1,
+            datasourceUsername = processSlaveDatasourceUsername1,
+            datasourcePassword = processSlaveDatasourcePassword1,
+            datasourceInitSql = processSlaveDatasourceInitSql1,
+            datasouceLeakDetectionThreshold = processSlaveDatasourceLeakDetectionThreshold1
         )
         dataSourceMap["ds_1"] = DataSourceUtil.hikariDataSource(
-            datasourcePoolName = "DBPool-Process2",
+            datasourcePoolName = "ds_1",
             datasourceUrl = processDatasourceUrl2,
             datasourceUsername = processDatasourceUsername2,
             datasourcePassword = processDatasourcePassword2,
             datasourceInitSql = processDatasourceInitSql2,
             datasouceLeakDetectionThreshold = processDatasourceLeakDetectionThreshold2
         )
+/*        dataSourceMap["m2"] = DataSourceUtil.hikariDataSource(
+            datasourcePoolName = "m2",
+            datasourceUrl = processMasterDatasourceUrl1,
+            datasourceUsername = processMasterDatasourceUsername1,
+            datasourcePassword = processMasterDatasourcePassword1,
+            datasourceInitSql = processMasterDatasourceInitSql1,
+            datasouceLeakDetectionThreshold = processMasterDatasourceLeakDetectionThreshold1
+        )
+        dataSourceMap["s2"] = DataSourceUtil.hikariDataSource(
+            datasourcePoolName = "s2",
+            datasourceUrl = processSlaveDatasourceUrl1,
+            datasourceUsername = processSlaveDatasourceUsername1,
+            datasourcePassword = processSlaveDatasourcePassword1,
+            datasourceInitSql = processSlaveDatasourceInitSql1,
+            datasouceLeakDetectionThreshold = processSlaveDatasourceLeakDetectionThreshold1
+        )*/
         return dataSourceMap
     }
 
@@ -106,6 +142,13 @@ class BkShardingDataSourceConfiguration {
         println("------------------init dataSource-----------")
         val shardingRuleConfig = ShardingRuleConfiguration()
         shardingRuleConfig.tableRuleConfigs.add(getPipelineInfoConfiguration())
+        val masterSlaveRuleConfig0 = MasterSlaveRuleConfiguration(
+            "ds_0", "m1", listOf("s1")
+        )
+/*        val masterSlaveRuleConfig1 = MasterSlaveRuleConfiguration(
+            "ds_1", "m2", listOf("m2", "s2")
+        )*/
+        shardingRuleConfig.masterSlaveRuleConfigs = listOf(masterSlaveRuleConfig0)
         shardingRuleConfig.defaultTableShardingStrategyConfig = NoneShardingStrategyConfiguration()
         shardingRuleConfig.defaultDatabaseShardingStrategyConfig =
             StandardShardingStrategyConfiguration("PROJECT_ID", BkDatabaseShardingAlgorithm())
@@ -117,6 +160,9 @@ class BkShardingDataSourceConfiguration {
 
     fun getPipelineInfoConfiguration(): TableRuleConfiguration? {
         val tableRuleConfig = TableRuleConfiguration("t_pipeline_info", "ds_\${0..1}.t_pipeline_info")
+        tableRuleConfig.tableShardingStrategyConfig = NoneShardingStrategyConfiguration()
+        tableRuleConfig.databaseShardingStrategyConfig =
+            StandardShardingStrategyConfiguration("PROJECT_ID", BkDatabaseShardingAlgorithm())
         return tableRuleConfig
     }
 }
