@@ -141,7 +141,12 @@ class BkShardingDataSourceConfiguration {
     fun shardingDataSource(): DataSource {
         println("------------------init dataSource-----------")
         val shardingRuleConfig = ShardingRuleConfiguration()
-        shardingRuleConfig.tableRuleConfigs.add(getPipelineInfoConfiguration())
+        shardingRuleConfig.tableRuleConfigs.addAll(
+            listOf(
+                getPipelineInfoConfiguration("t_pipeline_info"),
+                getPipelineInfoConfiguration("t_pipeline_user")
+            )
+        )
         val masterSlaveRuleConfig0 = MasterSlaveRuleConfiguration(
             "ds_0", "m1", listOf("s1")
         )
@@ -158,8 +163,8 @@ class BkShardingDataSourceConfiguration {
         return ShardingDataSourceFactory.createDataSource(dataSourceMap(), shardingRuleConfig, properties)
     }
 
-    fun getPipelineInfoConfiguration(): TableRuleConfiguration? {
-        val tableRuleConfig = TableRuleConfiguration("t_pipeline_info", "ds_\${0..1}.t_pipeline_info")
+    fun getPipelineInfoConfiguration(tableName: String): TableRuleConfiguration? {
+        val tableRuleConfig = TableRuleConfiguration(tableName, "ds_\${0..1}.$tableName")
         tableRuleConfig.tableShardingStrategyConfig = NoneShardingStrategyConfiguration()
         tableRuleConfig.databaseShardingStrategyConfig =
             StandardShardingStrategyConfiguration("PROJECT_ID", BkDatabaseShardingAlgorithm())

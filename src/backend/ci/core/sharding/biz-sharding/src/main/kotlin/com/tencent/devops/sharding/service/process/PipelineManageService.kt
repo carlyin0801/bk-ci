@@ -27,74 +27,39 @@
 
 package com.tencent.devops.sharding.service.process
 
-import com.tencent.devops.sharding.dao.process.ProcessDao
-import com.tencent.devops.sharding.pojo.process.PipelineInfo
+import com.tencent.devops.sharding.dao.process.PipelineManageDao
+import com.tencent.devops.sharding.pojo.process.PipelineUserItem
 import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
-import javax.annotation.PostConstruct
 
 @Service
-class ProcessService @Autowired constructor(
+class PipelineManageService @Autowired constructor(
     private val dslContext: DSLContext,
-    private val processDao: ProcessDao
+    private val pipelineManageDao: PipelineManageDao
 ) {
 
-    fun addPipelineInfo(
-        pipelineInfo: PipelineInfo
-    ): Boolean {
-        processDao.addPipelineInfo(
+    fun getPipelineUserList(
+        projectId: String,
+        pipelineId: String
+    ): List<PipelineUserItem>? {
+        val pipelineRecords = pipelineManageDao.getPipelineUserList(
             dslContext = dslContext,
-            projectId = pipelineInfo.projectId,
-            pipelineId = pipelineInfo.pipelineId,
-            pipelineName = pipelineInfo.pipelineName,
-            pipelineDesc = pipelineInfo.pipelineDesc
+            projectId = projectId,
+            pipelineId = pipelineId
         )
-        return true
-    }
-
-    fun getPipelineInfoListByProjectId(
-        projectId: String
-    ): List<PipelineInfo>? {
-        val pipelineRecords = processDao.getPipelineInfoByProjectId(
-            dslContext = dslContext,
-            projectId = projectId
-        )
-        val dataList = mutableListOf<PipelineInfo>()
+        val dataList = mutableListOf<PipelineUserItem>()
         pipelineRecords?.forEach {
             dataList.add(
-                PipelineInfo(
-                    projectId = it.projectId,
-                    pipelineId = it.pipelineId,
-                    pipelineName = it.pipelineName,
-                    pipelineDesc = it.pipelineDesc
+                PipelineUserItem(
+                    projectId = it["PROJECT_ID"] as String,
+                    pipelineId = it["PIPELINE_ID"] as String,
+                    pipelineName = it["PIPELINE_NAME"] as String,
+                    pipelineDesc = it["PIPELINE_DESC"] as String,
+                    userId = it["CREATE_USER"] as String
                 )
             )
         }
         return dataList
-    }
-
-    fun getPipelineInfoByPipelineId(
-        pipelineId: String
-    ): PipelineInfo? {
-        val pipelineRecord = processDao.getPipelineInfoByPipelineId(
-            dslContext = dslContext,
-            pipelineId = pipelineId
-        )
-        return if (pipelineRecord != null) {
-            PipelineInfo(
-                projectId = pipelineRecord.projectId,
-                pipelineId = pipelineRecord.pipelineId,
-                pipelineName = pipelineRecord.pipelineName,
-                pipelineDesc = pipelineRecord.pipelineDesc
-            )
-        } else {
-            null
-        }
-    }
-
-    @PostConstruct
-    fun init() {
-        println("-----------init test-------------")
     }
 }

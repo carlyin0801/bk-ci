@@ -28,56 +28,31 @@
 package com.tencent.devops.sharding.dao.process
 
 import com.tencent.devops.model.sharding.tables.TPipelineInfo
-import com.tencent.devops.model.sharding.tables.records.TPipelineInfoRecord
+import com.tencent.devops.model.sharding.tables.TPipelineUser
 import org.jooq.DSLContext
+import org.jooq.Record
 import org.jooq.Result
 import org.springframework.stereotype.Repository
 
 @Repository
-class ProcessDao {
+class PipelineManageDao {
 
-    fun addPipelineInfo(
+    fun getPipelineUserList(
         dslContext: DSLContext,
         projectId: String,
-        pipelineId: String,
-        pipelineName: String,
-        pipelineDesc: String
-    ) {
-        with(TPipelineInfo.T_PIPELINE_INFO) {
-            dslContext.insertInto(
-                this,
-                PIPELINE_ID,
-                PROJECT_ID,
-                PIPELINE_NAME,
-                PIPELINE_DESC
-            ).values(
-                pipelineId,
-                projectId,
-                pipelineName,
-                pipelineDesc
-            ).execute()
-        }
-    }
-
-    fun getPipelineInfoByPipelineId(
-        dslContext: DSLContext,
         pipelineId: String
-    ): TPipelineInfoRecord? {
-        with(TPipelineInfo.T_PIPELINE_INFO) {
-            return dslContext.selectFrom(this)
-                .where(PIPELINE_ID.eq(pipelineId))
-                .fetchAny()
-        }
-    }
-
-    fun getPipelineInfoByProjectId(
-        dslContext: DSLContext,
-        projectId: String
-    ): Result<TPipelineInfoRecord>? {
-        with(TPipelineInfo.T_PIPELINE_INFO) {
-            return dslContext.selectFrom(this)
-                .where(PROJECT_ID.eq(projectId))
-                .fetch()
-        }
+    ): Result<out Record>? {
+        val tpi = TPipelineInfo.T_PIPELINE_INFO
+        val tpu = TPipelineUser.T_PIPELINE_USER
+        return dslContext.select(
+            tpi.PROJECT_ID,
+            tpi.PIPELINE_ID,
+            tpi.PIPELINE_NAME,
+            tpi.PIPELINE_DESC,
+            tpu.CREATE_USER
+        )
+            .from(tpi).join(tpu).on(tpi.PIPELINE_ID.eq(tpu.PIPELINE_ID))
+            .where(tpi.PROJECT_ID.eq(projectId).and(tpi.PIPELINE_ID.eq(pipelineId)))
+            .fetch()
     }
 }

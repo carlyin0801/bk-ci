@@ -31,23 +31,48 @@ import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.sharding.api.ProcessResource
 import com.tencent.devops.sharding.pojo.process.PipelineInfo
-import com.tencent.devops.sharding.service.process.ProcessService
+import com.tencent.devops.sharding.pojo.process.PipelineUser
+import com.tencent.devops.sharding.pojo.process.PipelineUserItem
+import com.tencent.devops.sharding.service.process.PipelineInfoService
+import com.tencent.devops.sharding.service.process.PipelineManageService
+import com.tencent.devops.sharding.service.process.PipelineUserService
 import org.springframework.beans.factory.annotation.Autowired
 
 @RestResource
 class ProcessResourceImpl @Autowired constructor(
-    private val processService: ProcessService
+    private val pipelineInfoService: PipelineInfoService,
+    private val pipelineUserService: PipelineUserService,
+    private val pipelineManageService: PipelineManageService
 ) : ProcessResource {
 
     override fun addPipelineInfo(userId: String, pipelineInfo: PipelineInfo): Result<Boolean> {
-        return Result(processService.addPipelineInfo(pipelineInfo))
+        return Result(pipelineInfoService.addPipelineInfo(pipelineInfo))
     }
 
     override fun getPipelineIdListByProjectId(projectId: String): Result<List<PipelineInfo>?> {
-        return Result(processService.getPipelineInfoListByProjectId(projectId))
+        return Result(pipelineInfoService.getPipelineInfoListByProjectId(projectId))
     }
 
     override fun getPipelineInfoByPipelineId(pipelineId: String): Result<PipelineInfo?> {
-        return Result(processService.getPipelineInfoByPipelineId(pipelineId))
+        return Result(pipelineInfoService.getPipelineInfoByPipelineId(pipelineId))
+    }
+
+    override fun addPipelineUser(userId: String, pipelineUser: PipelineUser): Result<Boolean> {
+        return Result(pipelineUserService.addPipelineUser(pipelineUser))
+    }
+
+    override fun getPipelineUserListByProjectId(projectId: String): Result<List<PipelineUser>?> {
+        return Result(pipelineUserService.getPipelineUserListByProjectId(projectId))
+    }
+
+    override fun getPipelineUserByPipelineId(pipelineId: String): Result<PipelineUser?> {
+        return Result(pipelineUserService.getPipelineUserByPipelineId(pipelineId))
+    }
+
+    override fun getPipelineUserDetailListByProjectId(
+        projectId: String,
+        pipelineId: String
+    ): Result<List<PipelineUserItem>?> {
+        return Result(pipelineManageService.getPipelineUserList(projectId, pipelineId))
     }
 }

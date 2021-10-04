@@ -25,40 +25,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.sharding.configuration
+package com.tencent.devops.sharding.pojo.process
 
-import org.jooq.DSLContext
-import org.jooq.SQLDialect
-import org.jooq.conf.Settings
-import org.jooq.impl.DSL
-import org.jooq.impl.DefaultConfiguration
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Import
-import javax.sql.DataSource
-import javax.validation.constraints.NotNull
-
-/**
- *
- * Powered By Tencent
- */
-@Configuration
-@Import(BkShardingDataSourceConfiguration::class)
-class JooqConfiguration {
-
-    @Bean
-    @NotNull
-    fun shardingDslContest(
-        @Qualifier("shardingDataSource")
-        shardingDataSource: DataSource
-    ): DSLContext {
-        val configuration: org.jooq.Configuration = DefaultConfiguration()
-            .set(shardingDataSource)
-            .set(Settings().withRenderSchema(false)
-                .withExecuteLogging(true)
-                .withRenderFormatted(false))
-            .set(SQLDialect.MYSQL)
-        return DSL.using(configuration)
-    }
-}
+data class PipelineUserItem(
+    val projectId: String,
+    val pipelineId: String,
+    val pipelineName: String,
+    val pipelineDesc: String,
+    val userId: String
+)

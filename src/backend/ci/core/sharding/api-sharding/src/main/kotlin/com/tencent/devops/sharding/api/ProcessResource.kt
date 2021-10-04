@@ -31,6 +31,8 @@ import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.sharding.pojo.process.PipelineInfo
+import com.tencent.devops.sharding.pojo.process.PipelineUser
+import com.tencent.devops.sharding.pojo.process.PipelineUserItem
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
@@ -73,8 +75,49 @@ interface ProcessResource {
     @GET
     @Path("/pipelines/{pipelineId}/detail")
     fun getPipelineInfoByPipelineId(
-        @ApiParam("项目ID", required = true)
+        @ApiParam("流水线ID", required = true)
         @PathParam("pipelineId")
         pipelineId: String
     ): Result<PipelineInfo?>
+
+    @ApiOperation("新增流水线用户")
+    @POST
+    @Path("/pipelines/user/create")
+    fun addPipelineUser(
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "流水线用户", required = true)
+        pipelineUser: PipelineUser
+    ): Result<Boolean>
+
+    @ApiOperation("获取项目流水线用户信息")
+    @GET
+    @Path("/projects/{projectId}/pipeline/user/list")
+    fun getPipelineUserListByProjectId(
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String
+    ): Result<List<PipelineUser>?>
+
+    @ApiOperation("获取流水线用户信息")
+    @GET
+    @Path("/pipelines/{pipelineId}/pipeline/user/detail")
+    fun getPipelineUserByPipelineId(
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String
+    ): Result<PipelineUser?>
+
+    @ApiOperation("获取项目流水线用户详情信息")
+    @GET
+    @Path("/projects/{projectId}/pipelines/{pipelineId}/pipeline/userDetail/list")
+    fun getPipelineUserDetailListByProjectId(
+        @ApiParam("项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String
+    ): Result<List<PipelineUserItem>?>
 }
