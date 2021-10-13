@@ -62,6 +62,17 @@ interface ProcessResource {
         pipelineInfo: PipelineInfo
     ): Result<Boolean>
 
+    @ApiOperation("修改流水线")
+    @POST
+    @Path("/pipelines/update")
+    fun updatePipelineInfo(
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam(value = "流水线信息", required = true)
+        pipelineInfo: PipelineInfo
+    ): Result<Boolean>
+
     @ApiOperation("获取项目流水线信息")
     @GET
     @Path("/projects/{projectId}/pipelineInfos/list")

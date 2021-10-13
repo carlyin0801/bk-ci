@@ -36,5 +36,5 @@ dependencies {
     api("com.zaxxer:HikariCP")
     api("org.jooq:jooq")
     api("mysql:mysql-connector-java")
-    api("org.apache.shardingsphere:sharding-jdbc-core:4.1.1")
+    api("org.apache.shardingsphere:sharding-jdbc-core:4.0.1")
 }

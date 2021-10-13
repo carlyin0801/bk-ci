@@ -31,6 +31,7 @@ import com.tencent.devops.model.sharding.tables.TPipelineInfo
 import com.tencent.devops.model.sharding.tables.records.TPipelineInfoRecord
 import org.jooq.DSLContext
 import org.jooq.Result
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -70,6 +71,25 @@ class PipelineInfoDao {
         }
     }
 
+    fun countByProjectId(
+        dslContext: DSLContext,
+        projectId: String
+    ): Int {
+        with(TPipelineInfo.T_PIPELINE_INFO) {
+            val count1 = dslContext
+                .select(DSL.countDistinct(PIPELINE_DESC))
+                .from(this)
+                .where(PROJECT_ID.eq(projectId))
+                .fetchOne(0, Int::class.java)!!
+            val count2 = dslContext
+                .select(DSL.count(PIPELINE_DESC))
+                .from(this)
+                .where(PIPELINE_DESC.eq("dfdf123"))
+                .fetchOne(0, Int::class.java)!!
+            return count1 + count2
+        }
+    }
+
     fun getPipelineInfoByProjectId(
         dslContext: DSLContext,
         projectId: String
@@ -78,6 +98,22 @@ class PipelineInfoDao {
             return dslContext.selectFrom(this)
                 .where(PROJECT_ID.eq(projectId))
                 .fetch()
+        }
+    }
+
+    fun updatePipelineInfo(
+        dslContext: DSLContext,
+        projectId: String,
+        pipelineId: String,
+        pipelineName: String,
+        pipelineDesc: String
+    ) {
+        with(TPipelineInfo.T_PIPELINE_INFO) {
+            dslContext.update(this)
+                .set(PIPELINE_NAME, pipelineName)
+                .set(PIPELINE_DESC, pipelineDesc)
+                .where(PROJECT_ID.eq(projectId).and(PIPELINE_ID.eq(pipelineId)))
+                .execute()
         }
     }
 }

@@ -49,6 +49,10 @@ class ProcessResourceImpl @Autowired constructor(
         return Result(pipelineInfoService.addPipelineInfo(pipelineInfo))
     }
 
+    override fun updatePipelineInfo(userId: String, pipelineInfo: PipelineInfo): Result<Boolean> {
+        return Result(pipelineInfoService.updatePipelineInfo(pipelineInfo))
+    }
+
     override fun getPipelineIdListByProjectId(projectId: String): Result<List<PipelineInfo>?> {
         return Result(pipelineInfoService.getPipelineInfoListByProjectId(projectId))
     }

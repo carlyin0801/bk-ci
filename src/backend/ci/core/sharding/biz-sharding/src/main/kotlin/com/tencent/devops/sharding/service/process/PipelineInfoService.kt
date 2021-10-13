@@ -52,9 +52,24 @@ class PipelineInfoService @Autowired constructor(
         return true
     }
 
+    fun updatePipelineInfo(
+        pipelineInfo: PipelineInfo
+    ): Boolean {
+        pipelineInfoDao.updatePipelineInfo(
+            dslContext = dslContext,
+            projectId = pipelineInfo.projectId,
+            pipelineId = pipelineInfo.pipelineId,
+            pipelineName = pipelineInfo.pipelineName,
+            pipelineDesc = pipelineInfo.pipelineDesc
+        )
+        return true
+    }
+
     fun getPipelineInfoListByProjectId(
         projectId: String
     ): List<PipelineInfo>? {
+        val count = pipelineInfoDao.countByProjectId(dslContext, projectId)
+        println("getPipelineInfoListByProjectId:$count")
         val pipelineRecords = pipelineInfoDao.getPipelineInfoByProjectId(
             dslContext = dslContext,
             projectId = projectId
