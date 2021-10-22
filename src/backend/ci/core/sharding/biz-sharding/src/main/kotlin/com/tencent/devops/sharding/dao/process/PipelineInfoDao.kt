@@ -56,7 +56,10 @@ class PipelineInfoDao {
                 projectId,
                 pipelineName,
                 pipelineDesc
-            ).execute()
+            )
+                .onDuplicateKeyUpdate()
+                .set(PIPELINE_DESC, pipelineDesc)
+                .execute()
         }
     }
 

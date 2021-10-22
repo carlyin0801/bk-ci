@@ -27,8 +27,12 @@
 
 package com.tencent.devops.sharding.pojo.process
 
+import java.time.LocalDateTime
+
 data class PipelineUser(
     val projectId: String,
     val pipelineId: String,
-    val userId: String
+    val userId: String,
+    val createTime: LocalDateTime? = null,
+    val updateTime: LocalDateTime? = null
 )

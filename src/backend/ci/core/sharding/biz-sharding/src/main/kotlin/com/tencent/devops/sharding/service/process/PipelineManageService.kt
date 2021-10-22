@@ -43,6 +43,8 @@ class PipelineManageService @Autowired constructor(
         projectId: String,
         pipelineId: String
     ): List<PipelineUserItem>? {
+        val count = pipelineManageDao.countPipelineUserList(dslContext, projectId, pipelineId)
+        println("getPipelineUserList count:$count")
         val pipelineRecords = pipelineManageDao.getPipelineUserList(
             dslContext = dslContext,
             projectId = projectId,

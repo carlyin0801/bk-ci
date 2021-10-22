@@ -67,7 +67,9 @@ class PipelineUserService @Autowired constructor(
                 PipelineUser(
                     projectId = it.projectId,
                     pipelineId = it.pipelineId,
-                    userId = it.createUser
+                    userId = it.createUser,
+                    createTime = it.createTime,
+                    updateTime = it.updateTime
                 )
             )
         }
