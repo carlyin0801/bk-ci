@@ -113,8 +113,10 @@ class BkShardingDataSourceConfiguration {
         shardingRuleConfig.bindingTableGroups.add("T_PIPELINE_INFO,T_PIPELINE_USER")
         val dbShardingAlgorithmrProps = Properties()
         dbShardingAlgorithmrProps.setProperty("strategy", "STANDARD")
-        dbShardingAlgorithmrProps.setProperty("algorithmClassName", "com.tencent.devops.sharding.configuration.BkDatabaseShardingAlgorithm")
-        shardingRuleConfig.shardingAlgorithms["bkDatabaseShardingAlgorithm"] = ShardingSphereAlgorithmConfiguration("CLASS_BASED", dbShardingAlgorithmrProps)
+        dbShardingAlgorithmrProps.setProperty("algorithmClassName",
+            "com.tencent.devops.sharding.configuration.BkDatabaseShardingAlgorithm")
+        shardingRuleConfig.shardingAlgorithms["bkDatabaseShardingAlgorithm"] =
+            ShardingSphereAlgorithmConfiguration("CLASS_BASED", dbShardingAlgorithmrProps)
 
         shardingRuleConfig.defaultTableShardingStrategy = NoneShardingStrategyConfiguration()
         shardingRuleConfig.defaultDatabaseShardingStrategy =
@@ -122,7 +124,11 @@ class BkShardingDataSourceConfiguration {
         val properties = Properties()
         // 是否打印SQL解析和改写日志
         properties.setProperty("sql-show", "true")
-        return ShardingSphereDataSourceFactory.createDataSource(dataSourceMap(config), listOf(shardingRuleConfig), properties)
+        return ShardingSphereDataSourceFactory.createDataSource(
+            dataSourceMap(config),
+            listOf(shardingRuleConfig),
+            properties
+        )
     }
 
     fun getTableRuleConfiguration(
