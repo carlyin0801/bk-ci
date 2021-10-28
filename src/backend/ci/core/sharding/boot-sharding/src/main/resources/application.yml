@@ -7,18 +7,13 @@ spring:
     version: 4.0
     packageName: com.tencent.devops.sharding
   datasource:
-    processMaster1:
-      url: jdbc:mysql://localhost:3307/devops_sharding?useSSL=false&autoReconnect=true&serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
-      username: root
-      password: root
-    processSlave1:
-      url: jdbc:mysql://localhost:3308/devops_sharding?useSSL=false&autoReconnect=true&serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
-      username: root
-      password: root
-    processMaster2:
-      url: jdbc:mysql://10.125.48.80:3306/devops_sharding?useSSL=false&autoReconnect=true&serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
-      username: tig4php
-      password: tig4php
+    dataSourceConfigs:
+      - url: jdbc:mysql://localhost:3307/devops_sharding?useSSL=false&autoReconnect=true&serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
+        username: root
+        password: root
+      - url: jdbc:mysql://10.125.48.80:3306/devops_sharding?useSSL=false&autoReconnect=true&serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
+        username: tig4php
+        password: tig4php
   redis:
     database: 2
     host: 10.125.48.80

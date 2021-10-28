@@ -35,11 +35,11 @@ import org.apache.shardingsphere.sharding.api.config.ShardingRuleConfiguration
 import org.apache.shardingsphere.sharding.api.config.rule.ShardingTableRuleConfiguration
 import org.apache.shardingsphere.sharding.api.config.strategy.sharding.NoneShardingStrategyConfiguration
 import org.apache.shardingsphere.sharding.api.config.strategy.sharding.StandardShardingStrategyConfiguration
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.AutoConfigureBefore
 import org.springframework.boot.autoconfigure.AutoConfigureOrder
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
 import org.springframework.boot.autoconfigure.jooq.JooqAutoConfiguration
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
@@ -54,55 +54,29 @@ import javax.sql.DataSource
 @Configuration
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
 @AutoConfigureBefore(DataSourceAutoConfiguration::class, JooqAutoConfiguration::class)
+@EnableConfigurationProperties(DataSourceProperties::class)
 @EnableTransactionManagement
 class BkShardingDataSourceConfiguration {
 
     companion object {
         private const val PROJECT_ID_FIELD = "PROJECT_ID"
-        private const val FIRST_DATA_SOURCE_NAME = "ds_0"
-        private const val SECOND_DATA_SOURCE_NAME = "ds_1"
+        private const val DATA_SOURCE_NAME_PREFIX = "ds_"
     }
 
-    @Value("\${spring.datasource.processMaster1.url}")
-    val processMasterDatasourceUrl1: String = ""
-    @Value("\${spring.datasource.processMaster1.username}")
-    val processMasterDatasourceUsername1: String = ""
-    @Value("\${spring.datasource.processMaster1.password}")
-    val processMasterDatasourcePassword1: String = ""
-    @Value("\${spring.datasource.processMaster1.initSql:#{null}}")
-    val processMasterDatasourceInitSql1: String? = null
-    @Value("\${spring.datasource.processMaster1.leakDetectionThreshold:#{0}}")
-    val processMasterDatasourceLeakDetectionThreshold1: Long = 0
-
-    @Value("\${spring.datasource.processMaster2.url}")
-    val processDatasourceUrl2: String = ""
-    @Value("\${spring.datasource.processMaster2.username}")
-    val processDatasourceUsername2: String = ""
-    @Value("\${spring.datasource.processMaster2.password}")
-    val processDatasourcePassword2: String = ""
-    @Value("\${spring.datasource.processMaster2.initSql:#{null}}")
-    val processDatasourceInitSql2: String? = null
-    @Value("\${spring.datasource.processMaster2.leakDetectionThreshold:#{0}}")
-    val processDatasourceLeakDetectionThreshold2: Long = 0
-
-    private fun dataSourceMap(): Map<String, DataSource> {
+    private fun dataSourceMap(config: DataSourceProperties): Map<String, DataSource> {
         val dataSourceMap: MutableMap<String, DataSource> = mutableMapOf()
-        dataSourceMap[FIRST_DATA_SOURCE_NAME] = createHikariDataSource(
-            datasourcePoolName = FIRST_DATA_SOURCE_NAME,
-            datasourceUrl = processMasterDatasourceUrl1,
-            datasourceUsername = processMasterDatasourceUsername1,
-            datasourcePassword = processMasterDatasourcePassword1,
-            datasourceInitSql = processMasterDatasourceInitSql1,
-            datasouceLeakDetectionThreshold = processMasterDatasourceLeakDetectionThreshold1
-        )
-        dataSourceMap[SECOND_DATA_SOURCE_NAME] = createHikariDataSource(
-            datasourcePoolName = SECOND_DATA_SOURCE_NAME,
-            datasourceUrl = processDatasourceUrl2,
-            datasourceUsername = processDatasourceUsername2,
-            datasourcePassword = processDatasourcePassword2,
-            datasourceInitSql = processDatasourceInitSql2,
-            datasouceLeakDetectionThreshold = processDatasourceLeakDetectionThreshold2
-        )
+        val dataSourceConfigs = config.dataSourceConfigs
+        dataSourceConfigs.forEachIndexed { index, dataSourceConfig ->
+            val dataSourceName = "$DATA_SOURCE_NAME_PREFIX$index"
+            dataSourceMap[dataSourceName] = createHikariDataSource(
+                datasourcePoolName = dataSourceName,
+                datasourceUrl = dataSourceConfig.url,
+                datasourceUsername = dataSourceConfig.username,
+                datasourcePassword = dataSourceConfig.password,
+                datasourceInitSql = dataSourceConfig.initSql,
+                datasouceLeakDetectionThreshold = dataSourceConfig.leakDetectionThreshold
+            )
+        }
         return dataSourceMap
     }
 
@@ -129,12 +103,13 @@ class BkShardingDataSourceConfiguration {
     }
 
     @Bean
-    fun shardingDataSource(): DataSource {
+    fun shardingDataSource(config: DataSourceProperties): DataSource {
         val shardingRuleConfig = ShardingRuleConfiguration()
         // 设置表的路由规则
         val tableRuleConfigs = shardingRuleConfig.tables
-        tableRuleConfigs.add(getTableRuleConfiguration("t_pipeline_info"))
-        tableRuleConfigs.add(getTableRuleConfiguration("t_pipeline_user"))
+        val dataSourceSize = config.dataSourceConfigs.size
+        tableRuleConfigs.add(getTableRuleConfiguration("t_pipeline_info", dataSourceSize))
+        tableRuleConfigs.add(getTableRuleConfiguration("t_pipeline_user", dataSourceSize))
         shardingRuleConfig.bindingTableGroups.add("T_PIPELINE_INFO,T_PIPELINE_USER")
         val dbShardingAlgorithmrProps = Properties()
         dbShardingAlgorithmrProps.setProperty("strategy", "STANDARD")
@@ -147,18 +122,20 @@ class BkShardingDataSourceConfiguration {
         val properties = Properties()
         // 是否打印SQL解析和改写日志
         properties.setProperty("sql-show", "true")
-        return ShardingSphereDataSourceFactory.createDataSource(dataSourceMap(), listOf(shardingRuleConfig), properties)
+        return ShardingSphereDataSourceFactory.createDataSource(dataSourceMap(config), listOf(shardingRuleConfig), properties)
     }
 
     fun getTableRuleConfiguration(
         tableName: String,
+        dataSourceSize: Int,
         specifyDataSourceName: String? = null
     ): ShardingTableRuleConfiguration? {
         // 生成实际节点规则
         val actualDataNodes = if (specifyDataSourceName != null) {
             "$specifyDataSourceName.$tableName"
         } else {
-            "ds_\${0..1}.$tableName"
+            val lastIndex = dataSourceSize - 1
+            "$DATA_SOURCE_NAME_PREFIX\${0..$lastIndex}.$tableName"
         }
         val tableRuleConfig = ShardingTableRuleConfiguration(tableName, actualDataNodes)
         tableRuleConfig.tableShardingStrategy = NoneShardingStrategyConfiguration()
