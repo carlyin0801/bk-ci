@@ -27,10 +27,12 @@
 
 package com.tencent.devops.sharding
 
+import com.sankuai.inf.leaf.plugin.annotation.EnableLeafServer
 import com.tencent.devops.common.service.MicroService
 import com.tencent.devops.common.service.MicroServiceApplication
 
 @MicroService
+@EnableLeafServer
 class ShardingApplication
 
 fun main(args: Array<String>) {

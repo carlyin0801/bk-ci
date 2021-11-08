@@ -39,6 +39,7 @@ dependencies {
     api("org.codehaus.groovy:groovy-all:2.4.5")
     api("org.apache.calcite:calcite-core:1.26.0")
     api("org.antlr:antlr4-runtime:4.9.2")
+    api("com.sankuai.inf.leaf:leaf-boot-starter:1.0.1-RELEASE")
     api("org.apache.commons:commons-lang3:${Versions.CommonLang3}")
     api("org.apache.commons:commons-collections4:${Versions.Collection4}")
     api("commons-codec:commons-codec:${Versions.CommonCodec}")

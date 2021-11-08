@@ -110,7 +110,7 @@ class BkShardingDataSourceConfiguration {
         val dataSourceSize = config.dataSourceConfigs.size
         tableRuleConfigs.add(getTableRuleConfiguration("t_pipeline_info", dataSourceSize))
         tableRuleConfigs.add(getTableRuleConfiguration("t_pipeline_user", dataSourceSize))
-        shardingRuleConfig.bindingTableGroups.add("T_PIPELINE_INFO,T_PIPELINE_USER")
+        shardingRuleConfig.broadcastTables.add("leaf_alloc")
         val dbShardingAlgorithmrProps = Properties()
         dbShardingAlgorithmrProps.setProperty("strategy", "STANDARD")
         dbShardingAlgorithmrProps.setProperty("algorithmClassName",

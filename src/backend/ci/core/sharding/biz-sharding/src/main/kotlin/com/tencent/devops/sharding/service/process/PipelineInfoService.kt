@@ -27,6 +27,7 @@
 
 package com.tencent.devops.sharding.service.process
 
+import com.sankuai.inf.leaf.service.SegmentService
 import com.tencent.devops.sharding.dao.process.PipelineInfoDao
 import com.tencent.devops.sharding.pojo.process.PipelineInfo
 import org.jooq.DSLContext
@@ -36,12 +37,15 @@ import org.springframework.stereotype.Service
 @Service
 class PipelineInfoService @Autowired constructor(
     private val dslContext: DSLContext,
-    private val pipelineInfoDao: PipelineInfoDao
+    private val pipelineInfoDao: PipelineInfoDao,
+    private val segmentService: SegmentService
 ) {
 
     fun addPipelineInfo(
         pipelineInfo: PipelineInfo
     ): Boolean {
+        val bizId = segmentService.getId("PIPELINE_INFO")
+        println("addPipelineInfo bizId:$bizId")
         pipelineInfoDao.addPipelineInfo(
             dslContext = dslContext,
             projectId = pipelineInfo.projectId,
