@@ -27,7 +27,7 @@
 
 package com.tencent.devops.sharding.service.process
 
-import com.sankuai.inf.leaf.service.SegmentService
+import com.tencent.devops.leaf.service.SegmentService
 import com.tencent.devops.sharding.dao.process.PipelineInfoDao
 import com.tencent.devops.sharding.pojo.process.PipelineInfo
 import org.jooq.DSLContext

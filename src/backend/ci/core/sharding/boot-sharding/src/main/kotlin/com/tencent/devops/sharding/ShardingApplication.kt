@@ -27,9 +27,9 @@
 
 package com.tencent.devops.sharding
 
-import com.sankuai.inf.leaf.plugin.annotation.EnableLeafServer
 import com.tencent.devops.common.service.MicroService
 import com.tencent.devops.common.service.MicroServiceApplication
+import com.tencent.devops.leaf.plugin.annotation.EnableLeafServer
 
 @MicroService
 @EnableLeafServer
