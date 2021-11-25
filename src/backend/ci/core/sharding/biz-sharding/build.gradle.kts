@@ -36,5 +36,5 @@ dependencies {
     api("com.zaxxer:HikariCP")
     api("org.jooq:jooq")
     api("org.apache.shardingsphere:shardingsphere-jdbc-core:5.0.0")
-    api("com.tencent.devops.leaf:leaf-boot-starter:1.0.0-RELEASE")
+    api("com.tencent.devops.leaf:leaf-boot-starter:1.0.1-RELEASE")
 }
