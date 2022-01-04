@@ -34,6 +34,7 @@ import com.tencent.devops.model.sharding.tables.TLeafAlloc
 import com.tencent.devops.model.sharding.tables.records.TLeafAllocRecord
 import javassist.NotFoundException
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
@@ -55,24 +56,28 @@ class JooqIDAllocDaoImpl @Autowired constructor(
         }
     }
 
-    private fun generateLeafAlloc(leafAllocRecord: TLeafAllocRecord): LeafAlloc {
+    private fun generateLeafAlloc(leafAllocRecord: TLeafAllocRecord?): LeafAlloc {
         val leafAlloc = LeafAlloc()
-        leafAlloc.key = leafAllocRecord.bizTag
-        leafAlloc.maxId = leafAllocRecord.maxId
-        leafAlloc.step = leafAllocRecord.step
-        leafAlloc.updateTime = DateTimeUtil.toDateTime(leafAllocRecord.updateTime)
+        leafAlloc.key = leafAllocRecord?.bizTag
+        leafAlloc.maxId = leafAllocRecord?.maxId ?: 0
+        leafAlloc.step = leafAllocRecord?.step ?: 0
+        leafAlloc.updateTime = DateTimeUtil.toDateTime(leafAllocRecord?.updateTime)
         return leafAlloc
     }
 
     override fun updateMaxIdAndGetLeafAlloc(tag: String): LeafAlloc {
         with(TLeafAlloc.T_LEAF_ALLOC) {
-            dslContext.update(this)
-                .set(MAX_ID, MAX_ID + STEP)
-                .set(UPDATE_TIME, LocalDateTime.now())
-                .where(BIZ_TAG.eq(tag))
-                .execute()
-            val leafAllocRecord = dslContext.selectFrom(this).where(BIZ_TAG.eq(tag)).fetchOne()
-                ?: throw NotFoundException("invalid tag")
+            var leafAllocRecord:TLeafAllocRecord? = null
+                dslContext.transaction { t ->
+                val context = DSL.using(t)
+                context.update(this)
+                    .set(MAX_ID, MAX_ID + STEP)
+                    .set(UPDATE_TIME, LocalDateTime.now())
+                    .where(BIZ_TAG.eq(tag))
+                    .execute()
+                leafAllocRecord = context.selectFrom(this).where(BIZ_TAG.eq(tag)).fetchOne()
+                    ?: throw NotFoundException("invalid tag")
+            }
             return generateLeafAlloc(leafAllocRecord)
         }
     }
