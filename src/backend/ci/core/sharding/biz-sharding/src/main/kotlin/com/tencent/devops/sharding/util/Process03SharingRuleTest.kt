@@ -7,7 +7,7 @@ import java.io.File
 import java.util.*
 
 fun main() {
-    val file = File("C:\\Users\\carlyin\\Desktop\\test\\sub-db-project\\process02_project_20220119.txt")
+    val file = File("C:\\Users\\carlyin\\Desktop\\test\\sub-db-project\\process03_project_20220119.txt")
     val lines = file.readLines()
     lines.forEach { line ->
         val headers = mapOf(
@@ -19,10 +19,10 @@ fun main() {
         )
         val paramMap = mapOf(
             "routingName" to line,
-            "routingRule" to "ds_2"
+            "routingRule" to "ds_4"
         )
         try {
-            val response = OkhttpUtils.doPost("http://dev.devops.oa.com/ms/project/api/op/sharding/routing/rules/add", JsonUtil.toJson(paramMap), headers)
+            val response = OkhttpUtils.doPost("http://devops.oa.com/ms/project/api/op/sharding/routing/rules/add", JsonUtil.toJson(paramMap), headers)
             val data = response.body()?.string()
             val jsonObject = if (data != null) JsonUtil.toMap(data) else null
             val status = jsonObject?.get("status")?.toString()

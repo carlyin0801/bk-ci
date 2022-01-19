@@ -4,7 +4,7 @@ import java.io.File
 import java.lang.StringBuilder
 
 fun main() {
-    val file = File("C:\\Users\\carlyin\\Desktop\\test\\sub-db-project\\process03_project_notify.txt")
+    val file = File("C:\\Users\\carlyin\\Desktop\\test\\sub-db-project\\pcg_project_notify.txt")
     val lines = file.readLines()
     val sb = StringBuilder("(")
     lines.forEach { line ->

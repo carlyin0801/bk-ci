@@ -14,7 +14,7 @@ fun main() {
         "X-DEVOPS-TOKEN" to "vC9DOvUtqo4X3DORKis1RRX1XNGu8YFw",
         "X-DEVOPS-PROJECT-ID" to "grayproject"
     )
-    val response = OkhttpUtils.doGet("http://dev.devops.oa.com/ms/project/api/op/sharding/routing/rules/names/pcg-test/get", headers)
+    val response = OkhttpUtils.doGet("http://devops.oa.com/ms/project/api/op/sharding/routing/rules/names/git_300586/get", headers)
     val data = response.body()?.string()
     val jsonObject = if (data != null) JsonUtil.toMap(data) else null
     val result = jsonObject?.get("data")?.toString()
