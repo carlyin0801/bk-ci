@@ -27,11 +27,13 @@
 
 package com.tencent.devops.sharding.configuration
 
+import com.tencent.devops.sharding.configuration.listener.BkJooqExecuteListener
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.conf.Settings
 import org.jooq.impl.DSL
 import org.jooq.impl.DefaultConfiguration
+import org.jooq.impl.DefaultExecuteListenerProvider
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -59,6 +61,7 @@ class JooqConfiguration {
                 .withExecuteLogging(true)
                 .withRenderFormatted(false))
             .set(SQLDialect.MYSQL)
+            .set(DefaultExecuteListenerProvider(BkJooqExecuteListener()))
         return DSL.using(configuration)
     }
 }
