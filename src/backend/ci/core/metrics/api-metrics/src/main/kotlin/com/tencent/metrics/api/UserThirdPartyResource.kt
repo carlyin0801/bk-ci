@@ -15,13 +15,13 @@ import javax.ws.rs.Consumes
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 
-@Api(tags = ["USER_THIRDPARTY_OVERVIEW"], description = "第三方-概览")
-@Path("/user/thirdparty/overview")
+@Api(tags = ["USER_THIRDPARTY_OVERVIEW_DATAS"], description = "第三方-概览数据")
+@Path("/user/thirdparty/overview/datas")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 interface UserThirdPartyResource {
-    @ApiOperation("获取第三方度量信息")
-    @Path("/")
+    @ApiOperation("获取第三方汇总信息")
+    @Path("/summary/data/get")
     @GET
     fun queryPipelineSummaryInfo(
         @ApiParam("项目ID", required = true)

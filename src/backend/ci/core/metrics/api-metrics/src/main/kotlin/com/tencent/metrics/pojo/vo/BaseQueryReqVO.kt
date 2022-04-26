@@ -3,8 +3,8 @@ package com.tencent.metrics.pojo.vo
 import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiParam
 
-@ApiModel("查询条件请求报文")
-data class QueryReqVO(
+@ApiModel("基本查询条件请求报文")
+data class BaseQueryReqVO(
     @ApiParam("流水线ID", required = false)
     val pipelineIds: List<String>?,
     @ApiParam("流水线标签", required = false)

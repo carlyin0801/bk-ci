@@ -8,5 +8,5 @@ data class StageTrendSumInfoVO(
     @ApiModelProperty("stage标签名称")
     val stageTagName: String,
     @ApiModelProperty("流水线stage耗时信息")
-    val data: List<PipelineStageCostTimeInfoVO>
+    val StageCostTimeInfos: List<PipelineStageCostTimeInfoVO>
 )

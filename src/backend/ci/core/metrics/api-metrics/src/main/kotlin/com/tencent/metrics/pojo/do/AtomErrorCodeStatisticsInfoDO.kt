@@ -4,7 +4,7 @@ import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 
 @ApiModel("插件错误码统计信息")
-data class AtomErrorCodeCountInfoDO(
+data class AtomErrorCodeStatisticsInfoDO(
     @ApiModelProperty("错误的类型标识")
     val errorType: Int,
     @ApiModelProperty("错误的标识码")

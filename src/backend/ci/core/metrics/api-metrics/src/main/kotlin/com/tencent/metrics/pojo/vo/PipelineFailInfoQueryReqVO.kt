@@ -10,7 +10,7 @@ data class PipelineFailInfoQueryReqVO(
     @ApiParam("流水线标签", required = false)
     val pipelineLabelIds: List<String>?,
     @ApiParam("错误类型", required = false)
-    val errorTypes: List<String>?,
+    val errorTypes: List<Int>?,
     @ApiParam("开始时间", required = true)
     val startTime: String,
     @ApiParam("结束时间", required = true)

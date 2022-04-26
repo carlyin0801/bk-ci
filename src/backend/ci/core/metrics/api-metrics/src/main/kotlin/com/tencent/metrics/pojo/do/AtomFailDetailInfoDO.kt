@@ -8,12 +8,8 @@ import java.time.LocalDateTime
 data class AtomFailDetailInfoDO(
     @ApiModelProperty("项目ID")
     val projectId: String,
-    @ApiModelProperty("流水线ID")
-    val pipelineId: String,
-    @ApiModelProperty("流水线名称")
-    val pipelineName: String,
-    @ApiModelProperty("构建序号")
-    val buildNum: Int,
+    @ApiModelProperty("流水线基本信息")
+    val pipelineBaseInfo: PipelineBaseInfoDO,
     @ApiModelProperty("插件代码")
     val atomCode: String,
     @ApiModelProperty("插件名称")
