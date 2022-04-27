@@ -37,6 +37,7 @@ import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
 import javax.ws.rs.HeaderParam
 import javax.ws.rs.POST
+import javax.ws.rs.GET
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
@@ -60,4 +61,16 @@ interface UserAtomDisplayConfigResource {
         @ApiParam("保存项目下展示插件配置报文", required = true)
         saveAtomDisplayConfigVO: SaveAtomDisplayConfigVO
     ): Result<Boolean>
+
+    @ApiOperation("获取项目下需要展示的插件的配置")
+    @Path("/get")
+    @GET
+    fun getAtomDisplayConfig(
+        @ApiParam("项目ID", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
+        projectId: String,
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String
+    ): Result<>
 }

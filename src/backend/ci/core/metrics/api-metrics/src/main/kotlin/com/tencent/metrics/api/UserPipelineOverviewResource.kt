@@ -63,7 +63,7 @@ interface UserPipelineOverviewResource {
         queryReqVo: BaseQueryReqVO
     ): Result<PipelineSumInfoVO>
 
-    @ApiOperation("查询流水线趋势概览数据")
+    @ApiOperation("查询流水线运行趋势数据")
     @Path("/trend/info")
     @POST
     fun queryPipelineTrendInfo(
