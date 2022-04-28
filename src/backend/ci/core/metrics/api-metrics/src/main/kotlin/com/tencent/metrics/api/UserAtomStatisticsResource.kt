@@ -34,7 +34,7 @@ interface UserAtomStatisticsResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("查询条件", required = true)
-        queryCondition: AtomStatisticsInfoReqVO
+        condition: AtomStatisticsInfoReqVO
     ): Result<AtomTrendInfoVO>
 
     @ApiOperation("查询插件执行统计信息")
@@ -48,7 +48,7 @@ interface UserAtomStatisticsResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("查询条件", required = true)
-        queryCondition: AtomStatisticsInfoReqVO,
+        condition: AtomStatisticsInfoReqVO,
         @ApiParam("页码", required = true, defaultValue = "1")
         @QueryParam("page")
         page: Int,

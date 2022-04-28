@@ -7,7 +7,7 @@ import com.tencent.metrics.pojo.`do`.PipelineFailDetailInfoDO
 import com.tencent.metrics.pojo.vo.PipelineFailInfoQueryReqVO
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.metrics.pojo.vo.PipelineFailSumInfoVO
-import com.tencent.metrics.pojo.vo.PipelineFailDayTrendInfoVO
+import com.tencent.metrics.pojo.vo.PipelineFailTrendInfoVO
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
@@ -37,7 +37,7 @@ interface UserPipelineFailResource {
         userId: String,
         @ApiParam("查询条件", required = true)
         queryReqVo: PipelineFailInfoQueryReqVO
-    ): Result<List<PipelineFailDayTrendInfoVO>>
+    ): Result<List<PipelineFailTrendInfoVO>>
 
     @ApiOperation("查询流水线错误类型统计数据")
     @Path("/errorType/summary/data/get")
@@ -50,8 +50,8 @@ interface UserPipelineFailResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("查询条件", required = true)
-        queryCondition: PipelineFailInfoQueryReqVO
-    ): Result<List<PipelineFailSumInfoVO>>
+        queryReqVo: PipelineFailInfoQueryReqVO
+    ): Result<PipelineFailSumInfoVO>
 
     @ApiOperation("查询流水线失败详情数据")
     @Path("/details")
@@ -64,7 +64,7 @@ interface UserPipelineFailResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("查询条件", required = true)
-        queryCondition: PipelineFailInfoQueryReqVO,
+        queryReqVo: PipelineFailInfoQueryReqVO,
         @ApiParam("页码", required = true, defaultValue = "1")
         @QueryParam("page")
         page: Int,

@@ -46,5 +46,6 @@ package com.tencent.metrics.constant
 object MetricsMessageCode {
 
     // metrics服务模块业务错误
+    const val QUERY_DETAILS_COUNT_BEYOND = "查询记录过多，请缩小查询范围"
 
 }

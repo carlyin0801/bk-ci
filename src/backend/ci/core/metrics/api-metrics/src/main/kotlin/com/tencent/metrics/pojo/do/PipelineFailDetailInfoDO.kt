@@ -18,8 +18,8 @@ data class PipelineFailDetailInfoDO(
     val startTime: LocalDateTime,
     @ApiModelProperty("结束时间")
     val endTime: LocalDateTime,
-    @ApiModelProperty("流水线失败信息")
-    val pipelineFailInfo: PipelineFailInfoDO,
-
+    @ApiModelProperty("错误类型标识")
+    val errorType: Int,
+    @ApiModelProperty("错误信息")
     val errorMsg: String
 )

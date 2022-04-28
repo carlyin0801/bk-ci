@@ -35,7 +35,7 @@ interface UserAtomFailInfoResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("查询条件", required = true)
-        queryCondition: PipelineFailInfoQueryReqVO
+        condition: PipelineFailInfoQueryReqVO
     ): Result<AtomErrorCodeStatisticsInfoVO>
 
     @ApiOperation("查询插件错误码统计信息")
@@ -48,7 +48,7 @@ interface UserAtomFailInfoResource {
         @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("查询条件", required = true)
+        @ApiParam("错误类型", required = true)
         errorTypes: List<Int>?,
         @ApiParam("页码", required = true, defaultValue = "1")
         @QueryParam("page")
@@ -69,7 +69,7 @@ interface UserAtomFailInfoResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("查询条件", required = true)
-        queryCondition: PipelineFailInfoQueryReqVO,
+        condition: PipelineFailInfoQueryReqVO,
         @ApiParam("页码", required = true, defaultValue = "1")
         @QueryParam("page")
         page: Int,

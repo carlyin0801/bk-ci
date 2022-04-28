@@ -48,7 +48,7 @@ class PipelineOverviewDao {
                 sum(FAIL_EXECUTE_COUNT).`as`("FAIL_EXECUTE_COUNT"),
                 sum(TOTAL_AVG_COST_TIME).`as`("TOTAL_AVG_COST_TIME"),
                 sum(FAIL_AVG_COST_TIME).`as`("FAIL_AVG_COST_TIME")
-            ).from(this)
+            ).from(this, t)
             val conditionStep = if (!queryPipelineOverview.queryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.join(t).on(this.PROJECT_ID.eq(t.PROJECT_ID)).where(conditions)
             } else {
@@ -73,7 +73,7 @@ class PipelineOverviewDao {
         val formatter  = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val startTimeDateTime = LocalDateTime.parse(queryCondition.queryReq.startTime, formatter)
         val endTimeDateTime = LocalDateTime.parse(queryCondition.queryReq.endTime, formatter)
-        conditions.add(this.STATISTICS_TIME.between(startTimeDateTime,endTimeDateTime))
+        conditions.add(this.STATISTICS_TIME.between(startTimeDateTime, endTimeDateTime))
         return conditions
     }
 }
