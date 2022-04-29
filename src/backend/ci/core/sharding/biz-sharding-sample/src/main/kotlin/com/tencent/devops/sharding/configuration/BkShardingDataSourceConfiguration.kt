@@ -111,16 +111,22 @@ class BkShardingDataSourceConfiguration {
         tableRuleConfigs.add(getTableRuleConfiguration("t_pipeline_info", dataSourceSize))
         tableRuleConfigs.add(getTableRuleConfiguration("t_pipeline_user", dataSourceSize))
         shardingRuleConfig.broadcastTables.add("leaf_alloc")
-        val dbShardingAlgorithmrProps = Properties()
-        dbShardingAlgorithmrProps.setProperty("strategy", "STANDARD")
-        dbShardingAlgorithmrProps.setProperty("algorithmClassName",
+        val dbShardingAlgorithmProps = Properties()
+        dbShardingAlgorithmProps.setProperty("strategy", "STANDARD")
+        dbShardingAlgorithmProps.setProperty("algorithmClassName",
             "com.tencent.devops.sharding.configuration.BkDatabaseShardingAlgorithm")
         shardingRuleConfig.shardingAlgorithms["bkDatabaseShardingAlgorithm"] =
-            ShardingSphereAlgorithmConfiguration("CLASS_BASED", dbShardingAlgorithmrProps)
-
-        shardingRuleConfig.defaultTableShardingStrategy = NoneShardingStrategyConfiguration()
+            ShardingSphereAlgorithmConfiguration("CLASS_BASED", dbShardingAlgorithmProps)
+        val tableShardingAlgorithmProps = Properties()
+        tableShardingAlgorithmProps.setProperty("strategy", "STANDARD")
+        tableShardingAlgorithmProps.setProperty("algorithmClassName",
+            "com.tencent.devops.sharding.configuration.BkTableShardingAlgorithm")
+        shardingRuleConfig.shardingAlgorithms["bkTableShardingAlgorithm"] =
+            ShardingSphereAlgorithmConfiguration("CLASS_BASED", tableShardingAlgorithmProps)
+        shardingRuleConfig.defaultTableShardingStrategy =
+            StandardShardingStrategyConfiguration(PROJECT_ID_FIELD, "bkTableShardingAlgorithm")
         shardingRuleConfig.defaultDatabaseShardingStrategy =
-            StandardShardingStrategyConfiguration(PROJECT_ID_FIELD, "bkProcessDatabaseShardingAlgorithm")
+            StandardShardingStrategyConfiguration(PROJECT_ID_FIELD, "bkDatabaseShardingAlgorithm")
         val properties = Properties()
         // 是否打印SQL解析和改写日志
         properties.setProperty("sql-show", "true")
@@ -141,10 +147,11 @@ class BkShardingDataSourceConfiguration {
             "$specifyDataSourceName.$tableName"
         } else {
             val lastIndex = dataSourceSize - 1
-            "$DATA_SOURCE_NAME_PREFIX\${0..$lastIndex}.$tableName"
+            "$DATA_SOURCE_NAME_PREFIX\${0..$lastIndex}.${tableName}_\${0..1}"
         }
         val tableRuleConfig = ShardingTableRuleConfiguration(tableName, actualDataNodes)
-        tableRuleConfig.tableShardingStrategy = NoneShardingStrategyConfiguration()
+        tableRuleConfig.tableShardingStrategy =
+            StandardShardingStrategyConfiguration(PROJECT_ID_FIELD, "bkTableShardingAlgorithm")
         tableRuleConfig.databaseShardingStrategy =
             StandardShardingStrategyConfiguration(PROJECT_ID_FIELD, "bkDatabaseShardingAlgorithm")
         return tableRuleConfig

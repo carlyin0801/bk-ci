@@ -25,16 +25,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-dependencies {
-    api(project(":core:sharding:model-sharding"))
-    api(project(":core:common:common-service"))
-    api(project(":core:common:common-web"))
-    api(project(":core:common:common-client"))
-    api(project(":core:sharding:api-sharding"))
-    api("org.json:json")
-    api("org.springframework.boot:spring-boot-starter-jooq")
-    api("com.zaxxer:HikariCP")
-    api("org.jooq:jooq")
-    api("org.apache.shardingsphere:shardingsphere-jdbc-core:5.1.1")
-    api("com.tencent.devops.leaf:leaf-boot-starter:1.0.1-RELEASE")
+package com.tencent.devops.sharding.configuration
+
+import org.apache.shardingsphere.sharding.api.sharding.standard.PreciseShardingValue
+import org.apache.shardingsphere.sharding.api.sharding.standard.RangeShardingValue
+import org.apache.shardingsphere.sharding.api.sharding.standard.StandardShardingAlgorithm
+
+class BkTableShardingAlgorithm : StandardShardingAlgorithm<String> {
+
+    override fun doSharding(
+        availableTargetNames: MutableCollection<String>,
+        shardingValue: PreciseShardingValue<String>
+    ): String {
+        println("-------------doSharding shardingValue:$shardingValue")
+        val suffix = if (shardingValue.value.contains("devops0")) 0 else 1
+        for (targetName in availableTargetNames) {
+           if (targetName.endsWith(suffix.toString())) {
+               return targetName
+           }
+        }
+        throw IllegalArgumentException("错误的参数")
+    }
+
+    override fun doSharding(
+        availableTargetNames: MutableCollection<String>,
+        shardingValue: RangeShardingValue<String>
+    ): MutableCollection<String> {
+        return availableTargetNames
+    }
+
+    override fun getType(): String? {
+        return null
+    }
+
+    override fun init() {}
 }
