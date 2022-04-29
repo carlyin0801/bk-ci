@@ -92,8 +92,8 @@ class PipelineFailServiceImpl @Autowired constructor(
             )
         }
         val page = if (queryPipelineFailDTO.page <= 0) 1 else queryPipelineFailDTO.page
-        var pageSize = if (queryPipelineFailDTO.pageSize <= 0) 10 else queryPipelineFailDTO.pageSize
-        when {
+        var pageSize =
+            when {
             queryPipelineFailDTO.pageSize <= 0 -> {
                 10
             }
