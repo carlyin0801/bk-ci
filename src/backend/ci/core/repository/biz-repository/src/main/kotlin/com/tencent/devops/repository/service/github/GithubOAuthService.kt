@@ -33,6 +33,7 @@ import com.tencent.devops.common.api.exception.CustomException
 import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.util.HashUtil
 import com.tencent.devops.common.api.util.OkhttpUtils
+import com.tencent.devops.repository.pojo.github.GithubAppUrl
 import com.tencent.devops.repository.pojo.github.GithubOauth
 import com.tencent.devops.repository.pojo.github.GithubToken
 import com.tencent.devops.scm.config.GitConfig
@@ -62,7 +63,7 @@ class GithubOAuthService @Autowired constructor(
         return GithubOauth(redirectUrl)
     }
 
-    fun getGithubAppUrl() = gitConfig.githubAppUrl
+    fun getGithubAppUrl() = GithubAppUrl(gitConfig.githubAppUrl)
 
     fun githubCallback(code: String, state: String): Response {
         if (!state.contains(",BK_DEVOPS__")) {
@@ -102,7 +103,7 @@ class GithubOAuthService @Autowired constructor(
     }
 
     companion object {
-        private val logger = LoggerFactory.getLogger(this::class.java)
+        private val logger = LoggerFactory.getLogger(GithubOAuthService::class.java)
         private const val RANDOM_ALPHA_NUM = 8
         private const val GITHUB_URL = "https://github.com"
     }

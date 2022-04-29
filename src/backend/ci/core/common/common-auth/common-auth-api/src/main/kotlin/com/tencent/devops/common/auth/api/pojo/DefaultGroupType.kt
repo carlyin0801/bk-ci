@@ -32,7 +32,7 @@ package com.tencent.devops.common.auth.api.pojo
  * 项目角色组
  */
 enum class DefaultGroupType(val value: String, val displayName: String) {
-    MANAGER("manager", "管理员"), // 管理员
+    MANAGER("manager", "CI管理员"), // 管理员
     DEVELOPER("developer", "开发人员"), // 开发人员
     MAINTAINER("maintainer", "运维人员"), // 运维人员
     TESTER("tester", "测试人员"), // 测试人员
@@ -63,12 +63,12 @@ enum class DefaultGroupType(val value: String, val displayName: String) {
 
         fun getAll(): List<DefaultGroupType> {
             val allGroup = mutableListOf<DefaultGroupType>()
-            allGroup.add(DEVELOPER)
             allGroup.add(MANAGER)
+            allGroup.add(DEVELOPER)
             allGroup.add(MAINTAINER)
-            allGroup.add(TESTER)
             allGroup.add(PM)
             allGroup.add(QC)
+            allGroup.add(TESTER)
             return allGroup
         }
     }

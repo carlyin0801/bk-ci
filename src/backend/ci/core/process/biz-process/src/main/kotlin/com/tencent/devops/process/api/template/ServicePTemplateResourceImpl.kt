@@ -29,6 +29,7 @@ package com.tencent.devops.process.api.template
 
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.process.pojo.PipelineTemplateInfo
 import com.tencent.devops.process.service.template.TemplateFacadeService
 import com.tencent.devops.process.pojo.template.AddMarketTemplateRequest
 import com.tencent.devops.process.pojo.template.OptionalTemplateList
@@ -44,7 +45,7 @@ import org.springframework.beans.factory.annotation.Autowired
 class ServicePTemplateResourceImpl @Autowired constructor(
     private val pipelineTemplateService: PipelineTemplateService,
     private val templateFacadeService: TemplateFacadeService
-) : ServiceTemplateResource {
+) : ServicePTemplateResource {
 
     override fun addMarketTemplate(
         userId: String,
@@ -68,19 +69,28 @@ class ServicePTemplateResourceImpl @Autowired constructor(
         return templateFacadeService.getSrcTemplateCodes(projectId)
     }
 
+    override fun getTemplateIdBySrcCode(
+        srcTemplateId: String,
+        projectIds: List<String>
+    ): Result<List<PipelineTemplateInfo>> {
+        return Result(templateFacadeService.getTemplateIdByTemplateCode(srcTemplateId, projectIds))
+    }
+
     override fun listTemplate(
         userId: String,
         projectId: String,
         templateType: TemplateType?,
-        storeFlag: Boolean?
+        storeFlag: Boolean?,
+        page: Int?,
+        pageSize: Int?
     ): Result<TemplateListModel> {
         return Result(templateFacadeService.listTemplate(
             projectId = projectId,
             userId = userId,
             templateType = templateType,
             storeFlag = storeFlag,
-            page = 1,
-            pageSize = 1000
+            page = page ?: 1,
+            pageSize = pageSize ?: 1000
         ))
     }
 
@@ -101,14 +111,16 @@ class ServicePTemplateResourceImpl @Autowired constructor(
     override fun listAllTemplate(
         userId: String,
         projectId: String,
-        templateType: TemplateType?
+        templateType: TemplateType?,
+        page: Int?,
+        pageSize: Int?
     ): Result<OptionalTemplateList> {
         return Result(templateFacadeService.listAllTemplate(
             projectId = projectId,
             templateType = templateType,
             templateIds = null,
-            page = 1,
-            pageSize = 1000
+            page = page ?: 1,
+            pageSize = pageSize ?: 1000
         ))
     }
 
@@ -122,10 +134,11 @@ class ServicePTemplateResourceImpl @Autowired constructor(
 
     override fun listTemplateById(
         templateIds: Collection<String>,
+        projectId: String?,
         templateType: TemplateType?
     ): Result<OptionalTemplateList> {
         return Result(templateFacadeService.listAllTemplate(
-            projectId = null,
+            projectId = projectId,
             templateType = templateType,
             templateIds = templateIds
         ))

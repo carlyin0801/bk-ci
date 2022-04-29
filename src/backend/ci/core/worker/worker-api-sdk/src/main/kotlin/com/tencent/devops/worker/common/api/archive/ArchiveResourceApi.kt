@@ -29,6 +29,7 @@ package com.tencent.devops.worker.common.api.archive
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.gson.JsonParser
+import com.tencent.devops.artifactory.constant.REALM_LOCAL
 import com.tencent.devops.artifactory.pojo.GetFileDownloadUrlsResponse
 import com.tencent.devops.artifactory.pojo.enums.FileTypeEnum
 import com.tencent.devops.common.api.exception.RemoteServiceException
@@ -43,6 +44,10 @@ import java.io.File
 
 @Suppress("UNUSED")
 class ArchiveResourceApi : AbstractBuildResourceApi(), ArchiveSDKApi {
+
+    override fun getRealm(): String {
+        return REALM_LOCAL
+    }
 
     override fun getFileDownloadUrls(
         userId: String,
@@ -75,7 +80,7 @@ class ArchiveResourceApi : AbstractBuildResourceApi(), ArchiveSDKApi {
         return result.data?.fileUrlList ?: emptyList()
     }
 
-    override fun uploadCustomize(file: File, destPath: String, buildVariables: BuildVariables) {
+    override fun uploadCustomize(file: File, destPath: String, buildVariables: BuildVariables, token: String?) {
         // 过滤掉用../尝试遍历上层目录的操作
         val purePath = purePath(destPath)
         val path = purePath + "/" + file.name
@@ -96,7 +101,7 @@ class ArchiveResourceApi : AbstractBuildResourceApi(), ArchiveSDKApi {
         )
         val response = request(request, "上传自定义文件失败")
         try {
-            val obj = JsonParser().parse(response).asJsonObject
+            val obj = JsonParser.parseString(response).asJsonObject
             if (obj.has("code") && obj["code"].asString != "200") {
                 throw RemoteServiceException("上传自定义文件失败")
             }
@@ -106,7 +111,7 @@ class ArchiveResourceApi : AbstractBuildResourceApi(), ArchiveSDKApi {
         }
     }
 
-    override fun uploadPipeline(file: File, buildVariables: BuildVariables) {
+    override fun uploadPipeline(file: File, buildVariables: BuildVariables, token: String?) {
         LoggerService.addNormalLine("upload file >>> ${file.name}")
         val url = "/ms/artifactory/api/build/artifactories/file/archive?fileType=${FileTypeEnum.BK_ARCHIVE}"
         val fileBody = RequestBody.create(MultipartFormData, file)
@@ -122,14 +127,14 @@ class ArchiveResourceApi : AbstractBuildResourceApi(), ArchiveSDKApi {
         )
         val response = request(request, "上传流水线文件失败")
         try {
-            val obj = JsonParser().parse(response).asJsonObject
+            val obj = JsonParser.parseString(response).asJsonObject
             if (obj.has("code") && obj["code"].asString != "200") throw RemoteServiceException("上传流水线文件失败")
         } catch (ignored: Exception) {
             LoggerService.addNormalLine(ignored.message ?: "")
         }
     }
 
-    override fun uploadLog(file: File, destFullPath: String, buildVariables: BuildVariables) {
+    override fun uploadLog(file: File, destFullPath: String, buildVariables: BuildVariables, token: String?) {
         logger.warn("uploadLog not implemented")
     }
 
@@ -138,7 +143,8 @@ class ArchiveResourceApi : AbstractBuildResourceApi(), ArchiveSDKApi {
         projectId: String,
         uri: String,
         destPath: File,
-        isVmBuildEnv: Boolean
+        isVmBuildEnv: Boolean,
+        token: String?
     ) {
         val url = if (uri.startsWith("http://") || uri.startsWith("https://")) {
             uri
@@ -157,7 +163,8 @@ class ArchiveResourceApi : AbstractBuildResourceApi(), ArchiveSDKApi {
         buildId: String,
         uri: String,
         destPath: File,
-        isVmBuildEnv: Boolean
+        isVmBuildEnv: Boolean,
+        token: String?
     ) {
         val url = if (uri.startsWith("http://") || uri.startsWith("https://")) {
             uri
@@ -175,7 +182,6 @@ class ArchiveResourceApi : AbstractBuildResourceApi(), ArchiveSDKApi {
 
     override fun uploadFile(
         url: String,
-        destPath: String,
         file: File,
         headers: Map<String, String>?,
         isVmBuildEnv: Boolean

@@ -35,6 +35,7 @@ import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.annotation.BkField
 import com.tencent.devops.common.web.constant.BkStyleEnum
 import com.tencent.devops.store.pojo.atom.AtomDevLanguage
+import com.tencent.devops.store.pojo.atom.AtomOutput
 import com.tencent.devops.store.pojo.atom.AtomVersion
 import com.tencent.devops.store.pojo.atom.AtomVersionListItem
 import com.tencent.devops.store.pojo.atom.InstallAtomReq
@@ -44,6 +45,7 @@ import com.tencent.devops.store.pojo.atom.MyAtomResp
 import com.tencent.devops.store.pojo.atom.enums.AtomTypeEnum
 import com.tencent.devops.store.pojo.atom.enums.MarketAtomSortTypeEnum
 import com.tencent.devops.store.pojo.common.InstalledProjRespItem
+import com.tencent.devops.store.pojo.common.StoreShowVersionInfo
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
@@ -61,7 +63,8 @@ import javax.ws.rs.core.MediaType
 @Api(tags = ["USER_MARKET_ATOM"], description = "插件市场-插件")
 @Path("/user/market/")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)@Suppress("ALL")
+@Consumes(MediaType.APPLICATION_JSON)
+@Suppress("ALL")
 interface UserMarketAtomResource {
 
     @ApiOperation("获取插件市场首页的数据")
@@ -107,6 +110,9 @@ interface UserMarketAtomResource {
         @ApiParam("是否推荐标识 true：推荐，false：不推荐", required = false)
         @QueryParam("recommendFlag")
         recommendFlag: Boolean?,
+        @ApiParam("是否有红线指标", required = false)
+        @QueryParam("qualityFlag")
+        qualityFlag: Boolean?,
         @ApiParam("排序", required = false)
         @QueryParam("sortType")
         sortType: MarketAtomSortTypeEnum? = MarketAtomSortTypeEnum.CREATE_TIME,
@@ -232,17 +238,17 @@ interface UserMarketAtomResource {
         atomCode: String
     ): Result<Boolean>
 
-    @ApiOperation("根据插件标识获取插件最新版本详情")
+    @ApiOperation("根据插件标识获取插件回显版本信息")
     @GET
-    @Path("/atoms/{atomCode}/newest/detail")
-    fun getNewestAtomInfoByCode(
+    @Path("/atoms/{atomCode}/showVersionInfo")
+    fun getAtomShowVersionInfo(
         @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("atomCode", required = true)
         @PathParam("atomCode")
         atomCode: String
-    ): Result<AtomVersion?>
+    ): Result<StoreShowVersionInfo>
 
     @ApiOperation("查看插件的yml信息")
     @GET
@@ -273,4 +279,16 @@ interface UserMarketAtomResource {
         @QueryParam("defaultShowFlag")
         defaultShowFlag: Boolean?
     ): Result<String?>
+
+    @ApiOperation("展示插件的outPut参数")
+    @GET
+    @Path("/atoms/{atomCode}/output")
+    fun getAtomOutput(
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("atomCode", required = true)
+        @PathParam("atomCode")
+        atomCode: String
+    ): Result<List<AtomOutput>>
 }

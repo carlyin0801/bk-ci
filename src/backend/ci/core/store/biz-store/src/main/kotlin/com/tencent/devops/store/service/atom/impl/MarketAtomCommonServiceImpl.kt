@@ -29,7 +29,6 @@ package com.tencent.devops.store.service.atom.impl
 
 import com.tencent.devops.common.api.constant.COMPONENT
 import com.tencent.devops.common.api.constant.CommonMessageCode
-import com.tencent.devops.common.api.constant.INIT_VERSION
 import com.tencent.devops.common.api.constant.REQUIRED
 import com.tencent.devops.common.api.constant.TYPE
 import com.tencent.devops.common.api.exception.ErrorCodeException
@@ -77,7 +76,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import org.springframework.util.StringUtils
 import javax.ws.rs.core.Response
 
 @Suppress("ALL")
@@ -124,10 +122,7 @@ class MarketAtomCommonServiceImpl : MarketAtomCommonService {
         version: String
     ): Result<Boolean> {
         val dbVersion = atomRecord.version
-        if (INIT_VERSION == dbVersion && releaseType == ReleaseTypeEnum.NEW) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_EXIST, arrayOf(version))
-        }
-        val dbOsList = if (!StringUtils.isEmpty(atomRecord.os)) JsonUtil.getObjectMapper().readValue(
+        val dbOsList = if (!atomRecord.os.isNullOrBlank()) JsonUtil.getObjectMapper().readValue(
             atomRecord.os,
             List::class.java
         ) as List<String> else null
@@ -140,18 +135,30 @@ class MarketAtomCommonServiceImpl : MarketAtomCommonService {
         val requireVersionList =
             if (cancelFlag && releaseType == ReleaseTypeEnum.CANCEL_RE_RELEASE) {
                 listOf(dbVersion)
-            } else storeCommonService.getRequireVersion(
-                reqVersion = version,
-                dbVersion = dbVersion,
-                releaseType = requireReleaseType
-            )
+            } else {
+                // 历史大版本下的小版本更新模式需获取要更新大版本下的最新版本
+                val reqVersion = if (releaseType == ReleaseTypeEnum.HIS_VERSION_UPGRADE) {
+                    atomDao.getPipelineAtom(
+                        dslContext = dslContext,
+                        atomCode = atomRecord.atomCode,
+                        version = VersionUtils.convertLatestVersion(version)
+                    )?.version
+                } else {
+                    null
+                }
+                storeCommonService.getRequireVersion(
+                    reqVersion = reqVersion,
+                    dbVersion = dbVersion,
+                    releaseType = requireReleaseType
+                )
+            }
         if (!requireVersionList.contains(version)) {
             return MessageCodeUtil.generateResponseDataObject(
                 StoreMessageCode.USER_ATOM_VERSION_IS_INVALID,
                 arrayOf(version, requireVersionList.toString())
             )
         }
-        if (dbVersion.isNotBlank()) {
+        if (dbVersion.isNotBlank() && releaseType != ReleaseTypeEnum.NEW) {
             // 判断最近一个插件版本的状态，只有处于审核驳回、已发布、上架中止和已下架的状态才允许添加新的版本
             val atomFinalStatusList = listOf(
                 AtomStatusEnum.AUDIT_REJECT.status.toByte(),
@@ -324,8 +331,8 @@ class MarketAtomCommonServiceImpl : MarketAtomCommonService {
         val executionInfoMap = taskDataMap[KEY_EXECUTION] as? Map<String, Any>
         var atomPostInfo: AtomPostInfo? = null
         if (null != executionInfoMap) {
-            val target = executionInfoMap[KEY_TARGET]
-            if (StringUtils.isEmpty(target)) {
+            val target = executionInfoMap[KEY_TARGET] as? String
+            if (target.isNullOrBlank()) {
                 // 执行入口为空则校验失败
                 throw ErrorCodeException(
                     errorCode = StoreMessageCode.USER_REPOSITORY_TASK_JSON_FIELD_IS_NULL,
@@ -427,7 +434,7 @@ class MarketAtomCommonServiceImpl : MarketAtomCommonService {
         )
         val postEntryParam = atomEnv.postEntryParam
         val postCondition = atomEnv.postCondition
-        val postFlag = !StringUtils.isEmpty(postEntryParam) && !StringUtils.isEmpty(postEntryParam)
+        val postFlag = !postEntryParam.isNullOrBlank() && !postCondition.isNullOrBlank()
         val atomPostMap = mapOf(
             ATOM_POST_FLAG to postFlag,
             ATOM_POST_ENTRY_PARAM to postEntryParam,
@@ -545,5 +552,17 @@ class MarketAtomCommonServiceImpl : MarketAtomCommonService {
             }
         }
         return inputTypeInfos
+    }
+
+    override fun isPublicAtom(atomCode: String): Boolean {
+        val storePublicFlagKey = StoreUtils.getStorePublicFlagKey(StoreTypeEnum.ATOM.name)
+        if (!redisOperation.hasKey(storePublicFlagKey)) {
+            // 从db去查查默认插件
+            val defaultAtomCodeRecords = atomDao.batchGetDefaultAtomCode(dslContext)
+            val defaultAtomCodeList = defaultAtomCodeRecords.map { it.value1() }
+            redisOperation.sadd(storePublicFlagKey, *defaultAtomCodeList.toTypedArray())
+        }
+        // 判断是否是默认插件
+        return redisOperation.isMember(storePublicFlagKey, atomCode)
     }
 }

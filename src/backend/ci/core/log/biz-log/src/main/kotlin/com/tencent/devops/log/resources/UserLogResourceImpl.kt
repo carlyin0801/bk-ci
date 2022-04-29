@@ -27,17 +27,17 @@
 
 package com.tencent.devops.log.resources
 
-import com.tencent.devops.common.api.exception.ParamBlankException
-import com.tencent.devops.common.api.exception.PermissionForbiddenException
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.log.pojo.QueryLogStatus
-import com.tencent.devops.common.auth.api.AuthPermission
+import com.tencent.devops.common.log.pojo.QueryLogs
+import com.tencent.devops.common.log.pojo.enums.LogType
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.log.api.UserLogResource
-import com.tencent.devops.common.log.pojo.QueryLogs
-import com.tencent.devops.log.service.LogPermissionService
 import com.tencent.devops.log.service.BuildLogQueryService
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import javax.ws.rs.core.Response
 
 /**
@@ -46,9 +46,12 @@ import javax.ws.rs.core.Response
  */
 @RestResource
 class UserLogResourceImpl @Autowired constructor(
-    private val buildLogQuery: BuildLogQueryService,
-    private val logPermissionService: LogPermissionService
+    private val buildLogQueryService: BuildLogQueryService,
+    private val meterRegistry: MeterRegistry
 ) : UserLogResource {
+
+    @Value("\${spring.application.name:#{null}}")
+    private val applicationName: String? = null
 
     override fun getInitLogs(
         userId: String,
@@ -56,22 +59,26 @@ class UserLogResourceImpl @Autowired constructor(
         pipelineId: String,
         buildId: String,
         debug: Boolean?,
+        logType: LogType?,
         tag: String?,
         subTag: String?,
         jobId: String?,
         executeCount: Int?
     ): Result<QueryLogs> {
-        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
-        return buildLogQuery.getInitLogs(
+        val initLogs = buildLogQueryService.getInitLogs(
+            userId = userId,
             projectId = projectId,
             pipelineId = pipelineId,
             buildId = buildId,
             debug = debug,
+            logType = logType,
             tag = tag,
             subTag = subTag,
             jobId = jobId,
             executeCount = executeCount
         )
+        recordListLogCount(initLogs.data?.logs?.size ?: 0)
+        return initLogs
     }
 
     override fun getMoreLogs(
@@ -80,6 +87,7 @@ class UserLogResourceImpl @Autowired constructor(
         pipelineId: String,
         buildId: String,
         debug: Boolean?,
+        logType: LogType?,
         num: Int?,
         fromStart: Boolean?,
         start: Long,
@@ -89,12 +97,13 @@ class UserLogResourceImpl @Autowired constructor(
         jobId: String?,
         executeCount: Int?
     ): Result<QueryLogs> {
-        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
-        return buildLogQuery.getMoreLogs(
+        return buildLogQueryService.getMoreLogs(
+            userId = userId,
             projectId = projectId,
             pipelineId = pipelineId,
             buildId = buildId,
             debug = debug,
+            logType = logType,
             num = num,
             fromStart = fromStart,
             start = start,
@@ -113,23 +122,28 @@ class UserLogResourceImpl @Autowired constructor(
         buildId: String,
         start: Long,
         debug: Boolean?,
+        logType: LogType?,
         tag: String?,
         subTag: String?,
         jobId: String?,
         executeCount: Int?
     ): Result<QueryLogs> {
-        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
-        return buildLogQuery.getAfterLogs(
+        val afterLogs = buildLogQueryService.getAfterLogs(
+            userId = userId,
             projectId = projectId,
             pipelineId = pipelineId,
             buildId = buildId,
             start = start,
             debug = debug,
+            logType = logType,
             tag = tag,
             subTag = subTag,
             jobId = jobId,
             executeCount = executeCount
         )
+        recordListLogCount(afterLogs.data?.logs?.size ?: 0)
+
+        return afterLogs
     }
 
     override fun downloadLogs(
@@ -143,8 +157,8 @@ class UserLogResourceImpl @Autowired constructor(
         executeCount: Int?,
         fileName: String?
     ): Response {
-        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.DOWNLOAD)
-        return buildLogQuery.downloadLogs(
+        return buildLogQueryService.downloadLogs(
+            userId = userId,
             projectId = projectId,
             pipelineId = pipelineId,
             buildId = buildId,
@@ -164,8 +178,8 @@ class UserLogResourceImpl @Autowired constructor(
         tag: String,
         executeCount: Int?
     ): Result<QueryLogStatus> {
-        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
-        return buildLogQuery.getLogMode(
+        return buildLogQueryService.getLogMode(
+            userId = userId,
             projectId = projectId,
             pipelineId = pipelineId,
             buildId = buildId,
@@ -174,33 +188,14 @@ class UserLogResourceImpl @Autowired constructor(
         )
     }
 
-    private fun validateAuth(
-        userId: String,
-        projectId: String,
-        pipelineId: String,
-        buildId: String,
-        permission: AuthPermission
-    ) {
-        if (userId.isBlank()) {
-            throw ParamBlankException("Invalid userId")
-        }
-        if (projectId.isBlank()) {
-            throw ParamBlankException("Invalid projectId")
-        }
-        if (pipelineId.isBlank()) {
-            throw ParamBlankException("Invalid pipelineId")
-        }
-        if (buildId.isBlank()) {
-            throw ParamBlankException("Invalid buildId")
-        }
-        if (!logPermissionService.verifyUserLogPermission(
-                userId = userId,
-                pipelineId = pipelineId,
-                projectCode = projectId,
-                permission = permission
-            )
-        ) {
-            throw PermissionForbiddenException("用户($userId)无权限在工程($projectId)下${permission.alias}流水线")
-        }
+    /**
+     * 记录日志列表函数
+     */
+    private fun recordListLogCount(count: Number) {
+        Counter
+            .builder("list_log_count")
+            .tag("application", applicationName ?: "")
+            .register(meterRegistry)
+            .increment(count.toDouble())
     }
 }

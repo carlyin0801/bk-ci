@@ -41,7 +41,7 @@ BEGIN
               WHERE TABLE_SCHEMA = db
                   AND TABLE_NAME = 'T_PIPELINE_INFO'
                   AND COLUMN_NAME = 'ID') THEN
-        ALTER TABLE T_PIPELINE_INFO ADD COLUMN `ID` BIGINT NULL AUTO_INCREMENT,ADD KEY(`ID`);
+        ALTER TABLE T_PIPELINE_INFO ADD COLUMN `ID` BIGINT NULL AUTO_INCREMENT,ADD KEY(`ID`) COMMENT '主键ID';
 
     END IF;
 
@@ -51,6 +51,31 @@ BEGIN
                         AND TABLE_NAME = 'T_PIPELINE_BUILD_VAR'
                         AND COLUMN_NAME = 'READ_ONLY') THEN
         ALTER TABLE T_PIPELINE_BUILD_VAR ADD COLUMN READ_ONLY BIT(1) NULL COMMENT '是否只读';
+    END IF;
+
+    IF NOT EXISTS(SELECT 1
+                      FROM information_schema.COLUMNS
+                      WHERE TABLE_SCHEMA = db
+                        AND TABLE_NAME = 'T_PIPELINE_BUILD_STAGE'
+                        AND COLUMN_NAME = 'CHECK_IN') THEN
+        ALTER TABLE T_PIPELINE_BUILD_STAGE ADD COLUMN `CHECK_IN` mediumtext NULL COMMENT '准入检查配置';
+    END IF;
+
+    IF NOT EXISTS(SELECT 1
+                      FROM information_schema.COLUMNS
+                      WHERE TABLE_SCHEMA = db
+                        AND TABLE_NAME = 'T_PIPELINE_BUILD_STAGE'
+                        AND COLUMN_NAME = 'CHECK_OUT') THEN
+        ALTER TABLE T_PIPELINE_BUILD_STAGE ADD COLUMN `CHECK_OUT` mediumtext NULL COMMENT '准出检查配置';
+    END IF;
+
+    IF NOT EXISTS(SELECT 1
+                  FROM information_schema.COLUMNS
+                  WHERE TABLE_SCHEMA = db
+                    AND TABLE_NAME = 'T_PIPELINE_INFO'
+                    AND COLUMN_NAME = 'PIPELINE_NAME_PINYIN') THEN
+        ALTER TABLE T_PIPELINE_INFO
+            ADD COLUMN `PIPELINE_NAME_PINYIN` varchar(1300) DEFAULT NULL COMMENT '流水线名称拼音';
     END IF;
 
     COMMIT;

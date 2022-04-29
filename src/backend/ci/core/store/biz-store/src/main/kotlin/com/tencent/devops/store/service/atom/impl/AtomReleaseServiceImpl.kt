@@ -30,10 +30,12 @@ package com.tencent.devops.store.service.atom.impl
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.constant.DEPLOY
 import com.tencent.devops.common.api.constant.DEVELOP
+import com.tencent.devops.common.api.constant.MASTER
 import com.tencent.devops.common.api.constant.SECURITY
 import com.tencent.devops.common.api.constant.TEST
 import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.api.util.JsonSchemaUtil
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.UUIDUtil
 import com.tencent.devops.common.client.Client
@@ -106,7 +108,6 @@ import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.util.StringUtils
 import java.time.LocalDateTime
 
 @Suppress("ALL")
@@ -312,7 +313,14 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
             CommonMessageCode.PARAMETER_IS_EXIST,
             arrayOf(marketAtomUpdateRequest.name)
         )
-        val atomRecord = atomDao.getNewestAtomByCode(dslContext, atomCode)!!
+        val atomRecord = atomDao.getMaxVersionAtomByCode(dslContext, atomCode)!!
+        val releaseType = marketAtomUpdateRequest.releaseType
+        // 历史大版本下的小版本更新发布类型支持用户自定义分支，其他发布类型只支持master分支发布
+        val branch = if (marketAtomUpdateRequest.branch.isNullOrBlank() || releaseType != ReleaseTypeEnum.HIS_VERSION_UPGRADE) {
+            MASTER
+        } else {
+            marketAtomUpdateRequest.branch
+        }
         val getAtomConfResult = getAtomConfig(
             atomPackageSourceType = atomPackageSourceType,
             projectCode = projectCode,
@@ -320,7 +328,7 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
             atomVersion = version,
             userId = userId,
             repositoryHashId = atomRecord.repositoryHashId,
-            branch = marketAtomUpdateRequest.branch
+            branch = branch
         )
         if (getAtomConfResult.errorCode != "0") {
             return MessageCodeUtil.generateResponseDataObject(
@@ -330,7 +338,6 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
         }
         val taskDataMap = getAtomConfResult.taskDataMap
         // 校验前端传的版本号是否正确
-        val releaseType = marketAtomUpdateRequest.releaseType
         val osList = marketAtomUpdateRequest.os
         val validateAtomVersionResult =
             marketAtomCommonService.validateAtomVersion(
@@ -367,7 +374,7 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
             atomVersion = version,
             userId = userId,
             repositoryHashId = atomRecord.repositoryHashId,
-            branch = marketAtomUpdateRequest.branch
+            branch = branch
         )
         logger.info("update market atom, getAtomQualityResult: $getAtomQualityResult")
         if (getAtomQualityResult.errorCode == StoreMessageCode.USER_REPOSITORY_PULL_QUALITY_JSON_FILE_FAIL) {
@@ -382,7 +389,6 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
         val atomEnvRequest = getAtomConfResult.atomEnvRequest ?: return MessageCodeUtil.generateResponseDataObject(
             StoreMessageCode.USER_REPOSITORY_TASK_JSON_FIELD_IS_NULL, arrayOf(KEY_EXECUTION)
         )
-
         val propsMap = mutableMapOf<String, Any?>()
         propsMap[KEY_INPUT_GROUPS] = taskDataMap[KEY_INPUT_GROUPS]
         propsMap[KEY_INPUT] = taskDataMap[KEY_INPUT]
@@ -402,8 +408,8 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
         val cancelFlag = atomRecord.atomStatus == AtomStatusEnum.GROUNDING_SUSPENSION.status.toByte()
         dslContext.transaction { t ->
             val context = DSL.using(t)
-            val props = JsonUtil.toJson(propsMap)
-            if (StringUtils.isEmpty(atomRecord.version) ||
+            val props = JsonUtil.toJson(propsMap, formatted = false)
+            if (releaseType == ReleaseTypeEnum.NEW ||
                 (cancelFlag && releaseType == ReleaseTypeEnum.CANCEL_RE_RELEASE)) {
                 // 首次创建版本或者取消发布后不变更版本号重新上架，则在该版本的记录上做更新操作
                 atomId = atomRecord.id
@@ -448,7 +454,16 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
                     atomLabelRelDao.batchAdd(context, userId = userId, atomId = atomId, labelIdList = labelIdList)
                 }
             }
-            asyncHandleUpdateAtom(context, atomId, userId)
+
+            // 更新红线标识
+            val qualityFlag = getAtomQualityResult.errorCode == "0"
+            marketAtomFeatureDao.updateAtomFeature(
+                dslContext = context,
+                userId = userId,
+                atomFeatureRequest = AtomFeatureRequest(atomCode = atomCode, qualityFlag = qualityFlag)
+            )
+
+            asyncHandleUpdateAtom(context = context, atomId = atomId, userId = userId, branch = branch)
         }
         return Result(atomId)
     }
@@ -468,7 +483,8 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
     abstract fun asyncHandleUpdateAtom(
         context: DSLContext,
         atomId: String,
-        userId: String
+        userId: String,
+        branch: String? = null
     )
 
     private fun updateMarketAtom(
@@ -523,8 +539,8 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
                 branch = branch
             )
             logger.info("the quality json str is :$qualityJsonStr")
-            return if (!qualityJsonStr.isNullOrBlank()) {
-                val qualityDataMap = JsonUtil.toMap(qualityJsonStr!!)
+            return if (!qualityJsonStr.isNullOrBlank() && JsonSchemaUtil.validateJson(qualityJsonStr)) {
+                val qualityDataMap = JsonUtil.toMap(qualityJsonStr)
                 val indicators = qualityDataMap["indicators"] as Map<String, Any>
                 val stageCode = qualityDataMap["stage"] as String
                 val stage = when (stageCode) {
@@ -580,7 +596,7 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
 
                 GetAtomQualityConfigResult(
                     StoreMessageCode.USER_REPOSITORY_PULL_QUALITY_JSON_FILE_FAIL,
-                    arrayOf(QUALITY_JSON_NAME)
+                    arrayOf(branch ?: MASTER, QUALITY_JSON_NAME)
                 )
             }
         } catch (e: Exception) {
@@ -722,10 +738,10 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
                 params = arrayOf(TASK_JSON_NAME)
             )
         }
-        if (null == taskJsonStr) {
+        if (null == taskJsonStr || !JsonSchemaUtil.validateJson(taskJsonStr)) {
             throw ErrorCodeException(
                 errorCode = StoreMessageCode.USER_REPOSITORY_PULL_TASK_JSON_FILE_FAIL,
-                params = arrayOf(TASK_JSON_NAME)
+                params = arrayOf(branch ?: MASTER, TASK_JSON_NAME)
             )
         }
         return parseTaskJson(
@@ -889,6 +905,7 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
             userId,
             MessageCodeUtil.getCodeLanMessage(UN_RELEASE)
         )
+        doCancelReleaseBus(userId, atomId)
         // 通过websocket推送状态变更消息
         storeWebsocketService.sendWebsocketMessage(userId, atomId)
         // 删除质量红线相关数据
@@ -899,6 +916,8 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
         client.get(ServiceQualityControlPointMarketResource::class).deleteTestControlPoint(atomCode)
         return Result(true)
     }
+
+    abstract fun doCancelReleaseBus(userId: String, atomId: String)
 
     abstract fun getPreValidatePassTestStatus(atomCode: String, atomId: String, atomStatus: Byte): Byte
 
@@ -974,7 +993,11 @@ abstract class AtomReleaseServiceImpl @Autowired constructor() : AtomReleaseServ
                 )
                 // 查找插件最近一个已经发布的版本
                 val releaseAtomRecords = marketAtomDao.getReleaseAtomsByCode(context, atomCode, 1)
-                val newestReleaseAtomRecord = releaseAtomRecords?.get(0)
+                val newestReleaseAtomRecord = if (releaseAtomRecords.isNullOrEmpty()) {
+                    null
+                } else {
+                    releaseAtomRecords[0]
+                }
                 var newestReleaseFlag = false
                 if (newestReleaseAtomRecord != null) {
                     // 比较当前版本是否比最近一个已经发布的版本新

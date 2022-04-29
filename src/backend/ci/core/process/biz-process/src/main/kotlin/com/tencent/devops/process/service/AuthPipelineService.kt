@@ -72,8 +72,8 @@ class AuthPipelineService @Autowired constructor(
                 return searchPipeline(
                     projectId = projectId,
                     keyword = callBackInfo.filter.keyword,
-                    limit = page.offset.toInt(),
-                    offset = page.limit.toInt(),
+                    limit = page.limit.toInt(),
+                    offset = page.offset.toInt(),
                     token = token,
                     returnPipelineId = returnPipelineId!!
                 )
@@ -91,9 +91,6 @@ class AuthPipelineService @Autowired constructor(
         returnPipelineId: Boolean
     ): SearchInstanceInfo {
         authTokenApi.checkToken(token)
-//        val pipelineInfos =
-//            client.get(ServiceAuthPipelineResource::class)
-//                .searchPipelineInstances(projectId, offset, limit, keyword).data
         val pipelineInfos = pipelineListFacadeService.searchByPipelineName(
             projectId = projectId,
             pipelineName = keyword,
@@ -129,9 +126,6 @@ class AuthPipelineService @Autowired constructor(
         returnPipelineId: Boolean
     ): ListInstanceResponseDTO? {
         authTokenApi.checkToken(token)
-//        val pipelineInfos =
-//            client.get(ServiceAuthPipelineResource::class)
-//                .pipelineList(projectId, offset, limit).data
         val pipelineInfos = pipelineListFacadeService.getPipelinePage(
             projectId = projectId,
             limit = limit,
@@ -181,6 +175,7 @@ class AuthPipelineService @Autowired constructor(
             logger.info("$ids 未匹配到启用流水线")
             return result.buildFetchInstanceFailResult()
         }
+
         val entityInfo = mutableListOf<InstanceInfoDTO>()
         pipelineInfos?.map {
             val entityId = if (returnPipelineId) {
@@ -191,6 +186,7 @@ class AuthPipelineService @Autowired constructor(
             val entity = InstanceInfoDTO()
             entity.id = entityId
             entity.displayName = it.pipelineName
+            entity.iamApprover = arrayListOf(it.createUser)
             entityInfo.add(entity)
         }
         logger.info("entityInfo $entityInfo, count ${pipelineInfos.size.toLong()}")
@@ -198,6 +194,6 @@ class AuthPipelineService @Autowired constructor(
     }
 
     companion object {
-        val logger = LoggerFactory.getLogger(this::class.java)
+        val logger = LoggerFactory.getLogger(AuthPipelineService::class.java)
     }
 }

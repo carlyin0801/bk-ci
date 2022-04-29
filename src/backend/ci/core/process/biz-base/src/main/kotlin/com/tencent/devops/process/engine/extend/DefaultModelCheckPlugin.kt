@@ -47,6 +47,7 @@ import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildLessAto
 import com.tencent.devops.common.pipeline.type.BuildType
 import com.tencent.devops.process.constant.ProcessMessageCode
 import com.tencent.devops.process.engine.atom.AtomUtils
+import com.tencent.devops.process.engine.common.Timeout
 import com.tencent.devops.process.engine.control.DependOnUtils
 import com.tencent.devops.process.engine.utils.PipelineUtils
 import com.tencent.devops.process.plugin.load.ContainerBizRegistrar
@@ -73,8 +74,14 @@ open class DefaultModelCheckPlugin constructor(
 
     override fun checkModelIntegrity(model: Model, projectId: String?) {
         // 检查流水线名称
-        PipelineUtils.checkPipelineName(model.name)
-        PipelineUtils.checkPipelineDescLength(model.desc)
+        PipelineUtils.checkPipelineName(
+            name = model.name,
+            maxPipelineNameSize = pipelineCommonSettingConfig.maxPipelineNameSize
+        )
+        PipelineUtils.checkPipelineDescLength(
+            desc = model.desc,
+            maxPipelineNameSize = pipelineCommonSettingConfig.maxPipelineDescSize
+        )
         // 检查流水线model是否过大
         val modelSize = JsonUtil.toJson(model).length
         if (modelSize > pipelineCommonSettingConfig.maxModelSize.toLong()) {
@@ -139,12 +146,11 @@ open class DefaultModelCheckPlugin constructor(
                 }
             }
 
-            if (s.stageControlOption?.manualTrigger == true && s.stageControlOption?.triggerUsers?.isEmpty() == true) {
-                throw ErrorCodeException(
-                    defaultMessage = "手动触发的Stage没有未配置可执行人",
-                    errorCode = ProcessMessageCode.ERROR_PIPELINE_STAGE_NO_TRIGGER_USER
-                )
+            // #4531 检查stage审核组配置是否符合要求
+            if (s.stageControlOption?.manualTrigger == true || s.checkIn?.manualTrigger == true) {
+                checkStageReviewers(s)
             }
+
             val atomVersions = mutableSetOf<StoreVersion>()
             val atomInputParamList = mutableListOf<StoreParam>()
             checkElements(
@@ -164,6 +170,29 @@ open class DefaultModelCheckPlugin constructor(
                 )
             }
             DependOnUtils.checkRepeatedJobId(stage)
+        }
+    }
+
+    private fun checkStageReviewers(stage: Stage) {
+        stage.resetBuildOption()
+        if (stage.checkIn?.reviewGroups.isNullOrEmpty()) {
+            throw ErrorCodeException(
+                defaultMessage = "Stage(${stage.name})准入配置不正确",
+                errorCode = ProcessMessageCode.ERROR_PIPELINE_STAGE_NO_REVIEW_GROUP,
+                params = arrayOf(stage.name ?: stage.id ?: "")
+            )
+        }
+        stage.checkIn?.reviewGroups?.forEach { group ->
+            if (group.reviewers.isEmpty()) throw ErrorCodeException(
+                defaultMessage = "Stage(${stage.name})中审核组(${group.name})未配置审核人",
+                errorCode = ProcessMessageCode.ERROR_PIPELINE_STAGE_REVIEW_GROUP_NO_USER,
+                params = arrayOf(stage.name!!, group.name)
+            )
+        }
+        stage.checkIn?.timeout = if (stage.checkIn?.timeout in 1..(Timeout.DEFAULT_STAGE_TIMEOUT_HOURS * 30)) {
+            stage.checkIn?.timeout
+        } else {
+            Timeout.DEFAULT_STAGE_TIMEOUT_HOURS
         }
     }
 
@@ -284,12 +313,12 @@ open class DefaultModelCheckPlugin constructor(
     }
 
     /**
-     * When edit the pipeline, it need to check if the element delete
+     * When edit the pipeline, it needs to check if the element delete
      */
-    private fun Model.elementExist(elementId: String?): Boolean {
+    private fun Model.elementExist(originElement: Element): Boolean {
         stages.forEach { s ->
             s.containers.forEach { c ->
-                if (loopFind(c.elements, elementId)) {
+                if (loopFind(c.elements, originElement)) {
                     return true
                 }
             }
@@ -297,9 +326,9 @@ open class DefaultModelCheckPlugin constructor(
         return false
     }
 
-    private fun loopFind(elements: List<Element>, elementId: String?): Boolean {
+    private fun loopFind(elements: List<Element>, originElement: Element): Boolean {
         elements.forEach { e ->
-            if (e.id == elementId) {
+            if (e.stepId?.let { it == originElement.stepId } == true || e.id == originElement.id) {
                 return true
             }
         }
@@ -320,12 +349,12 @@ open class DefaultModelCheckPlugin constructor(
         }
     }
 
-    private fun deletePrepare(sourceModel: Model?, e: Element, param: BeforeDeleteParam) {
-        if (sourceModel == null || !sourceModel.elementExist(e.id)) {
-            logger.info("The element(${e.name}/${e.id}) is delete")
-            ElementBizRegistrar.getPlugin(e)?.beforeDelete(e, param)
+    private fun deletePrepare(sourceModel: Model?, originElement: Element, param: BeforeDeleteParam) {
+        if (sourceModel == null || !sourceModel.elementExist(originElement)) {
+            logger.info("The element(${originElement.name}/${originElement.id}) is delete")
+            ElementBizRegistrar.getPlugin(originElement)?.beforeDelete(originElement, param)
         } else {
-            logger.info("The element(${e.name}/${e.id}) is not delete")
+            logger.info("The element(${originElement.name}/${originElement.id}) is not delete")
         }
     }
 

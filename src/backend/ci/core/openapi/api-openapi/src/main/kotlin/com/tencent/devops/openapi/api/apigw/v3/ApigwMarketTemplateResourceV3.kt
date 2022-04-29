@@ -30,6 +30,7 @@ import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_APP_CODE
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_APP_CODE_DEFAULT_VALUE
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.process.pojo.PipelineTemplateInfo
 import com.tencent.devops.store.pojo.template.InstallTemplateReq
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
@@ -48,7 +49,7 @@ import javax.ws.rs.core.MediaType
 @Consumes(MediaType.APPLICATION_JSON)
 interface ApigwMarketTemplateResourceV3 {
 
-    @ApiOperation("安装研发商店模板到项目")
+    @ApiOperation("安装研发商店模板到项目", tags = ["v3_user_template_install", "v3_app_template_install"])
     @POST
     @Path("/template/installFromStore")
     fun installTemplateFromStore(
@@ -64,4 +65,24 @@ interface ApigwMarketTemplateResourceV3 {
         @ApiParam("安装研发商店模板到项目请求报文体", required = true)
         installTemplateReq: InstallTemplateReq
     ): Result<Boolean>
+
+    @ApiOperation(
+        "安装研发商店模板到项目--返回流水线模板Id",
+        tags = ["v3_app_template_install_new", "v3_user_template_install_new"]
+    )
+    @POST
+    @Path("/template/installFromStore/new")
+    fun installTemplateFromStoreNew(
+        @ApiParam(value = "appCode", required = true, defaultValue = AUTH_HEADER_DEVOPS_APP_CODE_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_DEVOPS_APP_CODE)
+        appCode: String?,
+        @ApiParam(value = "apigw Type", required = true)
+        @PathParam("apigwType")
+        apigwType: String?,
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("安装研发商店模板到项目请求报文体", required = true)
+        installTemplateReq: InstallTemplateReq
+    ): Result<List<PipelineTemplateInfo>>
 }

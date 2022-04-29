@@ -28,21 +28,23 @@
 package com.tencent.devops.quality.constant
 
 val codeccToolUrlPathMap = mapOf(
-    "COVERITY" to "/console/codecc/##projectId##/task/##taskId##/defect/compile/##detail##/list" +
+    "COVERITY" to "/codecc/##projectId##/task/##taskId##/defect/compile/##detail##/list" +
         "?buildId=##buildId##&status=7&sortField=createBuildNumber",
-    "KLOCWORK" to "/console/codecc/##projectId##/task/##taskId##/defect/compile/##detail##/list" +
+    "KLOCWORK" to "/codecc/##projectId##/task/##taskId##/defect/compile/##detail##/list" +
         "?buildId=##buildId##&status=7&sortField=createBuildNumber",
-    "PINPOINT" to "/console/codecc/##projectId##/task/##taskId##/defect/compile/##detail##/list" +
+    "PINPOINT" to "/codecc/##projectId##/task/##taskId##/defect/compile/##detail##/list" +
         "?buildId=##buildId##&status=7&sortField=createBuildNumber",
-    "SPOTBUGS" to "/console/codecc/##projectId##/task/##taskId##/defect/compile/##detail##/list" +
+    "SPOTBUGS" to "/codecc/##projectId##/task/##taskId##/defect/compile/##detail##/list" +
         "?buildId=##buildId##&status=7&sortField=createBuildNumber",
-    "CCN" to "/console/codecc/##projectId##/task/##taskId##/defect/##detail##/list" +
+    "CCN" to "/codecc/##projectId##/task/##taskId##/defect/##detail##/list" +
         "?buildId=##buildId##&status=7&sortField=createBuildNumber",
-    "DUPC" to "/console/codecc/##projectId##/task/##taskId##/defect/##detail##/list" +
+    "DUPC" to "/codecc/##projectId##/task/##taskId##/defect/##detail##/list" +
         "?buildId=##buildId##&status=7&sortField=createBuildNumber",
-    "STANDARD" to "/console/codecc/##projectId##/task/##taskId##/defect/standard/list?dimension=STANDARD",
-    "SECURITY" to "/console/codecc/##projectId##/task/##taskId##/defect/security/list?dimension=SECURITY",
-    "DEFECT" to "/console/codecc/##projectId##/task/##taskId##/defect/defect/list?dimension=DEFECT")
+    "STANDARD" to "/codecc/##projectId##/task/##taskId##/defect/standard/list?dimension=STANDARD&" +
+        "buildId=##buildId##",
+    "SECURITY" to "/codecc/##projectId##/task/##taskId##/defect/security/list?dimension=SECURITY&" +
+        "buildId=##buildId##",
+    "DEFECT" to "/codecc/##projectId##/task/##taskId##/defect/defect/list?dimension=DEFECT&buildId=##buildId##")
 
-const val DEFAULT_CODECC_URL = "/console/codecc/##projectId##/task/##taskId##/defect/lint/##detail##/list" +
+const val DEFAULT_CODECC_URL = "/codecc/##projectId##/task/##taskId##/defect/lint/##detail##/list" +
     "?buildId=##buildId##&status=7&sortField=createBuildNumber"

@@ -23,9 +23,9 @@ import javax.ws.rs.core.MediaType
 @Consumes(MediaType.APPLICATION_JSON)
 interface ApigwPermissionMoveResourceV3 {
 
-    @ApiOperation("获取项目下pipelineId+自增id")
+    @ApiOperation("获取项目下pipelineId+自增id", tags = ["v3_app_pipeline_id_info", "v3_user_pipeline_id_info"])
     @GET
-    @Path("/projects/{projectCode}/pipelineIds/list")
+    @Path("/projects/{projectId}/pipelineIds/list")
     fun getProjectPipelineIds(
         @ApiParam(value = "appCode", required = true, defaultValue = AUTH_HEADER_DEVOPS_APP_CODE_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_DEVOPS_APP_CODE)
@@ -34,13 +34,13 @@ interface ApigwPermissionMoveResourceV3 {
         @PathParam("apigwType")
         apigwType: String?,
         @ApiParam("项目Code", required = true)
-        @PathParam("projectCode")
-        projectCode: String
+        @PathParam("projectId")
+        projectId: String
     ): Result<List<PipelineIdInfo>>
 
-    @ApiOperation("关联iam项目")
+    @ApiOperation("关联iam项目", tags = ["v3_app_relation_iam", "v3_user_relation_iam"])
     @PUT
-    @Path("/projects/{projectCode}/relationProject")
+    @Path("/projects/{projectId}/relationProject")
     fun relationProject(
         @ApiParam(value = "appCode", required = true, defaultValue = AUTH_HEADER_DEVOPS_APP_CODE_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_DEVOPS_APP_CODE)
@@ -49,8 +49,8 @@ interface ApigwPermissionMoveResourceV3 {
         @PathParam("apigwType")
         apigwType: String?,
         @ApiParam("项目Code", required = true)
-        @PathParam("projectCode")
-        projectCode: String,
+        @PathParam("projectId")
+        projectId: String,
         @ApiParam("iam分级管理员ID", required = true)
         @QueryParam("relationId")
         relationId: String

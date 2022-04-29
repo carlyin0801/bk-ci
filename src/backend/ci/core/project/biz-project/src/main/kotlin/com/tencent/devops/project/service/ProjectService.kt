@@ -62,6 +62,15 @@ interface ProjectService {
         channel: ProjectChannelCode
     ): String
 
+    fun createExtProject(
+        userId: String,
+        projectCode: String,
+        projectCreateInfo: ProjectCreateInfo,
+        needAuth: Boolean,
+        needValidate: Boolean,
+        channel: ProjectChannelCode
+    ): ProjectVO?
+
     /**
      * 根据项目ID/英文ID获取项目信息对象
      * @param englishName projectCode 英文ID
@@ -92,6 +101,12 @@ interface ProjectService {
         accessToken: String?
     ): Result<ProjectLogo>
 
+    fun updateProjectName(
+        userId: String,
+        projectCode: String,
+        projectName: String
+    ): Boolean
+
     /**
      * 获取所有项目信息
      */
@@ -106,6 +121,8 @@ interface ProjectService {
     fun list(projectCodes: List<String>): List<ProjectVO>
 
     fun list(limit: Int, offset: Int): Page<ProjectVO>
+
+    fun listByChannel(limit: Int, offset: Int, projectChannelCode: ProjectChannelCode): Page<ProjectVO>
 
     fun getAllProject(): List<ProjectVO>
 
@@ -145,4 +162,8 @@ interface ProjectService {
     fun createProjectUser(projectId: String, createInfo: ProjectCreateUserInfo): Boolean
 
     fun relationIamProject(projectCode: String, relationId: String): Boolean
+
+    fun getProjectByName(
+        projectName: String
+    ): ProjectVO?
 }

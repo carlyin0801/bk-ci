@@ -38,7 +38,9 @@ import com.tencent.devops.common.client.ms.MicroServiceTarget
 import com.tencent.devops.common.client.pojo.enums.GatewayType
 import com.tencent.devops.common.service.config.CommonConfig
 import com.tencent.devops.common.service.utils.SpringContextUtil
+import feign.Contract
 import feign.Feign
+import feign.MethodMetadata
 import feign.Request
 import feign.RequestInterceptor
 import feign.RetryableException
@@ -47,6 +49,7 @@ import feign.jackson.JacksonDecoder
 import feign.jackson.JacksonEncoder
 import feign.jaxrs.JAXRSContract
 import feign.okhttp.OkHttpClient
+import feign.spring.SpringContract
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -54,6 +57,7 @@ import org.springframework.cloud.consul.discovery.ConsulDiscoveryClient
 import org.springframework.context.annotation.DependsOn
 import org.springframework.core.annotation.AnnotationUtils
 import org.springframework.stereotype.Component
+import java.lang.reflect.Method
 import java.security.cert.CertificateException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -134,7 +138,8 @@ class Client @Autowired constructor(
     )
 
     private val feignClient = OkHttpClient(okHttpClient)
-    private val jaxRsContract = JAXRSContract()
+    private val clientContract = ClientContract()
+    private val springContract = SpringContract()
     private val jacksonDecoder = JacksonDecoder(objectMapper)
     private val jacksonEncoder = JacksonEncoder(objectMapper)
 
@@ -160,6 +165,19 @@ class Client @Autowired constructor(
         }
     }
 
+    fun <T : Any> getSpringMvc(clz: KClass<T>): T {
+        return get(clz, "", springContract)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Any> get(clz: KClass<T>, suffix: String, contract: Contract = clientContract): T {
+        return try {
+            beanCaches.get(clz) as T
+        } catch (ignored: Throwable) {
+            getImpl(clz, contract)
+        }
+    }
+
     fun <T : Any> getWithoutRetry(clz: KClass<T>): T {
         val requestInterceptor = SpringContextUtil.getBean(RequestInterceptor::class.java) // 获取为feign定义的拦截器
         return Feign.builder()
@@ -167,7 +185,7 @@ class Client @Autowired constructor(
             .errorDecoder(clientErrorDecoder)
             .encoder(jacksonEncoder)
             .decoder(jacksonDecoder)
-            .contract(jaxRsContract)
+            .contract(clientContract)
             .requestInterceptor(requestInterceptor)
             .options(Request.Options(10 * 1000, 30 * 60 * 1000))
             .retryer(object : Retryer {
@@ -189,7 +207,7 @@ class Client @Autowired constructor(
             .errorDecoder(clientErrorDecoder)
             .encoder(jacksonEncoder)
             .decoder(jacksonDecoder)
-            .contract(jaxRsContract)
+            .contract(clientContract)
             .requestInterceptor(requestInterceptor)
             .options(Request.Options(10 * 1000, 30 * 60 * 1000))
             .retryer(object : Retryer {
@@ -217,7 +235,7 @@ class Client @Autowired constructor(
             .errorDecoder(clientErrorDecoder)
             .encoder(jacksonEncoder)
             .decoder(jacksonDecoder)
-            .contract(jaxRsContract)
+            .contract(clientContract)
             .requestInterceptor(requestInterceptor)
             .target(clz.java, buildGatewayUrl(path = "/$serviceName/api", gatewayType = gatewayType))
     }
@@ -233,12 +251,15 @@ class Client @Autowired constructor(
             .errorDecoder(clientErrorDecoder)
             .encoder(jacksonEncoder)
             .decoder(jacksonDecoder)
-            .contract(jaxRsContract)
+            .contract(clientContract)
             .requestInterceptors(requestInterceptor)
             .target(clz.java, buildGatewayUrl(path = "/$serviceName/api", gatewayType = GatewayType.IDC_PROXY))
     }
 
-    fun <T : Any> getImpl(clz: KClass<T>): T {
+    /**
+     * 支持对spring MVC注解的解析
+     */
+    fun <T : Any> getImpl(clz: KClass<T>, contract: Contract = clientContract): T {
         try {
             return SpringContextUtil.getBean(clz.java)
         } catch (ignored: Exception) {
@@ -250,7 +271,7 @@ class Client @Autowired constructor(
             .errorDecoder(clientErrorDecoder)
             .encoder(jacksonEncoder)
             .decoder(jacksonDecoder)
-            .contract(jaxRsContract)
+            .contract(contract)
             .requestInterceptor(requestInterceptor)
             .target(MicroServiceTarget(findServiceName(clz), clz.java, consulClient!!, tag))
     }
@@ -304,5 +325,13 @@ class Client @Autowired constructor(
                 "http://$gateway/${path.removePrefix("/")}"
             }
         }
+    }
+}
+
+class ClientContract : JAXRSContract() {
+    override fun parseAndValidateMetadata(targetType: Class<*>?, method: Method?): MethodMetadata {
+        val parseAndValidateMetadata = super.parseAndValidateMetadata(targetType, method)
+        parseAndValidateMetadata.template().decodeSlash(false)
+        return parseAndValidateMetadata
     }
 }

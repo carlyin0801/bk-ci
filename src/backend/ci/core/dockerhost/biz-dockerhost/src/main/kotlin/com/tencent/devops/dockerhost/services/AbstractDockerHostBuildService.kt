@@ -28,13 +28,13 @@
 package com.tencent.devops.dockerhost.services
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.api.exception.NotModifiedException
 import com.github.dockerjava.api.exception.UnauthorizedException
 import com.github.dockerjava.api.model.PullResponseItem
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientBuilder
-import com.github.dockerjava.core.command.PullImageResultCallback
 import com.github.dockerjava.okhttp.OkDockerHttpClient
 import com.github.dockerjava.transport.DockerHttpClient
 import com.tencent.devops.common.api.pojo.Result
@@ -46,7 +46,9 @@ import com.tencent.devops.dockerhost.exception.ContainerException
 import com.tencent.devops.dockerhost.utils.CommonUtils
 import com.tencent.devops.process.engine.common.VMUtils
 import com.tencent.devops.store.pojo.image.enums.ImageRDTypeEnum
+import org.apache.commons.io.FileUtils
 import org.slf4j.LoggerFactory
+import java.io.File
 
 abstract class AbstractDockerHostBuildService constructor(
     private val dockerHostConfig: DockerHostConfig,
@@ -229,12 +231,54 @@ abstract class AbstractDockerHostBuildService constructor(
         }
     }
 
+    fun afterOverlayFs(
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        vmSeqId: Int,
+        poolNo: Int
+    ) {
+        try {
+            val qpcGitProjectList = dockerHostBuildApi.getQpcGitProjectList(
+                projectId = projectId,
+                buildId = buildId,
+                vmSeqId = vmSeqId.toString(),
+                poolNo = poolNo
+            )?.data
+
+            // 针对overlayfs白名单项目清理工作空间
+            if (qpcGitProjectList != null && qpcGitProjectList.isNotEmpty()) {
+                val upperDir = "${dockerHostConfig.hostPathWorkspace}/$buildId/${getTailPath(vmSeqId, poolNo)}"
+                FileUtils.deleteQuietly(File(upperDir))
+            }
+        } catch (e: Throwable) {
+            logger.info("afterOverlayFs $buildId $vmSeqId $poolNo error: ${e.message}")
+        }
+    }
+
+    fun getWorkspace(
+        pipelineId: String,
+        vmSeqId: Int,
+        poolNo: Int,
+        path: String
+    ): String {
+        return "$path/$pipelineId/${getTailPath(vmSeqId, poolNo)}/"
+    }
+
+    private fun getTailPath(vmSeqId: Int, poolNo: Int): String {
+        return if (poolNo > 1) {
+            "$vmSeqId" + "_$poolNo"
+        } else {
+            vmSeqId.toString()
+        }
+    }
+
     inner class MyPullImageResultCallback internal constructor(
         private val buildId: String,
         private val dockerHostBuildApi: DockerHostBuildResourceApi,
         private val startTaskId: String?,
         private val containerHashId: String?
-    ) : PullImageResultCallback() {
+    ) : ResultCallback.Adapter<PullResponseItem>() {
         private val totalList = mutableListOf<Long>()
         private val step = mutableMapOf<Int, Long>()
         override fun onNext(item: PullResponseItem?) {
@@ -251,7 +295,7 @@ abstract class AbstractDockerHostBuildService constructor(
                     currentProgress = 100
                 }
 
-                if (currentProgress >= step[lays]?.plus(25) ?: 5) {
+                if (currentProgress >= (step[lays]?.plus(25) ?: 5)) {
                     dockerHostBuildApi.postLog(
                         buildId = buildId,
                         red = false,

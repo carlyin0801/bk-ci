@@ -27,11 +27,10 @@
 dependencies {
     api(project(":core:common:common-service"))
     api(project(":core:common:common-api"))
-    api("io.github.openfeign:feign-jaxrs") {
-        exclude(group = "javax.ws.rs", module = "jsr311-api")
-    }
+    api("io.github.openfeign:feign-jaxrs")
     api("io.github.openfeign:feign-okhttp")
     api("io.github.openfeign:feign-jackson")
     api("io.github.openfeign.form:feign-form")
     api("io.github.openfeign.form:feign-form-spring")
+    api("io.github.openfeign:feign-spring4")
 }

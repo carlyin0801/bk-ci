@@ -29,6 +29,7 @@ package com.tencent.devops.worker.common.api.report
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.gson.JsonParser
+import com.tencent.devops.artifactory.constant.REALM_LOCAL
 import com.tencent.devops.artifactory.pojo.enums.FileTypeEnum
 import com.tencent.devops.common.api.exception.RemoteServiceException
 import com.tencent.devops.common.api.pojo.Result
@@ -46,7 +47,17 @@ import java.io.File
 @Suppress("ALL")
 class ReportResourceApi : AbstractBuildResourceApi(), ReportSDKApi {
 
-    override fun uploadReport(file: File, taskId: String, relativePath: String, buildVariables: BuildVariables) {
+    override fun getRealm(): String {
+        return REALM_LOCAL
+    }
+
+    override fun uploadReport(
+        file: File,
+        taskId: String,
+        relativePath: String,
+        buildVariables: BuildVariables,
+        token: String?
+    ) {
         val purePath = "$taskId/${purePath(relativePath)}".removeSuffix("/${file.name}")
         logger.info("[${buildVariables.buildId}]| purePath=$purePath")
         val url = "/ms/artifactory/api/build/artifactories/file/archive" +

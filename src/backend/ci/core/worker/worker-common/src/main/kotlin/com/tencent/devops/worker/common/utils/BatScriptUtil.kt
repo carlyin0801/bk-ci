@@ -27,6 +27,7 @@
 
 package com.tencent.devops.worker.common.utils
 
+import com.tencent.devops.common.pipeline.enums.CharsetType
 import com.tencent.devops.worker.common.CommonEnv
 import com.tencent.devops.worker.common.WORKSPACE_ENV
 import com.tencent.devops.worker.common.task.script.ScriptEnvUtils
@@ -50,7 +51,7 @@ object BatScriptUtil {
     private val logger = LoggerFactory.getLogger(BatScriptUtil::class.java)
 
     // 2021-06-11 batchScript需要过滤掉上下文产生的变量，防止注入到环境变量中
-    private val specialKey = listOf("variables.", "settings.", "envs.", "ci.", "job.", "jobs.", "steps.")
+    private val specialKey = listOf("variables.", "settings.", "envs.", "ci.", "job.", "jobs.", "steps.", "matrix.")
 
     private val specialValue = listOf("\n", "\r")
     private val escapeValue = mapOf(
@@ -71,7 +72,9 @@ object BatScriptUtil {
         errorMessage: String? = null,
         workspace: File = dir,
         print2Logger: Boolean = true,
-        elementId: String? = null
+        jobId: String? = null,
+        stepId: String? = null,
+        charsetType: String? = null
     ): String {
         try {
             val file = getCommandFile(
@@ -79,7 +82,8 @@ object BatScriptUtil {
                 script = script,
                 runtimeVariables = runtimeVariables,
                 dir = dir,
-                workspace = workspace
+                workspace = workspace,
+                charsetType = charsetType
             )
             return CommandLineUtils.execute(
                 command = "cmd.exe /C \"${file.canonicalPath}\"",
@@ -88,7 +92,9 @@ object BatScriptUtil {
                 prefix = prefix,
                 executeErrorMessage = "",
                 buildId = buildId,
-                elementId = elementId
+                jobId = jobId,
+                stepId = stepId,
+                charsetType = charsetType
             )
         } catch (ignore: Throwable) {
             val errorInfo = errorMessage ?: "Fail to execute bat script $script"
@@ -103,7 +109,8 @@ object BatScriptUtil {
         script: String,
         runtimeVariables: Map<String, String>,
         dir: File,
-        workspace: File = dir
+        workspace: File = dir,
+        charsetType: String? = null
     ): File {
         val tmpDir = System.getProperty("java.io.tmpdir")
         val file = if (tmpDir.isNullOrBlank()) {
@@ -144,7 +151,13 @@ object BatScriptUtil {
                 newValue = File(dir, ScriptEnvUtils.getQualityGatewayEnvFile()).canonicalPath
             ))
 
-        val charset = Charset.defaultCharset()
+        // #4601 没有指定编码字符集时采用获取系统的默认字符集
+        val charset = when (charsetType?.let { CharsetType.valueOf(it) }) {
+            CharsetType.UTF_8 -> Charsets.UTF_8
+            CharsetType.GBK -> Charset.forName(CharsetType.GBK.name)
+            else -> Charset.defaultCharset()
+        }
+
         logger.info("The default charset is $charset")
 
         file.writeText(command.toString(), charset)

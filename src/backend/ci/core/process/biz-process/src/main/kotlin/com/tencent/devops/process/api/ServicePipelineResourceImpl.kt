@@ -41,17 +41,17 @@ import com.tencent.devops.process.engine.pojo.PipelineInfo
 import com.tencent.devops.process.engine.service.PipelineRepositoryService
 import com.tencent.devops.process.engine.service.rule.PipelineRuleService
 import com.tencent.devops.process.pojo.Pipeline
+import com.tencent.devops.process.pojo.PipelineCopy
 import com.tencent.devops.process.pojo.PipelineId
 import com.tencent.devops.process.pojo.PipelineIdInfo
 import com.tencent.devops.process.pojo.PipelineName
 import com.tencent.devops.process.pojo.PipelineSortType
-import com.tencent.devops.process.pojo.PipelineWithModel
 import com.tencent.devops.process.pojo.audit.Audit
 import com.tencent.devops.process.pojo.pipeline.DeployPipelineResult
 import com.tencent.devops.process.pojo.pipeline.SimplePipeline
-import com.tencent.devops.process.pojo.setting.PipelineSetting
 import com.tencent.devops.process.pojo.pipeline.enums.PipelineRuleBusCodeEnum
 import com.tencent.devops.process.pojo.setting.PipelineModelAndSetting
+import com.tencent.devops.process.pojo.setting.PipelineSetting
 import com.tencent.devops.process.service.PipelineInfoFacadeService
 import com.tencent.devops.process.service.PipelineListFacadeService
 import com.tencent.devops.process.service.pipeline.PipelineSettingFacadeService
@@ -112,7 +112,8 @@ class ServicePipelineResourceImpl @Autowired constructor(
         projectId: String,
         pipelineId: String,
         pipeline: Model,
-        channelCode: ChannelCode
+        channelCode: ChannelCode,
+        updateLastModifyUser: Boolean?
     ): Result<Boolean> {
         checkParams(userId, projectId)
         pipelineInfoFacadeService.editPipeline(
@@ -121,9 +122,41 @@ class ServicePipelineResourceImpl @Autowired constructor(
             pipelineId = pipelineId,
             model = pipeline,
             channelCode = channelCode,
-            checkPermission = ChannelCode.isNeedAuth(channelCode)
+            checkPermission = ChannelCode.isNeedAuth(channelCode),
+            updateLastModifyUser = updateLastModifyUser
         )
         return Result(true)
+    }
+
+    override fun copy(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        pipeline: PipelineCopy
+    ): Result<PipelineId> {
+        checkParam(userId, projectId)
+        val pid = PipelineId(
+            pipelineInfoFacadeService.copyPipeline(
+                userId = userId,
+                projectId = projectId,
+                pipelineId = pipelineId,
+                name = pipeline.name,
+                desc = pipeline.desc,
+                channelCode = ChannelCode.BS
+            )
+        )
+        auditService.createAudit(
+            Audit(
+                resourceType = AuthResourceType.PIPELINE_DEFAULT.value,
+                resourceId = pid.id,
+                resourceName = pipeline.name,
+                userId = userId,
+                action = "copy",
+                actionContent = "复制流水线/Copy Pipeline from($pipelineId)",
+                projectId = projectId
+            )
+        )
+        return Result(pid)
     }
 
     override fun uploadPipeline(
@@ -220,12 +253,29 @@ class ServicePipelineResourceImpl @Autowired constructor(
         ))
     }
 
+    override fun getSettingWithPermission(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        channelCode: ChannelCode,
+        checkPermission: Boolean
+    ): Result<PipelineSetting> {
+        checkParams(userId, projectId)
+        return Result(data = pipelineSettingFacadeService.userGetSetting(
+            userId = userId,
+            projectId = projectId,
+            pipelineId = pipelineId,
+            channelCode = channelCode,
+            checkPermission = checkPermission
+        ))
+    }
+
     override fun getBatch(
         userId: String,
         projectId: String,
         pipelineIds: List<String>,
         channelCode: ChannelCode
-    ): Result<List<PipelineWithModel>> {
+    ): Result<List<Pipeline>> {
         checkParams(userId, projectId, pipelineIds)
         return Result(data = pipelineListFacadeService.getBatchPipelinesWithModel(
             userId = userId,
@@ -240,11 +290,17 @@ class ServicePipelineResourceImpl @Autowired constructor(
         userId: String,
         projectId: String,
         pipelineId: String,
+        updateLastModifyUser: Boolean?,
         setting: PipelineSetting
     ): Result<Boolean> {
         checkProjectId(projectId)
         checkPipelineId(pipelineId)
-        pipelineSettingFacadeService.saveSetting(userId = userId, setting = setting, checkPermission = true)
+        pipelineSettingFacadeService.saveSetting(
+            userId = userId,
+            setting = setting,
+            checkPermission = true,
+            updateLastModifyUser = updateLastModifyUser
+        )
         return Result(true)
     }
 
@@ -325,8 +381,8 @@ class ServicePipelineResourceImpl @Autowired constructor(
         return Result(pipelineListFacadeService.getPipelineNameByIds(projectId, pipelineIds))
     }
 
-    override fun getBuildNoByBuildIds(buildIds: Set<String>): Result<Map<String, String>> {
-        return Result(pipelineListFacadeService.getBuildNoByByPair(buildIds))
+    override fun getBuildNoByBuildIds(buildIds: Set<String>, projectId: String?): Result<Map<String, String>> {
+        return Result(pipelineListFacadeService.getBuildNoByByPair(buildIds, projectId))
     }
 
     override fun getAllstatus(userId: String, projectId: String, pipelineId: String): Result<List<Pipeline>?> {
@@ -368,6 +424,19 @@ class ServicePipelineResourceImpl @Autowired constructor(
         return Result(pipelineListFacadeService.getPipelineId(projectCode, pipelineId))
     }
 
+    override fun getPipelineInfoByPipelineId(pipelineId: String): Result<SimplePipeline?>? {
+        val pipelineInfos = pipelineListFacadeService.getByPipelineIds(setOf(pipelineId))
+        if (pipelineInfos.isNotEmpty()) {
+            return Result(pipelineInfos[0])
+        }
+        return null
+    }
+
+    override fun batchUpdatePipelineNamePinYin(userId: String): Result<Boolean> {
+        pipelineInfoFacadeService.batchUpdatePipelineNamePinYin(userId)
+        return Result(true)
+    }
+
     private fun checkParams(userId: String, projectId: String) {
         checkUserId(userId)
         checkProjectId(projectId)
@@ -394,6 +463,15 @@ class ServicePipelineResourceImpl @Autowired constructor(
     private fun checkPipelineId(pipelineId: String) {
         if (pipelineId.isBlank()) {
             throw ParamBlankException("Invalid pipelineId")
+        }
+    }
+
+    private fun checkParam(userId: String, projectId: String) {
+        if (userId.isBlank()) {
+            throw ParamBlankException("Invalid userId")
+        }
+        if (projectId.isBlank()) {
+            throw ParamBlankException("Invalid projectId")
         }
     }
 

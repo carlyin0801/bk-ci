@@ -141,12 +141,13 @@ object JsonUtil {
         }
     }
 
-    fun getObjectMapper() = objectMapper
+    private val unformattedObjectMapper = objectMapper().apply { disable(SerializationFeature.INDENT_OUTPUT) }
+
+    fun getObjectMapper(formatted: Boolean = true) = if (formatted) objectMapper else unformattedObjectMapper
 
     /**
      * 此方法仅在系统初始化时调用，不建议在运行过程中调用
-     * 子模块/类注册最佳时机是在系统初始化时调用，而不是在运行过程中
-     * @param subModules 子模块/类
+     * [subModules]子模块/类注册最佳时机是在系统初始化时调用，而不是在运行过程中
      */
     fun registerModule(vararg subModules: Module) {
         synchronized(jsonModules) {
@@ -158,35 +159,36 @@ object JsonUtil {
         subModules.forEach { subModule ->
             objectMapper.registerModule(subModule)
             skipEmptyObjectMapper.registerModule(subModule)
+            unformattedObjectMapper.registerModule(subModule)
         }
     }
 
     /**
-     * 转成Json
+     * 转成Json, [formatted]默认ture采用格式化方式输出
      */
-    fun toJson(bean: Any): String {
+    fun toJson(bean: Any, formatted: Boolean = true): String {
         if (ReflectUtil.isNativeType(bean) || bean is String) {
             return bean.toString()
         }
-        return getObjectMapper().writeValueAsString(bean)!!
+        return getObjectMapper(formatted).writeValueAsString(bean)!!
     }
 
     /**
      * 将对象转可修改的Map,
      * 注意：会忽略掉值为空串和null的属性
      */
+    @Deprecated("不建议使用，建议使用toMutableMap")
     fun toMutableMapSkipEmpty(bean: Any): MutableMap<String, Any> {
         if (ReflectUtil.isNativeType(bean)) {
             return mutableMapOf()
         }
         return if (bean is String) {
-            skipEmptyObjectMapper.readValue<MutableMap<String, Any>>(
-                bean.toString(),
-                object : TypeReference<MutableMap<String, Any>>() {})
+            skipEmptyObjectMapper.readValue(bean.toString(), object : TypeReference<MutableMap<String, Any>>() {})
         } else {
-            skipEmptyObjectMapper.readValue<MutableMap<String, Any>>(
+            skipEmptyObjectMapper.readValue(
                 skipEmptyObjectMapper.writeValueAsString(bean),
-                object : TypeReference<MutableMap<String, Any>>() {})
+                object : TypeReference<MutableMap<String, Any>>() {}
+            )
         }
     }
 
@@ -195,8 +197,16 @@ object JsonUtil {
      * 注意：会忽略掉值为null的属性
      */
     fun toMap(bean: Any): Map<String, Any> {
+        return toMutableMap(bean)
+    }
+
+    /**
+     * 将对象转不可修改的Map
+     * 注意：会忽略掉值为null的属性, 不会忽略空串和空数组/列表对象
+     */
+    fun toMutableMap(bean: Any): MutableMap<String, Any> {
         return when {
-            ReflectUtil.isNativeType(bean) -> mapOf()
+            ReflectUtil.isNativeType(bean) -> mutableMapOf()
             bean is String -> to(bean)
             else -> to(getObjectMapper().writeValueAsString(bean))
         }
@@ -219,14 +229,36 @@ object JsonUtil {
     fun <T> to(json: String, type: Class<T>): T = getObjectMapper().readValue(json, type)
 
     fun <T> toOrNull(json: String?, type: Class<T>): T? {
-        return if (json.isNullOrBlank()) {
-            null
-        } else {
-            getObjectMapper().readValue(json, type)
+        return json?.let { self ->
+            if (self.isBlank()) {
+                return null
+            }
+            try {
+                getObjectMapper().readValue(self, type)
+            } catch (ignore: Exception) {
+                null
+            }
+        }
+    }
+
+    fun <T> toOrNull(json: String?, typeReference: TypeReference<T>): T? {
+        return json?.let { self ->
+            if (self.isBlank()) {
+                return null
+            }
+            try {
+                getObjectMapper().readValue(self, typeReference)
+            } catch (ignore: Exception) {
+                null
+            }
         }
     }
 
     fun <T> mapTo(map: Map<String, Any>, type: Class<T>): T = getObjectMapper().readValue(
         getObjectMapper().writeValueAsString(map), type
+    )
+
+    fun <T> anyTo(any: Any?, typeReference: TypeReference<T>): T = getObjectMapper().readValue(
+        getObjectMapper().writeValueAsString(any), typeReference
     )
 }

@@ -45,7 +45,7 @@ export default {
         showPanelType: '',
         isShowCompleteLog: false,
         isStagePopupShow: false,
-        isAddParallelContainer: false,
+        isAddParallelStage: false,
         insertStageIndex: null,
         insertStageIsFinally: false,
         buildParamsMap: {},
@@ -57,7 +57,7 @@ export default {
         defaultStageTags: [],
         showReviewDialog: false,
         reviewInfo: null,
-        showStageReviewPanel: false,
+        showStageReviewPanel: {},
         importedPipelineJson: null,
         atomVersionChangedKeys: [],
         pipelineLimit: {

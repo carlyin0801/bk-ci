@@ -33,15 +33,16 @@ import com.tencent.devops.project.pojo.OpProjectUpdateInfoRequest
 import com.tencent.devops.project.pojo.PaasProject
 import com.tencent.devops.project.pojo.ProjectCreateInfo
 import com.tencent.devops.project.pojo.ProjectUpdateInfo
+import com.tencent.devops.project.pojo.ProjectVO
 import com.tencent.devops.project.pojo.enums.ApproveStatus
 import com.tencent.devops.project.pojo.enums.ProjectChannelCode
 import com.tencent.devops.project.pojo.user.UserDeptDetail
+import com.tencent.devops.project.util.ProjectUtils
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Record
 import org.jooq.Record1
 import org.jooq.Result
-import org.jooq.UpdateConditionStep
 import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 import org.springframework.util.StringUtils
@@ -124,6 +125,18 @@ class ProjectDao {
     fun list(dslContext: DSLContext, limit: Int, offset: Int): Result<TProjectRecord> {
         return with(TProject.T_PROJECT) {
             dslContext.selectFrom(this).where(ENABLED.eq(true)).limit(limit).offset(offset).fetch()
+        }
+    }
+
+    fun listByChannel(
+        dslContext: DSLContext,
+        limit: Int,
+        offset: Int,
+        channelCode: ProjectChannelCode
+    ): Result<TProjectRecord> {
+        return with(TProject.T_PROJECT) {
+            dslContext.selectFrom(this).where(ENABLED.eq(true).and(CHANNEL.eq(channelCode.name)))
+                .limit(limit).offset(offset).fetch()
         }
     }
 
@@ -233,25 +246,6 @@ class ProjectDao {
                 conditions.add(CENTER_NAME.like("%${URLDecoder.decode(centerName, "UTF-8")}%"))
             }
             return dslContext.selectFrom(this).where(conditions).fetch()
-        }
-    }
-
-    fun updateAppName(dslContext: DSLContext, projectId: String, appName: String): Int {
-        with(TProject.T_PROJECT) {
-            return dslContext.update(this).set(CC_APP_NAME, appName).where(PROJECT_ID.eq(projectId)).execute()
-        }
-    }
-
-    fun batchUpdateAppName(dslContext: DSLContext, projects: Map<String, String>): Int {
-        with(TProject.T_PROJECT) {
-            val sets = ArrayList<UpdateConditionStep<TProjectRecord>>()
-            projects.forEach { (projectId, ccAppName) ->
-                sets.add(dslContext.update(this).set(CC_APP_NAME, ccAppName).where(PROJECT_ID.eq(projectId)))
-            }
-            if (sets.isNotEmpty()) {
-                return dslContext.batch(sets).execute().size
-            }
-            return 0
         }
     }
 
@@ -421,6 +415,15 @@ class ProjectDao {
                 .set(UPDATED_AT, LocalDateTime.now())
                 .set(UPDATOR, userId)
                 .where(PROJECT_ID.eq(projectId)).execute()
+        }
+    }
+
+    fun updateProjectName(dslContext: DSLContext, projectCode: String, projectName: String): Int {
+        with(TProject.T_PROJECT) {
+            return dslContext.update(this)
+                .set(PROJECT_NAME, projectName)
+                .where(ENGLISH_NAME.eq(projectCode))
+                .execute()
         }
     }
 
@@ -769,6 +772,17 @@ class ProjectDao {
                 .from(this)
                 .where(IS_SECRECY.eq(true))
                 .fetch()
+        }
+    }
+
+    fun getProjectByName(
+        dslContext: DSLContext,
+        projectName: String
+    ): ProjectVO? {
+        with(TProject.T_PROJECT) {
+            val record = dslContext.selectFrom(this).where(PROJECT_NAME.eq(projectName)).fetchAny()
+                ?: return null
+            return ProjectUtils.packagingBean(record, emptySet())
         }
     }
 }

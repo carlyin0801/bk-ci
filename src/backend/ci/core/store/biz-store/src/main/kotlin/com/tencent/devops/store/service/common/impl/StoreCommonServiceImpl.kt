@@ -29,8 +29,10 @@ package com.tencent.devops.store.service.common.impl
 
 import com.tencent.devops.common.api.constant.INIT_VERSION
 import com.tencent.devops.common.api.constant.SUCCESS
+import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.service.utils.SpringContextUtil
 import com.tencent.devops.store.configuration.StoreDetailUrlConfig
+import com.tencent.devops.store.constant.StoreMessageCode
 import com.tencent.devops.store.dao.common.AbstractStoreCommonDao
 import com.tencent.devops.store.dao.common.OperationLogDao
 import com.tencent.devops.store.dao.common.ReasonRelDao
@@ -54,6 +56,7 @@ import com.tencent.devops.store.pojo.common.ReleaseProcessItem
 import com.tencent.devops.store.pojo.common.StoreBuildInfo
 import com.tencent.devops.store.pojo.common.StoreProcessInfo
 import com.tencent.devops.store.pojo.common.StoreShowVersionInfo
+import com.tencent.devops.store.pojo.common.StoreShowVersionItem
 import com.tencent.devops.store.pojo.common.enums.ReleaseTypeEnum
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.service.common.StoreCommonService
@@ -102,6 +105,10 @@ class StoreCommonServiceImpl @Autowired constructor(
         return storeCommonDao.getStoreNameById(dslContext, storeId) ?: ""
     }
 
+    override fun getStorePublicFlagByCode(storeCode: String, storeType: StoreTypeEnum): Boolean {
+        return getStoreCommonDao(storeType.name).getStorePublicFlagByCode(dslContext, storeCode)
+    }
+
     private fun getStoreCommonDao(storeType: String): AbstractStoreCommonDao {
         return SpringContextUtil.getBean(AbstractStoreCommonDao::class.java, "${storeType}_COMMON_DAO")
     }
@@ -139,9 +146,11 @@ class StoreCommonServiceImpl @Autowired constructor(
                 if (!reqVersion.isNullOrBlank()) {
                     val reqVersionParts = reqVersion.split(".")
                     requireVersionList = listOf(
-                        "${reqVersionParts[0]}.$secondVersionPart.${thirdVersionPart.toInt() + 1}",
-                        "${reqVersionParts[0]}.${secondVersionPart.toInt() + 1}.0"
+                        "${reqVersionParts[0]}.${reqVersionParts[1]}.${reqVersionParts[2].toInt() + 1}",
+                        "${reqVersionParts[0]}.${reqVersionParts[1].toInt() + 1}.0"
                     )
+                } else {
+                    throw ErrorCodeException(errorCode = StoreMessageCode.USER_HIS_VERSION_UPGRADE_INVALID)
                 }
             }
             else -> {
@@ -252,7 +261,7 @@ class StoreCommonServiceImpl @Autowired constructor(
         releaseType: ReleaseTypeEnum?,
         version: String?
     ): StoreShowVersionInfo {
-        val showReleaseType = when {
+        val defaultShowReleaseType = when {
             cancelFlag -> {
                 ReleaseTypeEnum.CANCEL_RE_RELEASE
             }
@@ -266,7 +275,24 @@ class StoreCommonServiceImpl @Autowired constructor(
                 ReleaseTypeEnum.COMPATIBILITY_FIX
             }
         }
-        val showVersion = getRequireVersion(version ?: "", showReleaseType)[0]
-        return StoreShowVersionInfo(showVersion, showReleaseType.name)
+        val dbVersion = version ?: ""
+        val defaultShowVersion = getRequireVersion(dbVersion, defaultShowReleaseType)[0]
+        val showVersionList = mutableListOf<StoreShowVersionItem>()
+        showVersionList.add(StoreShowVersionItem(defaultShowVersion, defaultShowReleaseType.name, true))
+        if (dbVersion.isBlank()) {
+            return StoreShowVersionInfo(showVersionList)
+        }
+        val tmpReleaseTypeList = listOf(
+            ReleaseTypeEnum.INCOMPATIBILITY_UPGRADE,
+            ReleaseTypeEnum.COMPATIBILITY_UPGRADE,
+            ReleaseTypeEnum.COMPATIBILITY_FIX
+        )
+        tmpReleaseTypeList.forEach { tmpReleaseType ->
+            if (tmpReleaseType != defaultShowReleaseType) {
+                val showVersion = getRequireVersion(dbVersion, tmpReleaseType)[0]
+                showVersionList.add(StoreShowVersionItem(showVersion, tmpReleaseType.name))
+            }
+        }
+        return StoreShowVersionInfo(showVersionList)
     }
 }

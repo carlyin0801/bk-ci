@@ -29,6 +29,10 @@ package com.tencent.devops.dispatch.docker.client
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.tencent.devops.buildless.api.service.ServiceBuildlessResource
+import com.tencent.devops.buildless.pojo.BuildLessEndInfo
+import com.tencent.devops.buildless.pojo.BuildLessStartInfo
+import com.tencent.devops.buildless.pojo.RejectedExecutionType
 import com.tencent.devops.common.api.pojo.Zone
 import com.tencent.devops.common.api.util.ApiUtil
 import com.tencent.devops.common.api.util.HashUtil
@@ -43,13 +47,18 @@ import com.tencent.devops.common.pipeline.type.docker.ImageType
 import com.tencent.devops.dispatch.docker.common.Constants
 import com.tencent.devops.dispatch.docker.common.ErrorCodeEnum
 import com.tencent.devops.dispatch.docker.config.DefaultImageConfig
+import com.tencent.devops.dispatch.docker.dao.DockerResourceOptionsDao
 import com.tencent.devops.dispatch.docker.dao.PipelineDockerBuildDao
 import com.tencent.devops.dispatch.docker.dao.PipelineDockerIPInfoDao
 import com.tencent.devops.dispatch.docker.dao.PipelineDockerTaskSimpleDao
 import com.tencent.devops.dispatch.docker.exception.DockerServiceException
+import com.tencent.devops.dispatch.docker.pojo.Credential
 import com.tencent.devops.dispatch.docker.pojo.DockerHostBuildInfo
+import com.tencent.devops.dispatch.docker.pojo.Pool
 import com.tencent.devops.dispatch.docker.pojo.enums.DockerHostClusterType
+import com.tencent.devops.dispatch.docker.pojo.resource.DockerResourceOptionsVO
 import com.tencent.devops.dispatch.docker.service.DockerHostProxyService
+import com.tencent.devops.dispatch.docker.service.DockerHostQpcService
 import com.tencent.devops.dispatch.docker.utils.CommonUtils
 import com.tencent.devops.dispatch.docker.utils.DockerHostUtils
 import com.tencent.devops.dispatch.docker.utils.RedisUtils
@@ -72,11 +81,13 @@ class DockerHostClient @Autowired constructor(
     private val pipelineDockerBuildDao: PipelineDockerBuildDao,
     private val pipelineDockerIPInfoDao: PipelineDockerIPInfoDao,
     private val pipelineDockerTaskSimpleDao: PipelineDockerTaskSimpleDao,
+    private val dockerResourceOptionsDao: DockerResourceOptionsDao,
     private val dockerHostUtils: DockerHostUtils,
     private val client: Client,
     private val dslContext: DSLContext,
     private val defaultImageConfig: DefaultImageConfig,
     private val dockerHostProxyService: DockerHostProxyService,
+    private val dockerHostQpcService: DockerHostQpcService,
     private val redisUtils: RedisUtils
 ) {
 
@@ -92,23 +103,6 @@ class DockerHostClient @Autowired constructor(
         poolNo: Int,
         driftIpInfo: String
     ) {
-        pipelineDockerBuildDao.startBuild(
-            dslContext = dslContext,
-            projectId = dispatchMessage.projectId,
-            pipelineId = dispatchMessage.pipelineId,
-            buildId = dispatchMessage.buildId,
-            vmSeqId = dispatchMessage.vmSeqId.toInt(),
-            secretKey = dispatchMessage.secretKey,
-            status = PipelineTaskStatus.RUNNING,
-            zone = if (null == dispatchMessage.zone) {
-                Zone.SHENZHEN.name
-            } else {
-                dispatchMessage.zone!!.name
-            },
-            dockerIp = dockerIp,
-            poolNo = poolNo
-        )
-
         val dispatchType = dispatchMessage.dispatchType as DockerDispatchType
         val dockerImage = if (dispatchType.imageType == ImageType.THIRD) {
             dispatchType.dockerBuildVersion
@@ -128,8 +122,8 @@ class DockerHostClient @Autowired constructor(
         LOG.info("${dispatchMessage.buildId}|startBuild|${dispatchMessage.id}|$dockerImage" +
             "|${dispatchType.imageCode}|${dispatchType.imageVersion}|${dispatchType.credentialId}" +
             "|${dispatchType.credentialProject}")
-        var userName: String? = null
-        var password: String? = null
+        var userName = dispatchType.imageRepositoryUserName
+        var password = dispatchType.imageRepositoryPassword
         if (dispatchType.imageType == ImageType.THIRD) {
             if (!dispatchType.credentialId.isNullOrBlank()) {
                 val projectId = if (dispatchType.credentialProject.isNullOrBlank()) {
@@ -148,6 +142,29 @@ class DockerHostClient @Autowired constructor(
             }
         }
 
+        pipelineDockerBuildDao.saveBuildHistory(
+            dslContext = dslContext,
+            projectId = dispatchMessage.projectId,
+            pipelineId = dispatchMessage.pipelineId,
+            buildId = dispatchMessage.buildId,
+            vmSeqId = dispatchMessage.vmSeqId.toInt(),
+            secretKey = dispatchMessage.secretKey,
+            status = PipelineTaskStatus.RUNNING,
+            zone = if (null == dispatchMessage.zone) {
+                Zone.SHENZHEN.name
+            } else {
+                dispatchMessage.zone!!.name
+            },
+            dockerIp = dockerIp,
+            poolNo = poolNo,
+            startupMessage = JsonUtil.toJson(Pool(
+                container = dockerImage,
+                credential = Credential(userName, password),
+                env = null,
+                imageType = dispatchType.imageType?.type
+            ))
+        )
+
         val requestBody = DockerHostBuildInfo(
             projectId = dispatchMessage.projectId,
             agentId = dispatchMessage.id,
@@ -158,7 +175,6 @@ class DockerHostClient @Autowired constructor(
             status = PipelineTaskStatus.RUNNING.status,
             imageName = dockerImage!!,
             containerId = "",
-            wsInHost = true,
             poolNo = poolNo,
             registryUser = userName ?: "",
             registryPwd = password ?: "",
@@ -170,14 +186,18 @@ class DockerHostClient @Autowired constructor(
                 ImageRDTypeEnum.getImageRDTypeByName(dispatchType.imageRDType!!).name
             },
             containerHashId = dispatchMessage.containerHashId,
-            customBuildEnv = dispatchMessage.customBuildEnv
+            customBuildEnv = dispatchMessage.customBuildEnv,
+            dockerResource = getDockerResource(dispatchType),
+            qpcUniquePath = getQpcUniquePath(dispatchMessage),
+            specialProjectList = getSpecialProjectList()
         )
 
         pipelineDockerTaskSimpleDao.createOrUpdate(
             dslContext = dslContext,
             pipelineId = dispatchMessage.pipelineId,
             vmSeq = dispatchMessage.vmSeqId,
-            dockerIp = dockerIp
+            dockerIp = dockerIp,
+            dockerResourceOptionsId = dispatchType.performanceConfigId
         )
 
         dockerBuildStart(dockerIp, dockerHostPort, requestBody, driftIpInfo)
@@ -190,7 +210,7 @@ class DockerHostClient @Autowired constructor(
     ) {
         val secretKey = ApiUtil.randomSecretKey()
 
-        val id = pipelineDockerBuildDao.startBuild(
+        val id = pipelineDockerBuildDao.saveBuildHistory(
             dslContext = dslContext,
             projectId = event.projectId,
             pipelineId = event.pipelineId,
@@ -238,21 +258,6 @@ class DockerHostClient @Autowired constructor(
         }
         LOG.info("[${event.buildId}]|BUILD_LESS| Docker images is: $dockerImage")
 
-/*        var userName: String? = null
-        var password: String? = null
-        if (dispatchType.imageType == ImageType.THIRD) {
-            if (!dispatchType.credentialId.isNullOrBlank()) {
-                val ticketsMap = CommonUtils.getCredential(
-                    client = client,
-                    projectId = event.projectId,
-                    credentialId = dispatchType.credentialId!!,
-                    type = CredentialType.USERNAME_PASSWORD
-                )
-                userName = ticketsMap["v1"] as String
-                password = ticketsMap["v2"] as String
-            }
-        }*/
-
         val requestBody = DockerHostBuildInfo(
             projectId = event.projectId,
             agentId = agentId,
@@ -263,7 +268,6 @@ class DockerHostClient @Autowired constructor(
             status = PipelineTaskStatus.RUNNING.status,
             imageName = dockerImage,
             containerId = "",
-            wsInHost = true,
             poolNo = 0,
             registryUser = defaultImageConfig.agentLessRegistryUserName ?: "",
             registryPwd = defaultImageConfig.agentLessRegistryPassword ?: "",
@@ -275,10 +279,37 @@ class DockerHostClient @Autowired constructor(
                 ImageRDTypeEnum.getImageRDTypeByName(dispatchType.imageRDType!!).name
             },
             containerHashId = event.containerHashId,
-            buildType = BuildType.AGENT_LESS
+            buildType = BuildType.AGENT_LESS,
+            customBuildEnv = event.customBuildEnv
         )
 
-        dockerBuildStart(agentLessDockerIp, agentLessDockerPort, requestBody, "", DockerHostClusterType.AGENT_LESS)
+        // 测试
+        if (event.projectId == "test-sawyer2") {
+            startBuildLessBuild(agentId, secretKey, event)
+        } else {
+            dockerBuildStart(agentLessDockerIp, agentLessDockerPort, requestBody, "", DockerHostClusterType.AGENT_LESS)
+        }
+    }
+
+    private fun startBuildLessBuild(
+        agentId: String,
+        secretKey: String,
+        event: PipelineBuildLessStartupDispatchEvent
+    ) {
+        with(event) {
+            client.get(ServiceBuildlessResource::class).startBuild(
+                BuildLessStartInfo(
+                    projectId = projectId,
+                    pipelineId = pipelineId,
+                    buildId = buildId,
+                    vmSeqId = Integer.valueOf(vmSeqId),
+                    executionCount = event.executeCount ?: 1,
+                    agentId = agentId,
+                    secretKey = secretKey,
+                    rejectedExecutionType = RejectedExecutionType.ABORT_POLICY
+                )
+            )
+        }
     }
 
     fun endBuild(
@@ -288,8 +319,24 @@ class DockerHostClient @Autowired constructor(
         vmSeqId: Int,
         containerId: String,
         dockerIp: String,
+        poolNo: Int,
         clusterType: DockerHostClusterType = DockerHostClusterType.COMMON
     ) {
+        if (clusterType == DockerHostClusterType.AGENT_LESS) {
+            client.get(ServiceBuildlessResource::class).endBuild(
+                BuildLessEndInfo(
+                    projectId = projectId,
+                    pipelineId = pipelineId,
+                    buildId = buildId,
+                    vmSeqId = vmSeqId,
+                    poolNo = poolNo,
+                    containerId = containerId
+                )
+            )
+
+            return
+        }
+
         val requestBody = DockerHostBuildInfo(
             projectId = projectId,
             agentId = "",
@@ -300,8 +347,7 @@ class DockerHostClient @Autowired constructor(
             status = 0,
             imageName = "",
             containerId = containerId,
-            wsInHost = true,
-            poolNo = 0,
+            poolNo = poolNo,
             registryUser = "",
             registryPwd = "",
             imageType = "",
@@ -488,6 +534,62 @@ class DockerHostClient @Autowired constructor(
                 errorType = ErrorCodeEnum.START_VM_FAIL.errorType,
                 errorCode = ErrorCodeEnum.START_VM_FAIL.errorCode,
                 errorMsg = "Start build Docker VM failed, msg: $errorMessage."
+            )
+        }
+    }
+
+    private fun getQpcUniquePath(dispatchMessage: DispatchMessage): String? {
+        val projectId = dispatchMessage.projectId
+        return if (projectId.startsWith("git_") &&
+            dockerHostQpcService.checkQpcWhitelist(projectId.removePrefix("git_"))
+        ) {
+            return projectId.removePrefix("git_")
+        } else {
+            null
+        }
+    }
+
+    fun getSpecialProjectList(): String? {
+        return redisUtils.getSpecialProjectListKey()
+    }
+
+    private fun getDockerResource(dockerDispatchType: DockerDispatchType): DockerResourceOptionsVO {
+        if (dockerDispatchType.performanceConfigId != 0) {
+            val dockerResourceOptionRecord = dockerResourceOptionsDao.get(
+                dslContext = dslContext,
+                id = dockerDispatchType.performanceConfigId.toLong()
+            )
+
+            if (dockerResourceOptionRecord != null) {
+                return DockerResourceOptionsVO(
+                    memoryLimitBytes = dockerResourceOptionRecord.memoryLimitBytes,
+                    cpuPeriod = dockerResourceOptionRecord.cpuPeriod,
+                    cpuQuota = dockerResourceOptionRecord.cpuQuota,
+                    blkioDeviceReadBps = dockerResourceOptionRecord.blkioDeviceReadBps,
+                    blkioDeviceWriteBps = dockerResourceOptionRecord.blkioDeviceWriteBps,
+                    disk = dockerResourceOptionRecord.disk,
+                    description = ""
+                )
+            } else {
+                return DockerResourceOptionsVO(
+                    memoryLimitBytes = defaultImageConfig.memory,
+                    cpuPeriod = defaultImageConfig.cpuPeriod,
+                    cpuQuota = defaultImageConfig.cpuQuota,
+                    blkioDeviceReadBps = defaultImageConfig.blkioDeviceReadBps,
+                    blkioDeviceWriteBps = defaultImageConfig.blkioDeviceWriteBps,
+                    disk = 100,
+                    description = ""
+                )
+            }
+        } else {
+            return DockerResourceOptionsVO(
+                memoryLimitBytes = defaultImageConfig.memory,
+                cpuPeriod = defaultImageConfig.cpuPeriod,
+                cpuQuota = defaultImageConfig.cpuQuota,
+                blkioDeviceReadBps = defaultImageConfig.blkioDeviceReadBps,
+                blkioDeviceWriteBps = defaultImageConfig.blkioDeviceWriteBps,
+                disk = 100,
+                description = ""
             )
         }
     }

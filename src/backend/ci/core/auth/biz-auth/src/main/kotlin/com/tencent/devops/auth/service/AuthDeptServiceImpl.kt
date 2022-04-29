@@ -27,26 +27,33 @@
 
 package com.tencent.devops.auth.service
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.cache.CacheBuilder
 import com.tencent.bk.sdk.iam.constants.ManagerScopesEnum
 import com.tencent.bk.sdk.iam.dto.response.ResponseDTO
-import com.tencent.bk.sdk.iam.util.JsonUtil
 import com.tencent.devops.auth.common.Constants.LEVEL
 import com.tencent.devops.auth.common.Constants.PARENT
 import com.tencent.devops.auth.common.Constants.HTTP_RESULT
 import com.tencent.devops.auth.common.Constants.NAME
 import com.tencent.devops.auth.common.Constants.USERNAME
 import com.tencent.devops.auth.common.Constants.USER_LABLE
+import com.tencent.devops.auth.constant.AuthMessageCode
 import com.tencent.devops.auth.entity.SearchUserAndDeptEntity
 import com.tencent.devops.auth.entity.SearchDeptUserEntity
+import com.tencent.devops.auth.entity.SearchProfileDeptEntity
+import com.tencent.devops.auth.entity.SearchRetrieveDeptEntity
+import com.tencent.devops.auth.entity.UserDeptTreeInfo
 import com.tencent.devops.auth.pojo.vo.BkUserInfoVo
 import com.tencent.devops.auth.pojo.vo.DeptInfoVo
 import com.tencent.devops.auth.pojo.vo.UserAndDeptInfoVo
-import com.tencent.devops.common.api.exception.RemoteServiceException
+import com.tencent.devops.common.api.exception.OperationException
+import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.OkhttpUtils
+import com.tencent.devops.common.auth.api.pojo.EsbBaseReq
 import com.tencent.devops.common.redis.RedisOperation
+import com.tencent.devops.common.service.utils.MessageCodeUtil
 import okhttp3.MediaType
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -73,6 +80,11 @@ class AuthDeptServiceImpl @Autowired constructor(
         .maximumSize(500)
         .expireAfterWrite(1, TimeUnit.HOURS)
         .build<String/*deptId*/, List<String>>()
+
+    private val userDeptCache = CacheBuilder.newBuilder()
+        .maximumSize(500)
+        .expireAfterWrite(1, TimeUnit.HOURS)
+        .build<String/*userId*/, Set<String>>()
 
     override fun getDeptByLevel(level: Int, accessToken: String?, userId: String): DeptInfoVo {
         val search = SearchUserAndDeptEntity(
@@ -109,9 +121,6 @@ class AuthDeptServiceImpl @Autowired constructor(
         userId: String,
         type: ManagerScopesEnum
     ): List<UserAndDeptInfoVo?> {
-//        if (name.length < 2) {
-//            throw ParamBlankException(KEYWORD_TOO_SHORT)
-//        }
         val deptSearch = SearchUserAndDeptEntity(
             bk_app_code = appCode!!,
             bk_app_secret = appSecret!!,
@@ -197,9 +206,55 @@ class AuthDeptServiceImpl @Autowired constructor(
         }
     }
 
+    override fun getUserParentDept(userId: String): Int {
+        val deptSearchResponse = getUserDeptFamily(userId)
+        val deptId = getUserLastDeptId(deptSearchResponse)
+        val parentSearch = SearchRetrieveDeptEntity(
+            id = deptId,
+            bk_app_code = appCode!!,
+            bk_app_secret = appSecret!!,
+            bk_username = userId
+        )
+        val userCenterResponse = callUserCenter(RETRIEVE_DEPARTMENT, parentSearch)
+        return getParentDept(userCenterResponse)
+    }
+
+    override fun getDeptByName(deptName: String, userId: String): DeptInfoVo? {
+        val search = SearchUserAndDeptEntity(
+            bk_app_code = appCode!!,
+            bk_app_secret = appSecret!!,
+            bk_username = userId,
+            fields = null,
+            lookupField = NAME,
+            exactLookups = deptName,
+            fuzzyLookups = null,
+            accessToken = null
+        )
+        return getDeptInfo(search)
+    }
+
+    override fun getUserDeptInfo(userId: String): Set<String> {
+        if (userDeptCache.getIfPresent(userId) != null) {
+            return userDeptCache.getIfPresent(userId)!!
+        }
+        val deptFamilyInfo = getUserDeptFamily(userId)
+        val userDeptIds = getUserDeptTreeIds(deptFamilyInfo)
+        userDeptCache.put(userId, userDeptIds)
+        return userDeptIds
+    }
+
+    private fun getUserDeptFamily(userId: String): String {
+        val deptSearch = SearchProfileDeptEntity(
+            id = userId,
+            with_family = true,
+            bk_app_code = appCode!!,
+            bk_app_secret = appSecret!!,
+            bk_username = userId
+        )
+        return callUserCenter(LIST_PROFILE_DEPARTMENTS, deptSearch)
+    }
+
     private fun getAndRefreshDeptUser(deptId: Int, accessToken: String?): List<String> {
-        // TODO: 获取accessToken
-        val accessToken = accessToken
         val search = SearchDeptUserEntity(
             id = deptId,
             recursive = true,
@@ -208,54 +263,23 @@ class AuthDeptServiceImpl @Autowired constructor(
             bk_username = "",
             accessToken = accessToken
         )
-        val url = getAuthRequestUrl(LIST_DEPARTMENT_PROFILES)
-        val content = objectMapper.writeValueAsString(search)
-        val mediaType = MediaType.parse("application/json; charset=utf-8")
-        val requestBody = RequestBody.create(mediaType, content)
-        val request = Request.Builder().url(url)
-            .post(requestBody)
-            .build()
-        OkhttpUtils.doHttp(request).use {
-            if (!it.isSuccessful) {
-                // 请求错误
-                throw RemoteServiceException("get dept user fail, response: ($it)")
-            }
-            val responseStr = it.body()!!.string()
-            return findUserName(responseStr)
-        }
+        val responseStr = callUserCenter(LIST_DEPARTMENT_PROFILES, search)
+        return findUserName(responseStr)
     }
 
     private fun getDeptInfo(searchDeptEnity: SearchUserAndDeptEntity): DeptInfoVo {
-        val url = getAuthRequestUrl(LIST_DEPARTMENTS)
-        val content = objectMapper.writeValueAsString(searchDeptEnity)
-        logger.info("getDeptInfo url: $url, body: ${JsonUtil.toJson(searchDeptEnity)}")
-        val mediaType = MediaType.parse("application/json; charset=utf-8")
-        val requestBody = RequestBody.create(mediaType, content)
-        val request = Request.Builder().url(url)
-            .post(requestBody)
-            .build()
-        OkhttpUtils.doHttp(request).use {
-            if (!it.isSuccessful) {
-                // 请求错误
-                throw RemoteServiceException("get dept fail, response: ($it)")
-            }
-            val responseStr = it.body()!!.string()
-            logger.info("getDeptInfo response： $responseStr")
-            val responseDTO = JsonUtil.fromJson(responseStr, ResponseDTO::class.java)
-            if (responseDTO.code != 0L || responseDTO.result == false) {
-                // 请求错误
-                throw RemoteServiceException(
-                    "get dept fail: $responseStr"
-                )
-            }
-            return objectMapper.readValue<DeptInfoVo>(JsonUtil.toJson(responseDTO.data))
-        }
+        val responseDTO = callUserCenter(LIST_DEPARTMENTS, searchDeptEnity)
+        return objectMapper.readValue<DeptInfoVo>(responseDTO)
     }
 
     private fun getUserInfo(searchUserEntity: SearchUserAndDeptEntity): BkUserInfoVo {
-        val url = getAuthRequestUrl(USER_INFO)
-        val content = objectMapper.writeValueAsString(searchUserEntity)
-        logger.info("getUserInfo url: $url, body: ${JsonUtil.toJson(searchUserEntity)}")
+        val responseDTO = callUserCenter(USER_INFO, searchUserEntity)
+        return objectMapper.readValue<BkUserInfoVo>(responseDTO)
+    }
+
+    private fun callUserCenter(url: String, searchEntity: EsbBaseReq): String {
+        val url = getAuthRequestUrl(url)
+        val content = objectMapper.writeValueAsString(searchEntity)
         val mediaType = MediaType.parse("application/json; charset=utf-8")
         val requestBody = RequestBody.create(mediaType, content)
         val request = Request.Builder().url(url)
@@ -264,42 +288,66 @@ class AuthDeptServiceImpl @Autowired constructor(
         OkhttpUtils.doHttp(request).use {
             if (!it.isSuccessful) {
                 // 请求错误
-                throw RemoteServiceException("get user fail, response: ($it)")
+                logger.warn("call user center fail, $url| $searchEntity|response: ($it)")
+                throw OperationException(
+                    MessageCodeUtil.getCodeLanMessage(
+                    messageCode = AuthMessageCode.USER_NOT_EXIST
+                ))
             }
             val responseStr = it.body()!!.string()
-            logger.info("getUserInfo response： $responseStr")
-            val responseDTO = JsonUtil.fromJson(responseStr, ResponseDTO::class.java)
+            logger.info("user center response： $responseStr")
+            val responseDTO = JsonUtil.to(responseStr, ResponseDTO::class.java)
             if (responseDTO.code != 0L || responseDTO.result == false) {
                 // 请求错误
-                throw RemoteServiceException(
-                    "get user fail: $responseStr"
-                )
+                logger.warn("call user center fail, $url| $searchEntity| response: ($it)")
+                throw OperationException(
+                    MessageCodeUtil.getCodeLanMessage(
+                        messageCode = AuthMessageCode.USER_NOT_EXIST
+                    ))
             }
-            return objectMapper.readValue<BkUserInfoVo>(JsonUtil.toJson(responseDTO.data))
+            logger.info("user center response：${objectMapper.writeValueAsString(responseDTO.data)}")
+            return objectMapper.writeValueAsString(responseDTO.data)
         }
     }
 
     fun findUserName(str: String): List<String> {
-        val responseDTO = JsonUtil.fromJson(str, ResponseDTO::class.java)
-
-        if (responseDTO.code != 0L || responseDTO.result == false) {
-            // 请求错误
-            throw RemoteServiceException(
-                "get dept user fail: $str"
-            )
-        }
-        val responseData = JsonUtil.toJson(responseDTO.data)
-        val dataMap = JsonUtil.fromJson(responseData, Map::class.java)
-        val userInfoList = JsonUtil.fromJson(JsonUtil.toJson(dataMap[HTTP_RESULT]), List::class.java)
+        val dataMap = JsonUtil.to(str, Map::class.java)
+        val userInfoList = JsonUtil.to(JsonUtil.toJson(dataMap[HTTP_RESULT]!!), List::class.java)
         val users = mutableListOf<String>()
         userInfoList.forEach {
-            val userInfo = JsonUtil.toJson(it)
-            val userInfoMap = JsonUtil.fromJson(userInfo, Map::class.java)
-            val userName = userInfoMap.get("username").toString()
+            val userInfo = JsonUtil.toJson(it!!)
+            val userInfoMap = JsonUtil.to(userInfo, Map::class.java)
+            val userName = userInfoMap["username"].toString()
             users.add(userName)
         }
 
         return users
+    }
+
+    private fun getParentDept(responseData: String): Int {
+        val dataMap = JsonUtil.to(responseData, Map::class.java)
+        return dataMap["parent"]?.toString()?.toInt() ?: 0
+    }
+
+    private fun getUserLastDeptId(responseData: String): Int {
+        val deptInfo = JsonUtil.to(responseData, List::class.java)
+        val any = deptInfo[0] as Any
+        if (any is Map<*, *>) {
+            return any["id"].toString().toInt()
+        }
+        return 0
+    }
+
+    fun getUserDeptTreeIds(responseData: String): Set<String> {
+        val deptInfo = JsonUtil.to(responseData, object : TypeReference<List<UserDeptTreeInfo>>() {})
+        val deptTreeId = mutableSetOf<String>()
+        val deptTree = deptInfo[0]
+        deptTreeId.add(deptTree.id)
+        val family = deptTree.family
+        family.forEach {
+            deptTreeId.add(it.id.toString())
+        }
+        return deptTreeId
     }
 
     /**
@@ -314,9 +362,11 @@ class AuthDeptServiceImpl @Autowired constructor(
     }
 
     companion object {
-        val logger = LoggerFactory.getLogger(AuthDeptServiceImpl::class.java)
+        private val logger = LoggerFactory.getLogger(AuthDeptServiceImpl::class.java)
         const val LIST_DEPARTMENTS = "api/c/compapi/v2/usermanage/list_departments/"
         const val LIST_DEPARTMENT_PROFILES = "api/c/compapi/v2/usermanage/list_department_profiles/"
         const val USER_INFO = "api/c/compapi/v2/usermanage/list_users/"
+        const val RETRIEVE_DEPARTMENT = "api/c/compapi/v2/usermanage/retrieve_department/"
+        const val LIST_PROFILE_DEPARTMENTS = "api/c/compapi/v2/usermanage/list_profile_departments/"
     }
 }

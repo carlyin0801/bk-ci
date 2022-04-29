@@ -86,7 +86,7 @@ class SampleAtomReleaseServiceImpl : SampleAtomReleaseService, AtomReleaseServic
         return fileStr
     }
 
-    override fun asyncHandleUpdateAtom(context: DSLContext, atomId: String, userId: String) = Unit
+    override fun asyncHandleUpdateAtom(context: DSLContext, atomId: String, userId: String, branch: String?) = Unit
 
     override fun validateUpdateMarketAtomReq(
         userId: String,
@@ -118,6 +118,8 @@ class SampleAtomReleaseServiceImpl : SampleAtomReleaseService, AtomReleaseServic
         }
         return processInfo
     }
+
+    override fun doCancelReleaseBus(userId: String, atomId: String) = Unit
 
     override fun getPreValidatePassTestStatus(atomCode: String, atomId: String, atomStatus: Byte): Byte {
         return AtomStatusEnum.RELEASED.status.toByte()

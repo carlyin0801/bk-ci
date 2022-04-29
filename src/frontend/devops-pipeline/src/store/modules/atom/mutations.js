@@ -39,9 +39,7 @@ import {
     DELETE_STAGE,
     UPDATE_STAGE,
     ADD_STAGE,
-    CONTAINER_TYPE_SELECTION_VISIBLE,
-    SET_INSERT_STAGE_INDEX,
-    SET_INSERT_STAGE_ISFINALLY,
+    SET_INSERT_STAGE_STATE,
     UPDATE_ATOM,
     SET_PIPELINE_EDITING,
     SET_PIPELINE,
@@ -64,7 +62,6 @@ import {
     SET_EXECUTE_STATUS,
     SET_SAVE_STATUS,
     SET_DEFAULT_STAGE_TAG,
-    TOGGLE_REVIEW_DIALOG,
     TOGGLE_STAGE_REVIEW_PANEL,
     SET_IMPORTED_JSON,
     SET_EDIT_FROM
@@ -79,15 +76,11 @@ import {
 import { hashID } from '@/utils/util'
 
 export default {
-    [TOGGLE_STAGE_REVIEW_PANEL]: (state, { isShow, editingElementPos = null }) => {
+    [TOGGLE_STAGE_REVIEW_PANEL]: (state, { showStageReviewPanel, editingElementPos = null }) => {
         Object.assign(state, {
-            showStageReviewPanel: isShow,
+            showStageReviewPanel,
             editingElementPos
         })
-    },
-    [TOGGLE_REVIEW_DIALOG]: (state, { isShow: showReviewDialog, reviewInfo }) => {
-        Vue.set(state, 'showReviewDialog', showReviewDialog)
-        Vue.set(state, 'reviewInfo', reviewInfo)
     },
     [SET_DEFAULT_STAGE_TAG]: (state, defaultStageTags) => {
         Vue.set(state, 'defaultStageTags', defaultStageTags)
@@ -148,7 +141,9 @@ export default {
         return state
     },
     [SET_PIPELINE_EDITING]: (state, editing) => {
-        if (state.pipeline) Vue.set(state.pipeline, 'editing', editing)
+        if (state.pipeline && state.pipeline.editing !== editing) {
+            Vue.set(state.pipeline, 'editing', editing)
+        }
         return state
     },
     [SET_CONTAINER_DETAIL]: (state, { containerTypeList, containerModalMap }) => {
@@ -199,15 +194,7 @@ export default {
         })
         return state
     },
-    [CONTAINER_TYPE_SELECTION_VISIBLE]: (state, payload) => {
-        Object.assign(state, payload)
-        return state
-    },
-    [SET_INSERT_STAGE_INDEX]: (state, payload) => {
-        Object.assign(state, payload)
-        return state
-    },
-    [SET_INSERT_STAGE_ISFINALLY]: (state, payload) => {
+    [SET_INSERT_STAGE_STATE]: (state, payload) => {
         Object.assign(state, payload)
         return state
     },
@@ -246,6 +233,7 @@ export default {
         } else {
             const diffRes = diffAtomVersions(preVerEle, preVerAtomModal.props, atomModal.props, isChangeAtom)
             atomVersionChangedKeys = diffRes.atomVersionChangedKeys
+            console.log(atomModal)
             atom = {
                 id: `e-${hashID(32)}`,
                 '@type': atomModal.classType !== atomCode ? atomModal.classType : atomCode,
@@ -262,11 +250,16 @@ export default {
         this.atomVersionChangedCleanId = setTimeout(() => {
             state.atomVersionChangedKeys = []
         }, 5000)
-        container.elements.splice(atomIndex, 1, atom)
+        container.elements.splice(atomIndex, 1, {
+            ...atom,
+            os: atomModal.os,
+            buildLessRunFlag: atomModal.buildLessRunFlag,
+            logoUrl: atomModal.logoUrl
+        })
     },
     [UPDATE_ATOM]: (state, { atom, newParam }) => {
         for (const key in newParam) {
-            if (newParam.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(newParam, key)) {
                 Vue.set(atom, key, newParam[key])
             }
         }
@@ -275,7 +268,7 @@ export default {
     [UPDATE_ATOM_INPUT]: (state, { atom, newParam }) => {
         try {
             for (const key in newParam) {
-                if (newParam.hasOwnProperty(key)) {
+                if (Object.prototype.hasOwnProperty.call(newParam, key)) {
                     Vue.set(atom.data.input, key, newParam[key])
                 }
             }
@@ -295,7 +288,7 @@ export default {
     [UPDATE_ATOM_OUTPUT]: (state, { atom, newParam }) => {
         try {
             for (const key in newParam) {
-                if (newParam.hasOwnProperty(key)) {
+                if (Object.prototype.hasOwnProperty.call(newParam, key)) {
                     Vue.set(atom.data.output, key, newParam[key])
                 }
             }
@@ -323,6 +316,8 @@ export default {
             name: insertStageIsFinally === true ? 'Final' : `stage-${insertStageIndex + 1}`,
             tag: [...state.defaultStageTags],
             containers: [],
+            checkIn: { timeout: 24 },
+            checkOut: { timeout: 24 },
             finally: insertStageIsFinally === true || undefined
         })
         return state
@@ -339,7 +334,8 @@ export default {
     },
     [INSERT_ATOM]: (state, { elements, insertIndex }) => {
         elements.splice(insertIndex, 0, {
-            data: {}
+            data: {},
+            isError: true
         })
     },
     [DELETE_ATOM]: (state, { elements, atomIndex }) => {

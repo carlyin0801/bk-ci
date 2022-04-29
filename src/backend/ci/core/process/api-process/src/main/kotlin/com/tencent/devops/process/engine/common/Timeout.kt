@@ -43,7 +43,7 @@ object Timeout {
 
     val MAX_MINUTES = TimeUnit.DAYS.toMinutes(MAX_JOB_RUN_DAYS).toInt() // 7 * 24 * 60 = 10080 分钟 = 最多超时7天
 
-    val CONTAINER_MAX_MILLS = TimeUnit.MINUTES.toMillis(MAX_MINUTES.toLong()).toInt() + 1 // 毫秒+1
+    val CONTAINER_MAX_MILLS = TimeUnit.MINUTES.toMillis(MAX_MINUTES.toLong()) + 1 // 毫秒+1
 
     fun transMinuteTimeoutToMills(timeoutMinutes: Int?): Pair<Int, Long> {
         var minute = timeoutMinutes ?: DEFAULT_TIMEOUT_MIN
@@ -51,5 +51,13 @@ object Timeout {
             minute = MAX_MINUTES
         }
         return minute to TimeUnit.MINUTES.toMillis(minute.toLong())
+    }
+
+    fun transMinuteTimeoutToSec(timeoutMinutes: Int?): Long {
+        var minute = timeoutMinutes ?: DEFAULT_TIMEOUT_MIN
+        if (minute <= 0 || minute > MAX_MINUTES) {
+            minute = MAX_MINUTES
+        }
+        return TimeUnit.MINUTES.toSeconds(minute.toLong()) + 1 // #5109 buffer 1 second
     }
 }

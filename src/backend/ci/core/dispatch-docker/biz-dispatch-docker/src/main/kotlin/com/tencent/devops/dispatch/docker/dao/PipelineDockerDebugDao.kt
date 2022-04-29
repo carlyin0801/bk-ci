@@ -31,7 +31,6 @@ import com.tencent.devops.common.api.pojo.Zone
 import com.tencent.devops.dispatch.pojo.enums.PipelineTaskStatus
 import com.tencent.devops.model.dispatch.tables.TDispatchPipelineDockerDebug
 import com.tencent.devops.model.dispatch.tables.records.TDispatchPipelineDockerDebugRecord
-import com.tencent.devops.store.pojo.image.enums.ImageRDTypeEnum
 import org.jooq.DSLContext
 import org.jooq.DatePart
 import org.jooq.Field
@@ -58,13 +57,11 @@ class PipelineDockerDebugDao {
         buildEnv: String,
         registryUser: String?,
         registryPwd: String?,
-        imageType: String?,
-        imagePublicFlag: Boolean?,
-        imageRDType: ImageRDTypeEnum?
-    ): Long {
+        imageType: String?
+    ) {
         with(TDispatchPipelineDockerDebug.T_DISPATCH_PIPELINE_DOCKER_DEBUG) {
             val now = LocalDateTime.now()
-            return dslContext.insertInto(this,
+            dslContext.insertInto(this,
                 PROJECT_ID,
                 PIPELINE_ID,
                 VM_SEQ_ID,
@@ -79,9 +76,7 @@ class PipelineDockerDebugDao {
                 BUILD_ENV,
                 REGISTRY_USER,
                 REGISTRY_PWD,
-                IMAGE_TYPE,
-                IMAGE_PUBLIC_FLAG,
-                IMAGE_RD_TYPE
+                IMAGE_TYPE
             )
                 .values(
                     projectId,
@@ -98,12 +93,20 @@ class PipelineDockerDebugDao {
                     buildEnv,
                     registryUser,
                     registryPwd,
-                    imageType,
-                    imagePublicFlag,
-                    imageRDType?.type?.toByte()
+                    imageType
                 )
-                .returning(ID)
-                .fetchOne()!!.id
+                .onDuplicateKeyUpdate()
+                .set(POOL_NO, poolNo)
+                .set(STATUS, status.status)
+                .set(TOKEN, token)
+                .set(IMAGE_NAME, imageName)
+                .set(HOST_TAG, hostTag)
+                .set(CONTAINER_ID, containerId)
+                .set(UPDATED_TIME, now)
+                .set(BUILD_ENV, buildEnv)
+                .set(REGISTRY_USER, registryUser)
+                .set(REGISTRY_PWD, registryPwd)
+                .execute()
         }
     }
 

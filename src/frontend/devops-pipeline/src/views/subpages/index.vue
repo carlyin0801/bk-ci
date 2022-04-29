@@ -47,7 +47,7 @@
                     </section>
                 </triggers>
 
-                <div :class="{ 'more-operation-entry': true, 'active': isDropmenuShow }">
+                <div :class="{ 'more-operation-entry': true }">
                     <show-tooltip placement="bottom-end" :content="$t('subpage.saveTempTooltips')" key="more_operation" name="more_operation" style="z-index: 1">
                         <div class="entry-btn">
                             <i class="entry-circle" v-for="i in [1, 2, 3]" :key="i" />
@@ -84,7 +84,6 @@
                 </bk-form-item>
             </bk-form>
         </bk-dialog>
-        <review-dialog :is-show="showReviewDialog"></review-dialog>
         <export-dialog :is-show.sync="showExportDialog"></export-dialog>
         <import-pipeline-popup :handle-import-success="handleImportModifyPipeline" :is-show.sync="showImportDialog"></import-pipeline-popup>
         
@@ -97,7 +96,6 @@
     import BreadCrumbItem from '@/components/BreadCrumb/BreadCrumbItem'
     import innerHeader from '@/components/devops/inner_header'
     import triggers from '@/components/pipeline/triggers'
-    import ReviewDialog from '@/components/ReviewDialog'
     import { bus } from '@/utils/bus'
     import pipelineOperateMixin from '@/mixins/pipeline-operate-mixin'
     import ImportPipelinePopup from '@/components/pipelineList/ImportPipelinePopup'
@@ -112,7 +110,6 @@
             BreadCrumb,
             showTooltip,
             BreadCrumbItem,
-            ReviewDialog,
             exportDialog,
             versionSideslider,
             ImportPipelinePopup
@@ -121,7 +118,7 @@
         data () {
             return {
                 tabMap: {
-                    'trendData': this.$t('history.trendData')
+                    trendData: this.$t('history.trendData')
                 },
                 pipelineListSearching: false,
                 breadCrumbPath: [],
@@ -131,7 +128,7 @@
                 dialogConfig: {
                     title: '',
                     loading: false,
-                    formData: [],
+                    formData: {},
                     formConfig: [],
                     handleDialogConfirm: () => {},
                     handleDialogCancel: () => {}
@@ -155,8 +152,8 @@
                 'isPropertyPanelVisible',
                 'showReviewDialog']),
             ...mapGetters({
-                'isEditing': 'atom/isEditing',
-                'getAllElements': 'atom/getAllElements'
+                isEditing: 'atom/isEditing',
+                getAllElements: 'atom/getAllElements'
             }),
             isEditPage () {
                 return this.$route.name === 'pipelinesEdit'
@@ -246,9 +243,11 @@
                     showTips: true,
                     tipsName: 'switch_pipeline_hint',
                     tipsContent: this.$t('subpage.switchPipelineTooltips'),
-                    to: this.$route.name === 'pipelinesHistory' ? null : {
-                        name: 'pipelinesHistory'
-                    },
+                    to: this.$route.name === 'pipelinesHistory'
+                        ? null
+                        : {
+                            name: 'pipelinesHistory'
+                        },
                     handleSelected: this.handleSelected,
                     searching: this.pipelineListSearching,
                     handleSearch: debounce(this.handleSearchPipeline, 300)
@@ -473,7 +472,7 @@
                 this.$router.push({
                     name: 'templateEdit',
                     params: {
-                        'templateId': templateId
+                        templateId: templateId
                     }
                 })
             },
@@ -618,7 +617,7 @@
                         font-size: 10px;
 
                         &[disabled] {
-                            color: $fontLigtherColor;
+                            color: $fontLighterColor;
                             cursor: auto;
                         }
                     }
@@ -658,7 +657,7 @@
             height: 100%;
 
             .devops-icon {
-                color: $fontLigtherColor;
+                color: $fontLighterColor;
                 padding-left: 16px;
                 cursor: pointer;
                 &:hover,

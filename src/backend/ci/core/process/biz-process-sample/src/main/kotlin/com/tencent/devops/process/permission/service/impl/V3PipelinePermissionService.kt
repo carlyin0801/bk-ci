@@ -150,7 +150,7 @@ class V3PipelinePermissionService constructor(
         }
         if (instances.contains("*")) {
             val pipelineIds = mutableListOf<String>()
-            val pipelineInfos = pipelineInfoDao.searchByPipelineName(dslContext, projectId)
+            val pipelineInfos = pipelineInfoDao.searchByProject(dslContext, projectId)
             pipelineInfos?.map {
                 pipelineIds.add(it.pipelineId)
             }
@@ -177,6 +177,6 @@ class V3PipelinePermissionService constructor(
     }
 
     companion object {
-        private val logger = LoggerFactory.getLogger(this::class.java)
+        private val logger = LoggerFactory.getLogger(V3PipelinePermissionService::class.java)
     }
 }

@@ -47,7 +47,7 @@ object Heartbeat {
     private var running = false
 
     @Synchronized
-    fun start(jobTimeoutMills: Long = TimeUnit.MINUTES.toMillis(900)) {
+    fun start(jobTimeoutMills: Long = TimeUnit.MINUTES.toMillis(900), executeCount: Int = 1) {
         if (running) {
             logger.warn("The heartbeat task already started")
             return
@@ -57,7 +57,7 @@ object Heartbeat {
             if (running) {
                 try {
                     logger.info("Start to do the heartbeat")
-                    val heartBeatInfo = EngineService.heartbeat()
+                    val heartBeatInfo = EngineService.heartbeat(executeCount)
                     val cancelTaskIds = heartBeatInfo.cancelTaskIds
                     if (!cancelTaskIds.isNullOrEmpty()) {
                         // 启动线程杀掉取消任务对应的进程
@@ -83,7 +83,7 @@ object Heartbeat {
          */
         executor.scheduleWithFixedDelay({
             if (running) {
-                LoggerService.addRedLine("Job timout: ${TimeUnit.MILLISECONDS.toMinutes(jobTimeoutMills)}min")
+                LoggerService.addErrorLine("Job timout: ${TimeUnit.MILLISECONDS.toMinutes(jobTimeoutMills)}min")
                 EngineService.timeout()
                 exitProcess(99)
             }

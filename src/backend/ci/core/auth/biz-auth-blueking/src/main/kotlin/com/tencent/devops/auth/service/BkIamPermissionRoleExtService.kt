@@ -38,8 +38,8 @@ import com.tencent.devops.auth.service.iam.PermissionGradeService
 import com.tencent.devops.auth.service.iam.impl.IamPermissionRoleExtService
 import com.tencent.devops.common.client.Client
 import org.jooq.DSLContext
-import org.jvnet.hk2.annotations.Service
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Service
 
 @Service
 class BkIamPermissionRoleExtService @Autowired constructor(
@@ -49,15 +49,17 @@ class BkIamPermissionRoleExtService @Autowired constructor(
     private val groupService: AuthGroupService,
     private val authGroupDao: AuthGroupDao,
     private val dslContext: DSLContext,
-    private val client: Client
+    private val client: Client,
+    private val strategyService: StrategyService
 ) : IamPermissionRoleExtService(
-    iamManagerService,
-    permissionGradeService,
-    iamConfiguration,
-    groupService,
-    authGroupDao,
-    dslContext,
-    client
+    iamManagerService = iamManagerService,
+    permissionGradeService = permissionGradeService,
+    iamConfiguration = iamConfiguration,
+    groupService = groupService,
+    groupDao = authGroupDao,
+    dslContext = dslContext,
+    client = client,
+    strategyService = strategyService
 ) {
     override fun groupCreateExt(
         roleId: Int,

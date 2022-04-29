@@ -29,7 +29,7 @@ package com.tencent.devops.process.engine.control.command.stage
 
 import com.tencent.devops.common.api.util.Watcher
 import com.tencent.devops.common.pipeline.enums.BuildStatus
-import com.tencent.devops.process.engine.control.command.CmdContext
+import com.tencent.devops.process.command.CmdContext
 import com.tencent.devops.process.engine.control.command.CmdFlowState
 import com.tencent.devops.process.engine.pojo.PipelineBuildContainer
 import com.tencent.devops.process.engine.pojo.PipelineBuildStage
@@ -50,6 +50,8 @@ data class StageContext(
     var failureContainerNum: Int = 0,
     var skipContainerNum: Int = 0,
     var previousStageStatus: BuildStatus? = null, // 上一个Stage的状态
+    var concurrency: Int = 0,
+    val maxConcurrency: Int = 20, // #5109 并发控制埋点准备
     override var cmdFlowSeq: Int = 0, // 命令序号
     override val variables: Map<String, String>, // 变量
     override val watcher: Watcher, // 监控对象

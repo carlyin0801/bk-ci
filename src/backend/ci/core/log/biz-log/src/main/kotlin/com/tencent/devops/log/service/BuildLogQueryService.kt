@@ -27,11 +27,15 @@
 
 package com.tencent.devops.log.service
 
+import com.tencent.devops.common.api.exception.ParamBlankException
+import com.tencent.devops.common.api.exception.PermissionForbiddenException
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.log.pojo.EndPageQueryLogs
 import com.tencent.devops.common.log.pojo.PageQueryLogs
 import com.tencent.devops.common.log.pojo.QueryLogStatus
 import com.tencent.devops.common.log.pojo.QueryLogs
+import com.tencent.devops.common.log.pojo.enums.LogType
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import javax.ws.rs.core.Response
@@ -39,23 +43,28 @@ import javax.ws.rs.core.Response
 @Service
 class BuildLogQueryService @Autowired constructor(
     private val logService: LogService,
-    private val logStatusService: LogStatusService
+    private val logStatusService: LogStatusService,
+    private val logPermissionService: LogPermissionService
 ) {
 
     fun getInitLogs(
+        userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String,
         debug: Boolean?,
+        logType: LogType?,
         tag: String?,
         jobId: String?,
         executeCount: Int?,
         subTag: String? = null
     ): Result<QueryLogs> {
+        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
         return Result(
             logService.queryInitLogs(
                 buildId = buildId,
                 debug = debug ?: false,
+                logType = logType,
                 subTag = subTag,
                 tag = tag,
                 jobId = jobId,
@@ -70,6 +79,7 @@ class BuildLogQueryService @Autowired constructor(
         pipelineId: String,
         buildId: String,
         debug: Boolean?,
+        logType: LogType?,
         tag: String?,
         jobId: String?,
         executeCount: Int?,
@@ -77,10 +87,12 @@ class BuildLogQueryService @Autowired constructor(
         pageSize: Int?,
         subTag: String? = null
     ): Result<PageQueryLogs> {
+        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
         return Result(
             logService.queryInitLogsPage(
                 buildId = buildId,
                 debug = debug ?: false,
+                logType = logType,
                 tag = tag,
                 subTag = subTag,
                 jobId = jobId,
@@ -92,10 +104,12 @@ class BuildLogQueryService @Autowired constructor(
     }
 
     fun getMoreLogs(
+        userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String,
         debug: Boolean?,
+        logType: LogType?,
         num: Int?,
         fromStart: Boolean?,
         start: Long,
@@ -105,6 +119,7 @@ class BuildLogQueryService @Autowired constructor(
         executeCount: Int?,
         subTag: String? = null
     ): Result<QueryLogs> {
+        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
         return Result(
             logService.queryLogsBetweenLines(
                 buildId = buildId,
@@ -113,6 +128,7 @@ class BuildLogQueryService @Autowired constructor(
                 start = start,
                 end = end,
                 debug = debug ?: false,
+                logType = logType,
                 tag = tag,
                 subTag = subTag,
                 jobId = jobId,
@@ -122,21 +138,25 @@ class BuildLogQueryService @Autowired constructor(
     }
 
     fun getAfterLogs(
+        userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String,
         start: Long,
         debug: Boolean?,
+        logType: LogType?,
         tag: String?,
         jobId: String?,
         executeCount: Int?,
         subTag: String? = null
     ): Result<QueryLogs> {
+        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
         return Result(
             logService.queryLogsAfterLine(
                 buildId = buildId,
                 start = start,
                 debug = debug ?: false,
+                logType = logType,
                 tag = tag,
                 subTag = subTag,
                 jobId = jobId,
@@ -146,23 +166,27 @@ class BuildLogQueryService @Autowired constructor(
     }
 
     fun getBeforeLogs(
+        userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String,
         end: Long,
         debug: Boolean?,
+        logType: LogType?,
         size: Int?,
         tag: String?,
         jobId: String?,
         executeCount: Int?,
         subTag: String? = null
     ): Result<QueryLogs> {
+        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
         return Result(
             logService.queryLogsBeforeLine(
                 buildId = buildId,
                 end = end,
                 size = size,
                 debug = debug ?: false,
+                logType = logType,
                 tag = tag,
                 subTag = subTag,
                 jobId = jobId,
@@ -172,12 +196,14 @@ class BuildLogQueryService @Autowired constructor(
     }
 
     fun getLogMode(
+        userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String,
         tag: String,
         executeCount: Int?
     ): Result<QueryLogStatus> {
+        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
         return Result(
             logStatusService.getStorageMode(
                 buildId = buildId,
@@ -188,6 +214,7 @@ class BuildLogQueryService @Autowired constructor(
     }
 
     fun downloadLogs(
+        userId: String,
         projectId: String,
         pipelineId: String,
         buildId: String,
@@ -197,6 +224,7 @@ class BuildLogQueryService @Autowired constructor(
         fileName: String?,
         subTag: String? = null
     ): Response {
+        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.DOWNLOAD)
         return logService.downloadLogs(
             pipelineId = pipelineId,
             buildId = buildId,
@@ -215,6 +243,7 @@ class BuildLogQueryService @Autowired constructor(
         buildId: String,
         size: Int,
         debug: Boolean?,
+        logType: LogType?,
         tag: String?,
         jobId: String?,
         executeCount: Int?,
@@ -224,6 +253,7 @@ class BuildLogQueryService @Autowired constructor(
             pipelineId = pipelineId,
             buildId = buildId,
             debug = debug ?: false,
+                logType = logType,
             tag = tag,
             subTag = subTag,
             jobId = jobId,
@@ -238,21 +268,54 @@ class BuildLogQueryService @Autowired constructor(
         pipelineId: String,
         buildId: String,
         debug: Boolean?,
+        logType: LogType?,
         size: Int?,
         tag: String?,
         jobId: String?,
         executeCount: Int?,
         subTag: String? = null
     ): Result<QueryLogs> {
+        validateAuth(userId, projectId, pipelineId, buildId, AuthPermission.VIEW)
         return Result(logService.getBottomLogs(
             pipelineId = pipelineId,
             buildId = buildId,
             debug = debug ?: false,
+                logType = logType,
             tag = tag,
             subTag = subTag,
             jobId = jobId,
             executeCount = executeCount,
             size = size
         ))
+    }
+
+    private fun validateAuth(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        permission: AuthPermission
+    ) {
+        if (userId.isBlank()) {
+            throw ParamBlankException("Invalid userId")
+        }
+        if (projectId.isBlank()) {
+            throw ParamBlankException("Invalid projectId")
+        }
+        if (pipelineId.isBlank()) {
+            throw ParamBlankException("Invalid pipelineId")
+        }
+        if (buildId.isBlank()) {
+            throw ParamBlankException("Invalid buildId")
+        }
+        if (!logPermissionService.verifyUserLogPermission(
+                userId = userId,
+                pipelineId = pipelineId,
+                projectCode = projectId,
+                permission = permission
+            )
+        ) {
+            throw PermissionForbiddenException("用户($userId)无权限在工程($projectId)下${permission.alias}流水线")
+        }
     }
 }

@@ -33,3 +33,5 @@ out
 .history
 .codecc
 build.yml
+*.ipa
+build/

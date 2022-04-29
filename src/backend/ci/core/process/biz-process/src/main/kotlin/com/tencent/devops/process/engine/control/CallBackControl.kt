@@ -29,6 +29,8 @@ package com.tencent.devops.process.engine.control
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tencent.devops.common.api.exception.RemoteServiceException
+import com.tencent.devops.common.api.util.Watcher
+import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.event.enums.ActionType
 import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildStatusBroadCastEvent
 import com.tencent.devops.common.pipeline.Model
@@ -45,12 +47,14 @@ import com.tencent.devops.common.pipeline.event.SimpleModel
 import com.tencent.devops.common.pipeline.event.SimpleStage
 import com.tencent.devops.common.pipeline.event.SimpleTask
 import com.tencent.devops.common.service.trace.TraceTag
+import com.tencent.devops.common.service.utils.LogUtils
 import com.tencent.devops.process.engine.service.PipelineBuildDetailService
 import com.tencent.devops.process.engine.service.PipelineRepositoryService
 import com.tencent.devops.process.engine.service.ProjectPipelineCallBackService
 import com.tencent.devops.process.pojo.CallBackHeader
-import com.tencent.devops.process.pojo.ProjectPipelineCallBack
+import com.tencent.devops.common.pipeline.event.ProjectPipelineCallBack
 import com.tencent.devops.process.pojo.ProjectPipelineCallBackHistory
+import com.tencent.devops.project.api.service.ServiceAllocIdResource
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -76,7 +80,8 @@ import javax.net.ssl.X509TrustManager
 class CallBackControl @Autowired constructor(
     private val pipelineBuildDetailService: PipelineBuildDetailService,
     private val pipelineRepositoryService: PipelineRepositoryService,
-    private val projectPipelineCallBackService: ProjectPipelineCallBackService
+    private val projectPipelineCallBackService: ProjectPipelineCallBackService,
+    private val client: Client
 ) {
 
     fun pipelineCreateEvent(projectId: String, pipelineId: String) {
@@ -91,6 +96,9 @@ class CallBackControl @Autowired constructor(
         callBackPipelineEvent(projectId, pipelineId, CallBackEvent.UPDATE_PIPELINE)
     }
 
+    fun pipelineRestoreEvent(projectId: String, pipelineId: String) {
+        callBackPipelineEvent(projectId, pipelineId, CallBackEvent.RESTORE_PIPELINE)
+    }
     private fun callBackPipelineEvent(projectId: String, pipelineId: String, callBackEvent: CallBackEvent) {
         logger.info("$projectId|$pipelineId|$callBackEvent|callback pipeline event")
         val list = projectPipelineCallBackService.listProjectCallBack(
@@ -103,6 +111,7 @@ class CallBackControl @Autowired constructor(
         }
 
         val pipelineInfo = pipelineRepositoryService.getPipelineInfo(
+            projectId = projectId,
             pipelineId = pipelineId,
             delete = null
         ) ?: return
@@ -140,21 +149,36 @@ class CallBackControl @Autowired constructor(
             } else {
                 if (event.actionType == ActionType.START) {
                     CallBackEvent.BUILD_TASK_START
+                } else if (event.actionType == ActionType.REFRESH) {
+                    CallBackEvent.BUILD_TASK_PAUSE
                 } else {
                     CallBackEvent.BUILD_TASK_END
                 }
             }
 
         logger.info("$projectId|$pipelineId|$buildId|${callBackEvent.name}|${event.stageId}|${event.taskId}|callback")
-        val list = projectPipelineCallBackService.listProjectCallBack(
-            projectId = projectId,
-            events = callBackEvent.name
+        val list = mutableListOf<ProjectPipelineCallBack>()
+        list.addAll(
+            projectPipelineCallBackService.listProjectCallBack(
+                projectId = projectId,
+                events = callBackEvent.name
+            )
         )
+        val pipelineCallback = pipelineRepositoryService.getModel(projectId, pipelineId)
+            ?.getPipelineCallBack(projectId, callBackEvent) ?: emptyList()
+        if (pipelineCallback.isNotEmpty()) {
+            list.addAll(pipelineCallback)
+        }
+
         if (list.isEmpty()) {
             return
         }
 
-        val modelDetail = pipelineBuildDetailService.get(buildId = event.buildId, refreshStatus = false) ?: return
+        val modelDetail = pipelineBuildDetailService.get(
+            projectId = projectId,
+            buildId = event.buildId,
+            refreshStatus = false
+        ) ?: return
 
         val buildEvent = BuildEvent(
             buildId = event.buildId,
@@ -175,25 +199,36 @@ class CallBackControl @Autowired constructor(
     }
 
     private fun <T> sendToCallBack(callBackData: CallBackData<T>, list: List<ProjectPipelineCallBack>) {
-
         val requestBody = ObjectMapper().writeValueAsString(callBackData)
-        executors.submit {
-            list.forEach {
-                try {
-                    logger.info("${it.projectId}|${it.callBackUrl}|${it.events}|send to callback")
-                    if (it.callBackUrl.isBlank()) {
-                        logger.warn("[${it.projectId}]| call back url is empty!")
-                        return@forEach
-                    }
-                    send(callBack = it, requestBody = requestBody)
-                } catch (e: Exception) {
-                    logger.error("BKSystemErrorMonitor|${it.projectId}|${it.callBackUrl}|${it.events}|${e.message}", e)
+
+        list.forEach {
+            val uniqueId = when (val data = callBackData.data) {
+                is PipelineEvent -> {
+                    data.pipelineId
                 }
+                is BuildEvent -> {
+                    data.buildId
+                }
+                else -> ""
+            }
+            val watcher = Watcher(id = "${it.projectId}|${it.callBackUrl}|${it.events}|$uniqueId")
+            try {
+                logger.info("${it.projectId}|${it.callBackUrl}|$uniqueId|${it.events}|send to callback")
+                if (it.callBackUrl.isBlank()) {
+                    logger.warn("[${it.projectId}]| call back url is empty!")
+                    return@forEach
+                }
+                send(uniqueId = uniqueId, callBack = it, requestBody = requestBody)
+            } catch (e: Exception) {
+                logger.error("BKSystemErrorMonitor|${it.projectId}|${it.callBackUrl}|${it.events}|${e.message}", e)
+            } finally {
+                watcher.stop()
+                LogUtils.printCostTimeWE(watcher, warnThreshold = 2000)
             }
         }
     }
 
-    private fun send(callBack: ProjectPipelineCallBack, requestBody: String) {
+    private fun send(uniqueId: String, callBack: ProjectPipelineCallBack, requestBody: String) {
 
         val startTime = System.currentTimeMillis()
         val request = Request.Builder()
@@ -203,21 +238,10 @@ class CallBackControl @Autowired constructor(
             .post(RequestBody.create(JSON, requestBody))
             .build()
 
-        var responseCode: Int? = null
-        var responseBody: String? = null
         var errorMsg: String? = null
         var status = ProjectPipelineCallbackStatus.SUCCESS
         try {
-            callbackClient.newCall(request).execute().use { response ->
-                if (response.code() != 200) {
-                    logger.warn("[${callBack.projectId}]|CALL_BACK|url=${callBack.callBackUrl}|code=${response.code()}")
-                } else {
-                    logger.info("[${callBack.projectId}]|CALL_BACK|url=${callBack.callBackUrl}|code=${response.code()}")
-                }
-                responseCode = response.code()
-                responseBody = response.body()?.string()
-                errorMsg = response.message()
-            }
+            callbackClient.newCall(request).execute()
         } catch (e: Exception) {
             logger.warn("BKSystemErrorMonitor|[${callBack.projectId}]|CALL_BACK|" +
                 "url=${callBack.callBackUrl}|${callBack.events}", e)
@@ -226,10 +250,7 @@ class CallBackControl @Autowired constructor(
         } finally {
             saveHistory(
                 callBack = callBack,
-                requestHeaders = request.headers().names().map { CallBackHeader(it, value = request.header(it) ?: "") },
-                requestBody = requestBody,
-                responseCode = responseCode,
-                responseBody = responseBody,
+                requestHeaders = listOf(CallBackHeader(name = "X-DEVOPS-WEBHOOK-UNIQUE-ID", value = uniqueId)),
                 status = status.name,
                 errorMsg = errorMsg,
                 startTime = startTime,
@@ -241,9 +262,6 @@ class CallBackControl @Autowired constructor(
     private fun saveHistory(
         callBack: ProjectPipelineCallBack,
         requestHeaders: List<CallBackHeader>,
-        requestBody: String,
-        responseCode: Int?,
-        responseBody: String?,
         status: String,
         errorMsg: String?,
         startTime: Long,
@@ -257,11 +275,13 @@ class CallBackControl @Autowired constructor(
                 status = status,
                 errorMsg = errorMsg,
                 requestHeaders = requestHeaders,
-                requestBody = requestBody,
-                responseCode = responseCode,
-                responseBody = responseBody,
+                requestBody = "",
+                responseCode = 0,
+                responseBody = "",
                 startTime = startTime,
-                endTime = endTime
+                endTime = endTime,
+                id = client.get(ServiceAllocIdResource::class)
+                    .generateSegmentId("PROJECT_PIPELINE_CALLBACK_HISTORY").data
             ))
         } catch (e: Throwable) {
             logger.error("[${callBack.projectId}]|[${callBack.callBackUrl}]|[${callBack.events}]|save fail", e)
@@ -272,7 +292,13 @@ class CallBackControl @Autowired constructor(
         val stages = mutableListOf<SimpleStage>()
         model.stages.forEachIndexed { pos, s ->
             val jobs = mutableListOf<SimpleJob>()
-            val stage = SimpleStage(stageName = "Stage-${pos + 1}", status = "", jobs = jobs)
+            val stage = SimpleStage(
+                stageName = "Stage-${pos + 1}",
+                name = s.name ?: "",
+                status = "",
+                jobs = jobs
+            )
+            logger.info("parseModel ${model.name}|${stage.stageName}|${stage.name}|")
             stage.startTime = s.startEpoch ?: 0
             stages.add(stage)
 

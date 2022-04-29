@@ -28,17 +28,17 @@
 package com.tencent.devops.worker.common.service
 
 import com.tencent.devops.common.api.exception.RemoteServiceException
+import com.tencent.devops.common.api.pojo.ErrorInfo
+import com.tencent.devops.common.util.HttpRetryUtils
 import com.tencent.devops.engine.api.pojo.HeartBeatInfo
 import com.tencent.devops.process.pojo.BuildTask
 import com.tencent.devops.process.pojo.BuildTaskResult
 import com.tencent.devops.process.pojo.BuildVariables
-import com.tencent.devops.worker.common.CI_TOKEN_CONTEXT
 import com.tencent.devops.worker.common.JOB_OS_CONTEXT
 import com.tencent.devops.worker.common.api.ApiFactory
 import com.tencent.devops.worker.common.api.engine.EngineBuildSDKApi
 import com.tencent.devops.worker.common.env.AgentEnv
 import com.tencent.devops.worker.common.logger.LoggerService
-import com.tencent.devops.worker.common.utils.HttpRetryUtils
 import org.slf4j.LoggerFactory
 
 object EngineService {
@@ -47,11 +47,17 @@ object EngineService {
 
     private val buildApi = ApiFactory.create(EngineBuildSDKApi::class)
 
+    private const val retryTime = 100
+
+    private const val retryPeriodMills = 5000L
+
     fun setStarted(): BuildVariables {
+
         var retryCount = 0
-        val result = HttpRetryUtils.retry {
+        val result = HttpRetryUtils.retry(retryTime = retryTime) {
             if (retryCount > 0) {
                 logger.warn("retry|time=$retryCount|setStarted")
+                sleepInterval(retryCount)
             }
             buildApi.setStarted(retryCount++)
         }
@@ -59,35 +65,20 @@ object EngineService {
             throw RemoteServiceException("Report builder startup status failed")
         }
         val ret = result.data ?: throw RemoteServiceException("Report builder startup status failed")
-        val ciToken = buildApi.getCiToken()
-        return if (ciToken.isBlank()) {
-            ret
-        } else {
-            BuildVariables(
-                buildId = ret.buildId,
-                vmSeqId = ret.vmSeqId,
-                vmName = ret.vmName,
-                projectId = ret.projectId,
-                pipelineId = ret.pipelineId,
-                variables = ret.variables.plus(mapOf(
-                    CI_TOKEN_CONTEXT to ciToken,
-                    JOB_OS_CONTEXT to AgentEnv.getOS().name
-                )),
-                buildEnvs = ret.buildEnvs,
-                containerId = ret.containerId,
-                containerHashId = ret.containerHashId,
-                variablesWithType = ret.variablesWithType,
-                timeoutMills = ret.timeoutMills,
-                containerType = ret.containerType
-            )
-        }
+
+        // #5277 将Job上下文传入本次agent任务
+        val jobContext = buildApi.getJobContext().toMutableMap()
+        jobContext[JOB_OS_CONTEXT] = AgentEnv.getOS().name
+
+        return ret.copy(variables = ret.variables.plus(jobContext))
     }
 
     fun claimTask(): BuildTask {
         var retryCount = 0
-        val result = HttpRetryUtils.retry {
+        val result = HttpRetryUtils.retry(retryTime = retryTime) {
             if (retryCount > 0) {
                 logger.warn("retry|time=$retryCount|claimTask")
+                sleepInterval(retryCount)
             }
             buildApi.claimTask(retryCount++)
         }
@@ -100,9 +91,10 @@ object EngineService {
     fun completeTask(taskResult: BuildTaskResult) {
         LoggerService.flush()
         var retryCount = 0
-        val result = HttpRetryUtils.retry {
+        val result = HttpRetryUtils.retry(retryTime = retryTime) {
             if (retryCount > 0) {
                 logger.warn("retry|time=$retryCount|completeTask")
+                sleepInterval(retryCount)
             }
             buildApi.completeTask(taskResult, retryCount++)
         }
@@ -111,27 +103,36 @@ object EngineService {
         }
     }
 
-    fun endBuild() {
+    private fun sleepInterval(retryCount: Int) {
+        if (retryCount > 0) {
+            val time = (retryCount % 11) * 1000L // #5109 重试间隔优化，递增最多10秒
+            logger.warn("sleepInterval|retryCount=$retryCount|sleepTime=$time")
+            Thread.sleep(time)
+        }
+    }
+
+    fun endBuild(buildVariables: BuildVariables) {
         var retryCount = 0
         val result = HttpRetryUtils.retry {
             if (retryCount > 0) {
                 logger.warn("retry|time=$retryCount|endBuild")
+                sleepInterval(retryCount)
             }
-            buildApi.endTask(retryCount++)
+            buildApi.endTask(buildVariables, retryCount++)
         }
         if (result.isNotOk()) {
             throw RemoteServiceException("Failed to end build task")
         }
     }
 
-    fun heartbeat(): HeartBeatInfo {
+    fun heartbeat(executeCount: Int = 1): HeartBeatInfo {
         var retryCount = 0
-        val result = HttpRetryUtils.retryWhenHttpRetryException {
+        val result = HttpRetryUtils.retryWhenHttpRetryException(retryPeriodMills = retryPeriodMills) {
             if (retryCount > 0) {
                 logger.warn("retryWhenHttpRetryException|time=$retryCount|heartbeat")
             }
             retryCount++
-            buildApi.heartbeat()
+            buildApi.heartbeat(executeCount)
         }
         if (result.isNotOk()) {
             throw RemoteServiceException("Failed to do heartbeat task")
@@ -141,7 +142,7 @@ object EngineService {
 
     fun timeout() {
         var retryCount = 0
-        val result = HttpRetryUtils.retryWhenHttpRetryException {
+        val result = HttpRetryUtils.retryWhenHttpRetryException(retryPeriodMills = retryPeriodMills) {
             if (retryCount > 0) {
                 logger.warn("retryWhenHttpRetryException|time=$retryCount|timeout")
             }
@@ -150,6 +151,21 @@ object EngineService {
         }
         if (result.isNotOk()) {
             throw RemoteServiceException("Failed to report timeout")
+        }
+    }
+
+    fun submitError(errorInfo: ErrorInfo) {
+        var retryCount = 0
+        val result = HttpRetryUtils.retry {
+            if (retryCount > 0) {
+                logger.warn("retry|time=$retryCount|submitError")
+                sleepInterval(retryCount)
+            }
+            retryCount++
+            buildApi.submitError(errorInfo)
+        }
+        if (result.isNotOk()) {
+            throw RemoteServiceException("Failed to submit error")
         }
     }
 }

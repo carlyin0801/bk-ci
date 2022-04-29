@@ -31,6 +31,7 @@ import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatch
 import com.tencent.devops.common.pipeline.Model
 import com.tencent.devops.common.pipeline.container.Stage
 import com.tencent.devops.common.pipeline.enums.BuildStatus
+import com.tencent.devops.common.pipeline.pojo.StagePauseCheck
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.process.dao.BuildDetailDao
 import com.tencent.devops.process.engine.dao.PipelineBuildDao
@@ -56,10 +57,16 @@ class StageBuildDetailService(
     pipelineEventDispatcher,
     redisOperation
 ) {
-    fun updateStageStatus(buildId: String, stageId: String, buildStatus: BuildStatus): List<BuildStageStatus> {
+
+    fun updateStageStatus(
+        projectId: String,
+        buildId: String,
+        stageId: String,
+        buildStatus: BuildStatus
+    ): List<BuildStageStatus> {
         logger.info("[$buildId]|update_stage_status|stageId=$stageId|status=$buildStatus")
         var allStageStatus: List<BuildStageStatus>? = null
-        update(buildId, object : ModelInterface {
+        update(projectId, buildId, object : ModelInterface {
             var update = false
 
             override fun onFindStage(stage: Stage, model: Model): Traverse {
@@ -80,14 +87,14 @@ class StageBuildDetailService(
             override fun needUpdate(): Boolean {
                 return update
             }
-        }, BuildStatus.RUNNING)
+        }, BuildStatus.RUNNING, operation = "updateStageStatus#$stageId")
         return allStageStatus ?: emptyList()
     }
 
-    fun stageSkip(buildId: String, stageId: String): List<BuildStageStatus> {
+    fun stageSkip(projectId: String, buildId: String, stageId: String): List<BuildStageStatus> {
         logger.info("[$buildId]|stage_skip|stageId=$stageId")
         var allStageStatus: List<BuildStageStatus>? = null
-        update(buildId, object : ModelInterface {
+        update(projectId, buildId, object : ModelInterface {
             var update = false
 
             override fun onFindStage(stage: Stage, model: Model): Traverse {
@@ -106,27 +113,31 @@ class StageBuildDetailService(
             override fun needUpdate(): Boolean {
                 return update
             }
-        }, BuildStatus.RUNNING)
+        }, BuildStatus.RUNNING, operation = "stageSkip#$stageId")
         return allStageStatus ?: emptyList()
     }
 
     fun stagePause(
+        projectId: String,
         buildId: String,
         stageId: String,
-        controlOption: PipelineBuildStageControlOption
+        controlOption: PipelineBuildStageControlOption,
+        checkIn: StagePauseCheck?,
+        checkOut: StagePauseCheck?
     ): List<BuildStageStatus> {
         logger.info("[$buildId]|stage_pause|stageId=$stageId")
         var allStageStatus: List<BuildStageStatus>? = null
-        update(buildId, object : ModelInterface {
+        update(projectId, buildId, object : ModelInterface {
             var update = false
 
             override fun onFindStage(stage: Stage, model: Model): Traverse {
                 if (stage.id == stageId) {
                     update = true
                     stage.status = BuildStatus.PAUSE.name
-                    stage.reviewStatus = BuildStatus.REVIEWING.name
-                    stage.stageControlOption!!.triggerUsers = controlOption.stageControlOption.triggerUsers
+                    stage.stageControlOption = controlOption.stageControlOption
                     stage.startEpoch = System.currentTimeMillis()
+                    stage.checkIn = checkIn
+                    stage.checkOut = checkOut
                     allStageStatus = fetchHistoryStageStatus(model)
                     return Traverse.BREAK
                 }
@@ -136,20 +147,29 @@ class StageBuildDetailService(
             override fun needUpdate(): Boolean {
                 return update
             }
-        }, BuildStatus.STAGE_SUCCESS)
+        }, BuildStatus.STAGE_SUCCESS, operation = "stagePause#$stageId")
         return allStageStatus ?: emptyList()
     }
 
-    fun stageCancel(buildId: String, stageId: String) {
+    fun stageCancel(
+        projectId: String,
+        buildId: String,
+        stageId: String,
+        controlOption: PipelineBuildStageControlOption,
+        checkIn: StagePauseCheck?,
+        checkOut: StagePauseCheck?
+    ) {
         logger.info("[$buildId]|stage_cancel|stageId=$stageId")
-        update(buildId, object : ModelInterface {
+        update(projectId, buildId, object : ModelInterface {
             var update = false
 
             override fun onFindStage(stage: Stage, model: Model): Traverse {
                 if (stage.id == stageId) {
                     update = true
                     stage.status = ""
-                    stage.reviewStatus = BuildStatus.REVIEW_ABORT.name
+                    stage.stageControlOption = controlOption.stageControlOption
+                    stage.checkIn = checkIn
+                    stage.checkOut = checkOut
                     return Traverse.BREAK
                 }
                 return Traverse.CONTINUE
@@ -158,26 +178,28 @@ class StageBuildDetailService(
             override fun needUpdate(): Boolean {
                 return update
             }
-        }, BuildStatus.STAGE_SUCCESS)
+        }, BuildStatus.STAGE_SUCCESS, operation = "stageCancel#$stageId")
     }
 
-    fun stageStart(
+    fun stageCheckQuality(
+        projectId: String,
         buildId: String,
         stageId: String,
-        controlOption: PipelineBuildStageControlOption
+        controlOption: PipelineBuildStageControlOption,
+        checkIn: StagePauseCheck?,
+        checkOut: StagePauseCheck?
     ): List<BuildStageStatus> {
-        logger.info("[$buildId]|stage_start|stageId=$stageId")
+        logger.info("[$buildId]|stage_check_quality|stageId=$stageId|checkIn=$checkIn|checkOut=$checkOut")
         var allStageStatus: List<BuildStageStatus>? = null
-        update(buildId, object : ModelInterface {
+        update(projectId, buildId, object : ModelInterface {
             var update = false
 
             override fun onFindStage(stage: Stage, model: Model): Traverse {
                 if (stage.id == stageId) {
                     update = true
-                    stage.status = BuildStatus.QUEUE.name
-                    stage.reviewStatus = BuildStatus.REVIEW_PROCESSED.name
-                    stage.stageControlOption?.triggered = controlOption.stageControlOption.triggered
-                    stage.stageControlOption?.reviewParams = controlOption.stageControlOption.reviewParams
+                    stage.stageControlOption = controlOption.stageControlOption
+                    stage.checkIn = checkIn
+                    stage.checkOut = checkOut
                     allStageStatus = fetchHistoryStageStatus(model)
                     return Traverse.BREAK
                 }
@@ -187,13 +209,75 @@ class StageBuildDetailService(
             override fun needUpdate(): Boolean {
                 return update
             }
-        }, BuildStatus.RUNNING)
+        }, BuildStatus.RUNNING, operation = "stageCheckQuality#$stageId")
+        return allStageStatus ?: emptyList()
+    }
+
+    fun stageReview(
+        projectId: String,
+        buildId: String,
+        stageId: String,
+        controlOption: PipelineBuildStageControlOption,
+        checkIn: StagePauseCheck?,
+        checkOut: StagePauseCheck?
+    ) {
+        logger.info("[$buildId]|stage_review|stageId=$stageId")
+        update(projectId, buildId, object : ModelInterface {
+            var update = false
+
+            override fun onFindStage(stage: Stage, model: Model): Traverse {
+                if (stage.id == stageId) {
+                    update = true
+                    stage.stageControlOption = controlOption.stageControlOption
+                    stage.checkIn = checkIn
+                    stage.checkOut = checkOut
+                    return Traverse.BREAK
+                }
+                return Traverse.CONTINUE
+            }
+
+            override fun needUpdate(): Boolean {
+                return update
+            }
+        }, BuildStatus.STAGE_SUCCESS, operation = "stageReview#$stageId")
+    }
+
+    fun stageStart(
+        projectId: String,
+        buildId: String,
+        stageId: String,
+        controlOption: PipelineBuildStageControlOption,
+        checkIn: StagePauseCheck?,
+        checkOut: StagePauseCheck?
+    ): List<BuildStageStatus> {
+        logger.info("[$buildId]|stage_start|stageId=$stageId")
+        var allStageStatus: List<BuildStageStatus>? = null
+        update(projectId, buildId, object : ModelInterface {
+            var update = false
+
+            override fun onFindStage(stage: Stage, model: Model): Traverse {
+                if (stage.id == stageId) {
+                    update = true
+                    stage.status = BuildStatus.QUEUE.name
+                    stage.stageControlOption = controlOption.stageControlOption
+                    stage.checkIn = checkIn
+                    stage.checkOut = checkOut
+                    allStageStatus = fetchHistoryStageStatus(model)
+                    return Traverse.BREAK
+                }
+                return Traverse.CONTINUE
+            }
+
+            override fun needUpdate(): Boolean {
+                return update
+            }
+        }, BuildStatus.RUNNING, operation = "stageStart#$stageId")
         return allStageStatus ?: emptyList()
     }
 
     private fun fetchHistoryStageStatus(model: Model): List<BuildStageStatus> {
         val stageTagMap: Map<String, String>
-            by lazy { stageTagService.getAllStageTag().data!!.associate { it.id to it.stageTagName } ?: emptyMap() }
+            by lazy { stageTagService.getAllStageTag().data?.associate { it.id to it.stageTagName } ?: emptyMap() }
         // 更新Stage状态至BuildHistory
         return model.stages.map {
             BuildStageStatus(

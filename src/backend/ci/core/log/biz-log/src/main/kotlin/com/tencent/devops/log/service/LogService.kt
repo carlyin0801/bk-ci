@@ -29,31 +29,29 @@ package com.tencent.devops.log.service
 
 import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildFinishBroadCastEvent
 import com.tencent.devops.common.log.pojo.EndPageQueryLogs
-import com.tencent.devops.common.log.pojo.LogBatchEvent
-import com.tencent.devops.common.log.pojo.LogEvent
-import com.tencent.devops.common.log.pojo.LogStatusEvent
+import com.tencent.devops.log.event.LogStorageEvent
+import com.tencent.devops.log.event.LogOriginEvent
+import com.tencent.devops.log.event.LogStatusEvent
 import com.tencent.devops.common.log.pojo.PageQueryLogs
 import com.tencent.devops.common.log.pojo.QueryLogs
-import org.slf4j.LoggerFactory
+import com.tencent.devops.common.log.pojo.enums.LogType
 import javax.ws.rs.core.Response
 
+@Suppress("LongParameterList", "TooManyFunctions")
 interface LogService {
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(LogService::class.java)
-    }
 
     fun pipelineFinish(event: PipelineBuildFinishBroadCastEvent)
 
-    fun addLogEvent(event: LogEvent)
+    fun addLogEvent(event: LogOriginEvent)
 
-    fun addBatchLogEvent(event: LogBatchEvent)
+    fun addBatchLogEvent(event: LogStorageEvent)
 
     fun updateLogStatus(event: LogStatusEvent)
 
     fun queryInitLogs(
         buildId: String,
         debug: Boolean,
+        logType: LogType?,
         tag: String?,
         subTag: String?,
         jobId: String?,
@@ -67,6 +65,7 @@ interface LogService {
         start: Long,
         end: Long,
         debug: Boolean,
+        logType: LogType?,
         tag: String?,
         subTag: String?,
         jobId: String?,
@@ -77,6 +76,7 @@ interface LogService {
         buildId: String,
         start: Long,
         debug: Boolean,
+        logType: LogType?,
         tag: String?,
         subTag: String?,
         jobId: String?,
@@ -87,6 +87,7 @@ interface LogService {
         buildId: String,
         end: Long,
         debug: Boolean,
+        logType: LogType?,
         size: Int?,
         tag: String?,
         subTag: String?,
@@ -108,6 +109,7 @@ interface LogService {
         pipelineId: String,
         buildId: String,
         debug: Boolean,
+        logType: LogType?,
         tag: String?,
         subTag: String?,
         jobId: String?,
@@ -119,6 +121,7 @@ interface LogService {
         pipelineId: String,
         buildId: String,
         debug: Boolean,
+        logType: LogType?,
         tag: String?,
         subTag: String?,
         jobId: String?,
@@ -129,6 +132,7 @@ interface LogService {
     fun queryInitLogsPage(
         buildId: String,
         debug: Boolean,
+        logType: LogType?,
         tag: String?,
         subTag: String?,
         jobId: String?,

@@ -2,6 +2,7 @@ const Vue = window.Vue
 const vue = new Vue()
 const prefix = 'store/api'
 const processPerfix = 'process/api'
+const qualityPerfix = 'quality/api'
 
 export default {
     getMemberView (params) {
@@ -60,5 +61,13 @@ export default {
                 'content-type': 'application/json'
             }
         })
+    },
+
+    requestAtomQuality (code) {
+        return vue.$ajax.get(`${qualityPerfix}/user/metadata/market/atom/${code}/indicator/list`)
+    },
+
+    requestAtomVersionDetail (code) {
+        return vue.$ajax.get(`${prefix}/user/market/atoms/${code}/showVersionInfo`)
     }
 }
