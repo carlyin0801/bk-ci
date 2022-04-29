@@ -27,38 +27,32 @@ class PipelineFailServiceImpl @Autowired constructor(
         queryPipelineFailTrendInfoDTO: QueryPipelineFailTrendInfoDTO
     ): List<PipelineFailTrendInfoVO> {
 
-        val result = pipelineFailDao.queryPipelineFailErrorTypeInfo(
+        val typeInfos = pipelineFailDao.queryPipelineFailErrorTypeInfo(
             dslContext,
             QueryPipelineOverviewQO(
                 projectId = queryPipelineFailTrendInfoDTO.projectId,
                 queryReq = queryPipelineFailTrendInfoDTO.queryReq
             )
         )
-        val failTrendInfos = mutableListOf<PipelineFailTrendInfoVO>()
-        result.forEach { it ->
+        val failTrendInfos = typeInfos.map { failTrendInfo ->
             val result = pipelineFailDao.queryPipelineFailTrendInfo(
                 dslContext,
                 QueryPipelineOverviewQO(
                     projectId = queryPipelineFailTrendInfoDTO.projectId,
                     queryReq = queryPipelineFailTrendInfoDTO.queryReq
                 ),
-                it.value1()
+                failTrendInfo.value1()
             )
-            val failStatisticsInfos = mutableListOf<PipelineFailStatisticsInfoDO>()
-            result.forEach {
-                failStatisticsInfos.add(
-                    PipelineFailStatisticsInfoDO(
-                        statisticsTime = it.value1(),
-                        errorCount = it.value2().toInt()
-                    )
+            val failStatisticsInfos = result.map { failStatisticsInfo ->
+                PipelineFailStatisticsInfoDO(
+                    statisticsTime = failStatisticsInfo.value1(),
+                    errorCount = failStatisticsInfo.value2().toInt()
                 )
             }
-            failTrendInfos.add(
-                PipelineFailTrendInfoVO(
-                    errorType = it.value1(),
-                    name = it.value2(),
-                    failInfos = failStatisticsInfos
-                )
+            PipelineFailTrendInfoVO(
+                errorType = failTrendInfo.value1(),
+                name = failTrendInfo.value2(),
+                failInfos = failStatisticsInfos
             )
         }
         return failTrendInfos
@@ -73,17 +67,14 @@ class PipelineFailServiceImpl @Autowired constructor(
                 queryPipelineFailDTO.errorTypes
             )
         )
-        val listOf = mutableListOf<PipelineFailInfoDO>()
-        result.forEach {
-            listOf.add(
-                PipelineFailInfoDO(
-                    errorType = it.value1(),
-                    name = it.value2(),
-                    errorCount = it.value3().toInt()
-                )
+        val list = result.map {
+            PipelineFailInfoDO(
+                errorType = it.value1(),
+                name = it.value2(),
+                errorCount = it.value3().toInt()
             )
         }
-        return listOf
+        return list
     }
 
     override fun queryPipelineFailDetailInfo(queryPipelineFailDTO: QueryPipelineFailDTO): Page<PipelineFailDetailInfoDO> {
@@ -101,7 +92,18 @@ class PipelineFailServiceImpl @Autowired constructor(
             )
         }
         val page = if (queryPipelineFailDTO.page <= 0) 1 else queryPipelineFailDTO.page
-        val pageSize = if (queryPipelineFailDTO.pageSize <= 0) 10 else queryPipelineFailDTO.pageSize
+        var pageSize = if (queryPipelineFailDTO.pageSize <= 0) 10 else queryPipelineFailDTO.pageSize
+        when {
+            queryPipelineFailDTO.pageSize <= 0 -> {
+                10
+            }
+            queryPipelineFailDTO.pageSize > 100 -> {
+                100
+            }
+            else -> {
+                queryPipelineFailDTO.pageSize
+            }
+        }
         val result = pipelineFailDao.queryPipelineFailDetailInfo(
             dslContext,
             QueryPipelineFailQO(

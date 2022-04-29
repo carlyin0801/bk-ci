@@ -59,7 +59,6 @@ class UserPipelineFailResourceImpl @Autowired constructor(
         page: Int,
         pageSize: Int
     ): Result<Page<PipelineFailDetailInfoDO>> {
-        val limit = PageUtil.convertPageSizeToSQLMAXLimit(page, pageSize)
         return Result(
             pipelineFailManageService.queryPipelineFailDetailInfo(
                 QueryPipelineFailDTO(
