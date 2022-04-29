@@ -18,7 +18,7 @@ import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 
-@Api(tags = ["USER_ATOM_TREND_INFO"], description = "插件-趋势信息")
+@Api(tags = ["USER_ATOM_TREND_INFO"], description = "插件-统计信息")
 @Path("/user/atom/trend")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

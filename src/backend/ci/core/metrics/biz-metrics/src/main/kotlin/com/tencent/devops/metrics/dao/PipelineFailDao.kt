@@ -52,7 +52,8 @@ class PipelineFailDao {
             val t1 = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
             val t2 = TErrorTyppeDict.T_ERROR_TYPPE_DICT
             val conditions = getConditions(queryReqDO.projectId, queryReqDO.queryReq, t1)
-            val step = dslContext.select(this.ERROR_TYPE, t2.NAME).from(this)
+            val step = dslContext.select(this.ERROR_TYPE, t2.NAME)
+                .from(this)
             val conditionStep = if (!queryReqDO.queryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.leftJoin(t2).on(this.ERROR_TYPE.eq(t2.ERROR_TYPE))
                     .leftJoin(t1).on(this.PROJECT_ID.eq(t1.PROJECT_ID))
@@ -75,7 +76,8 @@ class PipelineFailDao {
             val step = dslContext.select(
                 ERROR_TYPE,
                 t2.NAME,
-                sum(this.ERROR_COUNT)).from(this)
+                sum(this.ERROR_COUNT))
+                .from(this)
             conditions.add(ERROR_TYPE.`in`(queryPipelineFailQo.errorTypes))
             val conditionStep = if (!queryPipelineFailQo.queryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.leftJoin(t2).on(this.ERROR_TYPE.eq(t2.ERROR_TYPE))
@@ -102,10 +104,10 @@ class PipelineFailDao {
             } else {
                 step.where(conditions)
             }
-            return conditionStep.limit(
-                (queryPipelineFailQo.page - 1) * queryPipelineFailQo.pageSize,
-                queryPipelineFailQo.pageSize
-            ).fetch()
+            return conditionStep
+                .limit(queryPipelineFailQo.limit!!.limit)
+                .offset(queryPipelineFailQo.limit!!.offset)
+                .fetch()
         }
     }
 

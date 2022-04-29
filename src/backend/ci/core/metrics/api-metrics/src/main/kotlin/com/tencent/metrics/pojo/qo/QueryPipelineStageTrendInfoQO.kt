@@ -4,12 +4,12 @@ import com.tencent.metrics.pojo.`do`.BaseQueryReqDO
 import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 
-@ApiModel("查询流水线失败趋势数据查询条件信息对象")
-data class QueryPipelineFailTrendQO(
+@ApiModel("查询流水线stage趋势信息查询条件信息对象")
+data class QueryPipelineStageTrendInfoQO(
     @ApiModelProperty("项目ID")
     val projectId: String,
-    @ApiModelProperty("基本查询条件信息")
+    @ApiModelProperty("查询条件信息")
     val queryReq: BaseQueryReqDO,
-    @ApiModelProperty("错误类型")
-    val errorType: Int
+    @ApiModelProperty("stage标签", required = true)
+    val stageTag: String
 )

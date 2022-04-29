@@ -67,14 +67,14 @@ class PipelineFailServiceImpl @Autowired constructor(
                 queryPipelineFailDTO.errorTypes
             )
         )
-        val list = result.map {
+        return result.map {
             PipelineFailInfoDO(
                 errorType = it.value1(),
                 name = it.value2(),
                 errorCount = it.value3().toInt()
             )
         }
-        return list
+
     }
 
     override fun queryPipelineFailDetailInfo(queryPipelineFailDTO: QueryPipelineFailDTO): Page<PipelineFailDetailInfoDO> {
@@ -91,32 +91,21 @@ class PipelineFailServiceImpl @Autowired constructor(
                 errorCode = MetricsMessageCode.QUERY_DETAILS_COUNT_BEYOND
             )
         }
-        val page = if (queryPipelineFailDTO.page <= 0) 1 else queryPipelineFailDTO.page
-        var pageSize =
-            when {
-            queryPipelineFailDTO.pageSize <= 0 -> {
-                10
-            }
-            queryPipelineFailDTO.pageSize > 100 -> {
-                100
-            }
-            else -> {
-                queryPipelineFailDTO.pageSize
-            }
-        }
         val result = pipelineFailDao.queryPipelineFailDetailInfo(
             dslContext,
             QueryPipelineFailQO(
                 queryPipelineFailDTO.projectId,
                 queryPipelineFailDTO.queryReq,
                 queryPipelineFailDTO.errorTypes,
-                page,
-                pageSize
+                PageUtil.convertPageSizeToSQLMAXLimit(
+                    queryPipelineFailDTO.page,
+                    queryPipelineFailDTO.pageSize
+                )
             )
         )?.map {
             PipelineFailDetailInfoDO(
-                projectId = it.get("PROJECT_ID") as String,
-                PipelineBaseInfoDO(
+                PipelineBuildInfoDO(
+                    projectId = it.get("PROJECT_ID") as String,
                     pipelineId = it.get("PIPELINE_ID") as String,
                     pipelineName = it.get("PIPELINE_NAME") as String,
                     buildId = it.get("BUILD_ID") as String,
@@ -129,10 +118,10 @@ class PipelineFailServiceImpl @Autowired constructor(
                 errorType = it.get("ERROR_TYPE") as Int,
                 errorMsg = it.get("ERROR_MSG") as String
             )
-        }?: listOf<PipelineFailDetailInfoDO>()
+        }?: emptyList()
         return Page(
-            page = page,
-            pageSize = pageSize,
+            queryPipelineFailDTO.page,
+            queryPipelineFailDTO.pageSize,
             count = queryPipelineFailDetailCount.toLong(),
             records = result
         )

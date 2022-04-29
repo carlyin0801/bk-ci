@@ -6,10 +6,8 @@ import java.time.LocalDateTime
 
 @ApiModel("流水线失败详情信息")
 data class PipelineFailDetailInfoDO(
-    @ApiModelProperty("项目ID")
-    val projectId: String,
     @ApiModelProperty("流水线基本信息")
-    val pipelineBaseInfo: PipelineBaseInfoDO,
+    val pipelineBaseInfo: PipelineBuildInfoDO,
     @ApiModelProperty("构建代码库分支")
     val branch: String,
     @ApiModelProperty("启动用户")

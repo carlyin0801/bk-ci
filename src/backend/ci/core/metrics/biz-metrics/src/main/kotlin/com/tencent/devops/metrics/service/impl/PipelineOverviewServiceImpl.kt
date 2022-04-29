@@ -42,16 +42,13 @@ class PipelineOverviewServiceImpl @Autowired constructor(
                 queryPipelineOverviewDTO.queryReq
             )
         )
-        val trendInfos = mutableListOf<PipelineTrendInfoDO>()
-        result.forEach {
-            trendInfos.add(
-                PipelineTrendInfoDO(
-                    statisticsTime = it.get("STATISTICS_TIME", LocalDateTime::class.java),
-                    totalExecuteCount = it.get("TOTAL_EXECUTE_COUNT", Long::class.java),
-                    failedExecuteCount = it.get("FAIL_EXECUTE_COUNT", Long::class.java),
-                    avgCostTime = it.get("TOTAL_AVG_COST_TIME", Long::class.java),
-                    avgFailCostTime = it.get("FAIL_AVG_COST_TIME", Long::class.java)
-                )
+        val trendInfos = result.map {
+            PipelineTrendInfoDO(
+                statisticsTime = it.get("STATISTICS_TIME", LocalDateTime::class.java),
+                totalExecuteCount = it.get("TOTAL_EXECUTE_COUNT", Long::class.java),
+                failedExecuteCount = it.get("FAIL_EXECUTE_COUNT", Long::class.java),
+                avgCostTime = it.get("TOTAL_AVG_COST_TIME", Long::class.java),
+                avgFailCostTime = it.get("FAIL_AVG_COST_TIME", Long::class.java)
             )
         }
         return trendInfos
