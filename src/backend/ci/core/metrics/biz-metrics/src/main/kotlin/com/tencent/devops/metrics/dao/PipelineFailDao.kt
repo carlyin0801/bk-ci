@@ -103,7 +103,7 @@ class PipelineFailDao {
                 step.where(conditions)
             }
             return conditionStep.limit(
-                queryPipelineFailQo.page - 1 * queryPipelineFailQo.pageSize,
+                (queryPipelineFailQo.page - 1) * queryPipelineFailQo.pageSize,
                 queryPipelineFailQo.pageSize
             ).fetch()
         }
