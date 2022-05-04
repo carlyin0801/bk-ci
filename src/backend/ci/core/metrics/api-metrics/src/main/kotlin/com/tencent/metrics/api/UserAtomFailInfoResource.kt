@@ -38,7 +38,7 @@ interface UserAtomFailInfoResource {
         condition: PipelineFailInfoQueryReqVO
     ): Result<AtomErrorCodeStatisticsInfoVO>
 
-    @ApiOperation("查询插件错误码统计信息")
+    @ApiOperation("获取插件错误码列表")
     @Path("/errorCode/get")
     @GET
     fun getErrorCodeInfo(

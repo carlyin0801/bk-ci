@@ -7,5 +7,5 @@ import io.swagger.annotations.ApiModelProperty
 @ApiModel("插件趋势信息视图")
 data class AtomTrendInfoVO(
     @ApiModelProperty("趋势信息列表")
-    val atomTrendInfos: List<AtomTrendInfoDO>
+    val atomTrendInfos: Map<String, AtomTrendInfoDO>
 )

@@ -6,6 +6,7 @@ import com.tencent.devops.model.metrics.tables.TPipelineFailSummaryData
 import com.tencent.devops.model.metrics.tables.TProjectPipelineLabelInfo
 import com.tencent.metrics.pojo.`do`.BaseQueryReqDO
 import com.tencent.metrics.pojo.qo.QueryAtomStatisticsQO
+import org.jetbrains.annotations.NotNull
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Record5
@@ -22,10 +23,14 @@ class AtomStatisticsDao {
         dslContext: DSLContext,
         queryAtomStatisticsQO: QueryAtomStatisticsQO
     ): Result<Record5<String, String, BigDecimal, Long, LocalDateTime>> {
+
+        if (!queryAtomStatisticsQO.errorTypes.isNullOrEmpty()) {
+            val atomCodes = getAtomCodesByErrorType(dslContext, queryAtomStatisticsQO)
+        }
+        内置插件以何种形式？
         with(TAtomOverviewData.T_ATOM_OVERVIEW_DATA) {
-            val t1 = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
-            val t2 = TAtomFailSummaryData.T_ATOM_FAIL_SUMMARY_DATA
-            val conditions = getConditions(queryAtomStatisticsQO, t1, t2)
+            val t = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
+            val conditions = getConditions(queryAtomStatisticsQO, t, atomCodes)
             val step = dslContext.select(
                 this.ATOM_CODE,
                 this.ATOM_NAME,
@@ -34,11 +39,10 @@ class AtomStatisticsDao {
                 this.STATISTICS_TIME
             ).from(this)
             val conditionStep = if (!queryAtomStatisticsQO.queryReq.pipelineLabelIds.isNullOrEmpty()) {
-                step.leftJoin(t2).on(this.PIPELINE_ID.eq(t2.PIPELINE_ID))
-                    .leftJoin(t1).on(this.PROJECT_ID.eq(t1.PROJECT_ID))
+                step.leftJoin(t).on(this.PROJECT_ID.eq(t.PROJECT_ID))
                     .where(conditions)
             } else {
-                step.leftJoin(t2).on(this.PIPELINE_ID.eq(t2.PIPELINE_ID)).where(conditions)
+                step.where(conditions)
             }
             return conditionStep.groupBy(ATOM_CODE, STATISTICS_TIME).fetch()
 
@@ -48,24 +52,41 @@ class AtomStatisticsDao {
     private fun TAtomOverviewData.getConditions(
         queryCondition: QueryAtomStatisticsQO,
         pipelineLabelInfo: TProjectPipelineLabelInfo,
-        atomFailSummaryInfo: TAtomFailSummaryData
+        atomCodes: List<String>
     ): MutableList<Condition> {
         val conditions = mutableListOf<Condition>()
-        conditions.add(this.PIPELINE_ID.eq(queryCondition.projectId))
+        conditions.add(this.PROJECT_ID.eq(queryCondition.projectId))
         if (!queryCondition.queryReq.pipelineIds.isNullOrEmpty()) {
             conditions.add(this.PIPELINE_ID.`in`(queryCondition.queryReq.pipelineIds))
         }
         if (!queryCondition.queryReq.pipelineLabelIds.isNullOrEmpty()) {
             conditions.add(pipelineLabelInfo.LABEL_ID.`in`(queryCondition.queryReq.pipelineLabelIds))
         }
-        if (!queryCondition.errorTypes.isNullOrEmpty()) {
-            conditions.add(atomFailSummaryInfo.ERROR_TYPE.`in`(queryCondition.errorTypes))
-        }
-        conditions.add(this.ATOM_CODE.`in`(queryCondition.atomCodes))
+        conditions.add(this.ATOM_CODE.`in`(atomCodes))
         val formatter  = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val startTimeDateTime = LocalDateTime.parse(queryCondition.queryReq.startTime, formatter)
         val endTimeDateTime = LocalDateTime.parse(queryCondition.queryReq.endTime, formatter)
         conditions.add(this.STATISTICS_TIME.between(startTimeDateTime, endTimeDateTime))
         return conditions
+    }
+
+    fun getAtomCodesByErrorType(dslContext: DSLContext, queryCondition: QueryAtomStatisticsQO,): List<String> {
+        with(TAtomFailSummaryData.T_ATOM_FAIL_SUMMARY_DATA) {
+            val conditions = mutableListOf<Condition>()
+            conditions.add(this.PROJECT_ID.eq(queryCondition.projectId))
+            if (!queryCondition.queryReq.pipelineIds.isNullOrEmpty()) {
+                conditions.add(this.PIPELINE_ID.`in`(queryCondition.queryReq.pipelineIds))
+            }
+            conditions.add(this.ATOM_CODE.`in`(queryCondition.atomCodes))
+            val formatter  = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            val startTimeDateTime = LocalDateTime.parse(queryCondition.queryReq.startTime, formatter)
+            val endTimeDateTime = LocalDateTime.parse(queryCondition.queryReq.endTime, formatter)
+            conditions.add(this.STATISTICS_TIME.between(startTimeDateTime, endTimeDateTime))
+            val fetch = dslContext.select(ATOM_CODE).from(this).where(conditions).groupBy(ATOM_CODE).fetch()
+            if (fetch.isNotEmpty) {
+                return fetch.map { it.value1() }
+            }
+            return emptyList()
+        }
     }
 }

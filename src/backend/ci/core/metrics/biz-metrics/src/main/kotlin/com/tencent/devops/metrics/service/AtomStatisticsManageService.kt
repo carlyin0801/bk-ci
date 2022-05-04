@@ -1,6 +1,6 @@
 package com.tencent.devops.metrics.service
 
-import com.tencent.metrics.pojo.dto.QueryAtomTrendInfoDTO
+import com.tencent.metrics.pojo.dto.QueryAtomStatisticsInfoDTO
 import com.tencent.metrics.pojo.vo.AtomTrendInfoVO
 
 interface AtomStatisticsManageService {
@@ -11,7 +11,7 @@ interface AtomStatisticsManageService {
      * @return 插件趋势信息视图
      */
     fun queryAtomTrendInfo(
-        queryAtomTrendInfoDTO: QueryAtomTrendInfoDTO
+        queryAtomTrendInfoDTO: QueryAtomStatisticsInfoDTO
     ): AtomTrendInfoVO
 
     fun queryAtomExecuteStatisticsInfo()
