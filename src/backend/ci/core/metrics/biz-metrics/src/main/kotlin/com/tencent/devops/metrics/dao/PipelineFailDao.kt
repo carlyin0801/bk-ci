@@ -46,7 +46,7 @@ class PipelineFailDao {
 
     fun queryPipelineFailErrorTypeInfo(
         dslContext: DSLContext,
-        queryReqDO: QueryPipelineOverviewQO
+        queryReq: QueryPipelineOverviewQO
     ): Result<Record2<Int, String>> {
         with(TPipelineFailSummaryData.T_PIPELINE_FAIL_SUMMARY_DATA) {
             val tProjectPipelineLabelInfo = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO

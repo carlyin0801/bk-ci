@@ -22,7 +22,7 @@ class UserAtomStatisticsResourceImpl @Autowired constructor(
             atomStatisticsManageService.queryAtomTrendInfo(
                 QueryAtomStatisticsInfoDTO(
                     projectId,
-                    condition.baseQueryReqDO,
+                    condition.baseQueryReq,
                     condition.errorTypes,
                     condition.atomCodes
                 )
