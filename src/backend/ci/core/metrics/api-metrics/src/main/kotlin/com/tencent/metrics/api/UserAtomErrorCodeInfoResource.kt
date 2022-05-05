@@ -2,54 +2,38 @@ package com.tencent.metrics.api
 
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_PROJECT_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
-import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.annotation.BkField
-import com.tencent.metrics.pojo.`do`.AtomFailDetailInfoDO
-import com.tencent.metrics.pojo.vo.AtomErrorCodeStatisticsInfoVO
-import com.tencent.metrics.pojo.vo.AtomFailInfoReqVO
+import com.tencent.metrics.pojo.`do`.ErrorCodeInfoDO
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
 import javax.ws.rs.HeaderParam
 import javax.ws.rs.QueryParam
-import javax.ws.rs.POST
+import javax.ws.rs.GET
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 
-@Api(tags = ["USER_ATOM_FAIL_INFOS"], description = "插件-失败信息")
-@Path("/user/pipeline/atom/fail/infos")
+@Api(tags = ["USER_ATOM_ERRORCODE_INFOS"], description = "插件-错误码信息")
+@Path("/user/atom/errorCode/infos")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-interface UserAtomFailInfoResource {
-    @ApiOperation("查询插件错误码统计信息")
-    @Path("/errorCode/statistics/info")
-    @POST
-    fun queryAtomErrorCodeStatisticsInfo(
-        @ApiParam("项目ID", required = true)
-        @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
-        projectId: String,
-        @ApiParam("userId", required = true)
-        @HeaderParam(AUTH_HEADER_USER_ID)
-        userId: String,
-        @ApiParam("查询条件", required = true)
-        atomFailInfoReq: AtomFailInfoReqVO
-    ): Result<AtomErrorCodeStatisticsInfoVO>
+interface UserAtomErrorCodeInfoResource {
 
-    @ApiOperation("查询流水线插件失败详情数据")
-    @Path("/details")
-    @POST
-    fun queryPipelineFailDetailInfo(
+    @ApiOperation("获取插件错误码列表")
+    @Path("/list")
+    @GET
+    fun getErrorCodeInfo(
         @ApiParam("项目ID", required = true)
         @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
         projectId: String,
         @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("查询条件", required = true)
-        atomFailInfoReq: AtomFailInfoReqVO,
+        @ApiParam("错误类型", required = true)
+        errorTypes: List<Int>?,
         @ApiParam("页码", required = true, defaultValue = "1")
         @BkField(minLength = 1)
         @QueryParam("page")
@@ -58,6 +42,5 @@ interface UserAtomFailInfoResource {
         @BkField(minLength = 10, maxLength = 100)
         @QueryParam("pageSize")
         pageSize: Int
-    ): Result<Page<AtomFailDetailInfoDO>>
-
+    ): Result<List<ErrorCodeInfoDO>>
 }

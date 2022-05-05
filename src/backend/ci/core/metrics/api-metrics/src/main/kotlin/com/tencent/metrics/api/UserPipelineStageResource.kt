@@ -3,7 +3,7 @@ package com.tencent.metrics.api
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_PROJECT_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.metrics.pojo.vo.BaseQueryReqVO
+import com.tencent.metrics.pojo.`do`.BaseQueryReqDO
 import com.tencent.metrics.pojo.vo.StageTrendSumInfoVO
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
@@ -31,6 +31,6 @@ interface UserPipelineStageResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("查询条件", required = true)
-        queryReqVo: BaseQueryReqVO
+        baseQueryReq: BaseQueryReqDO
     ): Result<List<StageTrendSumInfoVO>>
 }

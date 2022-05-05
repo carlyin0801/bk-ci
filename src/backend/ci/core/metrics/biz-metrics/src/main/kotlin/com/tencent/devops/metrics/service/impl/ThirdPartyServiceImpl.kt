@@ -2,6 +2,7 @@ package com.tencent.devops.metrics.service.impl
 
 import com.tencent.devops.metrics.dao.ThirdPartyOverviewInfoDao
 import com.tencent.devops.metrics.service.ThirdPartyManageService
+import com.tencent.metrics.constant.*
 import com.tencent.metrics.pojo.`do`.CodeCheckInfoDO
 import com.tencent.metrics.pojo.`do`.QualityInfoDO
 import com.tencent.metrics.pojo.`do`.TurboInfoDO
@@ -39,16 +40,16 @@ class ThirdPartyServiceImpl @Autowired constructor(
         result?.let {
             return ThirdPartyOverviewInfoVO(
                 CodeCheckInfoDO(
-                    resolvedDefectNum = it.get("RESOLVED_DEFECT_NUM", Int::class.java),
-                    repoCodeccAvgScore = it.get("REPO_CODECC_AVG_SCORE", Double::class.java) / totalExecuteCount
+                    resolvedDefectNum = it.get(BK_RESOLVED_DEFECT_NUM, Int::class.java),
+                    repoCodeccAvgScore = it.get(BK_REPO_CODECC_AVG_SCORE, Double::class.java) / totalExecuteCount
                 ),
                 QualityInfoDO(
                     it.get(
-                        "QUALITY_PIPELINE_INTERCEPTION_NUM",
+                        BK_QUALITY_PIPELINE_INTERCEPTION_NUM,
                         Double::class.java
-                    ) / it.get("QUALITY_PIPELINE_EXECUTE_NUM", Double::class.java)
+                    ) / it.get(BK_QUALITY_PIPELINE_EXECUTE_NUM, Double::class.java)
                 ),
-                TurboInfoDO(it.get("TURBO_SAVE_TIME", Long::class.java))
+                TurboInfoDO(it.get(BK_TURBO_SAVE_TIME, Long::class.java))
             )
         }
         return ThirdPartyOverviewInfoVO(

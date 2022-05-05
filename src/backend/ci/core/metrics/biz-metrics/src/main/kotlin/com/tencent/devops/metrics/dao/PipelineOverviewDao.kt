@@ -19,15 +19,17 @@ class PipelineOverviewDao {
         queryPipelineOverview: QueryPipelineOverviewQO
     ): Record3<BigDecimal, BigDecimal, BigDecimal>? {
         with(TPipelineOverviewData.T_PIPELINE_OVERVIEW_DATA) {
-            val t = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
-            val conditions = getConditions(queryPipelineOverview, t)
+            val tProjectPipelineLabelInfo = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
+            val conditions = getConditions(queryPipelineOverview, tProjectPipelineLabelInfo)
             val step = dslContext.select(
                 sum(TOTAL_EXECUTE_COUNT).`as`("totalExecuteCountSum"),
                 sum(SUCESS_EXECUTE_COUNT).`as`("sucessExecuteCountSum"),
                 sum(TOTAL_AVG_COST_TIME).`as`("totalAvgCostTimeSum")
             ).from(this)
             val conditionStep = if (!queryPipelineOverview.queryReq.pipelineLabelIds.isNullOrEmpty()) {
-                 step.join(t).on(this.PROJECT_ID.eq(t.PROJECT_ID)).where(conditions)
+                 step.join(tProjectPipelineLabelInfo)
+                     .on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                     .where(conditions)
             } else {
                 step.where(conditions)
             }

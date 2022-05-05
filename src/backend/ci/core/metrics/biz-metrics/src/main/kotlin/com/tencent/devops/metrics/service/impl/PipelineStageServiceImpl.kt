@@ -3,7 +3,7 @@ package com.tencent.devops.metrics.service.impl
 import com.tencent.devops.metrics.dao.PipelineStageDao
 import com.tencent.devops.metrics.service.PipelineStageManageService
 import com.tencent.metrics.pojo.`do`.PipelineStageCostTimeInfoDO
-import com.tencent.metrics.pojo.`do`.StageDayAvgCostTimeInfoDO
+import com.tencent.metrics.pojo.`do`.StageAvgCostTimeInfoDO
 import com.tencent.metrics.pojo.dto.QueryPipelineOverviewDTO
 import com.tencent.metrics.pojo.qo.QueryPipelineStageTrendInfoQO
 import com.tencent.metrics.pojo.vo.StageTrendSumInfoVO
@@ -21,7 +21,7 @@ class PipelineStageServiceImpl @Autowired constructor(
         queryPipelineOverviewDTO: QueryPipelineOverviewDTO
     ): List<StageTrendSumInfoVO> {
 
-        val stageTrendSumInfos = mutableMapOf<String, List<StageDayAvgCostTimeInfoDO>>()
+        val stageTrendSumInfos = mutableMapOf<String, List<StageAvgCostTimeInfoDO>>()
         val tags = pipelineStageDao.getStageTag(dslContext, queryPipelineOverviewDTO.projectId)
         return tags.map { tag ->
             val result = pipelineStageDao.queryPipelineStageTrendInfo(
@@ -34,11 +34,11 @@ class PipelineStageServiceImpl @Autowired constructor(
             )
             result.map {
                 if (!stageTrendSumInfos.containsKey(it.value1())) {
-                    val listOf = mutableListOf(StageDayAvgCostTimeInfoDO(it.value2(), it.value3()))
+                    val listOf = mutableListOf(StageAvgCostTimeInfoDO(it.value2(), it.value3()))
                     stageTrendSumInfos.put(it.value1(), listOf)
                 } else {
                     val listOf = stageTrendSumInfos[it.value1()]!!.toMutableList()
-                    listOf.add(StageDayAvgCostTimeInfoDO(it.value2(), it.value3()))
+                    listOf.add(StageAvgCostTimeInfoDO(it.value2(), it.value3()))
                 }
             }
             val pipelineStageCostTimeInfoDOs = stageTrendSumInfos.map {

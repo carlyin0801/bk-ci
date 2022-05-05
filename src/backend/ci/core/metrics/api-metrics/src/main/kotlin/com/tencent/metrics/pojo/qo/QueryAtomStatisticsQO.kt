@@ -10,7 +10,7 @@ data class QueryAtomStatisticsQO(
     @ApiModelProperty("项目ID")
     val projectId: String,
     @ApiModelProperty("查询条件请求信息")
-    val queryReq: BaseQueryReqDO,
+    val baseQueryReq: BaseQueryReqDO,
     @ApiModelProperty("错误类型")
     val errorTypes: List<Int>?,
     @ApiModelProperty("插件代码")

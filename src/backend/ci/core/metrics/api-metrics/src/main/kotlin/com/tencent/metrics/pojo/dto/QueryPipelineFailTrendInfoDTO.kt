@@ -9,5 +9,5 @@ class QueryPipelineFailTrendInfoDTO(
     @ApiModelProperty("项目ID")
     val projectId: String,
     @ApiModelProperty("查询条件请求信息", required = true)
-    val queryReq: BaseQueryReqDO
+    val baseQueryReq: BaseQueryReqDO
 )

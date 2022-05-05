@@ -4,7 +4,7 @@ import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 import java.time.LocalDateTime
 
-@ApiModel("流水线错误统计信息")
+@ApiModel("流水线错误每日统计信息")
 data class PipelineFailStatisticsInfoDO(
     @ApiModelProperty("统计时间")
     val statisticsTime: LocalDateTime,

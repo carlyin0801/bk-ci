@@ -30,7 +30,7 @@ package com.tencent.metrics.pojo.`do`
 import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 
-@ApiModel("流水线错误信息")
+@ApiModel("流水线异常类型信息")
 data class PipelineErrorTypeInfoDO(
     @ApiModelProperty("错误名称")
     val errorName: String,

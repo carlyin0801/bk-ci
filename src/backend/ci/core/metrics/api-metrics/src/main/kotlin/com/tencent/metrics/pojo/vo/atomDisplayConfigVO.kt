@@ -31,8 +31,8 @@ import com.tencent.metrics.pojo.`do`.AtomBaseInfoDO
 import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 
-@ApiModel("保存项目下展示插件配置报文")
-data class SaveAtomDisplayConfigVO(
+@ApiModel("项目下展示插件配置报文")
+data class atomDisplayConfigVO(
     @ApiModelProperty("插件基本信息列表")
     val atomBaseInfos: List<AtomBaseInfoDO>
 )

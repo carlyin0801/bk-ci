@@ -8,6 +8,6 @@ import io.swagger.annotations.ApiModelProperty
 data class StageTrendSumInfoVO(
     @ApiModelProperty("stage标签名称")
     val stageTagName: String,
-    @ApiModelProperty("流水线stage耗时信息")
-    val StageCostTimeInfos: List<PipelineStageCostTimeInfoDO>
+    @ApiModelProperty("流水线stage平均耗时信息")
+    val pipelineStageAvgCostTimeInfos: List<PipelineStageCostTimeInfoDO>
 )

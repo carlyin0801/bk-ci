@@ -27,10 +27,9 @@ class AtomStatisticsDao {
         if (!queryAtomStatisticsQO.errorTypes.isNullOrEmpty()) {
             val atomCodes = getAtomCodesByErrorType(dslContext, queryAtomStatisticsQO)
         }
-        内置插件以何种形式？
         with(TAtomOverviewData.T_ATOM_OVERVIEW_DATA) {
-            val t = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
-            val conditions = getConditions(queryAtomStatisticsQO, t, atomCodes)
+            val tProjectPipelineLabelInfo = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
+            val conditions = getConditions(queryAtomStatisticsQO, tProjectPipelineLabelInfo, atomCodes)
             val step = dslContext.select(
                 this.ATOM_CODE,
                 this.ATOM_NAME,
@@ -39,7 +38,7 @@ class AtomStatisticsDao {
                 this.STATISTICS_TIME
             ).from(this)
             val conditionStep = if (!queryAtomStatisticsQO.queryReq.pipelineLabelIds.isNullOrEmpty()) {
-                step.leftJoin(t).on(this.PROJECT_ID.eq(t.PROJECT_ID))
+                step.leftJoin(tProjectPipelineLabelInfo).on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
                     .where(conditions)
             } else {
                 step.where(conditions)
@@ -78,6 +77,7 @@ class AtomStatisticsDao {
                 conditions.add(this.PIPELINE_ID.`in`(queryCondition.queryReq.pipelineIds))
             }
             conditions.add(this.ATOM_CODE.`in`(queryCondition.atomCodes))
+            conditions.add(this.ERROR_TYPE.`in`(queryCondition.errorTypes))
             val formatter  = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
             val startTimeDateTime = LocalDateTime.parse(queryCondition.queryReq.startTime, formatter)
             val endTimeDateTime = LocalDateTime.parse(queryCondition.queryReq.endTime, formatter)

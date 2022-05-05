@@ -9,7 +9,7 @@ data class QueryPipelineStageTrendInfoQO(
     @ApiModelProperty("项目ID")
     val projectId: String,
     @ApiModelProperty("查询条件信息")
-    val queryReq: BaseQueryReqDO,
+    val baseQueryReq: BaseQueryReqDO,
     @ApiModelProperty("stage标签", required = true)
     val stageTag: String
 )

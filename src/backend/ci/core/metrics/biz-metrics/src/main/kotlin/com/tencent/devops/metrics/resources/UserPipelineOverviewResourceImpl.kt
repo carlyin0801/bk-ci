@@ -4,8 +4,8 @@ import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.metrics.service.PipelineOverviewManageService
 import com.tencent.metrics.api.UserPipelineOverviewResource
+import com.tencent.metrics.pojo.`do`.BaseQueryReqDO
 import com.tencent.metrics.pojo.dto.QueryPipelineOverviewDTO
-import com.tencent.metrics.pojo.vo.BaseQueryReqVO
 import com.tencent.metrics.pojo.vo.PipelineSumInfoVO
 import com.tencent.metrics.pojo.vo.PipelineTrendInfoVO
 import org.springframework.beans.factory.annotation.Autowired
@@ -17,7 +17,7 @@ class UserPipelineOverviewResourceImpl @Autowired constructor(
     override fun queryPipelineSumInfo(
         projectId: String,
         userId: String,
-        queryReqVo: BaseQueryReqVO
+        baseQueryReq: BaseQueryReqDO
     ): Result<PipelineSumInfoVO> {
 
         return Result(
@@ -26,7 +26,7 @@ class UserPipelineOverviewResourceImpl @Autowired constructor(
                     QueryPipelineOverviewDTO(
                         projectId = projectId,
                         userId = userId,
-                        queryReq = queryReqVo.queryReq
+                        baseQueryReq = baseQueryReq
                     )
                 )
             )
@@ -36,7 +36,7 @@ class UserPipelineOverviewResourceImpl @Autowired constructor(
     override fun queryPipelineTrendInfo(
         projectId: String,
         userId: String,
-        queryReqVo: BaseQueryReqVO
+        baseQueryReq: BaseQueryReqDO
     ): Result<PipelineTrendInfoVO> {
 
         return Result(
@@ -45,7 +45,7 @@ class UserPipelineOverviewResourceImpl @Autowired constructor(
                     QueryPipelineOverviewDTO(
                         projectId = projectId,
                         userId = userId,
-                        queryReq = queryReqVo.queryReq
+                        baseQueryReq = baseQueryReq
                     )
                 )
             )

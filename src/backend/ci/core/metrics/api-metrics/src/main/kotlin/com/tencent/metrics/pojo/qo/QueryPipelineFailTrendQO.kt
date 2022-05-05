@@ -9,7 +9,7 @@ data class QueryPipelineFailTrendQO(
     @ApiModelProperty("项目ID")
     val projectId: String,
     @ApiModelProperty("基本查询条件信息")
-    val queryReq: BaseQueryReqDO,
+    val baseQueryReq: BaseQueryReqDO,
     @ApiModelProperty("错误类型")
     val errorType: Int
 )

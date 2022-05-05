@@ -41,5 +41,7 @@ data class PipelineBuildInfoDO(
     @ApiModelProperty("构建ID")
     val buildId: String,
     @ApiModelProperty("构建序号")
-    val buildNum: Int
+    val buildNum: Int,
+    @ApiModelProperty("构建代码库分支")
+    val branch: String
 )

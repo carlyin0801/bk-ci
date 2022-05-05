@@ -2,6 +2,9 @@ package com.tencent.devops.metrics.dao
 
 import com.tencent.devops.model.metrics.tables.TPipelineStageOverviewData
 import com.tencent.devops.model.metrics.tables.TProjectPipelineLabelInfo
+import com.tencent.metrics.constant.BK_AVG_COST_TIME
+import com.tencent.metrics.constant.BK_PIPELINE_NAME
+import com.tencent.metrics.constant.BK_STATISTICS_TIME
 import com.tencent.metrics.pojo.qo.QueryPipelineStageTrendInfoQO
 import org.jooq.*
 import org.springframework.stereotype.Repository
@@ -15,11 +18,13 @@ class PipelineStageDao {
         queryInfoQO: QueryPipelineStageTrendInfoQO
     ): MutableList<String> {
         with(TPipelineStageOverviewData.T_PIPELINE_STAGE_OVERVIEW_DATA) {
-            val t = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
-            val conditions = getConditions(queryInfoQO, t)
+            val tProjectPipelineLabelInfo = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
+            val conditions = getConditions(queryInfoQO, tProjectPipelineLabelInfo)
             val step = dslContext.select(PIPELINE_ID).from(this)
             val conditionStep = if (!queryInfoQO.queryReq.pipelineLabelIds.isNullOrEmpty()) {
-                step.join(t).on(this.PROJECT_ID.eq(t.PROJECT_ID)).where(conditions)
+                step.join(tProjectPipelineLabelInfo)
+                    .on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                    .where(conditions)
             } else {
                 step.where(conditions)
             }
@@ -40,17 +45,19 @@ class PipelineStageDao {
     ): Result<Record3<String, LocalDateTime, Long>> {
         with(TPipelineStageOverviewData.T_PIPELINE_STAGE_OVERVIEW_DATA) {
             val pipelineInfos = getStageTrendPipelineInfo(dslContext, queryInfoQO)
-            val t = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
-            val conditions = getConditions(queryInfoQO, t)
+            val tProjectPipelineLabelInfo = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
+            val conditions = getConditions(queryInfoQO, tProjectPipelineLabelInfo)
             conditions.add(PIPELINE_ID.`in`(pipelineInfos))
             val step =
                 dslContext.select(
-                PIPELINE_NAME,
-                STATISTICS_TIME,
-                    AVG_COST_TIME
+                PIPELINE_NAME.`as`(BK_PIPELINE_NAME),
+                STATISTICS_TIME.`as`(BK_STATISTICS_TIME),
+                    AVG_COST_TIME.`as`(BK_AVG_COST_TIME)
                 ).from(this)
             val conditionStep = if (!queryInfoQO.queryReq.pipelineLabelIds.isNullOrEmpty()) {
-                step.join(t).on(this.PROJECT_ID.eq(t.PROJECT_ID)).where(conditions)
+                step.join(tProjectPipelineLabelInfo)
+                    .on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                    .where(conditions)
             } else {
                 step.where(conditions)
             }

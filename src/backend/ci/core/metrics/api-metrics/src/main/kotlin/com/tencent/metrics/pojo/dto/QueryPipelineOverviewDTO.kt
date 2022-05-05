@@ -11,5 +11,5 @@ data class QueryPipelineOverviewDTO(
     @ApiModelProperty("userId")
     val userId: String,
     @ApiModelProperty("查询条件信息")
-    val queryReq: BaseQueryReqDO
+    val baseQueryReq: BaseQueryReqDO
 )

@@ -15,10 +15,10 @@ data class ListPageVO<out T>(
     @ApiModelProperty("总共多少页", required = true)
     val totalPages: Int,
     @ApiModelProperty("列表头部集合", required = true)
-    val headers: List<String>,
+    val headerInfo: Map<String, String>,
     @ApiModelProperty("数据", required = true)
     val records: List<T>
 ) {
-    constructor(page: Int = 1, pageSize: Int = 10, count: Long, headers: List<String>, records: List<T>) :
-            this(count, page, pageSize, ceil(count * 1.0 / pageSize).toInt(), headers, records)
+    constructor(page: Int = 1, pageSize: Int = 10, count: Long, headerInfo: Map<String, String>, records: List<T>) :
+            this(count, page, pageSize, ceil(count * 1.0 / pageSize).toInt(), headerInfo, records)
 }

@@ -9,11 +9,11 @@ data class PipelineTrendInfoDO(
     @ApiModelProperty("统计时间")
     val statisticsTime: LocalDateTime,
     @ApiModelProperty("流水线总执行次数")
-    val totalExecuteCount: Long,
+    val totalExecuteCount: Int,
     @ApiModelProperty("流水线执行失败数")
-    val failedExecuteCount: Long,
-    @ApiModelProperty("平均执行耗时")
-    val avgCostTime: Long,
-    @ApiModelProperty("平均失败执行耗时")
-    val avgFailCostTime: Long
+    val failedExecuteCount: Int,
+    @ApiModelProperty("总平均耗时，单位：毫秒")
+    val totalAvgCostTime: Long,
+    @ApiModelProperty("失败平均耗时，单位：毫秒")
+    val failAvgCostTime: Long
 )

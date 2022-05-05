@@ -30,7 +30,7 @@ package com.tencent.metrics.api
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_PROJECT_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.metrics.pojo.vo.SaveAtomDisplayConfigVO
+import com.tencent.metrics.pojo.vo.atomDisplayConfigVO
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
@@ -48,7 +48,7 @@ import javax.ws.rs.core.MediaType
 @Consumes(MediaType.APPLICATION_JSON)
 interface UserAtomDisplayConfigResource {
 
-    @ApiOperation("保存项目下需要展示的插件的配置")
+    @ApiOperation("保存项目下需要展示的插件配置")
     @Path("/save")
     @POST
     fun saveAtomDisplayConfig(
@@ -58,11 +58,11 @@ interface UserAtomDisplayConfigResource {
         @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("保存项目下展示插件配置报文", required = true)
-        saveAtomDisplayConfigVO: SaveAtomDisplayConfigVO
+        @ApiParam("项目下展示插件配置报文", required = true)
+        atomDisplayConfig: atomDisplayConfigVO
     ): Result<Boolean>
 
-    @ApiOperation("获取项目下需要展示的插件的配置")
+    @ApiOperation("获取项目下需要展示的插件配置")
     @Path("/get")
     @GET
     fun getAtomDisplayConfig(
@@ -72,5 +72,17 @@ interface UserAtomDisplayConfigResource {
         @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String
-    ): Result<>
+    ): Result<atomDisplayConfigVO>
+
+    @ApiOperation("获取项目下可供选择展示的插件配置")
+    @Path("/optional/get")
+    @GET
+    fun getOptionalAtomDisplayConfig(
+        @ApiParam("项目ID", required = true)
+        @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
+        projectId: String,
+        @ApiParam("userId", required = true)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String
+    ): Result<atomDisplayConfigVO>
 }

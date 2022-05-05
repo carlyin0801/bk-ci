@@ -9,5 +9,5 @@ data class QueryPipelineOverviewQO(
     @ApiModelProperty("项目ID")
     val projectId: String,
     @ApiModelProperty("查询条件信息")
-    val queryReq: BaseQueryReqDO
+    val baseQueryReq: BaseQueryReqDO
 )
