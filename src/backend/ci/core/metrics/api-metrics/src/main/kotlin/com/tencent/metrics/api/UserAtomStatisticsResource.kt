@@ -19,7 +19,7 @@ import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 
-@Api(tags = ["USER_ATOM_STATISTICS_INFO"], description = "插件-统计信息")
+@Api(tags = ["USER_ATOM_STATISTICS"], description = "插件-统计信息")
 @Path("/user/atom/statistics")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -59,5 +59,4 @@ interface UserAtomStatisticsResource {
         @QueryParam("pageSize")
         pageSize: Int
     ): Result<ListPageVO<AtomExecutionStatisticsInfoDO>>
-
 }

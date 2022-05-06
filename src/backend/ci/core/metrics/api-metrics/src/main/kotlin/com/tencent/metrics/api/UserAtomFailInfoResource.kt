@@ -59,5 +59,4 @@ interface UserAtomFailInfoResource {
         @QueryParam("pageSize")
         pageSize: Int
     ): Result<Page<AtomFailDetailInfoDO>>
-
 }

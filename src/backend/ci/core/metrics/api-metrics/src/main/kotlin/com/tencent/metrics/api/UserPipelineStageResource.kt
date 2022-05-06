@@ -15,7 +15,7 @@ import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 
-@Api(tags = ["USER_PIPELINE_OVERVIEW"], description = "流水线-stage")
+@Api(tags = ["USER_PIPELINE_STAGE_STATISTICS"], description = "流水线-stage")
 @Path("/user/pipeline/stage/statistics")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

@@ -11,20 +11,20 @@ import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
 import javax.ws.rs.HeaderParam
 import javax.ws.rs.QueryParam
-import javax.ws.rs.GET
+import javax.ws.rs.POST
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
 
-@Api(tags = ["USER_ATOM_ERRORCODE_INFOS"], description = "插件-错误码信息")
-@Path("/user/atom/errorCode/infos")
+@Api(tags = ["USER__ERRORCODE_INFOS"], description = "插件-错误码信息")
+@Path("/user/errorCode/infos")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-interface UserAtomErrorCodeInfoResource {
+interface UserErrorCodeInfoResource {
 
-    @ApiOperation("获取插件错误码列表")
+    @ApiOperation("获取错误码列表")
     @Path("/list")
-    @GET
+    @POST
     fun getErrorCodeInfo(
         @ApiParam("项目ID", required = true)
         @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
@@ -32,7 +32,7 @@ interface UserAtomErrorCodeInfoResource {
         @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("错误类型", required = true)
+        @ApiParam("错误类型", required = false)
         errorTypes: List<Int>?,
         @ApiParam("页码", required = true, defaultValue = "1")
         @BkField(minLength = 1)

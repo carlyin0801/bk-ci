@@ -13,7 +13,7 @@ import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
 import javax.ws.rs.HeaderParam
 import javax.ws.rs.QueryParam
-import javax.ws.rs.POST
+import javax.ws.rs.GET
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
@@ -25,7 +25,7 @@ import javax.ws.rs.core.MediaType
 interface UserProjectInfoResource {
     @ApiOperation("获取项目下插件列表")
     @Path("/atom/list")
-    @POST
+    @GET
     fun queryProjectAtomList(
         @ApiParam("项目ID", required = true)
         @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
@@ -45,7 +45,7 @@ interface UserProjectInfoResource {
 
     @ApiOperation("获取项目下流水线标签列表")
     @Path("/pipeline/label/list")
-    @POST
+    @GET
     fun queryProjectPipelineLabels(
         @ApiParam("项目ID", required = true)
         @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
@@ -67,7 +67,7 @@ interface UserProjectInfoResource {
 
     @ApiOperation("获取项目下流水线异常类型列表")
     @Path("/pipeline/errorType/list")
-    @POST
+    @GET
     fun queryProjectPipelineErrorTypes(
         @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)

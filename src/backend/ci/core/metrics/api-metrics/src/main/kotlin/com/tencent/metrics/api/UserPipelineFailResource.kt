@@ -37,7 +37,7 @@ interface UserPipelineFailResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("查询条件", required = true)
-        queryReqVo: PipelineFailInfoQueryReqVO
+        pipelineFailInfoQueryReq: PipelineFailInfoQueryReqVO
     ): Result<List<PipelineFailTrendInfoVO>>
 
     @ApiOperation("查询流水线错误类型统计数据")
@@ -51,7 +51,7 @@ interface UserPipelineFailResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("查询条件", required = true)
-        queryReqVo: PipelineFailInfoQueryReqVO
+        pipelineFailInfoQueryReq: PipelineFailInfoQueryReqVO
     ): Result<PipelineFailSumInfoVO>
 
     @ApiOperation("查询流水线失败详情数据")
@@ -65,7 +65,7 @@ interface UserPipelineFailResource {
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
         @ApiParam("查询条件", required = true)
-        queryReqVo: PipelineFailInfoQueryReqVO,
+        pipelineFailInfoQueryReq: PipelineFailInfoQueryReqVO,
         @ApiParam("页码", required = true, defaultValue = "1")
         @BkField(minLength = 1)
         @QueryParam("page")

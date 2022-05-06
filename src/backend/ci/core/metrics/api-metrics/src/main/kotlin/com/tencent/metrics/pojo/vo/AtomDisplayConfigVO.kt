@@ -32,7 +32,7 @@ import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 
 @ApiModel("项目下展示插件配置报文")
-data class atomDisplayConfigVO(
+data class AtomDisplayConfigVO(
     @ApiModelProperty("插件基本信息列表")
     val atomBaseInfos: List<AtomBaseInfoDO>
 )
