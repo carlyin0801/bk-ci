@@ -3,16 +3,8 @@ package com.tencent.devops.metrics.service.impl
 import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.metrics.dao.AtomStatisticsDao
 import com.tencent.devops.metrics.service.AtomStatisticsManageService
-import com.tencent.metrics.constant.BK_ATOM_CODE
-import com.tencent.metrics.constant.BK_ATOM_NAME
-import com.tencent.metrics.constant.BK_AVG_COST_TIME
-import com.tencent.metrics.constant.BK_QUERY_COUNT_MAX
-import com.tencent.metrics.constant.BK_STATISTICS_TIME
-import com.tencent.metrics.constant.BK_SUCCESS_RATE
-import com.tencent.metrics.constant.MetricsMessageCode
-import com.tencent.metrics.pojo.`do`.AtomBaseTrendInfoDO
-import com.tencent.metrics.pojo.`do`.AtomExecutionStatisticsInfoDO
-import com.tencent.metrics.pojo.`do`.AtomTrendInfoDO
+import com.tencent.metrics.constant.*
+import com.tencent.metrics.pojo.`do`.*
 import com.tencent.metrics.pojo.dto.QueryAtomStatisticsInfoDTO
 import com.tencent.metrics.pojo.qo.QueryAtomStatisticsQO
 import com.tencent.metrics.pojo.vo.AtomTrendInfoVO
@@ -73,7 +65,7 @@ class AtomStatisticsServiceImpl @Autowired constructor(
         queryAtomTrendInfoDTO: QueryAtomStatisticsInfoDTO
     ): ListPageVO<AtomExecutionStatisticsInfoDO> {
         // 查询符合查询条件的记录数
-        val queryAtomExecuteStatisticsInfoCount =
+        val queryAtomExecuteStatisticsCount =
             atomStatisticsDao.queryAtomExecuteStatisticsInfoCount(
                 dslContext,
                 QueryAtomStatisticsQO(
@@ -83,7 +75,7 @@ class AtomStatisticsServiceImpl @Autowired constructor(
                     atomCodes = queryAtomTrendInfoDTO.atomCodes
                 )
             )
-        if (queryAtomExecuteStatisticsInfoCount > BK_QUERY_COUNT_MAX) {
+        if (queryAtomExecuteStatisticsCount > BK_QUERY_COUNT_MAX) {
             throw ErrorCodeException(
                 errorCode = MetricsMessageCode.QUERY_DETAILS_COUNT_BEYOND
             )
@@ -97,8 +89,70 @@ class AtomStatisticsServiceImpl @Autowired constructor(
                 atomCodes = queryAtomTrendInfoDTO.atomCodes
             )
         )
+        val queryAtomCodes = atomStatisticResult.map { it[BK_ATOM_CODE] as String }
+        val queryAtomFailStatisticsInfo = atomStatisticsDao.queryAtomFailStatisticsInfo(
+            dslContext,
+            QueryAtomStatisticsQO(
+                projectId = queryAtomTrendInfoDTO.projectId,
+                baseQueryReq = queryAtomTrendInfoDTO.baseQueryReq,
+                errorTypes = queryAtomTrendInfoDTO.errorTypes,
+                atomCodes = queryAtomCodes
+            )
+        )
+        val headerInfo = mutableMapOf<String, String>()
+        val atomFailInfos = mutableMapOf<String, MutableList<AtomFailInfoDO>>()
+        queryAtomFailStatisticsInfo.map {
+            val atomCode = it[BK_ATOM_CODE].toString()
+            if (!headerInfo.containsKey(it[BK_ERROR_TYPE].toString())) {
+                headerInfo.put(it[BK_ERROR_TYPE].toString(), it[BK_ERROR_NAME].toString())
+            }
+            if (!atomFailInfos.containsKey(atomCode)) {
+                atomFailInfos.put(
+                    atomCode,
+                    mutableListOf(
+                        AtomFailInfoDO(
+                            errorType = it[BK_ERROR_TYPE] as Int,
+                            name = it[BK_ERROR_NAME] as String,
+                            errorCount = (it[BK_ERROR_COUNT_SUM] as BigDecimal).toInt()
+                        )
+                    )
+                )
+            } else {
+                atomFailInfos[atomCode]!!.add(
+                    AtomFailInfoDO(
+                        errorType = it[BK_ERROR_TYPE] as Int,
+                        name = it[BK_ERROR_NAME] as String,
+                        errorCount = (it[BK_ERROR_COUNT_SUM] as BigDecimal).toInt()
+                    )
+                )
+            }
+        }
 
+        val records = atomStatisticResult.map {
+            val totalExecuteCount = (it[BK_TOTAL_EXECUTE_COUNT_SUM] as BigDecimal).toInt()
+            val successExecuteCount = (it[BK_SUCESS_EXECUTE_COUNT_SUM] as BigDecimal).toInt()
+            AtomExecutionStatisticsInfoDO(
+                projectId = queryAtomTrendInfoDTO.projectId,
+                atomBaseInfo = AtomBaseInfoDO(
+                    atomCode = it[BK_ATOM_CODE] as String,
+                    atomName = it[BK_ATOM_NAME] as String
+                ),
+                classifyCode = it[BK_CLASSIFY_CODE] as String,
+                totalExecuteCount = totalExecuteCount,
+                successExecuteCount = successExecuteCount,
+                successRate = String.format("%.2f", successExecuteCount.toDouble() * 100 / totalExecuteCount)
+                    .toDouble(),
+                atomFailInfos = atomFailInfos[it[BK_ATOM_CODE] as String]?.toList()?: emptyList()
+            )
+        }
 
+        return ListPageVO(
+            count = queryAtomExecuteStatisticsCount,
+            page = queryAtomTrendInfoDTO.page!!,
+            pageSize = queryAtomTrendInfoDTO.pageSize!!,
+            headerInfo = headerInfo,
+            records = records
+        )
 
     }
 }

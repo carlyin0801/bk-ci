@@ -5,23 +5,10 @@ import com.tencent.devops.model.metrics.tables.TAtomFailSummaryData
 import com.tencent.devops.model.metrics.tables.TAtomOverviewData
 import com.tencent.devops.model.metrics.tables.TErrorTyppeDict
 import com.tencent.devops.model.metrics.tables.TProjectPipelineLabelInfo
-import com.tencent.metrics.constant.BK_ATOM_CODE
-import com.tencent.metrics.constant.BK_ATOM_NAME
-import com.tencent.metrics.constant.BK_AVG_COST_TIME
-import com.tencent.metrics.constant.BK_CLASSIFY_CODE
-import com.tencent.metrics.constant.BK_ERROR_COUNT_SUM
-import com.tencent.metrics.constant.BK_ERROR_TYPE
-import com.tencent.metrics.constant.BK_STATISTICS_TIME
-import com.tencent.metrics.constant.BK_SUCCESS_RATE
-import com.tencent.metrics.constant.BK_SUCESS_EXECUTE_COUNT_SUM
-import com.tencent.metrics.constant.BK_TOTAL_AVG_COST_TIME_SUM
-import com.tencent.metrics.constant.BK_TOTAL_EXECUTE_COUNT_SUM
+import com.tencent.metrics.constant.*
 import com.tencent.metrics.pojo.qo.QueryAtomStatisticsQO
-import org.jooq.Condition
-import org.jooq.DSLContext
-import org.jooq.Record5
-import org.jooq.Record6
-import org.jooq.Result
+import org.jetbrains.annotations.NotNull
+import org.jooq.*
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.sum
 import org.springframework.stereotype.Repository
@@ -128,25 +115,32 @@ class AtomStatisticsDao {
             } else {
                 step.where(conditions)
             }
-            val statisticsTable = conditionStep.groupBy(ATOM_CODE).asTable("statisticsTable")
-            val tAtomFailSummaryData = TAtomFailSummaryData.T_ATOM_FAIL_SUMMARY_DATA
+            return conditionStep
+                .groupBy(ATOM_CODE)
+                .limit(queryCondition.limit!!.limit)
+                .offset(queryCondition.limit!!.offset)
+                .fetch()
+        }
+    }
+
+    fun queryAtomFailStatisticsInfo(
+        dslContext: DSLContext,
+        queryCondition: QueryAtomStatisticsQO
+    ): Result<Record4<String, Int, BigDecimal, String>> {
+        with(TAtomFailSummaryData.T_ATOM_FAIL_SUMMARY_DATA) {
+            val startTimeDateTime = DateTimeUtil.stringToLocalDateTime(queryCondition.baseQueryReq.startTime)
+            val endTimeDateTime = DateTimeUtil.stringToLocalDateTime(queryCondition.baseQueryReq.endTime)
             val tErrorTyppeDict = TErrorTyppeDict.T_ERROR_TYPPE_DICT
-            dslContext.select(
-                statisticsTable.field(BK_ATOM_CODE),
-                statisticsTable.field(BK_ATOM_NAME),
-                statisticsTable.field(BK_CLASSIFY_CODE),
-                statisticsTable.field(BK_TOTAL_EXECUTE_COUNT_SUM),
-                statisticsTable.field(BK_SUCESS_EXECUTE_COUNT_SUM),
-                statisticsTable.field(BK_TOTAL_AVG_COST_TIME_SUM),
-                tAtomFailSummaryData.ERROR_TYPE.`as`(BK_ERROR_TYPE),
-                sum(tAtomFailSummaryData.ERROR_COUNT).`as`(BK_ERROR_COUNT_SUM),
-                tErrorTyppeDict.NAME
-            ).from(statisticsTable)
-                .join(tAtomFailSummaryData)
-                .on(statisticsTable.field(BK_ATOM_CODE, String::class.java)!!.eq(tAtomFailSummaryData.ATOM_CODE))
+            return dslContext.select(
+                this.ATOM_CODE.`as`(BK_ATOM_CODE),
+                this.ERROR_TYPE.`as`(BK_ERROR_TYPE),
+                sum(this.ERROR_COUNT).`as`(BK_ERROR_COUNT_SUM),
+                tErrorTyppeDict.NAME.`as`(BK_ERROR_NAME)
+            ).from(this)
                 .join(tErrorTyppeDict)
-                .on(tAtomFailSummaryData.ERROR_TYPE.eq(tErrorTyppeDict.ERROR_TYPE))
-                .where()
+                .on(this.ERROR_TYPE.eq(tErrorTyppeDict.ERROR_TYPE))
+                .where(this.STATISTICS_TIME.between(startTimeDateTime, endTimeDateTime))
+                .groupBy(this.ATOM_CODE, this.ERROR_TYPE).fetch()
         }
     }
 

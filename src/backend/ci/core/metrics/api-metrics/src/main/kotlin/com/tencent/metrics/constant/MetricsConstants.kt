@@ -18,6 +18,7 @@ const val BK_TOTAL_AVG_COST_TIME = "total_avg_cost_time"
 const val BK_FAIL_AVG_COST_TIME = "fail_avg_cost_time"
 const val BK_PIPELINE_ID = "bk_pipeline_id"
 const val BK_ERROR_TYPE = "error_type"
+const val BK_ERROR_NAME = "error_name"
 
 const val BK_ERROR_COUNT_SUM = "error_count_sum"
 const val BK_TOTAL_EXECUTE_COUNT_SUM = "total_execute_count_sum"
