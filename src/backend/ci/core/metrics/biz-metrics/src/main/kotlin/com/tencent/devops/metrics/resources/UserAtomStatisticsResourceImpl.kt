@@ -37,6 +37,17 @@ class UserAtomStatisticsResourceImpl @Autowired constructor(
         page: Int,
         pageSize: Int
     ): Result<ListPageVO<AtomExecutionStatisticsInfoDO>> {
-        TODO("Not yet implemented")
+        return Result(
+            atomStatisticsManageService.queryAtomExecuteStatisticsInfo(
+                QueryAtomStatisticsInfoDTO(
+                    projectId,
+                    condition.baseQueryReq,
+                    condition.errorTypes,
+                    condition.atomCodes,
+                    page,
+                    pageSize
+                )
+            )
+        )
     }
 }

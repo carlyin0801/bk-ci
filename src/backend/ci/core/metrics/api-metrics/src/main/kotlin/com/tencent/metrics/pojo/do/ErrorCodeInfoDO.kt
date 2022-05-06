@@ -9,10 +9,6 @@ data class ErrorCodeInfoDO(
     val errorType: Int,
     @ApiModelProperty("错误的标识码")
     val errorCode: Int,
-    @ApiModelProperty("错误描述信息——简体中文")
-    val errorMsgZhCn: String,
-    @ApiModelProperty("错误描述信息——繁体中文")
-    val errorMsgZhTw: String,
-    @ApiModelProperty("错误描述信息——英文")
-    val errorMsgEn: String
+    @ApiModelProperty("错误描述信息")
+    val errorMsg: String,
 )

@@ -1,15 +1,18 @@
 package com.tencent.devops.metrics.dao
 
+import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.model.metrics.tables.TPipelineStageOverviewData
 import com.tencent.devops.model.metrics.tables.TProjectPipelineLabelInfo
 import com.tencent.metrics.constant.BK_AVG_COST_TIME
-import com.tencent.metrics.constant.BK_PIPELINE_NAME
+import com.tencent.metrics.constant.BK_PIPELINE_ID
 import com.tencent.metrics.constant.BK_STATISTICS_TIME
 import com.tencent.metrics.pojo.qo.QueryPipelineStageTrendInfoQO
-import org.jooq.*
+import org.jooq.Condition
+import org.jooq.DSLContext
+import org.jooq.Record3
+import org.jooq.Result
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 @Repository
 class PipelineStageDao {
@@ -21,7 +24,7 @@ class PipelineStageDao {
             val tProjectPipelineLabelInfo = TProjectPipelineLabelInfo.T_PROJECT_PIPELINE_LABEL_INFO
             val conditions = getConditions(queryInfoQO, tProjectPipelineLabelInfo)
             val step = dslContext.select(PIPELINE_ID).from(this)
-            val conditionStep = if (!queryInfoQO.queryReq.pipelineLabelIds.isNullOrEmpty()) {
+            val conditionStep = if (!queryInfoQO.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.join(tProjectPipelineLabelInfo)
                     .on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
                     .where(conditions)
@@ -50,11 +53,11 @@ class PipelineStageDao {
             conditions.add(PIPELINE_ID.`in`(pipelineInfos))
             val step =
                 dslContext.select(
-                PIPELINE_NAME.`as`(BK_PIPELINE_NAME),
+                PIPELINE_ID.`as`(BK_PIPELINE_ID),
                 STATISTICS_TIME.`as`(BK_STATISTICS_TIME),
                     AVG_COST_TIME.`as`(BK_AVG_COST_TIME)
                 ).from(this)
-            val conditionStep = if (!queryInfoQO.queryReq.pipelineLabelIds.isNullOrEmpty()) {
+            val conditionStep = if (!queryInfoQO.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.join(tProjectPipelineLabelInfo)
                     .on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
                     .where(conditions)
@@ -80,19 +83,19 @@ class PipelineStageDao {
 
     private fun TPipelineStageOverviewData.getConditions(
         queryCondition: QueryPipelineStageTrendInfoQO,
-        pipelineLabelInfo: TProjectPipelineLabelInfo
+        tProjectPipelineLabelInfo: TProjectPipelineLabelInfo
     ): MutableList<Condition> {
         val conditions = mutableListOf<Condition>()
+        val pipelineIds = queryCondition.baseQueryReq.pipelineIds
         conditions.add(this.PIPELINE_ID.eq(queryCondition.projectId))
-        if (!queryCondition.queryReq.pipelineIds.isNullOrEmpty()) {
-            conditions.add(this.PIPELINE_ID.`in`(queryCondition.queryReq.pipelineIds))
+        if (!pipelineIds.isNullOrEmpty()) {
+            conditions.add(this.PIPELINE_ID.`in`(pipelineIds))
         }
-        if (!queryCondition.queryReq.pipelineLabelIds.isNullOrEmpty()) {
-            conditions.add(pipelineLabelInfo.LABEL_ID.`in`(queryCondition.queryReq.pipelineLabelIds))
+        if (!queryCondition.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
+            conditions.add(tProjectPipelineLabelInfo.LABEL_ID.`in`(queryCondition.baseQueryReq.pipelineLabelIds))
         }
-        val formatter  = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        val startTimeDateTime = LocalDateTime.parse(queryCondition.queryReq.startTime, formatter)
-        val endTimeDateTime = LocalDateTime.parse(queryCondition.queryReq.endTime, formatter)
+        val startTimeDateTime = DateTimeUtil.stringToLocalDateTime(queryCondition.baseQueryReq.startTime)
+        val endTimeDateTime = DateTimeUtil.stringToLocalDateTime(queryCondition.baseQueryReq.endTime)
         conditions.add(this.STATISTICS_TIME.between(startTimeDateTime, endTimeDateTime))
         conditions.add(this.STAGE_TAG_NAME.eq(queryCondition.stageTag))
         return conditions

@@ -2,6 +2,10 @@ package com.tencent.devops.metrics.service.impl
 
 import com.tencent.devops.metrics.dao.PipelineStageDao
 import com.tencent.devops.metrics.service.PipelineStageManageService
+import com.tencent.metrics.constant.BK_AVG_COST_TIME
+import com.tencent.metrics.constant.BK_PIPELINE_ID
+import com.tencent.metrics.constant.BK_PIPELINE_NAME
+import com.tencent.metrics.constant.BK_STATISTICS_TIME
 import com.tencent.metrics.pojo.`do`.PipelineStageCostTimeInfoDO
 import com.tencent.metrics.pojo.`do`.StageAvgCostTimeInfoDO
 import com.tencent.metrics.pojo.dto.QueryPipelineOverviewDTO
@@ -10,6 +14,7 @@ import com.tencent.metrics.pojo.vo.StageTrendSumInfoVO
 import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
 
 @Service
 class PipelineStageServiceImpl @Autowired constructor(
@@ -28,17 +33,27 @@ class PipelineStageServiceImpl @Autowired constructor(
                 dslContext,
                 QueryPipelineStageTrendInfoQO(
                     queryPipelineOverviewDTO.projectId,
-                    queryPipelineOverviewDTO.queryReq,
+                    queryPipelineOverviewDTO.baseQueryReq,
                     tag
                 )
             )
             result.map {
-                if (!stageTrendSumInfos.containsKey(it.value1())) {
-                    val listOf = mutableListOf(StageAvgCostTimeInfoDO(it.value2(), it.value3()))
-                    stageTrendSumInfos.put(it.value1(), listOf)
+                if (!stageTrendSumInfos.containsKey(it[BK_PIPELINE_ID] as String)) {
+                    val listOf = mutableListOf(
+                        StageAvgCostTimeInfoDO(
+                            it[BK_STATISTICS_TIME] as LocalDateTime,
+                            it[BK_AVG_COST_TIME] as Long
+                        )
+                    )
+                    stageTrendSumInfos.put(it[BK_PIPELINE_ID] as String, listOf)
                 } else {
-                    val listOf = stageTrendSumInfos[it.value1()]!!.toMutableList()
-                    listOf.add(StageAvgCostTimeInfoDO(it.value2(), it.value3()))
+                    val listOf = stageTrendSumInfos[it[BK_PIPELINE_ID] as String]!!.toMutableList()
+                    listOf.add(
+                        StageAvgCostTimeInfoDO(
+                            it[BK_STATISTICS_TIME] as LocalDateTime,
+                            it[BK_AVG_COST_TIME] as Long
+                        )
+                    )
                 }
             }
             val pipelineStageCostTimeInfoDOs = stageTrendSumInfos.map {

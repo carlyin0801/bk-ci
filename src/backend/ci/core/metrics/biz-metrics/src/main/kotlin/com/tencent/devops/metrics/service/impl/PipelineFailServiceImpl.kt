@@ -5,6 +5,7 @@ import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.util.PageUtil
 import com.tencent.devops.metrics.service.PipelineFailManageService
 import com.tencent.devops.metrics.dao.PipelineFailDao
+import com.tencent.metrics.constant.BK_QUERY_COUNT_MAX
 import com.tencent.metrics.constant.MetricsMessageCode
 import com.tencent.metrics.pojo.`do`.*
 import com.tencent.metrics.pojo.dto.QueryPipelineFailDTO
@@ -31,7 +32,7 @@ class PipelineFailServiceImpl @Autowired constructor(
             dslContext,
             QueryPipelineOverviewQO(
                 projectId = queryPipelineFailTrendInfoDTO.projectId,
-                queryReq = queryPipelineFailTrendInfoDTO.queryReq
+                baseQueryReq = queryPipelineFailTrendInfoDTO.baseQueryReq
             )
         )
         val failTrendInfos = typeInfos.map { failTrendInfo ->
@@ -39,7 +40,7 @@ class PipelineFailServiceImpl @Autowired constructor(
                 dslContext,
                 QueryPipelineOverviewQO(
                     projectId = queryPipelineFailTrendInfoDTO.projectId,
-                    queryReq = queryPipelineFailTrendInfoDTO.queryReq
+                    baseQueryReq = queryPipelineFailTrendInfoDTO.baseQueryReq
                 ),
                 failTrendInfo.value1()
             )
@@ -63,7 +64,7 @@ class PipelineFailServiceImpl @Autowired constructor(
             dslContext,
             QueryPipelineFailQO(
                 queryPipelineFailDTO.projectId,
-                queryPipelineFailDTO.queryReq,
+                queryPipelineFailDTO.baseQueryReq,
                 queryPipelineFailDTO.errorTypes
             )
         )
@@ -78,15 +79,16 @@ class PipelineFailServiceImpl @Autowired constructor(
     }
 
     override fun queryPipelineFailDetailInfo(queryPipelineFailDTO: QueryPipelineFailDTO): Page<PipelineFailDetailInfoDO> {
+        // 查询符合查询条件的记录数
         val queryPipelineFailDetailCount = pipelineFailDao.queryPipelineFailDetailCount(
             dslContext,
             QueryPipelineFailQO(
                 queryPipelineFailDTO.projectId,
-                queryPipelineFailDTO.queryReq,
+                queryPipelineFailDTO.baseQueryReq,
                 queryPipelineFailDTO.errorTypes
             )
         )
-        if (queryPipelineFailDetailCount > 10000) {
+        if (queryPipelineFailDetailCount > BK_QUERY_COUNT_MAX) {
             throw ErrorCodeException(
                 errorCode = MetricsMessageCode.QUERY_DETAILS_COUNT_BEYOND
             )
@@ -95,34 +97,37 @@ class PipelineFailServiceImpl @Autowired constructor(
             dslContext,
             QueryPipelineFailQO(
                 queryPipelineFailDTO.projectId,
-                queryPipelineFailDTO.queryReq,
+                queryPipelineFailDTO.baseQueryReq,
                 queryPipelineFailDTO.errorTypes,
                 PageUtil.convertPageSizeToSQLMAXLimit(
                     queryPipelineFailDTO.page,
                     queryPipelineFailDTO.pageSize
                 )
             )
-        )?.map {
+        ).map {
             PipelineFailDetailInfoDO(
                 PipelineBuildInfoDO(
-                    projectId = it.get("PROJECT_ID") as String,
-                    pipelineId = it.get("PIPELINE_ID") as String,
-                    pipelineName = it.get("PIPELINE_NAME") as String,
-                    buildId = it.get("BUILD_ID") as String,
-                    buildNum = it.get("BUILD_NUM") as Int
+                    projectId = it.projectId,
+                    pipelineId = it.pipelineId,
+                    pipelineName = it.pipelineName,
+                    buildId = it.buildid,
+                    buildNum = it.buildNum,
+                    branch = it.branch
                 ),
-                branch = it.get("BRANCH") as String,
-                startUser = it.get("START_USER") as String,
-                startTime = it.get("START_TIME") as LocalDateTime,
-                endTime = it.get("END_TIME") as LocalDateTime,
-                errorType = it.get("ERROR_TYPE") as Int,
-                errorMsg = it.get("ERROR_MSG") as String
+                startUser = it.startUser,
+                startTime = it.startTime,
+                endTime = it.endTime,
+                errorInfo = ErrorCodeInfoDO(
+                    errorType = it.errorType,
+                    errorCode = it.errorCode,
+                    errorMsg = it.errorMsg
+                )
             )
-        }?: emptyList()
+        }
         return Page(
             queryPipelineFailDTO.page,
             queryPipelineFailDTO.pageSize,
-            count = queryPipelineFailDetailCount.toLong(),
+            count = queryPipelineFailDetailCount,
             records = result
         )
     }

@@ -27,7 +27,7 @@ class UserPipelineFailResourceImpl @Autowired constructor(
             pipelineFailManageService.queryPipelineFailTrendInfo(
                 QueryPipelineFailTrendInfoDTO(
                     projectId,
-                    queryReqVo.queryReq
+                    queryReqVo.baseQueryReq
                 )
             )
         )
@@ -43,7 +43,7 @@ class UserPipelineFailResourceImpl @Autowired constructor(
                 pipelineFailManageService.queryPipelineFailSumInfo(
                     QueryPipelineFailDTO(
                         projectId,
-                        queryReqVo.queryReq,
+                        queryReqVo.baseQueryReq,
                         queryReqVo.errorTypes
                     )
                 )
@@ -63,7 +63,7 @@ class UserPipelineFailResourceImpl @Autowired constructor(
             pipelineFailManageService.queryPipelineFailDetailInfo(
                 QueryPipelineFailDTO(
                     projectId,
-                    queryReqVo.queryReq,
+                    queryReqVo.baseQueryReq,
                     queryReqVo.errorTypes,
                     page,
                     pageSize
