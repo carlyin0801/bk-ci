@@ -11,5 +11,5 @@ data class AtomFailInfoReqVO(
     @ApiParam("错误类型", required = false)
     val errorTypes: List<Int>?,
     @ApiParam("错误码", required = false)
-    val errorCodes: List<String>?,
+    val errorCodes: List<Int>?
 )

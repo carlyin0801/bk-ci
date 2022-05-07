@@ -99,10 +99,8 @@ class PipelineFailServiceImpl @Autowired constructor(
                 queryPipelineFailDTO.projectId,
                 queryPipelineFailDTO.baseQueryReq,
                 queryPipelineFailDTO.errorTypes,
-                PageUtil.convertPageSizeToSQLMAXLimit(
                     queryPipelineFailDTO.page,
                     queryPipelineFailDTO.pageSize
-                )
             )
         ).map {
             PipelineFailDetailInfoDO(

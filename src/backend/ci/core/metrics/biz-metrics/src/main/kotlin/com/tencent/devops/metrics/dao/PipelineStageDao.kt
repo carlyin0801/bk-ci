@@ -26,7 +26,7 @@ class PipelineStageDao {
             val step = dslContext.select(PIPELINE_ID).from(this)
             val conditionStep = if (!queryInfoQO.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.join(tProjectPipelineLabelInfo)
-                    .on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                    .on(this.PIPELINE_ID.eq(tProjectPipelineLabelInfo.PIPELINE_ID))
                     .where(conditions)
             } else {
                 step.where(conditions)
@@ -59,7 +59,7 @@ class PipelineStageDao {
                 ).from(this)
             val conditionStep = if (!queryInfoQO.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.join(tProjectPipelineLabelInfo)
-                    .on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                    .on(this.PIPELINE_ID.eq(tProjectPipelineLabelInfo.PIPELINE_ID))
                     .where(conditions)
             } else {
                 step.where(conditions)

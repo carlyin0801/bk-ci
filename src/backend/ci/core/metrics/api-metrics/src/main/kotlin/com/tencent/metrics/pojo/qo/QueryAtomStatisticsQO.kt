@@ -15,6 +15,8 @@ data class QueryAtomStatisticsQO(
     val errorTypes: List<Int>?,
     @ApiModelProperty("插件代码")
     val atomCodes: List<String>?,
-    @ApiModelProperty("分页信息")
-    val limit: SQLLimit? = null
+    @ApiModelProperty("页码")
+    val page: Int = 1,
+    @ApiModelProperty("页数")
+    val pageSize: Int = 10
 )

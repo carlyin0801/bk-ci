@@ -1,6 +1,7 @@
 package com.tencent.devops.metrics.service.impl
 
 import com.tencent.devops.common.api.exception.ErrorCodeException
+import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.metrics.dao.AtomStatisticsDao
 import com.tencent.devops.metrics.service.AtomStatisticsManageService
 import com.tencent.metrics.constant.*
@@ -11,9 +12,12 @@ import com.tencent.metrics.pojo.vo.AtomTrendInfoVO
 import com.tencent.metrics.pojo.vo.ListPageVO
 import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
+@Service
 class AtomStatisticsServiceImpl @Autowired constructor(
     private val dslContext: DSLContext,
     private val atomStatisticsDao: AtomStatisticsDao
@@ -75,6 +79,7 @@ class AtomStatisticsServiceImpl @Autowired constructor(
                     atomCodes = queryAtomTrendInfoDTO.atomCodes
                 )
             )
+        // 查询记录过多，提醒用户缩小查询范围
         if (queryAtomExecuteStatisticsCount > BK_QUERY_COUNT_MAX) {
             throw ErrorCodeException(
                 errorCode = MetricsMessageCode.QUERY_DETAILS_COUNT_BEYOND
@@ -86,7 +91,9 @@ class AtomStatisticsServiceImpl @Autowired constructor(
                 projectId = queryAtomTrendInfoDTO.projectId,
                 baseQueryReq = queryAtomTrendInfoDTO.baseQueryReq,
                 errorTypes = queryAtomTrendInfoDTO.errorTypes,
-                atomCodes = queryAtomTrendInfoDTO.atomCodes
+                atomCodes = queryAtomTrendInfoDTO.atomCodes,
+                page = queryAtomTrendInfoDTO.page!!,
+                pageSize = queryAtomTrendInfoDTO.pageSize!!
             )
         )
         val queryAtomCodes = atomStatisticResult.map { it[BK_ATOM_CODE] as String }
@@ -99,12 +106,14 @@ class AtomStatisticsServiceImpl @Autowired constructor(
                 atomCodes = queryAtomCodes
             )
         )
-        val headerInfo = mutableMapOf<String, String>()
+        //  获取表头固定字段
+        val headerInfo = getHeaderInfo()
         val atomFailInfos = mutableMapOf<String, MutableList<AtomFailInfoDO>>()
         queryAtomFailStatisticsInfo.map {
             val atomCode = it[BK_ATOM_CODE].toString()
+            //  动态扩展表头
             if (!headerInfo.containsKey(it[BK_ERROR_TYPE].toString())) {
-                headerInfo.put(it[BK_ERROR_TYPE].toString(), it[BK_ERROR_NAME].toString())
+                headerInfo[it[BK_ERROR_TYPE].toString()] = it[BK_ERROR_NAME].toString()
             }
             if (!atomFailInfos.containsKey(atomCode)) {
                 atomFailInfos.put(
@@ -127,7 +136,11 @@ class AtomStatisticsServiceImpl @Autowired constructor(
                 )
             }
         }
-
+            //  查询的时间区间天数
+        val days = getIntervalTime(
+            DateTimeUtil.stringToLocalDateTime(queryAtomTrendInfoDTO.baseQueryReq.startTime),
+            DateTimeUtil.stringToLocalDateTime(queryAtomTrendInfoDTO.baseQueryReq.endTime)
+        )
         val records = atomStatisticResult.map {
             val totalExecuteCount = (it[BK_TOTAL_EXECUTE_COUNT_SUM] as BigDecimal).toInt()
             val successExecuteCount = (it[BK_SUCESS_EXECUTE_COUNT_SUM] as BigDecimal).toInt()
@@ -138,6 +151,7 @@ class AtomStatisticsServiceImpl @Autowired constructor(
                     atomName = it[BK_ATOM_NAME] as String
                 ),
                 classifyCode = it[BK_CLASSIFY_CODE] as String,
+                avgCostTime = (it[BK_TOTAL_AVG_COST_TIME_SUM] as BigDecimal).toLong() / days,  //尚有疑问，精确度未保证
                 totalExecuteCount = totalExecuteCount,
                 successExecuteCount = successExecuteCount,
                 successRate = String.format("%.2f", successExecuteCount.toDouble() * 100 / totalExecuteCount)
@@ -154,5 +168,18 @@ class AtomStatisticsServiceImpl @Autowired constructor(
             records = records
         )
 
+    }
+
+    private fun getIntervalTime(fromDate: LocalDateTime, toDate: LocalDateTime) = ChronoUnit.DAYS.between(fromDate, toDate)
+
+    private fun getHeaderInfo(): MutableMap<String, String> {
+        val headerInfo = mutableMapOf<String, String>()
+        headerInfo[BK_ATOM_CODE] = BK_ATOM_CODE_FIELD_NAME
+        headerInfo[BK_CLASSIFY_CODE] = BK_CLASSIFY_CODE_FIELD_NAME
+        headerInfo[BK_SUCCESS_RATE] = BK_SUCCESS_RATE_FIELD_NAME
+        headerInfo[BK_AVG_COST_TIME] = BK_AVG_COST_TIME_FIELD_NAME
+        headerInfo[BK_TOTAL_EXECUTE_COUNT] = BK_TOTAL_EXECUTE_COUNT_FIELD_NAME
+        headerInfo[BK_SUCESS_EXECUTE_COUNT] = BK_SUCESS_EXECUTE_COUNT_FIELD_NAME
+        return headerInfo
     }
 }

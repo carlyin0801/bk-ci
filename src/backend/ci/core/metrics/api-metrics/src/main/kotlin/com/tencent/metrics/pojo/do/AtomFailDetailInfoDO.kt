@@ -6,8 +6,14 @@ import java.time.LocalDateTime
 
 @ApiModel("插件失败详情信息")
 data class AtomFailDetailInfoDO(
-    @ApiModelProperty("流水线构建信息")
-    val pipelineBaseInfo: PipelineBaseInfoDO,
+    @ApiModelProperty("流水线ID")
+    val pipelineId: String,
+    @ApiModelProperty("流水线名称")
+    val pipelineName: String,
+    @ApiModelProperty("构建ID")
+    val buildId: String,
+    @ApiModelProperty("构建序号")
+    val buildNum: Int,
     @ApiModelProperty("插件代码")
     val atomCode: String,
     @ApiModelProperty("插件名称")

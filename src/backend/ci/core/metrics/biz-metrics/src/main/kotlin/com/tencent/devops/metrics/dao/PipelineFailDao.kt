@@ -47,7 +47,7 @@ class PipelineFailDao {
             val conditionStep =
                 if (!queryPipelineFailTrendQo.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.leftJoin(tProjectPipelineLabelInfo)
-                    .on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                    .on(this.PIPELINE_ID.eq(tProjectPipelineLabelInfo.PIPELINE_ID))
                     .where(conditions)
             } else {
                 step.where(conditions)
@@ -68,7 +68,8 @@ class PipelineFailDao {
                 .from(this)
             val conditionStep = if (!queryReq.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.leftJoin(tErrorTyppeDict).on(this.ERROR_TYPE.eq(tErrorTyppeDict.ERROR_TYPE))
-                    .leftJoin(tProjectPipelineLabelInfo).on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                    .leftJoin(tProjectPipelineLabelInfo)
+                    .on(this.PIPELINE_ID.eq(tProjectPipelineLabelInfo.PIPELINE_ID))
                     .where(conditions)
             } else {
                 step.leftJoin(tErrorTyppeDict).on(this.ERROR_TYPE.eq(tErrorTyppeDict.ERROR_TYPE)).where(conditions)
@@ -117,14 +118,14 @@ class PipelineFailDao {
             conditions.add(ERROR_TYPE.`in`(queryPipelineFailQo.errorTypes))
             val conditionStep = if (!queryPipelineFailQo.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.leftJoin(tProjectPipelineLabelInfo)
-                    .on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                    .on(this.PIPELINE_ID.eq(tProjectPipelineLabelInfo.PIPELINE_ID))
                     .where(conditions)
             } else {
                 step.where(conditions)
             }
             return conditionStep
-                .limit(queryPipelineFailQo.limit!!.limit)
-                .offset(queryPipelineFailQo.limit!!.offset)
+                .groupBy(this.PIPELINE_ID, this.BUILD_NUM)
+                .limit((queryPipelineFailQo.page - 1) * queryPipelineFailQo.pageSize, queryPipelineFailQo.pageSize)
                 .fetch().into(PipelineFailDetailDataPO::class.java)
         }
     }
@@ -145,7 +146,8 @@ class PipelineFailDao {
             conditions.add(ERROR_TYPE.`in`(queryPipelineFailQo.errorTypes))
             val conditionStep = if (!queryPipelineFailQo.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
                 step.leftJoin(tErrorTypeDict).on(this.ERROR_TYPE.eq(tErrorTypeDict.ERROR_TYPE))
-                    .leftJoin(tProjectPipelineLabelInfo).on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                    .leftJoin(tProjectPipelineLabelInfo)
+                    .on(this.PIPELINE_ID.eq(tProjectPipelineLabelInfo.PIPELINE_ID))
                     .where(conditions)
             } else {
                 step.leftJoin(tErrorTypeDict).on(this.ERROR_TYPE.eq(tErrorTypeDict.ERROR_TYPE)).where(conditions)

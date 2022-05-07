@@ -37,7 +37,8 @@ class AtomStatisticsDao {
                 this.STATISTICS_TIME.`as`(BK_STATISTICS_TIME)
             ).from(this)
             val conditionStep = if (!queryCondition.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
-                step.leftJoin(tProjectPipelineLabelInfo).on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                step.leftJoin(tProjectPipelineLabelInfo)
+                    .on(this.PIPELINE_ID.eq(tProjectPipelineLabelInfo.PIPELINE_ID))
                     .where(conditions)
             } else {
                 step.where(conditions)
@@ -110,15 +111,15 @@ class AtomStatisticsDao {
                 sum(this.AVG_COST_TIME.`as`(BK_TOTAL_AVG_COST_TIME_SUM))
             ).from(this)
             val conditionStep = if (!queryCondition.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
-                step.leftJoin(tProjectPipelineLabelInfo).on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                step.leftJoin(tProjectPipelineLabelInfo)
+                    .on(this.PIPELINE_ID.eq(tProjectPipelineLabelInfo.PIPELINE_ID))
                     .where(conditions)
             } else {
                 step.where(conditions)
             }
             return conditionStep
                 .groupBy(ATOM_CODE)
-                .limit(queryCondition.limit!!.limit)
-                .offset(queryCondition.limit!!.offset)
+                .limit((queryCondition.page - 1) * queryCondition.pageSize, queryCondition.pageSize)
                 .fetch()
         }
     }
@@ -156,7 +157,8 @@ class AtomStatisticsDao {
             val conditions = getConditions(queryCondition, tProjectPipelineLabelInfo, atomCodes)
             val step = dslContext.selectCount().from(this)
             val conditionStep = if (!queryCondition.baseQueryReq.pipelineLabelIds.isNullOrEmpty()) {
-                step.leftJoin(tProjectPipelineLabelInfo).on(this.PROJECT_ID.eq(tProjectPipelineLabelInfo.PROJECT_ID))
+                step.leftJoin(tProjectPipelineLabelInfo)
+                    .on(this.PIPELINE_ID.eq(tProjectPipelineLabelInfo.PIPELINE_ID))
                     .where(conditions)
             } else {
                 step.where(conditions)

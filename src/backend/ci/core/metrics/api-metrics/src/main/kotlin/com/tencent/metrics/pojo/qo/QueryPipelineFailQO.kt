@@ -13,6 +13,8 @@ data class QueryPipelineFailQO(
     val baseQueryReq: BaseQueryReqDO,
     @ApiModelProperty("错误类型")
     val errorTypes: List<Int>?,
-    @ApiModelProperty("分页信息")
-    val limit: SQLLimit? = null
+    @ApiModelProperty("页码")
+    val page: Int = 1,
+    @ApiModelProperty("页数")
+    val pageSize: Int = 10
 )
