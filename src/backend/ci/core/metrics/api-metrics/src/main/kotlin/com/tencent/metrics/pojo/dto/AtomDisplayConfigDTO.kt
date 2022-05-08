@@ -31,8 +31,8 @@ import com.tencent.metrics.pojo.`do`.AtomBaseInfoDO
 import io.swagger.annotations.ApiModel
 import io.swagger.annotations.ApiModelProperty
 
-@ApiModel("保存项目下展示插件配置传输对象")
-data class SaveAtomDisplayConfigDTO(
+@ApiModel("项目下展示插件配置传输对象")
+data class AtomDisplayConfigDTO(
     @ApiModelProperty("项目ID")
     val projectId: String,
     @ApiModelProperty("userId")

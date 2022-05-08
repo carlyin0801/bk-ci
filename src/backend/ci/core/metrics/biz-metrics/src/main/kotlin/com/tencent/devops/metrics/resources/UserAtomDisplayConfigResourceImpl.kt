@@ -31,20 +31,28 @@ import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.metrics.service.AtomDisplayConfigManageService
 import com.tencent.metrics.api.UserAtomDisplayConfigResource
-import com.tencent.metrics.pojo.dto.SaveAtomDisplayConfigDTO
+import com.tencent.metrics.pojo.dto.AtomDisplayConfigDTO
 import com.tencent.metrics.pojo.vo.AtomDisplayConfigVO
 import org.springframework.beans.factory.annotation.Autowired
 
 @RestResource
 class UserAtomDisplayConfigResourceImpl @Autowired constructor(
-    private val aomDisplayConfigManageService: AtomDisplayConfigManageService
+    private val atomDisplayConfigManageService: AtomDisplayConfigManageService
 ) : UserAtomDisplayConfigResource {
     override fun createAtomDisplayConfig(
         projectId: String,
         userId: String,
         atomDisplayConfig: AtomDisplayConfigVO
     ): Result<Boolean> {
-        TODO("Not yet implemented")
+        return Result(
+            atomDisplayConfigManageService.createAtomDisplayConfig(
+                AtomDisplayConfigDTO(
+                    projectId,
+                    userId,
+                    atomDisplayConfig.atomBaseInfos
+                )
+            )
+        )
     }
 
     override fun updateAtomDisplayConfig(
@@ -52,7 +60,15 @@ class UserAtomDisplayConfigResourceImpl @Autowired constructor(
         userId: String,
         atomDisplayConfig: AtomDisplayConfigVO
     ): Result<Boolean> {
-        TODO("Not yet implemented")
+        return Result(
+            atomDisplayConfigManageService.updateAtomDisplayConfig(
+                AtomDisplayConfigDTO(
+                    projectId,
+                    userId,
+                    atomDisplayConfig.atomBaseInfos
+                )
+            )
+        )
     }
 
     override fun getAtomDisplayConfig(projectId: String, userId: String): Result<AtomDisplayConfigVO> {
