@@ -16,7 +16,7 @@ class QueryAtomFailInfoDTO (
     @ApiModelProperty("错误码", required = false)
     val errorCodes: List<Int>?,
     @ApiModelProperty("页码")
-    val page: Int?,
+    val page: Int? = 1,
     @ApiModelProperty("页数")
-    val pageSize: Int?
+    val pageSize: Int? = 10
 )

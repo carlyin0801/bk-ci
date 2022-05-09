@@ -2,18 +2,33 @@ package com.tencent.devops.metrics.resources;
 
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.metrics.service.AtomFailInfoManageService
 import com.tencent.metrics.api.UserAtomFailInfoResource
 import com.tencent.metrics.pojo.`do`.AtomFailDetailInfoDO
+import com.tencent.metrics.pojo.dto.QueryAtomFailInfoDTO
 import com.tencent.metrics.pojo.vo.AtomErrorCodeStatisticsInfoVO
 import com.tencent.metrics.pojo.vo.AtomFailInfoReqVO
+import org.springframework.beans.factory.annotation.Autowired
 
-class UserAtomFailInfoResourceImpl: UserAtomFailInfoResource {
+
+class UserAtomFailInfoResourceImpl @Autowired constructor(
+    private val atomFailInfoManageService: AtomFailInfoManageService
+): UserAtomFailInfoResource {
     override fun queryAtomErrorCodeStatisticsInfo(
         projectId: String,
         userId: String,
         atomFailInfoReq: AtomFailInfoReqVO
     ): Result<AtomErrorCodeStatisticsInfoVO> {
-        TODO("Not yet implemented")
+        return Result(
+            atomFailInfoManageService.queryAtomErrorCodeStatisticsInfo(
+                QueryAtomFailInfoDTO(
+                    projectId,
+                    atomFailInfoReq.baseQueryReq,
+                    atomFailInfoReq.errorTypes,
+                    atomFailInfoReq.errorCodes
+                )
+            )
+        )
     }
 
     override fun queryPipelineFailDetailInfo(
@@ -23,6 +38,17 @@ class UserAtomFailInfoResourceImpl: UserAtomFailInfoResource {
         page: Int,
         pageSize: Int
     ): Result<Page<AtomFailDetailInfoDO>> {
-        TODO("Not yet implemented")
+        return Result(
+            atomFailInfoManageService.queryPipelineFailDetailInfo(
+                QueryAtomFailInfoDTO(
+                    projectId,
+                    atomFailInfoReq.baseQueryReq,
+                    atomFailInfoReq.errorTypes,
+                    atomFailInfoReq.errorCodes,
+                    page,
+                    pageSize
+                )
+            )
+        )
     }
 }
