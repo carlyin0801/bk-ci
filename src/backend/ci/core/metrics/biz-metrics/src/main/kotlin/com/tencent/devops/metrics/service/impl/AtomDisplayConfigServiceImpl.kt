@@ -28,32 +28,34 @@
 package com.tencent.devops.metrics.service.impl
 
 import com.tencent.devops.common.api.enums.SystemModuleEnum
+import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.db.utils.SnowFlakeUtils
 import com.tencent.devops.metrics.dao.AtomDisplayConfigDao
 import com.tencent.devops.metrics.service.AtomDisplayConfigManageService
-import com.tencent.metrics.pojo.dto.SaveAtomDisplayConfigDTO
-import com.tencent.metrics.pojo.po.SaveAtomDisplayConfigPO
+import com.tencent.metrics.pojo.dto.AtomDisplayConfigDTO
+import com.tencent.metrics.pojo.po.AtomDisplayConfigPO
+import com.tencent.metrics.pojo.vo.AtomDisplayConfigVO
 import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 
 @Service
-class DbAtomDisplayConfigServiceImpl @Autowired constructor(
+class AtomDisplayConfigServiceImpl @Autowired constructor(
     private val dslContext: DSLContext,
     private val atomDisplayConfigDao: AtomDisplayConfigDao
 ) : AtomDisplayConfigManageService {
 
-    override fun saveAtomDisplayConfig(saveAtomDisplayConfigDTO: SaveAtomDisplayConfigDTO): Boolean {
-        val atomBaseInfos = saveAtomDisplayConfigDTO.atomBaseInfos
-        val saveAtomDisplayConfigPOs = mutableListOf<SaveAtomDisplayConfigPO>()
+    override fun addAtomDisplayConfig(atomDisplayConfigDTO: AtomDisplayConfigDTO): Boolean {
+        val atomBaseInfos = atomDisplayConfigDTO.atomBaseInfos
+        val atomDisplayConfigPOS = mutableListOf<AtomDisplayConfigPO>()
         atomBaseInfos.forEach { atomBaseInfo ->
             val currentTime = LocalDateTime.now()
-            saveAtomDisplayConfigPOs.add(
-                SaveAtomDisplayConfigPO(
+            atomDisplayConfigPOS.add(
+                AtomDisplayConfigPO(
                     id = SnowFlakeUtils.getId(SystemModuleEnum.METRICS.code),
-                    projectId = saveAtomDisplayConfigDTO.projectId,
-                    userId = saveAtomDisplayConfigDTO.userId,
+                    projectId = atomDisplayConfigDTO.projectId,
+                    userId = atomDisplayConfigDTO.userId,
                     atomCode = atomBaseInfo.atomCode,
                     atomName = atomBaseInfo.atomName,
                     createTime = currentTime,
@@ -61,7 +63,43 @@ class DbAtomDisplayConfigServiceImpl @Autowired constructor(
                 )
             )
         }
-        atomDisplayConfigDao.batchSaveAtomDisplayConfig(dslContext, saveAtomDisplayConfigPOs)
+        atomDisplayConfigDao.batchAddAtomDisplayConfig(dslContext, atomDisplayConfigPOS)
         return true
+    }
+
+    override fun deleteAtomDisplayConfig(atomDisplayConfigDTO: AtomDisplayConfigDTO): Boolean {
+        val atomCodes = atomDisplayConfigDTO.atomBaseInfos.map { it.atomCode }
+        return atomDisplayConfigDao.batchDeleteAtomDisplayConfig(
+            dslContext,
+            atomDisplayConfigDTO.projectId,
+            atomDisplayConfigDTO.userId,
+            atomCodes
+        )
+    }
+
+    override fun getAtomDisplayConfig(projectId: String, userId: String): AtomDisplayConfigVO {
+        return AtomDisplayConfigVO(
+            atomDisplayConfigDao.getAtomDisplayConfig(
+                dslContext,
+                projectId,
+                userId
+            )
+        )
+    }
+
+    override fun getOptionalAtomDisplayConfig(projectId: String, userId: String): AtomDisplayConfigVO {
+        val atomCodes = atomDisplayConfigDao.getAtomDisplayConfig(
+            dslContext,
+            projectId,
+            userId
+        ).map { it.atomCode }
+        return AtomDisplayConfigVO(
+            atomDisplayConfigDao.getOptionalAtomDisplayConfig(
+                dslContext,
+                projectId,
+                userId,
+                atomCodes
+            )
+        )
     }
 }

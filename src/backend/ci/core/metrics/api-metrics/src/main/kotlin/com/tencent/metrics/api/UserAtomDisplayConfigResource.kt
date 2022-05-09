@@ -35,10 +35,10 @@ import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
 import javax.ws.rs.Consumes
+import javax.ws.rs.DELETE
 import javax.ws.rs.HeaderParam
 import javax.ws.rs.POST
 import javax.ws.rs.GET
-import javax.ws.rs.PUT
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
@@ -52,7 +52,7 @@ interface UserAtomDisplayConfigResource {
     @ApiOperation("新增项目下需要展示的插件配置")
     @Path("/config/add")
     @POST
-    fun createAtomDisplayConfig(
+    fun addAtomDisplayConfig(
         @ApiParam("项目ID", required = true)
         @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
         projectId: String,
@@ -63,10 +63,10 @@ interface UserAtomDisplayConfigResource {
         atomDisplayConfig: AtomDisplayConfigVO
     ): Result<Boolean>
 
-    @ApiOperation("更新项目下需要展示的插件配置")
+    @ApiOperation("删除项目下需要展示的插件配置")
     @Path("/config/update")
-    @PUT
-    fun updateAtomDisplayConfig(
+    @DELETE
+    fun deleteAtomDisplayConfig(
         @ApiParam("项目ID", required = true)
         @HeaderParam(AUTH_HEADER_DEVOPS_PROJECT_ID)
         projectId: String,

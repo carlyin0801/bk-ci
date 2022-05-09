@@ -39,13 +39,13 @@ import org.springframework.beans.factory.annotation.Autowired
 class UserAtomDisplayConfigResourceImpl @Autowired constructor(
     private val atomDisplayConfigManageService: AtomDisplayConfigManageService
 ) : UserAtomDisplayConfigResource {
-    override fun createAtomDisplayConfig(
+    override fun addAtomDisplayConfig(
         projectId: String,
         userId: String,
         atomDisplayConfig: AtomDisplayConfigVO
     ): Result<Boolean> {
         return Result(
-            atomDisplayConfigManageService.createAtomDisplayConfig(
+            atomDisplayConfigManageService.addAtomDisplayConfig(
                 AtomDisplayConfigDTO(
                     projectId,
                     userId,
@@ -55,13 +55,13 @@ class UserAtomDisplayConfigResourceImpl @Autowired constructor(
         )
     }
 
-    override fun updateAtomDisplayConfig(
+    override fun deleteAtomDisplayConfig(
         projectId: String,
         userId: String,
         atomDisplayConfig: AtomDisplayConfigVO
     ): Result<Boolean> {
         return Result(
-            atomDisplayConfigManageService.updateAtomDisplayConfig(
+            atomDisplayConfigManageService.deleteAtomDisplayConfig(
                 AtomDisplayConfigDTO(
                     projectId,
                     userId,
@@ -72,10 +72,20 @@ class UserAtomDisplayConfigResourceImpl @Autowired constructor(
     }
 
     override fun getAtomDisplayConfig(projectId: String, userId: String): Result<AtomDisplayConfigVO> {
-        TODO("Not yet implemented")
+        return Result(
+            atomDisplayConfigManageService.getAtomDisplayConfig(
+                projectId,
+                userId
+            )
+        )
     }
 
     override fun getOptionalAtomDisplayConfig(projectId: String, userId: String): Result<AtomDisplayConfigVO> {
-        TODO("Not yet implemented")
+        return Result(
+            atomDisplayConfigManageService.getOptionalAtomDisplayConfig(
+                projectId,
+                userId
+            )
+        )
     }
 }

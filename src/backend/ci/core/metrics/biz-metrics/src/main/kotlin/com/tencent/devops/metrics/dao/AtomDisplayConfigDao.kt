@@ -28,34 +28,79 @@
 package com.tencent.devops.metrics.dao
 
 import com.tencent.devops.model.metrics.tables.TAtomDisplayConfig
-import com.tencent.metrics.pojo.po.SaveAtomDisplayConfigPO
+import com.tencent.devops.model.metrics.tables.TAtomOverviewData
+import com.tencent.metrics.pojo.`do`.AtomBaseInfoDO
+import com.tencent.metrics.pojo.po.AtomDisplayConfigPO
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 
 @Repository
 class AtomDisplayConfigDao {
 
-    fun batchSaveAtomDisplayConfig(
+    fun batchAddAtomDisplayConfig(
         dslContext: DSLContext,
-        saveAtomDisplayConfigPOs: List<SaveAtomDisplayConfigPO>
+        atomDisplayConfigPOS: List<AtomDisplayConfigPO>
     ) {
         with(TAtomDisplayConfig.T_ATOM_DISPLAY_CONFIG) {
-            saveAtomDisplayConfigPOs.forEach { saveAtomDisplayConfigPO ->
+            atomDisplayConfigPOS.forEach { atomDisplayConfigPO ->
                 dslContext.insertInto(this)
-                    .set(ID, saveAtomDisplayConfigPO.id)
-                    .set(PROJECT_ID, saveAtomDisplayConfigPO.projectId)
-                    .set(ATOM_CODE, saveAtomDisplayConfigPO.atomCode)
-                    .set(ATOM_NAME, saveAtomDisplayConfigPO.atomName)
-                    .set(CREATOR, saveAtomDisplayConfigPO.userId)
-                    .set(MODIFIER, saveAtomDisplayConfigPO.userId)
-                    .set(UPDATE_TIME, saveAtomDisplayConfigPO.updateTime)
-                    .set(CREATE_TIME, saveAtomDisplayConfigPO.createTime)
+                    .set(ID, atomDisplayConfigPO.id)
+                    .set(PROJECT_ID, atomDisplayConfigPO.projectId)
+                    .set(ATOM_CODE, atomDisplayConfigPO.atomCode)
+                    .set(ATOM_NAME, atomDisplayConfigPO.atomName)
+                    .set(CREATOR, atomDisplayConfigPO.userId)
+                    .set(MODIFIER, atomDisplayConfigPO.userId)
+                    .set(UPDATE_TIME, atomDisplayConfigPO.updateTime)
+                    .set(CREATE_TIME, atomDisplayConfigPO.createTime)
                     .onDuplicateKeyUpdate()
-                    .set(ATOM_NAME, saveAtomDisplayConfigPO.atomName)
-                    .set(MODIFIER, saveAtomDisplayConfigPO.userId)
-                    .set(UPDATE_TIME, saveAtomDisplayConfigPO.updateTime)
+                    .set(ATOM_NAME, atomDisplayConfigPO.atomName)
+                    .set(MODIFIER, atomDisplayConfigPO.userId)
+                    .set(UPDATE_TIME, atomDisplayConfigPO.updateTime)
                     .execute()
             }
+        }
+    }
+
+    fun batchDeleteAtomDisplayConfig(
+        dslContext: DSLContext,
+        projectId: String,
+        userId: String,
+        atomCodes: List<String>
+    ): Boolean {
+        with(TAtomDisplayConfig.T_ATOM_DISPLAY_CONFIG) {
+            return dslContext.deleteFrom(this)
+                .where(PROJECT_ID.eq(projectId))
+                .and(CREATOR.eq(userId))
+                .and(ATOM_CODE.`in`(atomCodes))
+                .execute() != 0
+        }
+    }
+
+    fun getAtomDisplayConfig(
+        dslContext: DSLContext,
+        projectId: String,
+        userId: String
+    ): List<AtomBaseInfoDO> {
+        with(TAtomDisplayConfig.T_ATOM_DISPLAY_CONFIG) {
+            return dslContext.select(ATOM_CODE, ATOM_NAME)
+                .where(PROJECT_ID.eq(projectId))
+                .and(CREATOR.eq(userId))
+                .fetchInto(AtomBaseInfoDO::class.java)
+        }
+    }
+
+    fun getOptionalAtomDisplayConfig(
+        dslContext: DSLContext,
+        projectId: String,
+        userId: String,
+        atomCodes: List<String>
+    ): List<AtomBaseInfoDO> {
+        with(TAtomOverviewData.T_ATOM_OVERVIEW_DATA) {
+            return dslContext.select(ATOM_CODE, ATOM_NAME)
+                .where(PROJECT_ID.eq(projectId))
+                .and(CREATOR.eq(userId))
+                .and(ATOM_CODE.notIn(atomCodes))
+                .fetchInto(AtomBaseInfoDO::class.java)
         }
     }
 }

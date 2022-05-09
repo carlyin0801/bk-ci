@@ -2,6 +2,7 @@ package com.tencent.metrics.api
 
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_PROJECT_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.annotation.BkField
 import com.tencent.metrics.pojo.`do`.ErrorCodeInfoDO
@@ -42,5 +43,5 @@ interface UserErrorCodeInfoResource {
         @BkField(minLength = 10, maxLength = 100)
         @QueryParam("pageSize")
         pageSize: Int
-    ): Result<List<ErrorCodeInfoDO>>
+    ): Result<Page<ErrorCodeInfoDO>>
 }

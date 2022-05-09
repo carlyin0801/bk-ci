@@ -38,7 +38,7 @@ interface AtomDisplayConfigManageService {
      * @param saveAtomDisplayConfigDTO 保存项目下展示插件配置传输对象
      * @return 布尔值
      */
-    fun createAtomDisplayConfig(
+    fun addAtomDisplayConfig(
         saveAtomDisplayConfigDTO: AtomDisplayConfigDTO
     ): Boolean
 
@@ -47,15 +47,19 @@ interface AtomDisplayConfigManageService {
      * @param saveAtomDisplayConfigDTO 保存项目下展示插件配置传输对象
      * @return 布尔值
      */
-    fun updateAtomDisplayConfig(
+    fun deleteAtomDisplayConfig(
         saveAtomDisplayConfigDTO: AtomDisplayConfigDTO
     ): Boolean
 
-    fun getAtomDisplayConfig(projectId: String, userId: String): Result<AtomDisplayConfigVO> {
-        TODO("Not yet implemented")
-    }
+    /**
+     * 获取项目下需要展示的插件
+     * @return 项目下展示插件配置报文
+     */
+    fun getAtomDisplayConfig(projectId: String, userId: String): AtomDisplayConfigVO
 
-    fun getOptionalAtomDisplayConfig(projectId: String, userId: String): Result<AtomDisplayConfigVO> {
-        TODO("Not yet implemented")
-    }
+    /**
+     * 获取项目下可供选择展示的插件
+     * @return 项目下展示插件配置报文
+     */
+    fun getOptionalAtomDisplayConfig(projectId: String, userId: String): AtomDisplayConfigVO
 }

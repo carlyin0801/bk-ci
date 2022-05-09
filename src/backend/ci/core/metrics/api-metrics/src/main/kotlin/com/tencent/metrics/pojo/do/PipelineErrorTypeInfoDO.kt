@@ -32,8 +32,8 @@ import io.swagger.annotations.ApiModelProperty
 
 @ApiModel("流水线异常类型信息")
 data class PipelineErrorTypeInfoDO(
-    @ApiModelProperty("错误名称")
-    val errorName: String,
     @ApiModelProperty("错误类型")
-    val errorType: Int
+    val errorType: Int,
+    @ApiModelProperty("错误名称")
+    val errorName: String
 )

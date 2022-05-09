@@ -2,6 +2,7 @@ package com.tencent.metrics.api
 
 import com.tencent.devops.common.api.auth.AUTH_HEADER_DEVOPS_PROJECT_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
+import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.annotation.BkField
 import com.tencent.metrics.pojo.`do`.AtomBaseInfoDO
@@ -33,15 +34,15 @@ interface UserProjectInfoResource {
         @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("流水线ID", required = false)
-        pipelineIds: List<String>?,
         @ApiParam("页码", required = true, defaultValue = "1")
+        @BkField(minLength = 1)
         @QueryParam("page")
         page: Int,
         @ApiParam("每页大小", required = true, defaultValue = "10")
+        @BkField(minLength = 10, maxLength = 10)
         @QueryParam("pageSize")
         pageSize: Int
-    ): Result<List<AtomBaseInfoDO>>
+    ): Result<Page<AtomBaseInfoDO>>
 
     @ApiOperation("获取项目下流水线标签列表")
     @Path("/pipeline/label/list")
@@ -60,7 +61,7 @@ interface UserProjectInfoResource {
         @QueryParam("page")
         page: Int,
         @ApiParam("每页大小", required = true, defaultValue = "10")
-        @BkField(minLength = 10, maxLength = 100)
+        @BkField(minLength = 10, maxLength = 10)
         @QueryParam("pageSize")
         pageSize: Int
     ): Result<List<PipelineLabelInfoDO>>
@@ -71,14 +72,6 @@ interface UserProjectInfoResource {
     fun queryProjectPipelineErrorTypes(
         @ApiParam("userId", required = true)
         @HeaderParam(AUTH_HEADER_USER_ID)
-        userId: String,
-        @ApiParam("页码", required = true, defaultValue = "1")
-        @BkField(minLength = 1)
-        @QueryParam("page")
-        page: Int,
-        @ApiParam("每页大小", required = true, defaultValue = "10")
-        @BkField(minLength = 10, maxLength = 100)
-        @QueryParam("pageSize")
-        pageSize: Int
+        userId: String
     ): Result<List<PipelineErrorTypeInfoDO>>
 }
