@@ -78,4 +78,11 @@ object JooqUtils {
             BigDecimal::class.java
         )
     }
+
+    fun <T>count(data: Field<T>): Field<Int> {
+        return DSL.field(
+            "count(${data.name})",
+            Int::class.java
+        )
+    }
 }
