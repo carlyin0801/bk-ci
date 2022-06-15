@@ -26,6 +26,7 @@
  */
 
 dependencies {
+    api("org.reflections:reflections")
     api(project(":core:process:api-process"))
     api(project(":core:log:api-log"))
     api(project(":core:store:api-store"))
@@ -44,7 +45,7 @@ dependencies {
     api("ch.qos.logback:logback-core")
     api("ch.qos.logback:logback-classic")
     api("com.github.ben-manes.caffeine:caffeine")
-    api(fileTree(mapOf("dir" to "lib/KillProcessTree.jar", "include" to listOf("*.jar"))))
+    api(fileTree(mapOf("dir" to "lib", "includes" to listOf("*.jar"))))
 }
 
 configurations.forEach {

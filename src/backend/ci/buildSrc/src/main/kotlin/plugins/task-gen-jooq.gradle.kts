@@ -25,7 +25,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import nu.studer.gradle.jooq.JooqGenerate
-import org.gradle.api.tasks.compile.AbstractCompile
 
 plugins {
     id("nu.studer.jooq")
@@ -35,11 +34,11 @@ val jooqGenerator by configurations
 val api by configurations
 
 dependencies {
-    jooqGenerator("mysql:mysql-connector-java:8.0.22")
+    jooqGenerator("mysql:mysql-connector-java:8.0.28")
     api("org.jooq:jooq")
 }
 
-val moduleNames = when (val moduleName = name.split("-")[1]) {
+var moduleNames = when (val moduleName = name.split("-")[1]) {
     "misc" -> {
         listOf("process", "project", "repository", "dispatch", "plugin", "quality", "artifactory", "environment")
     }
@@ -49,7 +48,14 @@ val moduleNames = when (val moduleName = name.split("-")[1]) {
     "lambda" -> {
         listOf("process", "project", "lambda")
     }
+    "gitci" -> {
+        listOf("stream")
+    }
     else -> listOf(moduleName)
+}
+
+if (name == "model-dispatch-bcs") {
+    moduleNames = listOf("dispatch_bcs")
 }
 
 val mysqlPrefix: String? = System.getProperty("mysqlPrefix") ?: System.getenv("mysqlPrefix")
@@ -88,7 +94,7 @@ jooq {
                         }
 
                         if (mysqlURL == null) {
-                            println("use default properties.")
+                            println("use default mysql database.")
                             mysqlURL = project.extra["DB_HOST"]?.toString()
                             mysqlUser = project.extra["DB_USERNAME"]?.toString()
                             mysqlPasswd = project.extra["DB_PASSWORD"]?.toString()
@@ -123,7 +129,11 @@ jooq {
                         }
 
                         target.apply {
-                            packageName = "com.tencent.devops.model.$moduleName"
+                            if (packageName == "gitci") {
+                                packageName = "com.tencent.devops.model.gitci"
+                            } else {
+                                packageName = "com.tencent.devops.model.$moduleName"
+                            }
                         }
                     }
                 }

@@ -185,9 +185,9 @@ class BuildEndControl @Autowired constructor(
 
         // 上报SLA数据
         if (buildStatus.isSuccess() || buildStatus == BuildStatus.STAGE_SUCCESS) {
-            successPipelineCount(this)
+            successPipelineCount()
         } else if (buildStatus.isFailure()) {
-            failPipelineCount(this)
+            failPipelineCount()
         }
         buildInfo.endTime = endTime.timestampmilli()
         buildInfo.status = buildStatus
@@ -400,32 +400,26 @@ class BuildEndControl @Autowired constructor(
         )
     }
 
-    private fun successPipelineCount(event: PipelineBuildFinishEvent) {
+    private fun successPipelineCount() {
         Counter
             .builder("success_pipeline_count")
-            .tag("projectId", event.projectId)
-            .tag("pipelineId", event.pipelineId)
             .register(meterRegistry)
             .increment()
 
-        finishPipelineCount(event)
+        finishPipelineCount()
     }
 
-    private fun failPipelineCount(event: PipelineBuildFinishEvent) {
+    private fun failPipelineCount() {
         Counter
             .builder("fail_pipeline_count")
-            .tag("projectId", event.projectId)
-            .tag("pipelineId", event.pipelineId)
             .register(meterRegistry)
             .increment()
-        finishPipelineCount(event)
+        finishPipelineCount()
     }
 
-    private fun finishPipelineCount(event: PipelineBuildFinishEvent) {
+    private fun finishPipelineCount() {
         Counter
             .builder("finish_pipeline_count")
-            .tag("projectId", event.projectId)
-            .tag("pipelineId", event.pipelineId)
             .register(meterRegistry)
             .increment()
     }
