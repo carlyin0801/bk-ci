@@ -27,7 +27,7 @@
 
 package com.tencent.devops.sharding.util
 
-import com.mysql.cj.jdbc.Driver
+/*import com.mysql.cj.jdbc.Driver
 import com.zaxxer.hikari.HikariDataSource
 
 object DataSourceUtil {
@@ -53,4 +53,4 @@ object DataSourceUtil {
             leakDetectionThreshold = datasouceLeakDetectionThreshold
         }
     }
-}
+}*/

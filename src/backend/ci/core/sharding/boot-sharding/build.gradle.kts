@@ -28,7 +28,3 @@
 dependencies {
     api(project(":core:sharding:biz-sharding-sample"))
 }
-
-plugins {
-   `task-spring-boot-package`
-}

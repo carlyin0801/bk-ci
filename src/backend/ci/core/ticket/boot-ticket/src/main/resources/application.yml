@@ -2,18 +2,43 @@ spring:
   main:
     allow-bean-definition-overriding: true
   application:
-    name: ticket${service-suffix}
-    desc: DevOps Ticket Service
-    version: 4.0.0
+    name: ticket
+    desc: Devops Sharding Service
+    version: 4.0
     packageName: com.tencent.devops.ticket
+  datasource:
+    dataSourceConfigs:
+      - url: jdbc:mysql://localhost:3307/devops_ticket?useSSL=false&autoReconnect=true&serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
+        username: root
+        password: root
+  redis:
+    database: 2
+    host: 10.125.48.80
+    password: itdev@db
+  rabbitmq:
+    core:
+      virtual-host: soda4
+      username: soda
+      password: soda
+      addresses: 9.134.79.35:5672
+    extend:
+      virtual-host: soda4
+      username: soda
+      password: soda
+      addresses: 9.134.79.35:5672
+
+swagger:
+  append:
+    name: true
 
 server:
-  port: 21915
+  port: 21950
 
-
-cert:
-  aes-key: "gHi(xG9Af)jEvCx&"
-
-credential:
-  mixer: "******"
-  aes-key: "G/I%yP{?ST}2TXPg"
+leaf:
+  segment:
+    allocStrategyDaoBeanName: jooqIDAllocDaoImpl
+    enable: true
+    url: jdbc:mysql://localhost:3307/devops_ticket?useSSL=false&autoReconnect=true&serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
+    password: root
+    username: root
+  name: test

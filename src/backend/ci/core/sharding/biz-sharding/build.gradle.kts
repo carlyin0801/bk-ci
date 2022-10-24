@@ -35,6 +35,7 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-jooq")
     api("com.zaxxer:HikariCP")
     api("org.jooq:jooq")
+    api("mysql:mysql-connector-java")
     api("org.apache.shardingsphere:shardingsphere-jdbc-core:5.1.1")
-    api("com.tencent.devops.leaf:leaf-boot-starter:1.0.1-RELEASE")
+    api("com.tencent.devops.leaf:leaf-boot-starter:1.0.2-RELEASE")
 }
