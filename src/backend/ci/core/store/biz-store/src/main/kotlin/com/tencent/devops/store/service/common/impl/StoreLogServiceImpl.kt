@@ -30,8 +30,9 @@ import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.log.pojo.QueryLogs
-import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.log.api.ServiceLogResource
+import com.tencent.devops.store.constant.StoreMessageCode.GET_INFO_NO_PERMISSION
 import com.tencent.devops.store.dao.common.StoreMemberDao
 import com.tencent.devops.store.dao.common.StorePipelineRelDao
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
@@ -163,9 +164,10 @@ class StoreLogServiceImpl @Autowired constructor(
     ): Result<Boolean> {
         // 查询是否是插件的成员，只有插件的成员才能看日志
         val storePipelineRelRecord = storePipelineRelDao.getStorePipelineRelByPipelineId(dslContext, pipelineId)
-            ?: return MessageCodeUtil.generateResponseDataObject(
+            ?: return I18nUtil.generateResponseDataObject(
                 messageCode = CommonMessageCode.PARAMETER_IS_INVALID,
-                params = arrayOf(pipelineId)
+                params = arrayOf(pipelineId),
+                language = I18nUtil.getLanguage(userId)
             )
         val flag = storeMemberDao.isStoreMember(
             dslContext = dslContext,
@@ -174,7 +176,11 @@ class StoreLogServiceImpl @Autowired constructor(
             storeType = storeType.type.toByte()
         )
         if (!flag) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = GET_INFO_NO_PERMISSION,
+                language = I18nUtil.getLanguage(userId),
+                params = arrayOf(storePipelineRelRecord.storeCode)
+            )
         }
         return Result(true)
     }

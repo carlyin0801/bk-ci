@@ -33,9 +33,11 @@ import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.PageUtil
 import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.client.Client
-import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.common.service.utils.SpringContextUtil
+import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.model.store.tables.records.TStoreApproveRecord
+import com.tencent.devops.store.constant.StoreMessageCode.GET_INFO_NO_PERMISSION
+import com.tencent.devops.store.constant.StoreMessageCode.NO_COMPONENT_ADMIN_PERMISSION
 import com.tencent.devops.store.dao.common.StoreApproveDao
 import com.tencent.devops.store.dao.common.StoreMemberDao
 import com.tencent.devops.store.pojo.common.StoreApproveDetail
@@ -83,21 +85,29 @@ class StoreApproveServiceImpl : StoreApproveService {
     ): Result<Boolean> {
         logger.info("approveStoreInfo params:[$userId|$approveId|$storeApproveRequest]")
         val storeApproveRecord = storeApproveDao.getStoreApproveInfo(dslContext, approveId)
-            ?: return MessageCodeUtil.generateResponseDataObject(
+            ?: return I18nUtil.generateResponseDataObject(
                 messageCode = CommonMessageCode.PARAMETER_IS_INVALID,
                 params = arrayOf(approveId),
-                data = false
+                data = false,
+                language = I18nUtil.getLanguage(userId)
             )
         val storeCode = storeApproveRecord.storeCode
         val storeType = storeApproveRecord.storeType
         val token = storeApproveRecord.token
         if (!storeApproveRequest.token.isNullOrBlank() && token != storeApproveRequest.token) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = CommonMessageCode.PERMISSION_DENIED,
+                language = I18nUtil.getLanguage(userId)
+            )
         }
         // 判断是否是插件管理员在操作
         val flag = storeMemberDao.isStoreAdmin(dslContext, userId, storeCode, storeType)
         if (!flag) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = NO_COMPONENT_ADMIN_PERMISSION,
+                params = arrayOf(storeCode),
+                language = I18nUtil.getLanguage(userId)
+            )
         }
         val busInfoService = getStoreApproveSpecifyBusInfoService(storeApproveRecord.type)
         val approveResult = busInfoService.approveStoreSpecifyBusInfo(
@@ -127,7 +137,11 @@ class StoreApproveServiceImpl : StoreApproveService {
         // 判断查看用户是否是当前插件的成员
         val flag = storeMemberDao.isStoreMember(dslContext, userId, storeCode, storeType.type.toByte())
         if (!flag) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = GET_INFO_NO_PERMISSION,
+                params = arrayOf(storeCode),
+                language = I18nUtil.getLanguage(userId)
+            )
         }
         val storeApproveInfoList = storeApproveDao.getStoreApproveInfos(
             dslContext = dslContext,
@@ -192,7 +206,11 @@ class StoreApproveServiceImpl : StoreApproveService {
                 storeType = storeApproveRecord.storeType
             )
             if (!flag) {
-                return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+                return I18nUtil.generateResponseDataObject(
+                    messageCode = GET_INFO_NO_PERMISSION,
+                    language = I18nUtil.getLanguage(userId),
+                    params = arrayOf(storeApproveRecord.storeCode)
+                )
             }
             val approveType = storeApproveRecord.type
             val busInfoService = getStoreApproveSpecifyBusInfoService(approveType)

@@ -37,7 +37,7 @@ import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.UUIDUtil
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.redis.RedisOperation
-import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.model.store.tables.TExtensionService
 import com.tencent.devops.model.store.tables.TExtensionServiceEnvInfo
 import com.tencent.devops.project.api.service.ServiceItemResource
@@ -255,19 +255,19 @@ abstract class ExtServiceManageService {
             serviceId
         }
         if (extServiceId.isNullOrBlank()) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 StoreMessageCode.USER_SERVICE_NOT_EXIST,
                 arrayOf(serviceCode)
             )
         }
         val type = StoreTypeEnum.SERVICE.type.toByte()
         if (!storeMemberDao.isStoreAdmin(dslContext, userId, serviceCode, type)) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
         }
         val releasedCount = extServiceDao.countReleaseServiceByCode(dslContext, serviceCode)
         logger.info("releasedCount: $releasedCount")
         if (releasedCount > 0) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 StoreMessageCode.USER_SERVICE_RELEASED_IS_NOT_ALLOW_DELETE,
                 arrayOf(serviceCode)
             )
@@ -276,7 +276,7 @@ abstract class ExtServiceManageService {
         val installedCount = storeProjectRelDao.countInstalledProject(dslContext, serviceCode, type)
         logger.info("installedCount: $releasedCount")
         if (installedCount > 0) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 StoreMessageCode.USER_SERVICE_USED_IS_NOT_ALLOW_DELETE,
                 arrayOf(serviceCode)
             )
@@ -511,7 +511,7 @@ abstract class ExtServiceManageService {
                 storeType = StoreTypeEnum.SERVICE.type.toByte()
             )
         ) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
         }
         // 查询扩展的最新记录
         val newestServiceRecord = extServiceDao.getNewestServiceByCode(dslContext, serviceCode)
@@ -703,12 +703,12 @@ abstract class ExtServiceManageService {
 
     fun getReadMeFile(userId: String, serviceCode: String): String? {
         val serviceRecord = extServiceDao.getNewestServiceByCode(dslContext, serviceCode)
-            ?: throw RuntimeException(MessageCodeUtil.getCodeMessage(
+            ?: throw RuntimeException(I18nUtil.getCodeLanMessage(
                 messageCode = StoreMessageCode.USER_SERVICE_NOT_EXIST,
                 params = arrayOf(serviceCode))
             )
         val featureRecord = extServiceFeatureDao.getLatestServiceByCode(dslContext, serviceCode)
-            ?: throw RuntimeException(MessageCodeUtil.getCodeMessage(
+            ?: throw RuntimeException(I18nUtil.getCodeLanMessage(
                 messageCode = StoreMessageCode.USER_SERVICE_NOT_EXIST,
                 params = arrayOf(serviceCode))
             )

@@ -28,13 +28,14 @@ package com.tencent.devops.store.service.common.impl
 
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.constant.KEY_VERSION
-import com.tencent.devops.store.constant.StoreMessageCode
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.AESUtil
 import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.common.redis.RedisLock
 import com.tencent.devops.common.redis.RedisOperation
-import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.common.web.utils.I18nUtil
+import com.tencent.devops.store.constant.StoreMessageCode
+import com.tencent.devops.store.constant.StoreMessageCode.GET_INFO_NO_PERMISSION
 import com.tencent.devops.store.dao.common.StoreEnvVarDao
 import com.tencent.devops.store.dao.common.StoreMemberDao
 import com.tencent.devops.store.pojo.common.KEY_CREATE_TIME
@@ -54,12 +55,12 @@ import com.tencent.devops.store.pojo.common.StoreEnvVarInfo
 import com.tencent.devops.store.pojo.common.StoreEnvVarRequest
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.service.common.StoreEnvVarService
+import java.time.LocalDateTime
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.time.LocalDateTime
 
 @Suppress("ALL")
 @Service
@@ -83,7 +84,11 @@ class StoreEnvVarServiceImpl @Autowired constructor(
         val storeCode = storeEnvVarRequest.storeCode
         val storeType = StoreTypeEnum.valueOf(storeEnvVarRequest.storeType).type.toByte()
         if (!storeMemberDao.isStoreMember(dslContext, userId, storeCode, storeType)) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = GET_INFO_NO_PERMISSION,
+                params = arrayOf(storeEnvVarRequest.storeCode),
+                language = I18nUtil.getLanguage(userId)
+            )
         }
         if (storeEnvVarDao.queryEnvironmentVariable(
                 dslContext = dslContext,
@@ -93,10 +98,11 @@ class StoreEnvVarServiceImpl @Autowired constructor(
                 scope = storeEnvVarRequest.scope,
                 varName = storeEnvVarRequest.varName
         ) != null) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 messageCode = StoreMessageCode.USER_SENSITIVE_CONF_EXIST,
                 params = arrayOf(storeEnvVarRequest.varName),
-                data = false
+                data = false,
+                language = I18nUtil.getLanguage(userId)
             )
         }
         val lockKey = "$storeCode:$storeType:${storeEnvVarRequest.varName}"
@@ -119,7 +125,11 @@ class StoreEnvVarServiceImpl @Autowired constructor(
             }
         } catch (ignored: Throwable) {
             logger.error("BKSystemErrorMonitor|addEnvVar|$storeEnvVarRequest|error=${ignored.message}", ignored)
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.SYSTEM_ERROR)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = CommonMessageCode.SYSTEM_ERROR,
+                language = I18nUtil.getLanguage(userId)
+
+            )
         } finally {
             lock.unlock()
         }
@@ -131,7 +141,11 @@ class StoreEnvVarServiceImpl @Autowired constructor(
         val storeCode = storeEnvVarRequest.storeCode
         val storeType = StoreTypeEnum.valueOf(storeEnvVarRequest.storeType).type.toByte()
         if (!storeMemberDao.isStoreMember(dslContext, userId, storeCode, storeType)) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = GET_INFO_NO_PERMISSION,
+                language = I18nUtil.getLanguage(userId),
+                params = arrayOf(storeEnvVarRequest.storeCode)
+            )
         }
         // 查询该环境变量在数据库中最大的版本的一行记录
         val envVarOne = storeEnvVarDao.getNewEnvVar(
@@ -164,10 +178,11 @@ class StoreEnvVarServiceImpl @Autowired constructor(
                 varName = storeEnvVarRequest.varName
             ) != null
         ) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 messageCode = StoreMessageCode.USER_SENSITIVE_CONF_EXIST,
                 params = arrayOf(storeEnvVarRequest.varName),
-                data = false
+                data = false,
+                language = I18nUtil.getLanguage(userId)
             )
         }
         val lockKey = "$storeCode:$storeType:${storeEnvVarRequest.varName}"
@@ -215,7 +230,11 @@ class StoreEnvVarServiceImpl @Autowired constructor(
             }
         } catch (ignored: Throwable) {
             logger.error("BKSystemErrorMonitor|updateEnvVar|$storeEnvVarRequest|error=${ignored.message}", ignored)
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.SYSTEM_ERROR)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = CommonMessageCode.SYSTEM_ERROR,
+                language = I18nUtil.getLanguage(userId)
+
+            )
         } finally {
             lock.unlock()
         }
@@ -238,7 +257,11 @@ class StoreEnvVarServiceImpl @Autowired constructor(
                 storeType = storeTypeObj.type.toByte()
             )
         ) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = GET_INFO_NO_PERMISSION,
+                language = I18nUtil.getLanguage(userId),
+                params = arrayOf(storeCode)
+            )
         }
         storeEnvVarDao.batchDelete(
             dslContext = dslContext,
@@ -269,7 +292,11 @@ class StoreEnvVarServiceImpl @Autowired constructor(
                 storeType = storeTypeObj.type.toByte()
             )
         ) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = GET_INFO_NO_PERMISSION,
+                language = I18nUtil.getLanguage(userId),
+                params = arrayOf(storeCode)
+            )
         }
         val latestEnvVarRecords = storeEnvVarDao.getLatestEnvVarList(
             dslContext = dslContext,
@@ -321,7 +348,11 @@ class StoreEnvVarServiceImpl @Autowired constructor(
         logger.info("storeEnvVar getEnvVarChangeLogList params:[$userId|$storeType|$storeCode|$varName]")
         val storeTypeObj = StoreTypeEnum.valueOf(storeType)
         if (!storeMemberDao.isStoreMember(dslContext, userId, storeCode, storeTypeObj.type.toByte())) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(
+                messageCode = GET_INFO_NO_PERMISSION,
+                language = I18nUtil.getLanguage(userId),
+                params = arrayOf(storeCode)
+            )
         }
         val storeEnvVarRecords = storeEnvVarDao.getEnvVarList(
             dslContext = dslContext,

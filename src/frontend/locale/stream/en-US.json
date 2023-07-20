@@ -18,6 +18,7 @@
     "cancel": "Cancel",
     "copy": "Copy",
     "noData": "No Data",
+    "searchEmpty": "Search result is empty",
     "noDesc": "No description",
     "status": "Status",
     "refresh": "Refresh",
@@ -64,6 +65,7 @@
         "goToGit": "go to git"
     },
     "pipeline": {
+        "commitMsgWithEnter": "Please enter the submission message and press the Enter key to search",
         "queue": "Queue",
         "queueTimeout": "Queue Timeout",
         "running": "Running",
@@ -249,7 +251,9 @@
         "crossRepoUse": "Allow cross-repository use",
         "crossRepoUseTips": "Credential can be referenced across repositories when it's used in template.",
         "ticket": {
-            "credentialDesc": "The credentials are referenced in YAML by means of the context settings.&lt;key&gt;.xxx, which has a different field name depending on the credential type",
+            "oauthTokenDesc": "Oauth Token is generally used in scenarios where the upper platform invokes Stream. The user has authorized the upper platform with Oauth, and the upper platform uses the user authorization to operate when using the Stream service",
+            "oauthTokenPlaceholder": "OauthToken is used to pass user authorization information when the upper platform invokes the Stream service",
+            "credentialDesc": "The credentials are referenced in YAML by means of the context settings.<key>.xxx, which has a different field name depending on the credential type",
             "credentialType": "Credential type",
             "credentialKey": "Credential identification (key)",
             "addCredential": "Add Credential",
@@ -457,5 +461,10 @@
             "canApplyCount": "Can apply count",
             "selectNewNode": "Select new Agent"
         }
-    }
+    },
+    "清空筛选条件": "Clear Search Conditions",
+    "可以尝试 调整关键词 或 清空筛选条件": "You can try adjusting keywords or {0}",
+    "确认离开当前页？": "Are you sure to leave now?",
+    "离开将会导致未保存信息丢失": "Your changes will be lost if you close without saving.",
+    "离开": "Leave"
 }

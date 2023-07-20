@@ -58,7 +58,7 @@ import com.tencent.devops.common.auth.api.AuthResourceType
 import com.tencent.devops.common.auth.code.PipelineAuthServiceCode
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.redis.RedisOperation
-import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.project.api.service.ServiceItemResource
 import com.tencent.devops.project.api.service.ServiceProjectResource
 import com.tencent.devops.store.constant.StoreMessageCode
@@ -276,7 +276,7 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
         // 判断微扩展是不是首次创建版本
         val serviceCount = extServiceDao.countByCode(dslContext, serviceCode)
         if (serviceCount < 1) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 CommonMessageCode.PARAMETER_IS_INVALID,
                 arrayOf(serviceCode)
             )
@@ -287,7 +287,7 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
                 submitDTO.serviceName,
                 submitDTO.serviceCode
             )
-        ) return MessageCodeUtil.generateResponseDataObject(
+        ) return I18nUtil.generateResponseDataObject(
             CommonMessageCode.PARAMETER_IS_EXIST,
             arrayOf(submitDTO.serviceName)
         )
@@ -423,14 +423,14 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
         logger.info("getProcessInfo userId is $userId,serviceId is $serviceId")
         val record = extServiceDao.getServiceById(dslContext, serviceId)
         return if (null == record) {
-            MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_INVALID, arrayOf(serviceId))
+            I18nUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_INVALID, arrayOf(serviceId))
         } else {
             val serviceCode = record.serviceCode
             // 判断用户是否有查询权限
             val queryFlag =
                 storeMemberDao.isStoreMember(dslContext, userId, serviceCode, StoreTypeEnum.SERVICE.type.toByte())
             if (!queryFlag) {
-                return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+                return I18nUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
             }
             val status = record.serviceStatus.toInt()
             // 查看当前版本之前的版本是否有已发布的，如果有已发布的版本则只是普通的升级操作而不需要审核
@@ -451,7 +451,7 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
     fun offlineService(userId: String, serviceCode: String, serviceOfflineDTO: ServiceOfflineDTO): Result<Boolean> {
         // 判断用户是否有权限下线
         if (!storeMemberDao.isStoreAdmin(dslContext, userId, serviceCode, StoreTypeEnum.SERVICE.type.toByte())) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
         }
         // 停止kubernetes灰度命名空间和正式命名空间的应用
         val kubernetesStopAppResult = extServiceKubernetesService.stopExtService(
@@ -493,7 +493,7 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
     fun cancelRelease(userId: String, serviceId: String): Result<Boolean> {
         logger.info("extService cancelRelease, userId=$userId, serviceId=$serviceId")
         val serviceRecord = extServiceDao.getServiceById(dslContext, serviceId)
-            ?: return MessageCodeUtil.generateResponseDataObject(
+            ?: return I18nUtil.generateResponseDataObject(
                 messageCode = CommonMessageCode.PARAMETER_IS_INVALID,
                 params = arrayOf(serviceId),
                 data = false
@@ -501,7 +501,7 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
         val status = ExtServiceStatusEnum.GROUNDING_SUSPENSION.status.toByte()
         val (checkResult, code) = checkServiceVersionOptRight(userId, serviceId, status)
         if (!checkResult) {
-            return MessageCodeUtil.generateResponseDataObject(code)
+            return I18nUtil.generateResponseDataObject(code)
         }
         // 如果该版本的状态已处于测试中及其后面的状态，取消发布则需要停掉灰度命名空间的应用
         val serviceCode = serviceRecord.serviceCode
@@ -533,7 +533,7 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
                 serviceId = serviceId,
                 serviceStatus = status,
                 userId = userId,
-                msg = MessageCodeUtil.getCodeLanMessage(UN_RELEASE)
+                msg = I18nUtil.getCodeLanMessage(UN_RELEASE)
             )
         }
         return Result(true)
@@ -545,7 +545,7 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
     fun passTest(userId: String, serviceId: String): Result<Boolean> {
         logger.info("passTest, userId=$userId, serviceId=$serviceId")
         extServiceDao.getServiceById(dslContext, serviceId)
-            ?: return MessageCodeUtil.generateResponseDataObject(
+            ?: return I18nUtil.generateResponseDataObject(
                 messageCode = CommonMessageCode.PARAMETER_IS_INVALID,
                 params = arrayOf(serviceId),
                 data = false
@@ -568,11 +568,11 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
         val status = ExtServiceStatusEnum.BUILDING.status.toByte()
         val (checkResult, code) = checkServiceVersionOptRight(userId, serviceId, status)
         if (!checkResult) {
-            return MessageCodeUtil.generateResponseDataObject(code)
+            return I18nUtil.generateResponseDataObject(code)
         }
         // 拉取extension.json，检查格式，更新入库
         val serviceRecord =
-            extServiceDao.getServiceById(dslContext, serviceId) ?: return MessageCodeUtil.generateResponseDataObject(
+            extServiceDao.getServiceById(dslContext, serviceId) ?: return I18nUtil.generateResponseDataObject(
                 CommonMessageCode.PARAMETER_IS_INVALID,
                 arrayOf(serviceId)
             )
@@ -649,7 +649,7 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
         val (checkResult, code) = checkServiceVersionOptRight(userId, serviceId, newStatus, isNormalUpgrade)
 
         if (!checkResult) {
-            return MessageCodeUtil.generateResponseDataObject(code)
+            return I18nUtil.generateResponseDataObject(code)
         }
         // 先集中删除，再添加媒体信息
         storeMediaService.deleteByStoreCode(userId, serviceCode, StoreTypeEnum.SERVICE)
@@ -698,7 +698,7 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
         val (checkResult, code) = checkServiceVersionOptRight(userId, serviceId, newStatus.status.toByte())
 
         if (!checkResult) {
-            return MessageCodeUtil.generateResponseDataObject(code)
+            return I18nUtil.generateResponseDataObject(code)
         }
 
         extServiceDao.setServiceStatusById(
@@ -842,24 +842,24 @@ abstract class ExtServiceReleaseService @Autowired constructor() {
 
     private fun initProcessInfo(isNormalUpgrade: Boolean): List<ReleaseProcessItem> {
         val processInfo = mutableListOf<ReleaseProcessItem>()
-        processInfo.add(ReleaseProcessItem(MessageCodeUtil.getCodeLanMessage(BEGIN), BEGIN, NUM_ONE, SUCCESS))
+        processInfo.add(ReleaseProcessItem(I18nUtil.getCodeLanMessage(BEGIN), BEGIN, NUM_ONE, SUCCESS))
         processInfo.add(
             ReleaseProcessItem(
-                name = MessageCodeUtil.getCodeLanMessage(TEST_ENV_PREPARE),
+                name = I18nUtil.getCodeLanMessage(TEST_ENV_PREPARE),
                 code = TEST_ENV_PREPARE,
                 step = NUM_TWO,
                 status = UNDO
             )
         )
-        processInfo.add(ReleaseProcessItem(MessageCodeUtil.getCodeLanMessage(TEST), TEST, NUM_THREE, UNDO))
-        processInfo.add(ReleaseProcessItem(MessageCodeUtil.getCodeLanMessage(EDIT), COMMIT, NUM_FOUR, UNDO))
+        processInfo.add(ReleaseProcessItem(I18nUtil.getCodeLanMessage(TEST), TEST, NUM_THREE, UNDO))
+        processInfo.add(ReleaseProcessItem(I18nUtil.getCodeLanMessage(EDIT), COMMIT, NUM_FOUR, UNDO))
         if (isNormalUpgrade) {
-            processInfo.add(ReleaseProcessItem(MessageCodeUtil.getCodeLanMessage(ONLINE), ONLINE, NUM_FIVE, UNDO))
-            processInfo.add(ReleaseProcessItem(MessageCodeUtil.getCodeLanMessage(END), END, NUM_SIX, UNDO))
+            processInfo.add(ReleaseProcessItem(I18nUtil.getCodeLanMessage(ONLINE), ONLINE, NUM_FIVE, UNDO))
+            processInfo.add(ReleaseProcessItem(I18nUtil.getCodeLanMessage(END), END, NUM_SIX, UNDO))
         } else {
-            processInfo.add(ReleaseProcessItem(MessageCodeUtil.getCodeLanMessage(APPROVE), APPROVE, NUM_FIVE, UNDO))
-            processInfo.add(ReleaseProcessItem(MessageCodeUtil.getCodeLanMessage(ONLINE), ONLINE, NUM_SIX, UNDO))
-            processInfo.add(ReleaseProcessItem(MessageCodeUtil.getCodeLanMessage(END), END, NUM_SEVEN, UNDO))
+            processInfo.add(ReleaseProcessItem(I18nUtil.getCodeLanMessage(APPROVE), APPROVE, NUM_FIVE, UNDO))
+            processInfo.add(ReleaseProcessItem(I18nUtil.getCodeLanMessage(ONLINE), ONLINE, NUM_SIX, UNDO))
+            processInfo.add(ReleaseProcessItem(I18nUtil.getCodeLanMessage(END), END, NUM_SEVEN, UNDO))
         }
         return processInfo
     }

@@ -36,7 +36,7 @@ import com.tencent.devops.store.pojo.dto.UpdateExtServiceEnvInfoDTO
 import com.tencent.devops.store.pojo.vo.ServiceEnvVO
 import com.tencent.devops.worker.common.api.AbstractBuildResourceApi
 import com.tencent.devops.worker.common.api.archive.ArtifactoryBuildResourceApi
-import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody
 import java.io.File
 import java.net.URLEncoder
@@ -53,7 +53,7 @@ class ExtServiceResourceApi : AbstractBuildResourceApi(), ExtServiceSDKApi {
     ): Result<Boolean> {
         val path = "/ms/store/api/build/ext/services/env/projects/$projectId/services/$serviceCode/versions/$version"
         val body = RequestBody.create(
-            MediaType.parse("application/json; charset=utf-8"),
+            "application/json; charset=utf-8".toMediaTypeOrNull(),
             objectMapper.writeValueAsString(updateExtServiceEnvInfo)
         )
         val request = buildPut(path, body)

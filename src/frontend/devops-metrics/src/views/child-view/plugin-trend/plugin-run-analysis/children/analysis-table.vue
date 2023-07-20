@@ -3,6 +3,7 @@ import {
   ref,
   onMounted,
   watch,
+  computed,
   h,
 } from 'vue';
 import http from '@/http/api';
@@ -13,6 +14,7 @@ import {
   useRouter,
 } from 'vue-router';
 import useFilter from '@/composables/use-filter';
+import EmptyTableStatus from '@/components/empty-table-status.vue'
 import { useI18n } from "vue-i18n";
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
@@ -26,7 +28,7 @@ interface IShowTime {
 
 const { t } = useI18n();
 
-const emit = defineEmits(['change']);
+const emit = defineEmits(['change', 'clear']);
 
 const {
   handleChange
@@ -63,6 +65,31 @@ const classifyCodeMap = {
   common: t('其它'),
 }
 
+const emptyType = computed(() => {
+  return (
+    props.status.pipelineIds.length
+    ||  props.status.pipelineLabelIds.length
+    ||  props.status.errorTypes.length
+    ||  props.status.atomCodes.length
+    ||  props.status.startTime
+    ||  props.status.endTime
+  )
+    ? 'search-empty'
+    : 'empty'
+
+})
+
+const handleClear = () => {
+  emit('clear', {
+    pipelineIds: [],
+    pipelineLabelIds: [],
+    startTime: '',
+    endTime: '',
+    errorTypes: [],
+    atomCodes: [],
+  })
+}
+
 const timeFormatter = (val) => {
   const time = dayjs.duration(val);
   const h = time.hours();
@@ -89,6 +116,7 @@ const getData = () => {
         const column = {
           label,
           field,
+          showOverflowTooltip: true,
           sort: true,
         }
         if (field === 'atomCode') {
@@ -100,7 +128,7 @@ const getData = () => {
                 style: {
                   cursor: 'pointer',
                   color: '#3a84ff',
-                }, 
+                },
                 onClick () {
                   router.push({
                     name: 'PluginFailAnalysis',
@@ -144,17 +172,17 @@ const getData = () => {
             record.classifyCode = '--'
         }
         const timeMap = timeFormatter(record.avgCostTime)
-        let timeStr = '0'
+        let timeStr = ''
         if (timeMap.h) {
-            timeStr = timeMap.h + 'h'
+            timeStr += timeMap.h + 'h'
         }
         if (timeMap.m) {
-            timeStr = timeMap.m + 'm'
+            timeStr += timeMap.m + 'm'
         }
         if (timeMap.s) {
-            timeStr = timeMap.s + 's'
+            timeStr += timeMap.s + 's'
         }
-        record.avgCostTime = timeStr
+        record.avgCostTime = timeStr || '0'
 
         Object.keys(data.headerInfo).forEach(i => {
           if (i.includes('errorCount') && !record.atomFailInfos[i]) {
@@ -199,6 +227,9 @@ watch(
       :pagination="pagination"
       @page-value-change="handlePageChange"
       @page-limit-change="handlePageLimitChange">
+      <template #empty>
+        <EmptyTableStatus :type="emptyType" @clear="handleClear" />
+      </template>
     </bk-table>
   </bk-loading>
 </template>

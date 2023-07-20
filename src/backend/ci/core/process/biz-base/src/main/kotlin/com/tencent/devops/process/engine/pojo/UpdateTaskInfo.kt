@@ -29,18 +29,22 @@ package com.tencent.devops.process.engine.pojo
 
 import com.tencent.devops.common.api.pojo.ErrorType
 import com.tencent.devops.common.pipeline.enums.BuildStatus
+import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
 import java.time.LocalDateTime
 
 data class UpdateTaskInfo(
     val projectId: String, // 项目ID
     val buildId: String, // 构建ID
     val taskId: String, // 任务ID
+    val executeCount: Int,
     val taskStatus: BuildStatus, // 构建状态
     var starter: String? = null, // 启动人
     var approver: String? = null, // 审批人
     var startTime: LocalDateTime? = null, // 开始时间
     var endTime: LocalDateTime? = null, // 结束时间
     var totalTime: Long? = null, // 耗费时间
+    val additionalOptions: ElementAdditionalOptions? = null,
+    var taskParams: Map<String, Any>? = null,
     val errorType: ErrorType? = null,
     val errorCode: Int? = null,
     val errorMsg: String? = null,

@@ -24,10 +24,11 @@ const status = ref({
   errorCodes: [],
   atomCodes: <any[]>[route.query.atomCode].filter(v => v),
 });
-const resetBtnDisabled = ref(false)
+const atomCode = ref(route.query.atomCode || '');
+const resetBtnDisabled = ref(false);
 const handleChangeResetBtnDisabled = (val) => {
   resetBtnDisabled.value = val
-}
+};
 const handleFilterChange = (newStatus) => {
   resetBtnDisabled.value = true
   status.value = {
@@ -40,7 +41,11 @@ const handleToPluginTrend = () => {
   router.push({
     name: 'PluginRunAnalysis'
   })
-}
+};
+
+const handleClear = (payload) => {
+  handleFilterChange(payload);
+};
 </script>
 
 <template>
@@ -57,6 +62,7 @@ const handleToPluginTrend = () => {
     <analysis-filter
       :reset-btn-disabled="resetBtnDisabled"
       :status="status"
+      :atom-code="atomCode"
       @change="handleFilterChange"
     />
     <analysis-doughnut
@@ -66,6 +72,7 @@ const handleToPluginTrend = () => {
       :status="status"
       :reset-btn-disabled="resetBtnDisabled"
       @change="handleChangeResetBtnDisabled"
+      @clear="handleClear"
     />
   </main>
 </template>

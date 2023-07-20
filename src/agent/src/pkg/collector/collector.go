@@ -32,10 +32,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/util/fileutil"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/util/fileutil"
+
 	"github.com/influxdata/telegraf/logger"
 
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/util/systemutil"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/util/systemutil"
 
 	"github.com/influxdata/telegraf/agent"
 	telegrafConfig "github.com/influxdata/telegraf/config"
@@ -43,8 +44,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/config"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/logs"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/config"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/logs"
 )
 
 const (
@@ -215,6 +216,12 @@ const configTemplateWindows = `[global_tags]
 `
 
 func DoAgentCollect() {
+	defer func() {
+		if err := recover(); err != nil {
+			logs.Error("agent collect panic: ", err)
+		}
+	}()
+
 	if config.GAgentConfig.CollectorOn == false {
 		logs.Info("agent collector off")
 		return
@@ -232,14 +239,14 @@ func DoAgentCollect() {
 		logFile,
 	)
 	if err != nil {
-		logs.Error("init telegraf agent failed: %v", err)
+		logs.Errorf("init telegraf agent failed: %v", err)
 		return
 	}
 
 	for {
 		logs.Info("launch telegraf agent")
 		if err = tAgent.Run(context.Background()); err != nil {
-			logs.Error("telegraf agent exit: %v", err)
+			logs.Errorf("telegraf agent exit: %v", err)
 		}
 		time.Sleep(telegrafRelaunchTime)
 	}

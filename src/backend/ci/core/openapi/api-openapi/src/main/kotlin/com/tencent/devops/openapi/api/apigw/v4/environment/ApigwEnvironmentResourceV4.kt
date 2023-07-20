@@ -73,7 +73,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String
     ): Result<List<NodeWithPermission>>
@@ -91,7 +91,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam(value = "环境信息", required = true)
@@ -111,7 +111,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam("环境 hashId", required = true)
@@ -132,7 +132,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam(value = "节点列表", required = true)
@@ -152,7 +152,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam("环境 hashId", required = true)
@@ -175,7 +175,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam("环境 hashId", required = true)
@@ -198,7 +198,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String
     ): Result<List<EnvWithPermission>>
@@ -219,7 +219,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam("环境名称(s)", required = true)
@@ -242,7 +242,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam("环境 hashId(s)", required = true)
@@ -265,7 +265,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam("节点 hashIds", required = true)
@@ -288,7 +288,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam("节点 hashIds", required = true)
@@ -308,7 +308,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String
     ): Result<List<NodeWithPermission>>
@@ -329,7 +329,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam("节点 hashId", required = true)
@@ -350,7 +350,7 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("项目ID", required = true)
+        @ApiParam("项目ID(项目英文名)", required = true)
         @PathParam("projectId")
         projectId: String,
         @ApiParam("环境 hashId", required = true)
@@ -359,4 +359,22 @@ interface ApigwEnvironmentResourceV4 {
         @ApiParam(value = "共享的项目列表", required = true)
         sharedProjects: SharedProjectInfoWrap
     ): Result<Boolean>
+
+    @ApiOperation("指定构建环境获取所有节点信息", tags = ["v4_user_third_party_env2nodes", "v4_app_third_party_env2nodes"])
+    @GET
+    @Path("/third_party_env2nodes")
+    fun thirdPartyEnv2Nodes(
+        @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @ApiParam("项目ID(项目英文名)", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @ApiParam("环境 hashId (envHashId和envName选填一项)", required = false)
+        @QueryParam("envHashId")
+        envHashId: String?,
+        @ApiParam("环境名称 (envHashId和envName选填一项)", required = false)
+        @QueryParam("envName")
+        envName: String?
+    ): Result<List<NodeWithPermission>>
 }

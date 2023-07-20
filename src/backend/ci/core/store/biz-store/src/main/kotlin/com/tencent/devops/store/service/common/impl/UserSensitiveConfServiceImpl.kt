@@ -34,9 +34,11 @@ import com.tencent.devops.common.api.util.AESUtil
 import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.common.api.util.UUIDUtil
 import com.tencent.devops.common.redis.RedisOperation
-import com.tencent.devops.common.service.utils.MessageCodeUtil
 import com.tencent.devops.common.web.utils.AtomRuntimeUtil
+import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.store.constant.StoreMessageCode
+import com.tencent.devops.store.constant.StoreMessageCode.BUILD_VISIT_NO_PERMISSION
+import com.tencent.devops.store.constant.StoreMessageCode.GET_INFO_NO_PERMISSION
 import com.tencent.devops.store.dao.common.SensitiveConfDao
 import com.tencent.devops.store.dao.common.StoreMemberDao
 import com.tencent.devops.store.pojo.common.SensitiveConfReq
@@ -82,18 +84,20 @@ class UserSensitiveConfServiceImpl @Autowired constructor(
         checkUserAuthority(userId, storeCode, storeType)
         val fieldName = sensitiveConfReq.fieldName
         if (fieldName.isEmpty()) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 messageCode = CommonMessageCode.PARAMETER_IS_NULL,
                 params = arrayOf(fieldName),
-                data = false
+                data = false,
+                language = I18nUtil.getLanguage(userId)
             )
         }
         val fieldValue = sensitiveConfReq.fieldValue
         if (fieldValue.isEmpty()) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 messageCode = CommonMessageCode.PARAMETER_IS_NULL,
                 params = arrayOf(fieldValue),
-                data = false
+                data = false,
+                language = I18nUtil.getLanguage(userId)
             )
         }
         // 判断同名
@@ -105,10 +109,11 @@ class UserSensitiveConfServiceImpl @Autowired constructor(
             id = null
         )
         if (isNameExist) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 messageCode = StoreMessageCode.USER_SENSITIVE_CONF_EXIST,
                 params = arrayOf(fieldName),
-                data = false
+                data = false,
+                language = I18nUtil.getLanguage(userId)
             )
         }
         val fieldType = sensitiveConfReq.fieldType
@@ -145,10 +150,11 @@ class UserSensitiveConfServiceImpl @Autowired constructor(
         logger.info("updateSensitiveConf params: [$storeType | $storeCode | $id | $sensitiveConfReq]")
         checkUserAuthority(userId, storeCode, storeType)
         val sensitiveConfRecord = sensitiveConfDao.getById(dslContext, id)
-            ?: return MessageCodeUtil.generateResponseDataObject(
+            ?: return I18nUtil.generateResponseDataObject(
                 messageCode = CommonMessageCode.PARAMETER_IS_INVALID,
                 params = arrayOf(id),
-                data = false
+                data = false,
+                language = I18nUtil.getLanguage(userId)
             )
         val fieldName = sensitiveConfReq.fieldName
         val fieldValue = sensitiveConfReq.fieldValue
@@ -161,10 +167,11 @@ class UserSensitiveConfServiceImpl @Autowired constructor(
             id = id
         )
         if (isNameExist) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 messageCode = StoreMessageCode.USER_SENSITIVE_CONF_EXIST,
                 params = arrayOf(fieldName),
-                data = false
+                data = false,
+                language = I18nUtil.getLanguage(userId)
             )
         }
         val fieldType = sensitiveConfReq.fieldType
@@ -296,7 +303,7 @@ class UserSensitiveConfServiceImpl @Autowired constructor(
             if (runningAtomCode != storeCode) {
                 // build类接口需要校验storeCode是否为正在运行的storeCode，防止越权查询storeCode信息
                 throw ErrorCodeException(
-                    errorCode = CommonMessageCode.PERMISSION_DENIED,
+                    errorCode = BUILD_VISIT_NO_PERMISSION,
                     params = arrayOf(storeCode)
                 )
             }
@@ -315,7 +322,7 @@ class UserSensitiveConfServiceImpl @Autowired constructor(
                 storeType = storeType.type.toByte())
         ) {
             throw ErrorCodeException(
-                errorCode = CommonMessageCode.PERMISSION_DENIED,
+                errorCode = GET_INFO_NO_PERMISSION,
                 params = arrayOf(storeCode)
             )
         }

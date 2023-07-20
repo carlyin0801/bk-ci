@@ -28,19 +28,32 @@
 package cron
 
 import (
+	"context"
 	"fmt"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/config"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/logs"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/util"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/util/systemutil"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/config"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/imagedebug"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/job_docker"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
+
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/logs"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/util"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/util/systemutil"
 )
 
 func CleanJob() {
+	defer func() {
+		if err := recover(); err != nil {
+			logs.Error("agent clean panic: ", err)
+		}
+	}()
+
 	intervalInHours := 2
 	TryCleanFile()
 	for {
@@ -115,4 +128,82 @@ func cleanLogFile(timeBeforeInHours int) {
 		}
 	}
 	logs.Info("clean log file done")
+
+	// 清理docker构建记录
+	dockerLogDir := job_docker.LocalDockerWorkSpaceDirName + "/logs"
+	dockerFiles, err := ioutil.ReadDir(dockerLogDir)
+	if err != nil {
+		logs.Warn("read docker log dir error: ", err.Error())
+		return
+	}
+
+	// 因为docker构建机是按照buildId分类存储到文件夹中，所以只需要查看文件夹变更日期之后删除即可
+	for _, file := range dockerFiles {
+		if !file.IsDir() {
+			continue
+		}
+
+		if int(time.Since(file.ModTime()).Hours()) > timeBeforeInHours {
+			dockerFullName := dockerLogDir + "/" + file.Name()
+			err = os.RemoveAll(dockerFullName)
+			if err != nil {
+				logs.Warn(fmt.Sprintf("remove docker log file %s failed: ", dockerFullName))
+			} else {
+				logs.Info(fmt.Sprintf("docker log file %s removed", dockerFullName))
+			}
+		}
+	}
+}
+
+func CleanDebugContainer() {
+	if !systemutil.IsLinux() {
+		return
+	}
+
+	defer func() {
+		if err := recover(); err != nil {
+			logs.Error("agent clean debug container panic: ", err)
+		}
+	}()
+
+	cleanDebugContainer()
+
+	ticker := time.Tick(4 * time.Hour)
+	for range ticker {
+		cleanDebugContainer()
+	}
+}
+
+// 清理过期的调试容器
+func cleanDebugContainer() {
+	if !config.GAgentConfig.EnableDockerBuild {
+		return
+	}
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		logs.WithError(err).Warn("cleanDebugContainer get docker lient error")
+		return
+	}
+	conList, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
+	if err != nil {
+		logs.WithError(err).Warn("cleanDebugContainer get docker container list error")
+		return
+	}
+
+	for _, c := range conList {
+		for _, n := range c.Names {
+			if strings.Contains(n, imagedebug.DebugContainerHeader+"b-") && time.Now().Sub(time.Unix(c.Created, 0)) > imagedebug.ImageDebugMaxHoldHour*time.Hour {
+				logs.Infof("cleanDebugContainer find debug container %s created %s than 24 hour will remove", c.ID, time.Unix(c.Created, 0).String())
+				containerStopTimeout := 0
+				if err := cli.ContainerStop(context.Background(), c.ID, container.StopOptions{Timeout: &containerStopTimeout}); err != nil {
+					logs.WithError(err).Warnf("cleanDebugContainer stop container %s error", c.ID)
+				}
+				if err = cli.ContainerRemove(context.Background(), c.ID, types.ContainerRemoveOptions{Force: true}); err != nil {
+					logs.WithError(err).Warnf("remove container %s error", c.ID)
+				}
+			}
+		}
+	}
+
+	return
 }

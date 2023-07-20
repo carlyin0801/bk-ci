@@ -28,13 +28,13 @@
 package com.tencent.devops.process.engine.service.measure
 
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.tencent.devops.common.event.pojo.measure.BuildEndContainerMetricsData
-import com.tencent.devops.common.event.pojo.measure.BuildEndStageMetricsData
-import com.tencent.devops.common.event.pojo.measure.BuildEndTaskMetricsData
 import com.tencent.devops.common.api.pojo.ErrorType
 import com.tencent.devops.common.api.util.DateTimeUtil
+import com.tencent.devops.common.event.pojo.measure.BuildEndContainerMetricsData
 import com.tencent.devops.common.event.pojo.measure.BuildEndMetricsBroadCastEvent
 import com.tencent.devops.common.event.pojo.measure.BuildEndPipelineMetricsData
+import com.tencent.devops.common.event.pojo.measure.BuildEndStageMetricsData
+import com.tencent.devops.common.event.pojo.measure.BuildEndTaskMetricsData
 import com.tencent.devops.common.pipeline.Model
 import com.tencent.devops.common.pipeline.container.Container
 import com.tencent.devops.common.pipeline.container.Stage
@@ -46,12 +46,13 @@ import com.tencent.devops.process.dao.PipelineStageTagDao
 import com.tencent.devops.process.engine.dao.PipelineInfoDao
 import com.tencent.devops.process.engine.pojo.BuildInfo
 import com.tencent.devops.process.service.measure.MeasureEventDispatcher
+import java.util.Date
+import java.util.concurrent.TimeUnit
 import org.jooq.DSLContext
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.cloud.context.config.annotation.RefreshScope
 import org.springframework.stereotype.Service
-import java.util.Date
-import java.util.concurrent.TimeUnit
 
 @Service
 @RefreshScope
@@ -90,6 +91,10 @@ class MetricsServiceImpl constructor(
             !allowReportProjectConfig.split(",").contains(projectId)) {
             return
         }
+        if (buildInfo.endTime == null) {
+            logger.warn("Warning: The post of metrics data is abnormal, build info end time is null.")
+            return
+        }
         val pipelineId = buildInfo.pipelineId
         val buildId = buildInfo.buildId
         val pipelineName = pipelineInfoDao.getPipelineInfo(
@@ -112,8 +117,12 @@ class MetricsServiceImpl constructor(
             branch = webhookInfo?.webhookBranch,
             startUser = buildInfo.startUser,
             startTime = buildInfo.startTime?.let { DateTimeUtil.formatMilliTime(it, DateTimeUtil.YYYY_MM_DD_HH_MM_SS) },
-            endTime = buildInfo.endTime?.let { DateTimeUtil.formatMilliTime(it, DateTimeUtil.YYYY_MM_DD_HH_MM_SS) },
-            costTime = (buildInfo.endTime ?: 0L) - (buildInfo.startTime ?: 0L),
+            endTime = DateTimeUtil.formatMilliTime(buildInfo.endTime!!, DateTimeUtil.YYYY_MM_DD_HH_MM_SS),
+            costTime = if (buildInfo.queueTime == 0L) {
+                buildInfo.queueTime
+            } else {
+                buildInfo.endTime!! - buildInfo.queueTime
+            },
             successFlag = buildInfo.status.isSuccess(),
             errorInfos = buildInfo.errorInfoList,
             stages = stageMetricsDatas,
@@ -282,6 +291,7 @@ class MetricsServiceImpl constructor(
                 },
                 costTime = element.elapsed ?: 0L,
                 successFlag = BuildStatus.valueOf(elementStatus!!).isSuccess(),
+                // TODO 新构建详情中不带有错误信息，需要读取build表
                 errorType = element.errorType?.let { ErrorType.getErrorType(it)?.num },
                 errorCode = element.errorCode,
                 errorMsg = element.errorMsg
@@ -301,5 +311,9 @@ class MetricsServiceImpl constructor(
         val buildStatus = BuildStatus.valueOf(status)
         val invalidFinishStatusList = listOf(BuildStatus.UNEXEC, BuildStatus.SKIP, BuildStatus.QUOTA_FAILED)
         return buildStatus.isFinish() && !invalidFinishStatusList.contains(buildStatus)
+    }
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(MetricsServiceImpl::class.java)
     }
 }

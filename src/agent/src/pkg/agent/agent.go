@@ -28,18 +28,23 @@
 package agent
 
 import (
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/collector"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/config"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/cron"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/heartbeat"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/job"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/logs"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/pipeline"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/upgrade"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/collector"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/config"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/cron"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/heartbeat"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/i18n"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/imagedebug"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/job"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/logs"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/pipeline"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/upgrade"
 )
 
-func Run() {
-	config.Init()
+func Run(isDebug bool) {
+	config.Init(isDebug)
+
+	// 初始化国际化
+	i18n.InitAgentI18n()
 
 	_, err := job.AgentStartup()
 	if err != nil {
@@ -60,6 +65,10 @@ func Run() {
 
 	// 定期清理
 	go cron.CleanJob()
+	go cron.CleanDebugContainer()
+
+	// 登录调试任务
+	go imagedebug.DoPullAndDebug()
 
 	job.DoPollAndBuild()
 }

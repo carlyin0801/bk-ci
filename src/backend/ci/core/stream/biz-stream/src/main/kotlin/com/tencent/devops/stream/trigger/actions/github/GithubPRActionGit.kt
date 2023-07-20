@@ -194,9 +194,9 @@ class GithubPRActionGit(
             scmType = ScmType.GITHUB,
             sourceGitProjectId = event.pullRequest.head.repo.id.toString(),
             branch = if (event.pullRequest.merged == true) {
-                event.pullRequest.head.ref
-            } else {
                 event.pullRequest.base.ref
+            } else {
+                event.pullRequest.head.ref
             },
             commit = EventCommonDataCommit(
                 commitId = event.pullRequest.head.sha,
@@ -547,7 +547,7 @@ class GithubPRActionGit(
             sourceBranch = GitActionCommon.getTriggerBranch(event.pullRequest.head.ref),
             targetBranch = GitActionCommon.getTriggerBranch(event.pullRequest.base.ref),
             changeSet = getChangeSet(),
-            userId = data.getUserId(),
+            userId = data.eventCommon.userId,
             mrAction = mrAction
         )
         return TriggerResult(

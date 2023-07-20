@@ -28,12 +28,13 @@
 package systemutil
 
 import (
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/logs"
 	"testing"
+
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/logs"
 )
 
 func TestGetAgentIp(t *testing.T) {
-	logs.DebugInit()
+	logs.UNTestDebugInit()
 	type args struct {
 		ignoreIps []string
 	}

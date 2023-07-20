@@ -29,7 +29,7 @@ package com.tencent.devops.store.service
 
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.store.dao.ExtServiceDao
 import com.tencent.devops.store.dao.ExtServiceFeatureDao
 import com.tencent.devops.store.pojo.common.StoreMemberReq
@@ -59,7 +59,7 @@ abstract class ExtServiceMemberServiceImpl : StoreMemberServiceImpl() {
             "$sendNotify|$checkPermissionFlag|$testProjectCode")
         val serviceCode = storeMemberReq.storeCode
         val serviceRecord = extServiceFeatureDao.getLatestServiceByCode(dslContext, serviceCode)
-            ?: return MessageCodeUtil.generateResponseDataObject(
+            ?: return I18nUtil.generateResponseDataObject(
                 messageCode = CommonMessageCode.PARAMETER_IS_INVALID,
                 params = arrayOf(serviceCode)
             )
@@ -70,7 +70,7 @@ abstract class ExtServiceMemberServiceImpl : StoreMemberServiceImpl() {
                 storeType = storeType.type.toByte()
             )
         ) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
         }
         val repositoryHashId = serviceRecord.repositoryHashId
         val addRepoMemberResult = addRepoMember(storeMemberReq, userId, repositoryHashId)
@@ -104,12 +104,12 @@ abstract class ExtServiceMemberServiceImpl : StoreMemberServiceImpl() {
     ): Result<Boolean> {
         logger.info("deleteExtServiceMember params:[$userId|$id|$storeCode|$storeType|$checkPermissionFlag]")
         val serviceRecord = extServiceFeatureDao.getServiceByCode(dslContext, storeCode)
-            ?: return MessageCodeUtil.generateResponseDataObject(
+            ?: return I18nUtil.generateResponseDataObject(
                 messageCode = CommonMessageCode.PARAMETER_IS_INVALID,
                 params = arrayOf(storeCode)
             )
         val memberRecord = storeMemberDao.getById(dslContext, id)
-            ?: return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_INVALID, arrayOf(id))
+            ?: return I18nUtil.generateResponseDataObject(CommonMessageCode.PARAMETER_IS_INVALID, arrayOf(id))
         // 如果删除的是管理员，只剩一个管理员则不允许删除
         if ((memberRecord.type).toInt() == 0) {
             val validateAdminResult = isStoreHasAdmins(storeCode, storeType)

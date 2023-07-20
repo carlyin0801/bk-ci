@@ -29,9 +29,21 @@
 
         <section class="main-body section-box">
             <section class="build-filter">
-                <bk-input v-model="filterData.commitMsg" class="filter-item w300" :placeholder="$t('pipeline.commitMsg')"></bk-input>
-                <bk-input v-model="filterData.triggerUser" name="triggerUser" class="filter-item w300" :placeholder="$t('pipeline.actor')"></bk-input>
-                <bk-select v-model="filterData.branch"
+                <bk-input
+                    v-model="filterData.commitMsg"
+                    class="filter-item w300"
+                    :placeholder="$t('pipeline.commitMsgWithEnter')"
+                    @enter="handleFilterChange"
+                ></bk-input>
+                <bk-input
+                    v-model="filterData.triggerUser"
+                    name="triggerUser"
+                    class="filter-item w300"
+                    :placeholder="$t('pipeline.actor')"
+                    @change="handleFilterChange"
+                ></bk-input>
+                <bk-select
+                    v-model="filterData.branch"
                     class="filter-item"
                     :placeholder="$t('pipeline.branch')"
                     multiple
@@ -39,6 +51,7 @@
                     :loading="isLoadingBuildBranch"
                     :remote-method="remoteGetBuildBranchList"
                     @toggle="toggleFilterBuildBranch"
+                    @change="handleFilterChange"
                 >
                     <bk-option v-for="option in buildBranchList"
                         :key="option"
@@ -54,6 +67,7 @@
                     multiple
                     searchable
                     @toggle="toggleFilterEvent"
+                    @change="handleFilterChange"
                 >
                     <bk-option
                         v-for="event in eventList"
@@ -64,7 +78,7 @@
                 </bk-select>
                 <bk-select
                     v-for="filter in filterList"
-                    :key="filter.id"
+                    :key="filter.key"
                     :placeholder="filter.placeholder"
                     class="filter-item"
                     multiple
@@ -87,6 +101,7 @@
                     :loading="isLoadingPipeline"
                     :remote-method="remoteGetPipelineList"
                     @toggle="toggleFilterPipeline"
+                    @change="handleFilterChange"
                 >
                     <bk-option v-for="option in pipelineList"
                         :key="option.pipelineId"
@@ -110,14 +125,14 @@
                     <template slot-scope="props">
                         <section class="commit-message">
                             <i :class="getIconClass(props.row.buildHistory.status)"></i>
-                            <p>
+                            <p class="content">
                                 <span class="message">{{ props.row.gitRequestEvent.buildTitle }}</span>
                                 <span class="info">{{ props.row.displayName }} #{{ props.row.buildHistory.buildNum }}：{{ props.row.reason }}</span>
                             </p>
                         </section>
                     </template>
                 </bk-table-column>
-                <bk-table-column :label="$t('pipeline.branch')" width="200">
+                <bk-table-column :label="$t('pipeline.branch')" width="200" show-overflow-tooltip>
                     <template slot-scope="props">
                         <span>{{ props.row.gitRequestEvent.branch }}</span>
                     </template>
@@ -142,6 +157,9 @@
                         </opt-menu>
                     </template>
                 </bk-table-column>
+                <template #empty>
+                    <EmptyTableStatus :type="emptyType" @clear="resetFilter" />
+                </template>
             </bk-table>
             <bk-pagination small
                 :current.sync="compactPaging.current"
@@ -281,6 +299,7 @@
     import '@blueking/bkui-form/dist/bkui-form.css'
     import UiTips from '@/components/ui-form/tips.vue'
     import UiSelector from '@/components/ui-form/selector.vue'
+    import EmptyTableStatus from '@/components/empty-table-status'
     const BkUiForm = createForm({
         components: {
             tips: UiTips,
@@ -292,7 +311,8 @@
         components: {
             optMenu,
             codeSection,
-            BkUiForm
+            BkUiForm,
+            EmptyTableStatus
         },
 
         filters: {
@@ -330,6 +350,7 @@
                 filterList: [
                     {
                         id: 'status',
+                        key: new Date().getSeconds(),
                         placeholder: this.$t('status'),
                         data: [
                             { name: this.$t('pipeline.succeed'), val: ['SUCCEED'], id: 'succeed' },
@@ -405,6 +426,19 @@
 
             defaultBranch () {
                 return this.projectInfo.default_branch || ''
+            },
+
+            emptyType () {
+                return (
+                    this.filterData.commitMsg
+                    || this.filterData.triggerUser
+                    || this.filterData.branch.length
+                    || this.filterData.event.length
+                    || this.filterData.status.length
+                    || this.filterData.pipelineIds.length
+                )
+                ? 'search-empty'
+                : 'empty'
             }
         },
 
@@ -414,21 +448,6 @@
                     if (Object.keys(oldVal).length) this.cleanFilterData()
                     this.initBuildData()
                 }
-            },
-            filterData: {
-                handler () {
-                    this.initBuildData()
-                    const query = { page: 1 }
-                    Object.keys(this.filterData).forEach(key => {
-                        if (this.filterData[key].length && typeof this.filterData[key] === 'string') {
-                            query[key] = this.filterData[key]
-                        } else if (this.filterData[key].length && Array.isArray(this.filterData[key])) {
-                            query[key] = this.filterData[key].join(',')
-                        }
-                    })
-                    this.$router.replace({ query })
-                },
-                deep: true
             }
         },
 
@@ -452,13 +471,27 @@
             },
 
             getIconClass (status) {
-                return [getPipelineStatusClass(status), ...getPipelineStatusCircleIconCls(status)]
+                return [getPipelineStatusClass(status), ...getPipelineStatusCircleIconCls(status), 'statuc-icon']
             },
 
             handleStatusChange (val, id) {
                 const filter = this.filterList.find(filter => filter.id === id)
                 const options = filter.data.filter(data => val.includes(data.id))
                 this.filterData[id] = options.map(opstion => opstion.val).flat()
+                this.handleFilterChange()
+            },
+
+            handleFilterChange () {
+                this.initBuildData()
+                const query = { page: 1 }
+                Object.keys(this.filterData).forEach(key => {
+                    if (this.filterData[key].length && typeof this.filterData[key] === 'string') {
+                        query[key] = this.filterData[key]
+                    } else if (this.filterData[key].length && Array.isArray(this.filterData[key])) {
+                        query[key] = this.filterData[key].join(',')
+                    }
+                })
+                this.$router.replace({ query })
             },
 
             toggleFilterBranch (isOpen) {
@@ -564,6 +597,7 @@
                     status: [],
                     pipelineIds: []
                 }
+                this.handleFilterChange()
             },
 
             initBuildData () {
@@ -739,6 +773,7 @@
                 return pipelines.getPipelineParamJson(this.projectId, this.curPipeline.pipelineId, { branchName, commitId }).then((res) => {
                     this.uiFormSchema = res.schema || {}
                     this.formData.yaml = res.yaml || ''
+                    this.formData.inputs = {}
                     this.disableManual = res.enable === false
                 }).catch((err) => {
                     if (err.code === 2129028) {
@@ -835,6 +870,8 @@
                     status: [],
                     pipelineIds: []
                 }
+                this.filterList[0].key = new Date().getSeconds()
+                this.handleFilterChange()
             },
 
             requireRule (name) {
@@ -953,7 +990,7 @@
                 &.executing {
                     font-size: 14px;
                 }
-                &.icon-exclamation, &.icon-exclamation-triangle, &.icon-clock {
+                &.icon-exclamation, &.icon-exclamation-triangle, &.icon-clock, &.stream-reviewing-2 {
                     font-size: 24px;
                 }
                 &.running {
@@ -971,6 +1008,9 @@
                 &.pause {
                     color: #ff9801;
                 }
+            }
+            .content {
+                flex: 1;
             }
             .message {
                 display: block;

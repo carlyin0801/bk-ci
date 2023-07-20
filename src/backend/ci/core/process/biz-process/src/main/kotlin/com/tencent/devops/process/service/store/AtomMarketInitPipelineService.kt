@@ -130,7 +130,7 @@ class AtomMarketInitPipelineService @Autowired constructor(
                 checkPermission = false,
                 isMobile = false,
                 startByMessage = null
-            )
+            ).id
         } catch (ignored: Throwable) {
             logger.error("BKSystemErrorMonitor|buildManualStartup|$pipelineId|error=${ignored.message}", ignored)
             atomBuildStatus = AtomStatusEnum.BUILD_FAIL

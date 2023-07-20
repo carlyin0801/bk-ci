@@ -31,7 +31,7 @@ import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.util.DateTimeUtil
-import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.store.dao.ExtServiceDao
 import com.tencent.devops.store.dao.ExtServiceEnvDao
 import com.tencent.devops.store.pojo.dto.UpdateExtServiceEnvInfoDTO
@@ -62,7 +62,7 @@ class ExtServiceEnvService @Autowired constructor(
         logger.info("updateExtServiceEnvInfo params:[$serviceCode|$version|$updateExtServiceEnvInfo")
         val extServiceRecord = extServiceDao.getExtService(dslContext, serviceCode, version)
         if (null == extServiceRecord || extServiceRecord.deleteFlag) {
-            return MessageCodeUtil.generateResponseDataObject(
+            return I18nUtil.generateResponseDataObject(
                 CommonMessageCode.PARAMETER_IS_INVALID,
                 arrayOf("$serviceCode+$version"),
                 false

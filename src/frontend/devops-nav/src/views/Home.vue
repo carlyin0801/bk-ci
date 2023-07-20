@@ -17,7 +17,7 @@
                                     v-for="service in recentVisitService"
                                     :key="service.key"
                                     :to="addConsole(service.link_new)"
-                                    @click.native="getDocumentTitle(service.link_new)"
+                                    @click.native="updateDocumnetTitle(service.link_new)"
                                 >
                                     <img v-if="isAbsoluteUrl(service.logoUrl)" :src="service.logoUrl" class="recent-logo-icon" />
                                     <Logo
@@ -53,6 +53,7 @@
                             slot="content"
                             class="all-service-list"
                             column-width="190px"
+                            :get-document-title="getDocumentTitle"
                             :with-hover="false"
                             :services="services"
                         />
@@ -65,10 +66,12 @@
                         v-for="(item, index) in funcArray"
                         :key="index"
                         :style="{ left: item.left }"
-                    >{{ item.label }}</span>
+                    >
+                        {{ item.label }}
+                    </span>
                     <div class="bkdevops-button">
                         <a
-                            :href="DOCS_URL_PREFIX"
+                            :href="BKCI_DOCS.BKCI_DOC"
                             target="_blank"
                         >
                             <bk-button
@@ -81,7 +84,7 @@
                     </div>
                 </div>
 
-                <div class="devops-news">
+                <div class="devops-news" v-if="news.length > 0">
                     <header>
                         <p class="title">
                             {{ $t("latestNews") }}
@@ -115,24 +118,13 @@
                     <p>
                         {{ $t("bkdevopsDesc") }}
                         <a
-                            :href="DOCS_URL_PREFIX"
+                            :href="BKCI_DOCS.BKCI_DOC"
                             class="more"
                             target="_blank"
                         >{{ $t("learnMore") }}</a>
                     </p>
                 </article>
-                <article>
-                    <h2>{{ $t("bkdevopsTarget") }}</h2>
-                    <p>
-                        {{ $t("bkdevopsWay") }}
-                        <!-- <a
-                            :href="DOCS_URL_PREFIX"
-                            target="_blank"
-                            class="more"
-                        >{{ $t("learnMore") }}</a> -->
-                    </p>
-                </article>
-                <article>
+                <article v-if="related.length > 0">
                     <h2>{{ $t("relatedLink") }}</h2>
                     <div>
                         <a
@@ -153,20 +145,20 @@
                 <a href="https://bk.tencent.com/s-mart/community/" target="_blank">{{ $t('communityForum') }}</a> |
                 <a href="https://bk.tencent.com/index/" target="_blank">{{ $t('ProductOfficialWebsite') }}</a>
             </div>
-            <p class="bkci-copyright">Copyright © 2012-{{ getFullYear() }} Tencent BlueKing. All Rights Reserved v{{ BK_CI_VERSION.trim() }}</p>
+            <p class="bkci-copyright">Copyright © 2012-{{ getFullYear() }} Tencent BlueKing. All Rights Reserved {{ BK_CI_VERSION.trim() }}</p>
         </section>
     </div>
 </template>
 
 <script lang="ts">
+    import { mapDocumnetTitle } from '@/utils/constants'
+    import { isAbsoluteUrl, urlJoin } from '@/utils/util'
     import Vue from 'vue'
     import { Component } from 'vue-property-decorator'
-    import { State, Action } from 'vuex-class'
-    import NavBox from '../components/NavBox/index.vue'
-    import Logo from '../components/Logo/index.vue'
+    import { Action, State } from 'vuex-class'
     import { Accordion, AccordionItem } from '../components/Accordion/index'
-    
-    import { urlJoin, isAbsoluteUrl } from '../utils/util'
+    import Logo from '../components/Logo/index.vue'
+    import NavBox from '../components/NavBox/index.vue'
 
     @Component({
         components: {
@@ -182,7 +174,6 @@
         @State related
         @Action fetchLinks
         isAllServiceListShow: boolean = false
-        DOCS_URL_PREFIX: string = `${DOCS_URL_PREFIX}/产品简介/README.md`
         isAbsoluteUrl = isAbsoluteUrl
         BK_CI_VERSION: string = window.BK_CI_VERSION
 
@@ -223,31 +214,11 @@
         
         getDocumentTitle (linkNew) {
             const title = linkNew.split('/')[1]
-            const titlesMap = {
-                pipeline: this.$t('documentTitlePipeline'),
-                codelib: this.$t('documentTitleCodelib'),
-                artifactory: this.$t('documentTitleArtifactory'),
-                codecc: this.$t('documentTitleCodecc'),
-                experience: this.$t('documentTitleExperience'),
-                turbo: this.$t('documentTitleTurbo'),
-                repo: this.$t('documentTitleRepo'),
-                preci: this.$t('documentTitlePreci'),
-                stream: this.$t('documentTitleStream'),
-                wetest: this.$t('documentTitleWetest'),
-                quality: this.$t('documentTitleQuality'),
-                xinghai: this.$t('documentTitleXinghai'),
-                bcs: this.$t('documentTitleBcs'),
-                job: this.$t('documentTitleJob'),
-                environment: this.$t('documentTitleEnvironment'),
-                vs: this.$t('documentTitleVs'),
-                apk: this.$t('documentTitleApk'),
-                monitor: this.$t('documentTitleMonitor'),
-                perm: this.$t('documentTitlePerm'),
-                ticket: this.$t('documentTitleTicket'),
-                store: this.$t('documentTitleStore'),
-                metrics: this.$t('documentTitleMetrics')
-            }
-            document.title = titlesMap[title]
+            return this.$t(mapDocumnetTitle(title)) as string
+        }
+
+        updateDocumnetTitle (linkNew) {
+            document.title = this.getDocumentTitle(linkNew)
         }
 
         serviceName (name = ''): string {
@@ -272,7 +243,11 @@
 <style lang="scss">
     @import '../assets/scss/conf';
     .devops-home-page {
-        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        overflow: auto;
+        width: 100%;
     }
     .devops-home-content {
         display: flex;
@@ -280,7 +255,6 @@
         justify-content: center;
         width: 1280px;
         padding: 30px 0 100px 0;
-        overflow: auto;
 
         > section {
             width: 800px;

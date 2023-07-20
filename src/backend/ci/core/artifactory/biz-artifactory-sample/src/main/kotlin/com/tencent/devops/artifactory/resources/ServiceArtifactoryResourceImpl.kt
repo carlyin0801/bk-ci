@@ -109,6 +109,7 @@ class ServiceArtifactoryResourceImpl @Autowired constructor(
     ): Result<Url> {
         val urls = archiveFileService.getFileDownloadUrls(
             userId = userId,
+            projectId = projectId,
             fileChannelType = FileChannelTypeEnum.WEB_DOWNLOAD,
             filePath = path,
             artifactoryType = artifactoryType
@@ -187,7 +188,8 @@ class ServiceArtifactoryResourceImpl @Autowired constructor(
         includeFolder: Boolean?,
         deep: Boolean?,
         page: Int?,
-        pageSize: Int?
+        pageSize: Int?,
+        modifiedTimeDesc: Boolean?
     ): Result<Page<FileInfo>> {
         val fileList = archiveFileService.listCustomFiles(
             userId = userId,
@@ -196,8 +198,39 @@ class ServiceArtifactoryResourceImpl @Autowired constructor(
             includeFolder = includeFolder,
             deep = deep,
             page = page,
-            pageSize = pageSize
+            pageSize = pageSize,
+            modifiedTimeDesc = modifiedTimeDesc
         )
         return Result(fileList)
+    }
+
+    override fun getFileContent(
+        userId: String,
+        projectId: String,
+        repoName: String,
+        filePath: String
+    ): Result<String> {
+        val content = archiveFileService.getFileContent(
+            userId = userId,
+            projectId = projectId,
+            repoName = repoName,
+            filePath = filePath
+        )
+        return Result(content)
+    }
+
+    override fun listFileNamesByPath(
+        userId: String,
+        projectId: String,
+        repoName: String,
+        filePath: String
+    ): Result<List<String>> {
+        val fileNames = archiveFileService.listFileNamesByPath(
+            userId = userId,
+            projectId = projectId,
+            repoName = repoName,
+            filePath = filePath
+        )
+        return Result(fileNames)
     }
 }

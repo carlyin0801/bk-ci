@@ -31,6 +31,8 @@ import com.tencent.devops.common.api.pojo.ErrorInfo
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.pipeline.pojo.BuildParameters
+import com.tencent.devops.process.pojo.BuildStageStatus
+import com.tencent.devops.process.pojo.PipelineBuildMaterial
 import com.tencent.devops.process.pojo.code.WebhookInfo
 
 data class BuildInfo(
@@ -43,8 +45,8 @@ data class BuildInfo(
     var status: BuildStatus,
     val queueTime: Long,
     val executeTime: Long,
-    val startUser: String, // 真正用来执行构建的人的身份（一般像Git触发，有可能]与触发人不一样，因为Git平台帐号不一定是人）
-    val triggerUser: String, // 真正的触发人（不一定是人，也可能是机器帐号，比如git平台帐号）
+    val startUser: String, // 真正用来执行构建的人的身份（一般像Git触发，有可能]与触发人不一样，因为Git平台账号不一定是人）
+    val triggerUser: String, // 真正的触发人（不一定是人，也可能是机器账号，比如git平台账号）
     val startTime: Long?,
     var endTime: Long?,
     val taskCount: Int,
@@ -54,9 +56,15 @@ data class BuildInfo(
     val channelCode: ChannelCode,
     val buildParameters: List<BuildParameters>?,
     var errorInfoList: List<ErrorInfo>?,
+    val stageStatus: List<BuildStageStatus>?,
+    @Deprecated("后续只用executeCount做判断")
     val retryFlag: Boolean? = null,
+    val executeCount: Int? = 1,
     val concurrencyGroup: String? = null,
     val webhookInfo: WebhookInfo? = null,
+    val buildMsg: String? = null,
+    val material: List<PipelineBuildMaterial>? = null,
+    val remark: String? = null,
     val errorType: Int? = null,
     val errorCode: Int? = null,
     val errorMsg: String? = null

@@ -30,7 +30,7 @@
                                         </bk-popover>
                                         {{ param.id }}
                                     </span>
-                                    <i v-if="!disabled && settingKey !== 'templateParams'" @click.stop.prevent="editParamShow(index)" class="devops-icon" :class="[`${param.required ? 'icon-eye' : 'icon-eye-slash'}`]" />
+                                    <i v-if="!disabled && !isTemplateParams" @click.stop.prevent="editParamShow(index)" class="devops-icon" :class="[`${param.required ? 'icon-eye' : 'icon-eye-slash'}`]" />
                                     <i v-if="!disabled" class="devops-icon icon-move" />
                                     <i v-if="!disabled" @click.stop.prevent="editParam(index, false)" class="devops-icon icon-minus" />
                                 </header>
@@ -47,7 +47,7 @@
                                                 :value="param.type"
                                             />
                                         </bk-form-item>
-                                        <bk-form-item label-width="auto" class="flex-col-span-1" v-if="settingKey !== 'templateParams'">
+                                        <bk-form-item label-width="auto" class="flex-col-span-1" v-if="!isTemplateParams">
                                             <atom-checkbox :disabled="disabled" :text="$t('editPage.showOnStarting')" :value="param.required" name="required" :handle-change="(name, value) => handleUpdateParam(name, value, index)" />
                                         </bk-form-item>
                                     </div>
@@ -143,7 +143,7 @@
 </template>
 
 <script>
-    import { mapGetters, mapState } from 'vuex'
+    import { mapGetters } from 'vuex'
     import { deepCopy } from '@/utils/util'
     import Accordion from '@/components/atomFormField/Accordion'
     import VuexInput from '@/components/atomFormField/VuexInput'
@@ -240,13 +240,13 @@
         },
 
         computed: {
-            ...mapState('atom', [
-                'buildParamsMap'
-            ]),
             ...mapGetters('atom', [
                 'osList',
                 'getBuildResourceTypeList'
             ]),
+            isTemplateParams () {
+                return this.settingKey === 'templateParams'
+            },
             baseOSList () {
                 return this.osList.filter(os => os.value !== 'NONE').map(os => ({
                     id: os.value,
@@ -298,14 +298,6 @@
                     animation: 200,
                     disabled: this.disabled
                 }
-            },
-            buildParams () {
-                const { buildNo } = this.$route.params
-                return this.buildParamsMap[buildNo]
-            },
-            isExecDetail () {
-                const { buildNo } = this.$route.params
-                return !!buildNo
             }
         },
 
@@ -354,7 +346,8 @@
                     {
                         ...deepCopy(DEFAULT_PARAM[value]),
                         id: this.globalParams[paramIndex].id,
-                        paramIdKey: this.globalParams[paramIndex].paramIdKey
+                        paramIdKey: this.globalParams[paramIndex].paramIdKey,
+                        required: !this.isTemplateParams
                     },
                     ...this.globalParams.slice(paramIndex + 1)
                 ]
@@ -418,10 +411,8 @@
                     const param = {
                         ...deepCopy(DEFAULT_PARAM[STRING]),
                         id: `param${Math.floor(Math.random() * 100)}`,
-                        paramIdKey: `paramIdKey-${this.paramIdCount++}`
-                    }
-                    if (this.settingKey === 'templateParams') {
-                        Object.assign(param, { required: false })
+                        paramIdKey: `paramIdKey-${this.paramIdCount++}`,
+                        required: !this.isTemplateParams
                     }
                     globalParams.splice(index + 1, 0, param)
                 } else {
@@ -537,7 +528,6 @@
                     return []
                 }
             },
-
             // 全局参数添加遍历的key值
             getParams (params) {
                 const result = params.map(item => {

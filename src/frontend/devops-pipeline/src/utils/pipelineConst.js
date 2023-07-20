@@ -23,6 +23,18 @@ export const allVersionKeyList = [
     'BK_CI_FIX_VERSION'
 ]
 
+export const NAME_FILTER_TYPE = 'filterByName'
+export const CREATOR_FILTER_TYPE = 'filterByCreator'
+export const FILTER_BY_LABEL = 'filterByLabel'
+export const FILTER_BY_VIEW_ID = 'filterByViewIds'
+
+export const FILTER_BY_DELETER = 'filterByViewIds'
+
+export const PIPELINE_FILTER_PIPELINENAME = 'filterByPipelineName'
+export const PIPELINE_FILTER_CREATOR = 'filterByCreator'
+export const PIPELINE_FILTER_VIEWIDS = 'filterByViewIds'
+export const PIPELINE_FILTER_LABELS = 'filterByLabels'
+
 export const jobConst = {
     LINUX: 'Linux',
     MACOS: 'macOS',
@@ -49,6 +61,11 @@ export const BUILD_HISTORY_TABLE_DEFAULT_COLUMNS = [
     'remark',
     'errorCode'
 ]
+
+export const VIEW_CONDITION = {
+    LIKE: 'LIKE',
+    INCLUDE: 'INCLUDE'
+}
 
 export function getVersionConfig () {
     return {
@@ -77,4 +94,61 @@ export function pluginUrlParse (originUrl, query) {
     /* eslint-disable */
     return new Function('ctx', `return '${originUrl.replace(PLUGIN_URL_PARAM_REG, '\'\+ (ctx.hasOwnProperty(\'$1\') ? ctx[\'$1\'] : "") \+\'')}'`)(query)
     /* eslint-enable */
+}
+
+export const errorTypeMap = [
+    {
+        title: 'systemError',
+        icon: 'error-system'
+    },
+    {
+        title: 'userError',
+        icon: 'error-user'
+    },
+    {
+        title: 'thirdPartyError',
+        icon: 'third-party'
+    },
+    {
+        title: 'pluginError',
+        icon: 'error-plugin'
+    }
+]
+
+export const repoTypeMap = {
+    CUSTOM_DIR: 'details.customRepo',
+    PIPELINE: 'details.pipelineRepo',
+    IMAGE: 'details.imageRepo'
+}
+export const repoTypeNameMap = {
+    CUSTOM_DIR: 'custom',
+    PIPELINE: 'pipeline'
+}
+export const fileExtIconMap = {
+    txt: ['.json', '.txt', '.md'],
+    zip: ['.zip', '.tar', '.tar.gz', '.tgz', '.jar', '.gz'],
+    apkfile: ['.apk'],
+    ipafile: ['.ipa']
+}
+export function extForFile (name) {
+    const defaultIcon = 'file'
+    const pos = name.lastIndexOf('.')
+    if (pos > -1) {
+        const ext = name.substring(pos)
+        return Object.keys(fileExtIconMap).find(key => {
+            const arr = fileExtIconMap[key]
+            return arr.includes(ext)
+        }) ?? defaultIcon
+    }
+    return defaultIcon
+}
+export const ORDER_ENUM = {
+    ascending: 'ASC',
+    descending: 'DESC'
+}
+export const PIPELINE_SORT_FILED = {
+    pipelineName: 'NAME',
+    createTime: 'CREATE_TIME',
+    latestBuildStartDate: 'LAST_EXEC_TIME',
+    updateTime: 'UPDATE_TIME'
 }

@@ -34,7 +34,7 @@ import com.tencent.devops.common.api.util.UUIDUtil
 import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.pipeline.enums.ChannelCode
-import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.model.store.tables.TExtensionService
 import com.tencent.devops.model.store.tables.TExtensionServiceFeature
 import com.tencent.devops.model.store.tables.TStoreProjectRel
@@ -234,7 +234,7 @@ class ExtServiceProjectService @Autowired constructor(
         logger.info("uninstallService, isAdmin=$isAdmin")
 
         if (!(isAdmin || isInstaller)) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED, arrayOf(serviceCode))
+            return I18nUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED, arrayOf(serviceCode))
         }
 
         dslContext.transaction { t ->

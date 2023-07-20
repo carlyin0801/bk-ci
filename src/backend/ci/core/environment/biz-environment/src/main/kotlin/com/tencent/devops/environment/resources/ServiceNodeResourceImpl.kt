@@ -30,6 +30,7 @@ package com.tencent.devops.environment.resources
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.common.api.util.HashUtil
 import com.tencent.devops.common.service.prometheus.BkTimed
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.environment.api.ServiceNodeResource
@@ -59,8 +60,10 @@ class ServiceNodeResourceImpl @Autowired constructor(
         nodeHashIds: List<String>
     ): Result<List<NodeBaseInfo>> {
         if (nodeHashIds.isEmpty()) {
-            throw ErrorCodeException(errorCode = CommonMessageCode.ERROR_INVALID_PARAM_,
-                params = arrayOf("nodeHashIds"))
+            throw ErrorCodeException(
+                errorCode = CommonMessageCode.ERROR_INVALID_PARAM_,
+                params = arrayOf("nodeHashIds")
+            )
         }
 
         return Result(nodeService.listRawServerNodeByIds(userId, projectId, nodeHashIds))
@@ -73,8 +76,10 @@ class ServiceNodeResourceImpl @Autowired constructor(
         envHashIds: List<String>
     ): Result<Map<String, List<NodeBaseInfo>>> {
         if (envHashIds.isEmpty()) {
-            throw ErrorCodeException(errorCode = CommonMessageCode.ERROR_INVALID_PARAM_,
-                params = arrayOf("envHashIds"))
+            throw ErrorCodeException(
+                errorCode = CommonMessageCode.ERROR_INVALID_PARAM_,
+                params = arrayOf("envHashIds")
+            )
         }
 
         return Result(envService.listRawServerNodeByEnvHashIds(userId, projectId, envHashIds))
@@ -105,7 +110,34 @@ class ServiceNodeResourceImpl @Autowired constructor(
     }
 
     override fun deleteNodes(userId: String, projectId: String, nodeHashIds: List<String>): Result<Boolean> {
-        nodeService.deleteNodes(userId, projectId, nodeHashIds)
+        nodeService.deleteNodes(userId, projectId, nodeHashIds.map { HashUtil.decodeIdToLong(it) })
         return Result(true)
+    }
+
+    override fun deleteThirdPartyNode(userId: String, projectId: String, agentId: String): Result<Boolean> {
+        if (agentId.isEmpty()) return Result(false)
+        nodeService.deleteNodeByAgentId(userId, projectId, agentId)
+        return Result(true)
+    }
+
+    override fun thirdPartyEnv2Nodes(
+        userId: String,
+        projectId: String,
+        envHashId: String?,
+        envName: String?
+    ): Result<List<NodeWithPermission>> {
+        if (envHashId.isNullOrBlank() && envName.isNullOrBlank()) {
+            throw ErrorCodeException(
+                errorCode = CommonMessageCode.ERROR_NEED_PARAM_,
+                params = arrayOf("envHashId")
+            )
+        }
+        val envId = envHashId ?: envName?.let {
+            envService.getByName(projectId, it)?.envHashId
+        } ?: throw ErrorCodeException(
+            errorCode = CommonMessageCode.ERROR_NEED_PARAM_,
+            params = arrayOf("envName")
+        )
+        return Result(envService.thirdPartyEnv2Nodes(userId, projectId, envId))
     }
 }

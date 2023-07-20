@@ -28,7 +28,7 @@
 package config
 
 import (
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/util/systemutil"
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/util/systemutil"
 )
 
 const ActionUpgrade = "upgrade"
@@ -68,7 +68,14 @@ const (
 	WorkAgentFile = "worker-agent.jar"
 
 	JdkClientFile = "jdk.zip"
+
+	DockerInitFile = "agent_docker_init.sh"
 )
+
+const DEFAULT_LANGUAGE_TYPE = "zh_CN"
+
+// DEFAULT_IMAGE_DEBUG_PORT_RANGE 默认的可以进行远程登录调试的范围，取自kubernetes nodeport
+const DEFAULT_IMAGE_DEBUG_PORT_RANGE = "30000-32767"
 
 // Auth Header
 

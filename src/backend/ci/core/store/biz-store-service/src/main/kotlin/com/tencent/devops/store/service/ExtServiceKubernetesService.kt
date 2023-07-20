@@ -31,7 +31,7 @@ import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.client.Client
-import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.dispatch.kubernetes.api.service.ServiceKubernetesResource
 import com.tencent.devops.dispatch.kubernetes.pojo.AppDeployment
 import com.tencent.devops.dispatch.kubernetes.pojo.AppIngress
@@ -187,7 +187,7 @@ class ExtServiceKubernetesService {
                 storeCode = serviceCode,
                 storeType = StoreTypeEnum.SERVICE.type.toByte())
         ) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
         }
         val namespaceName = if (!grayFlag) {
             extServiceKubernetesNameSpaceConfig.namespaceName
@@ -246,7 +246,7 @@ class ExtServiceKubernetesService {
                 storeCode = serviceCode,
                 storeType = StoreTypeEnum.SERVICE.type.toByte())
         ) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
         }
         var grayNamespaceName = ""
         var grayHost = ""
@@ -299,7 +299,7 @@ class ExtServiceKubernetesService {
                 storeCode = serviceCode,
                 storeType = StoreTypeEnum.SERVICE.type.toByte())
         ) {
-            return MessageCodeUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
+            return I18nUtil.generateResponseDataObject(CommonMessageCode.PERMISSION_DENIED)
         }
         val deployment = client.get(ServiceKubernetesResource::class).getDeploymentInfo(
             namespaceName = if (grayFlag == null || !grayFlag) {

@@ -32,9 +32,10 @@ package systemutil
 
 import (
 	"fmt"
-	"github.com/Tencent/bk-ci/src/agent/src/pkg/logs"
 	"os"
 	"syscall"
+
+	"github.com/TencentBlueKing/bk-ci/src/agent/src/pkg/logs"
 )
 
 // MkBuildTmpDir 创建构建提供的临时目录
@@ -50,6 +51,18 @@ func MkBuildTmpDir() (string, error) {
 	return tmpDir, err
 }
 
+func MkDir(dir string) error {
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	err = Chmod(dir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Chmod 对指定file进行修改权限
 func Chmod(file string, perm os.FileMode) error {
 	stat, err := os.Stat(file)
@@ -59,9 +72,9 @@ func Chmod(file string, perm os.FileMode) error {
 		err = os.Chmod(file, perm) // 修改权限
 	}
 	if err == nil {
-		logs.Info("chmod %o %s ok!", perm, file)
+		logs.Infof("chmod %o %s ok!", perm, file)
 	} else {
-		logs.Warn("chmod %o %s msg: %s", perm, file, err)
+		logs.Warnf("chmod %o %s msg: %s", perm, file, err.Error())
 	}
 	return err
 }

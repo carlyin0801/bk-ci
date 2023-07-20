@@ -17,6 +17,9 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {
+    ALL_PIPELINE_VIEW_ID
+} from '@/store/constants'
 import { v4 as uuidv4 } from 'uuid'
 
 export function isVNode (node) {
@@ -25,6 +28,19 @@ export function isVNode (node) {
 
 export function urlJoin (...args) {
     return args.filter(arg => arg).join('/').replace(/([^:]\/)\/+/g, '$1')
+}
+
+export function isShallowEqual (obj1, obj2) {
+    if (!isObject(obj1) || !isObject(obj2)) {
+        return false
+    }
+    const obj1Keys = Object.keys(obj1)
+    const obj2Keys = Object.keys(obj2)
+    if (obj1Keys.length !== obj2Keys.length) {
+        return false
+    }
+
+    return obj1Keys.every(key => obj1[key] === obj2[key])
 }
 
 export function isInArray (ele, array) {
@@ -254,6 +270,20 @@ export function convertMStoString (time) {
     return time ? getDays(Math.floor(time / 1000)) : `0${window.pipelineVue.$i18n.t('timeMap.seconds')}`
 }
 
+export function convertMillSec (ms) {
+    const millseconds = ms % 1000 > 0 ? `.${`${ms % 1000}`.padStart(3, '0')}` : ''
+
+    const seconds = Math.floor(ms / 1000) % 60
+    const minutes = Math.floor(ms / 1000 / 60) % 60
+    const hours = Math.floor(ms / 1000 / 60 / 60) % 24
+
+    return `${[
+        ...(hours > 0 ? [hours] : []),
+        minutes,
+        seconds
+    ].map(prezero).join(':')}${millseconds}`
+}
+
 /**
  *  将毫秒值转换成x时x分x秒的形式并使用格式化规则
  *  @param {Number} time - 时间的毫秒形式
@@ -318,6 +348,7 @@ function prezero (num) {
 }
 
 export function convertTime (ms) {
+    if (!ms) return '--'
     const time = new Date(ms)
 
     return `${time.getFullYear()}-${prezero(time.getMonth() + 1)}-${prezero(time.getDate())} ${prezero(time.getHours())}:${prezero(time.getMinutes())}:${prezero(time.getSeconds())}`
@@ -654,4 +685,63 @@ export class HttpError extends Error {
 
 export function bkVarWrapper (name) {
     return '${{' + name + '}}'
+}
+
+export const toolbars = {
+    bold: false, // 粗体
+    italic: false, // 斜体
+    header: false, // 标题
+    underline: false, // 下划线
+    strikethrough: false, // 中划线
+    mark: false, // 标记
+    superscript: false, // 上角标
+    subscript: false, // 下角标
+    quote: false, // 引用
+    ol: false, // 有序列表
+    ul: false, // 无序列表
+    // link: false, // 链接
+    imagelink: false, // 图片链接
+    code: false, // code
+    table: false, // 表格
+    fullscreen: true, // 全屏编辑
+    readmodel: false, // 沉浸式阅读
+    htmlcode: false, // 展示html源码
+    help: false, // 帮助
+    /* 1.3.5 */
+    undo: false, // 上一步
+    redo: false, // 下一步
+    trash: false, // 清空
+    // save: false, // 保存（触发events中的save事件）
+    /* 1.4.2 */
+    navigation: false, // 导航目录
+    /* 2.1.8 */
+    alignleft: false, // 左对齐
+    aligncenter: false, // 居中
+    alignright: false, // 右对齐
+    /* 2.2.1 */
+    subfield: false, // 单双栏模式
+    preview: true // 预览
+}
+
+export function cacheViewIdKey (projectId) {
+    return `BK_DEVOPS_VIEW_ID_LS_PREFIX_${projectId}`
+}
+export function cacheViewId (projectId, viewId) {
+    localStorage.setItem(cacheViewIdKey(projectId), viewId)
+}
+
+export function getCacheViewId (projectId) {
+    return localStorage.getItem(cacheViewIdKey(projectId)) ?? ALL_PIPELINE_VIEW_ID
+}
+
+export function getMaterialIconByType (type) {
+    const materialIconMap = {
+        CODE_SVN: 'CODE_SVN',
+        CODE_GIT: 'CODE_GIT',
+        CODE_GITLAB: 'CODE_GITLAB',
+        GITHUB: 'codeGithubWebHookTrigger',
+        CODE_TGIT: 'CODE_GIT',
+        CODE_P4: 'CODE_P4'
+    }
+    return materialIconMap[type] ?? 'CODE_GIT'
 }

@@ -27,24 +27,27 @@
 
 package com.tencent.devops.process.api
 
+import com.tencent.devops.common.api.constant.CommonMessageCode.USER_NOT_HAVE_PROJECT_PERMISSIONS
 import com.tencent.devops.common.api.exception.InvalidParamException
 import com.tencent.devops.common.api.exception.ParamBlankException
 import com.tencent.devops.common.api.exception.PermissionForbiddenException
 import com.tencent.devops.common.api.pojo.Page
-import com.tencent.devops.common.event.pojo.measure.PipelineLabelRelateInfo
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.auth.api.AuthResourceType
+import com.tencent.devops.common.event.pojo.measure.PipelineLabelRelateInfo
 import com.tencent.devops.common.pipeline.Model
 import com.tencent.devops.common.pipeline.ModelUpdate
 import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.web.RestResource
+import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.process.api.service.ServicePipelineResource
 import com.tencent.devops.process.audit.service.AuditService
 import com.tencent.devops.process.engine.pojo.PipelineInfo
 import com.tencent.devops.process.engine.service.PipelineRepositoryService
 import com.tencent.devops.process.engine.service.rule.PipelineRuleService
 import com.tencent.devops.process.permission.PipelinePermissionService
+import com.tencent.devops.process.pojo.Permission
 import com.tencent.devops.process.pojo.Pipeline
 import com.tencent.devops.process.pojo.PipelineCopy
 import com.tencent.devops.process.pojo.PipelineId
@@ -123,7 +126,7 @@ class ServicePipelineResourceImpl @Autowired constructor(
         updateLastModifyUser: Boolean?
     ): Result<Boolean> {
         checkParams(userId, projectId)
-        pipelineInfoFacadeService.editPipeline(
+        val deployPipelineResult = pipelineInfoFacadeService.editPipeline(
             userId = userId,
             projectId = projectId,
             pipelineId = pipelineId,
@@ -131,6 +134,17 @@ class ServicePipelineResourceImpl @Autowired constructor(
             channelCode = channelCode,
             checkPermission = ChannelCode.isNeedAuth(channelCode),
             updateLastModifyUser = updateLastModifyUser
+        )
+        auditService.createAudit(
+            Audit(
+                resourceType = AuthResourceType.PIPELINE_DEFAULT.value,
+                resourceId = pipelineId,
+                resourceName = pipeline.name,
+                userId = userId,
+                action = "copy",
+                actionContent = "API: Edit Ver.${deployPipelineResult.version}",
+                projectId = projectId
+            )
         )
         return Result(true)
     }
@@ -147,8 +161,7 @@ class ServicePipelineResourceImpl @Autowired constructor(
                 userId = userId,
                 projectId = projectId,
                 pipelineId = pipelineId,
-                name = pipeline.name,
-                desc = pipeline.desc,
+                pipelineCopy = pipeline,
                 channelCode = ChannelCode.BS
             )
         )
@@ -159,7 +172,7 @@ class ServicePipelineResourceImpl @Autowired constructor(
                 resourceName = pipeline.name,
                 userId = userId,
                 action = "copy",
-                actionContent = "复制流水线/Copy Pipeline from($pipelineId)",
+                actionContent = "API: Copy from($pipelineId)",
                 projectId = projectId
             )
         )
@@ -173,6 +186,7 @@ class ServicePipelineResourceImpl @Autowired constructor(
         channelCode: ChannelCode,
         useTemplateSettings: Boolean?
     ): Result<PipelineId> {
+        modelAndSetting.setting.checkParam()
         val pipelineId = PipelineId(
             id = pipelineInfoFacadeService.uploadPipeline(
                 userId = userId,
@@ -187,7 +201,7 @@ class ServicePipelineResourceImpl @Autowired constructor(
                 resourceName = modelAndSetting.model.name,
                 userId = userId,
                 action = "create",
-                actionContent = "调用创建流水线API/Create Pipeline API",
+                actionContent = "API: Import Create",
                 projectId = projectId
             )
         )
@@ -222,7 +236,7 @@ class ServicePipelineResourceImpl @Autowired constructor(
                 resourceName = modelAndSetting.model.name,
                 userId = userId,
                 action = "edit",
-                actionContent = "调用保存流水线API/API Save Ver.${pipelineResult.version}",
+                actionContent = "API: Save Ver.${pipelineResult.version}",
                 projectId = projectId
             )
         )
@@ -313,11 +327,23 @@ class ServicePipelineResourceImpl @Autowired constructor(
     ): Result<Boolean> {
         checkProjectId(projectId)
         checkPipelineId(pipelineId)
+        setting.checkParam()
         pipelineSettingFacadeService.saveSetting(
             userId = userId,
-            setting = setting,
+            setting = setting.copy(projectId, pipelineId),
             checkPermission = ChannelCode.isNeedAuth(channelCode ?: ChannelCode.BS),
             updateLastModifyUser = updateLastModifyUser
+        )
+        auditService.createAudit(
+            Audit(
+                resourceType = AuthResourceType.PIPELINE_DEFAULT.value,
+                resourceId = pipelineId,
+                resourceName = setting.pipelineName,
+                userId = userId,
+                action = "edit",
+                actionContent = "Update Setting",
+                projectId = projectId
+            )
         )
         return Result(true)
     }
@@ -427,11 +453,23 @@ class ServicePipelineResourceImpl @Autowired constructor(
 
     override fun restore(userId: String, projectId: String, pipelineId: String): Result<Boolean> {
         checkParams(userId, projectId)
-        pipelineInfoFacadeService.restorePipeline(
+        val restorePipeline = pipelineInfoFacadeService.restorePipeline(
             userId = userId,
             projectId = projectId,
             pipelineId = pipelineId,
             channelCode = ChannelCode.BS
+        )
+
+        auditService.createAudit(
+            Audit(
+                resourceType = AuthResourceType.PIPELINE_DEFAULT.value,
+                resourceId = pipelineId,
+                resourceName = restorePipeline.pipelineName,
+                userId = userId,
+                action = "Restore",
+                actionContent = "Restore Ver.${restorePipeline.version}",
+                projectId = projectId
+            )
         )
         return Result(true)
     }
@@ -450,11 +488,6 @@ class ServicePipelineResourceImpl @Autowired constructor(
             return Result(pipelineInfos[0])
         }
         return null
-    }
-
-    override fun batchUpdatePipelineNamePinYin(userId: String): Result<Boolean> {
-        pipelineInfoFacadeService.batchUpdatePipelineNamePinYin(userId)
-        return Result(true)
     }
 
     override fun getPipelineLabelInfos(
@@ -478,7 +511,12 @@ class ServicePipelineResourceImpl @Autowired constructor(
                 permission = AuthPermission.VIEW
             )
         ) {
-            throw PermissionForbiddenException("$userId 无项目$projectId 查看权限")
+            throw PermissionForbiddenException(
+                I18nUtil.getCodeLanMessage(
+                    messageCode = USER_NOT_HAVE_PROJECT_PERMISSIONS,
+                    params = arrayOf(userId, projectId)
+                )
+            )
         }
         val pipelineInfos = pipelineListFacadeService.searchIdAndName(
             projectId = projectId,
@@ -491,6 +529,52 @@ class ServicePipelineResourceImpl @Autowired constructor(
 
     override fun batchUpdateModelName(modelUpdateList: List<ModelUpdate>): Result<List<ModelUpdate>> {
         return Result(pipelineInfoFacadeService.batchUpdateModelName(modelUpdateList))
+    }
+
+    override fun getPipelineInfobyAutoId(projectId: String, id: Long): Result<SimplePipeline?> {
+        return Result(
+            pipelineListFacadeService.getByAutoIds(
+                ids = listOf(id),
+                projectId = projectId
+            ).firstOrNull()
+        )
+    }
+
+    override fun hasPermissionList(
+        userId: String,
+        projectId: String,
+        permission: Permission,
+        excludePipelineId: String?,
+        page: Int?,
+        pageSize: Int?
+    ): Result<Page<Pipeline>> {
+        checkParam(userId, projectId)
+        val bkAuthPermission = when (permission) {
+            Permission.DEPLOY -> AuthPermission.DEPLOY
+            Permission.DOWNLOAD -> AuthPermission.DOWNLOAD
+            Permission.EDIT -> AuthPermission.EDIT
+            Permission.EXECUTE -> AuthPermission.EXECUTE
+            Permission.DELETE -> AuthPermission.DELETE
+            Permission.VIEW -> AuthPermission.VIEW
+            Permission.CREATE -> AuthPermission.CREATE
+            Permission.LIST -> AuthPermission.LIST
+        }
+        val result = pipelineListFacadeService.hasPermissionList(
+            userId = userId,
+            projectId = projectId,
+            authPermission = bkAuthPermission,
+            excludePipelineId = excludePipelineId,
+            page = page,
+            pageSize = pageSize
+        )
+        return Result(
+            data = Page(
+                page = page ?: 0,
+                pageSize = pageSize ?: -1,
+                count = result.count,
+                records = result.records
+            )
+        )
     }
 
     private fun checkParams(userId: String, projectId: String) {
