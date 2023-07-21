@@ -28,7 +28,8 @@
 package com.tencent.devops.project.service
 
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.service.utils.MessageCodeUtil
+import com.tencent.devops.common.web.utils.I18nUtil
+import com.tencent.devops.project.constant.ProjectMessageCode.T_SERVICE_PREFIX
 import com.tencent.devops.project.dao.ServiceDao
 import com.tencent.devops.project.pojo.service.ServiceVO
 import org.jooq.DSLContext
@@ -43,12 +44,14 @@ class ServiceProjectService @Autowired constructor(
     fun getServiceList(): Result<List<ServiceVO>> {
         val serviceList = mutableListOf<ServiceVO>()
         val serviceRecodes = projectServiceDao.getServiceList(dslContext)
-        if (serviceRecodes != null) {
+        if (serviceRecodes.isNotEmpty) {
             for (serviceRecode in serviceRecodes) {
                 serviceList.add(
                     ServiceVO(
                         id = serviceRecode.id ?: 0,
-                        name = MessageCodeUtil.getMessageByLocale(serviceRecode.name, serviceRecode.englishName),
+                        name = I18nUtil.getCodeLanMessage(T_SERVICE_PREFIX + serviceRecode.englishName).ifBlank {
+                            serviceRecode.name
+                        },
                         link = serviceRecode.link ?: "",
                         linkNew = serviceRecode.linkNew ?: "",
                         status = serviceRecode.status,
