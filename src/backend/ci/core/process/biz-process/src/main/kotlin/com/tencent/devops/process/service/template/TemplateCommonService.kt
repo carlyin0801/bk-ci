@@ -79,8 +79,7 @@ class TemplateCommonService @Autowired constructor(
     fun getDefaultSetting(
         projectId: String,
         templateId: String,
-        templateName: String,
-        creator: String? = null
+        templateName: String
     ): PipelineSetting {
         val failNotifyTypes = pipelineInfoExtService.failNotifyChannel()
         val failType = failNotifyTypes.split(",").filter { i -> i.isNotBlank() }
@@ -93,7 +92,7 @@ class TemplateCommonService @Autowired constructor(
         )
         return PipelineSetting.defaultSetting(
             projectId = projectId, pipelineId = templateId, pipelineName = templateName,
-            maxPipelineResNum = null, failSubscription = failSubscription, creator = creator
+            maxPipelineResNum = null, failSubscription = failSubscription
         )
     }
 

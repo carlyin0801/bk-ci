@@ -161,15 +161,19 @@
                     params.push(key)
                 }
                 this.displayName = keyArr.join(',')
-                if (this.isMultiple && !this.isEqualArray(this.value, params)) {
-                    this.handleChange(this.name, params)
-                }
+                this.handleChange(this.name, params)
             },
             value (newValue) {
                 if (this.isMultiple) {
-                    this.getMultipleDisplayName(newValue)
+                    if (this.displayName) {
+                        this.getMultipleDisplayName(this.displayName, 'name')
+                    } else {
+                        this.getMultipleDisplayName(newValue)
+                    }
                 } else {
-                    if (this.isEnvVar(newValue)) {
+                    if (this.isEnvVar(this.displayName) && this.displayName.trim() !== newValue) {
+                        this.handleChange(this.name, this.displayName.trim())
+                    } else if (this.isEnvVar(newValue)) {
                         this.displayName = newValue
                     } else {
                         this.displayName = this.getDisplayName(newValue ?? this.displayName)
@@ -193,10 +197,6 @@
             this.handleBlur()
         },
         methods: {
-            isEqualArray (arr1, arr2) { // 判断两个数组是否相等
-                if (arr1.length !== arr2.length) return false
-                return arr1.every((item, index) => item === arr2[index])
-            },
             handleInput (e) {
                 // const { name, value } = e.target
                 this.optionListVisible = true
@@ -216,7 +216,7 @@
                                     id: child[paramId],
                                     name: child[paramName],
                                     active: child.id === this.value,
-                                    selected: this.selectedPointer === childIndex && this.selectedGroupPointer === index
+                                    selected: this.selectedPointer === childIndex && this.selectedGroupPointer === index && !this.isMultiple
                                 }
                             })
                             result.push({
@@ -276,7 +276,7 @@
             },
 
             isEnvVar (str) {
-                return typeof str === 'string' && this.getValidaVar(str)
+                return typeof str === 'string' && str.isBkVar()
             },
 
             handleBlur () {
@@ -286,14 +286,6 @@
                 this.isFocused = false
                 this.$refs.inputArea && this.$refs.inputArea.blur()
                 this.$emit('blur', null)
-                
-                if (!this.isMultiple && this.isEnvVar(this.displayName) && this.displayName.trim() !== this.value) {
-                    this.handleChange(this.name, this.displayName.trim())
-                }
-
-                if (this.isMultiple && this.displayName) {
-                    this.getMultipleDisplayName(this.displayName, 'name')
-                }
             },
 
             handleFocus (e) {

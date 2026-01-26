@@ -27,8 +27,6 @@
 
 package com.tencent.devops.repository.service.hub
 
-import com.tencent.devops.common.api.constant.HttpStatus
-import com.tencent.devops.common.api.exception.RemoteServiceException
 import com.tencent.devops.repository.pojo.hub.ScmFilePushReq
 import com.tencent.devops.repository.pojo.hub.ScmFilePushResult
 import com.tencent.devops.repository.pojo.hub.ScmPullRequestCreateReq
@@ -36,13 +34,11 @@ import com.tencent.devops.repository.service.RepositoryScmConfigService
 import com.tencent.devops.repository.service.RepositoryService
 import com.tencent.devops.repository.service.ScmApiManager
 import com.tencent.devops.scm.api.enums.PullRequestState
-import com.tencent.devops.scm.api.exception.ScmApiException
 import com.tencent.devops.scm.api.pojo.ContentInput
 import com.tencent.devops.scm.api.pojo.PullRequest
 import com.tencent.devops.scm.api.pojo.PullRequestInput
 import com.tencent.devops.scm.api.pojo.PullRequestListOptions
 import com.tencent.devops.scm.api.pojo.ReferenceInput
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
@@ -73,21 +69,11 @@ class ScmApiComposer @Autowired constructor(
                 authRepository = authRepository
             ) { providerProperties, providerRepository ->
                 // 判断分支是否存在,不存在则创建
-                try {
-                    scmApiManager.findBranch(
-                        providerProperties = providerProperties,
-                        providerRepository = providerRepository,
-                        name = ref
-                    )
-                } catch (ignored: Exception) {
-                    logger.info("Failed to get branch ($ref)", ignored)
-                    if (isNotFoundException(exception = ignored)) {
-                        logger.info("branch ($ref) not found, create")
-                        null
-                    } else {
-                        throw ignored
-                    }
-                } ?: run {
+                scmApiManager.findBranch(
+                    providerProperties = providerProperties,
+                    providerRepository = providerRepository,
+                    name = ref
+                ) ?: run {
                     val referenceInput = ReferenceInput(
                         name = ref,
                         sha = defaultBranch
@@ -99,22 +85,12 @@ class ScmApiComposer @Autowired constructor(
                     )
                 }
                 // 判断文件是否存在
-                val newFile = try {
-                    scmApiManager.getFileContent(
-                        providerProperties = providerProperties,
-                        providerRepository = providerRepository,
-                        path = path,
-                        ref = ref
-                    )
-                } catch (ignored: Exception) {
-                    logger.info("Failed to get file content ($ref)", ignored)
-                    if (isNotFoundException(exception = ignored)) {
-                        logger.info("file $path not found, create")
-                        null
-                    } else {
-                        throw ignored
-                    }
-                } == null
+                val newFile = scmApiManager.getFileContent(
+                    providerProperties = providerProperties,
+                    providerRepository = providerRepository,
+                    path = path,
+                    ref = ref
+                ) == null
                 // 创建或更新文件
                 val contentInput = ContentInput(
                     ref = ref,
@@ -197,20 +173,5 @@ class ScmApiComposer @Autowired constructor(
                 }
             }
         }
-    }
-
-    private fun isNotFoundException(
-        exception: Exception
-    ): Boolean {
-        val httpStatus = when {
-            exception is ScmApiException && exception.statusCode != null -> exception.statusCode
-            exception is RemoteServiceException -> exception.httpStatus
-            else -> return false
-        }
-        return httpStatus == HttpStatus.NOT_FOUND.value
-    }
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(ScmApiComposer::class.java)
     }
 }

@@ -66,7 +66,6 @@ interface ArchiveStorePkgService {
         version: String,
         instanceId: String? = null,
         osName: String? = null,
-        osArch: String? = null,
-        checkPermissionFlag: Boolean = true
+        osArch: String? = null
     ): String
 }

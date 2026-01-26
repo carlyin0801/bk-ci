@@ -12,16 +12,13 @@
       </bk-table-column>
       <bk-table-column :label="t('expiredTime')" prop="expiredDisplay">
         <template #default="{ row }">
-          <span>{{ row.status === 'EXPIRED' ? row.expiredDisplay : row.expiredDisplay + t('day') }} </span>
+          <span>{{ row.expiredDisplay ? row.expiredDisplay + t('day') : '--' }} </span>
         </template>
       </bk-table-column>
       <bk-table-column :label="t('status')" prop="status">
         <template #default="{ row }">
           <div class="status-content">
-            <i :class="{
-              'status-icon': true,
-              [statusIconClass(row.status)]: true
-            }" />
+            <img :src="statusIcon(row.status)" class="status-icon">
             {{ statusFormatter(row.status) }}
           </div>
         </template>
@@ -107,6 +104,9 @@
 <script>
 import ajax from '../../../ajax/index';
 import ApplyDialog from './apply-dialog.vue';
+import syncDefault from '../../../svg/sync-default.svg?inline';
+import syncSuccess from '../../../svg/sync-success.svg?inline';
+import syncFailed from '../../../svg/sync-failed.svg?inline';
 import SideSlider from '../../widget-components/side-slider.jsx';
 import PermissionDialog from '../../widget-components/dialog.jsx';
 import { Message } from 'bkui-vue';
@@ -223,11 +223,11 @@ export default {
       return map[status];
     },
 
-    statusIconClass (status) {
+    statusIcon(status) {
       const map = {
-        NOT_JOINED: 'default',
-        NORMAL: 'success',
-        EXPIRED: 'failed',
+        NOT_JOINED: syncDefault,
+        NORMAL: syncSuccess,
+        EXPIRED: syncFailed,
       };
       return map[status];
     },
@@ -236,7 +236,6 @@ export default {
       this.apply.isShow = true;
       this.apply.groupName = row.groupName;
       this.apply.groupId = row.groupId;
-      this.apply.status = row.status;
       this.apply.expiredDisplay = row.expiredDisplay;
       this.apply.title = this.t('renewal');
       this.apply.type = 'renewal';
@@ -296,20 +295,9 @@ export default {
         align-items: center;
     }
     .status-icon {
-        display: inline-block;
-        height: 13px;
-        width: 13px;
-        border-radius: 50%;
-        margin-right: 3px;
-        &.default {
-          border: 3px solid #c4c6cc;
-        }
-        &.success {
-          border: 3px solid #3fc06d;
-        }
-        &.failed {
-          border: 3px solid #ea3636;
-        }
+        height: 16px;
+        width: 16px;
+        margin-right: 5px;
     }
     .detail-content {
         padding: 20px;

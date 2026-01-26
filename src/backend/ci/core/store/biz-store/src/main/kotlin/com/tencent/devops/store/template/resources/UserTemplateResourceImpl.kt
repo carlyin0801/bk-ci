@@ -32,9 +32,7 @@ import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.web.RestResource
-import com.tencent.devops.process.api.template.v2.ServicePipelineTemplateV2Resource
 import com.tencent.devops.store.api.template.UserTemplateResource
-import com.tencent.devops.store.common.service.StoreProjectService
 import com.tencent.devops.store.pojo.common.InstalledProjRespItem
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.pojo.template.InstallTemplateReq
@@ -42,14 +40,10 @@ import com.tencent.devops.store.pojo.template.InstallTemplateResp
 import com.tencent.devops.store.pojo.template.MarketTemplateMain
 import com.tencent.devops.store.pojo.template.MarketTemplateResp
 import com.tencent.devops.store.pojo.template.MyTemplateItem
-import com.tencent.devops.store.pojo.template.MyTemplateItemResponse
-import com.tencent.devops.store.pojo.template.PublishStrategyUpdateReq
 import com.tencent.devops.store.pojo.template.TemplateDetail
-import com.tencent.devops.store.pojo.template.TemplatePublishedVersionInfo
 import com.tencent.devops.store.pojo.template.enums.MarketTemplateSortTypeEnum
 import com.tencent.devops.store.pojo.template.enums.TemplateRdTypeEnum
-import com.tencent.devops.store.pojo.template.enums.TemplateStatusEnum
-import com.tencent.devops.store.template.service.MarketTemplatePublishedService
+import com.tencent.devops.store.common.service.StoreProjectService
 import com.tencent.devops.store.template.service.MarketTemplateService
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -57,8 +51,7 @@ import org.springframework.beans.factory.annotation.Autowired
 class UserTemplateResourceImpl @Autowired constructor(
     private val marketTemplateService: MarketTemplateService,
     private val storeProjectService: StoreProjectService,
-    private val client: Client,
-    private val marketTemplatePublishedService: MarketTemplatePublishedService
+    private val client: Client
 ) : UserTemplateResource {
 
     override fun getInstalledProjects(
@@ -75,46 +68,6 @@ class UserTemplateResourceImpl @Autowired constructor(
         pageSize: Int
     ): Result<Page<MyTemplateItem>?> {
         return marketTemplateService.getMyTemplates(userId, templateName, page, pageSize)
-    }
-
-    override fun getMyTemplatesNew(
-        userId: String,
-        templateName: String?,
-        projectName: String?,
-        status: TemplateStatusEnum?,
-        modifier: String?,
-        description: String?,
-        page: Int,
-        pageSize: Int
-    ): Result<Page<MyTemplateItemResponse>> {
-        return Result(
-            marketTemplateService.getMyTemplatesNew(
-                userId = userId,
-                templateName = templateName,
-                projectName = projectName,
-                status = status,
-                modifier = modifier,
-                description = description,
-                page = page,
-                pageSize = pageSize
-            )
-        )
-    }
-
-    override fun listPublishedHistory(
-        userId: String,
-        templateCode: String,
-        page: Int,
-        pageSize: Int
-    ): Result<Page<TemplatePublishedVersionInfo>> {
-        return Result(
-            marketTemplatePublishedService.list(
-                userId = userId,
-                templateCode = templateCode,
-                page = page,
-                pageSize = pageSize
-            )
-        )
     }
 
     override fun installTemplate(
@@ -144,29 +97,6 @@ class UserTemplateResourceImpl @Autowired constructor(
         )
     }
 
-    override fun installTemplateV2(
-        userId: String,
-        installTemplateReq: InstallTemplateReq
-    ): Result<InstallTemplateResp> {
-        return marketTemplateService.installTemplateV2(
-            userId = userId,
-            channelCode = ChannelCode.BS,
-            installTemplateReq = installTemplateReq
-        )
-    }
-
-    override fun updatePublishStrategy(
-        userId: String,
-        templateCode: String,
-        strategy: PublishStrategyUpdateReq
-    ): Result<Boolean> {
-        return client.get(ServicePipelineTemplateV2Resource::class).updatePublishStrategy(
-            userId = userId,
-            templateId = templateCode,
-            strategy = strategy.publishStrategy
-        )
-    }
-
     override fun mainPageList(userId: String, page: Int?, pageSize: Int?): Result<List<MarketTemplateMain>> {
         return marketTemplateService.mainPageList(userId, page, pageSize)
     }
@@ -181,7 +111,6 @@ class UserTemplateResourceImpl @Autowired constructor(
         rdType: TemplateRdTypeEnum?,
         sortType: MarketTemplateSortTypeEnum?,
         projectCode: String?,
-        excludeProjectCode: String?,
         page: Int?,
         pageSize: Int?
     ): Result<MarketTemplateResp> {
@@ -196,7 +125,6 @@ class UserTemplateResourceImpl @Autowired constructor(
                 rdType = rdType,
                 sortType = sortType,
                 projectCode = projectCode,
-                excludeProjectCode = excludeProjectCode,
                 page = page,
                 pageSize = pageSize
             )

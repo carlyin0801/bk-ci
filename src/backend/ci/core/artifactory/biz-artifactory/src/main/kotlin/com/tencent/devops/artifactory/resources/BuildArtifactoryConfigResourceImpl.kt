@@ -23,8 +23,7 @@ class BuildArtifactoryConfigResourceImpl(
         return Result(ReportPluginConfig(
             enableCompress = reportArchiveTaskConfig.enabledCompress,
             enableCompressPipelines = reportArchiveTaskConfig.enableCompressPipelines,
-            compressThreshold = reportArchiveTaskConfig.compressThreshold,
-            compressSizeLimit = reportArchiveTaskConfig.compressSizeLimit
+            compressThreshold = reportArchiveTaskConfig.compressThreshold
         ))
     }
 }

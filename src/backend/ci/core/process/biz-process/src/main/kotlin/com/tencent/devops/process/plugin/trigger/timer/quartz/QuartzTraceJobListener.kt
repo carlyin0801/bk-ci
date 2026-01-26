@@ -29,7 +29,7 @@ package com.tencent.devops.process.plugin.trigger.timer.quartz
 
 import com.tencent.devops.common.service.trace.TraceTag
 import com.tencent.devops.process.constant.MeasureConstant.NAME_PIPELINE_CRON_SCHEDULE_DELAY
-import com.tencent.devops.process.trigger.PipelineTriggerMeasureService
+import com.tencent.devops.process.service.TimerScheduleMeasureService
 import org.quartz.JobExecutionContext
 import org.quartz.JobExecutionException
 import org.quartz.listeners.JobListenerSupport
@@ -39,7 +39,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class QuartzTraceJobListener @Autowired constructor(
-    val pipelineTriggerMeasureService: PipelineTriggerMeasureService
+    val timerScheduleMeasureService: TimerScheduleMeasureService
 ) : JobListenerSupport() {
 
     override fun getName(): String {
@@ -58,7 +58,7 @@ class QuartzTraceJobListener @Autowired constructor(
     override fun jobWasExecuted(context: JobExecutionContext?, jobException: JobExecutionException?) {
         context?.let {
             // 记录执行时间
-            pipelineTriggerMeasureService.recordTaskExecutionTime(
+            timerScheduleMeasureService.recordTaskExecutionTime(
                 name = NAME_PIPELINE_CRON_SCHEDULE_DELAY,
                 timeConsumingMills = it.fireTime.time - it.scheduledFireTime.time
             )

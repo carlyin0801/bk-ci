@@ -36,10 +36,10 @@
                         :key="item.projectCode"
                         :id="item.projectCode"
                         :name="item.projectName"
-                        :disabled="type === 'template' && !item.pipelineTemplateInstallPerm"
+                        :disabled="!item.pipelineTemplateInstallPerm"
                         v-bk-tooltips="{
                             content: $t('store.无该项目的模板安装权限'),
-                            disabled: type !== 'template' || item.pipelineTemplateInstallPerm
+                            disabled: item.pipelineTemplateInstallPerm
                         }"
                     >
                     </bk-option>
@@ -136,7 +136,7 @@
 
 <script>
     import breadCrumbs from '@/components/bread-crumbs.vue'
-    import { mapActions, mapGetters } from 'vuex'
+    import { mapGetters } from 'vuex'
 
     export default {
         components: {
@@ -148,7 +148,7 @@
                 type: this.$route.query.type,
                 code: this.$route.query.code,
                 from: this.$route.query.from,
-                name: this.$route.query.name || '',
+                name: '',
                 id: '',
                 installError: false,
                 projectListLoading: false,
@@ -188,8 +188,8 @@
 
         created () {
             this.isLoading = true
-            Promise.all([this.requestDetail(), this.fetchRelativeProject()]).then(() => {
-                this.fetchProjectList()
+            Promise.all([this.requestDetail(), this.requestRelativeProject()]).then(() => {
+                this.requestProjectList()
             }).catch((err) => {
                 this.$bkMessage({ message: err.messgae || err, theme: 'error' })
             }).finally(() => {
@@ -198,18 +198,6 @@
         },
 
         methods: {
-            ...mapActions('store', [
-                'requestAtom',
-                'requestTemplateDetail',
-                'requestImageDetailByCode',
-                'requestRelativeProject',
-                'requestRelativeTplProject',
-                'requestRelativeImageProject',
-                'requestProjectList',
-                'installAtom',
-                'installTemplate',
-                'installImage'
-            ]),
             fromFilter (val) {
                 let res = ''
                 switch (val) {
@@ -223,45 +211,62 @@
                 return res
             },
     
-            async requestDetail () {
+            requestDetail () {
                 const methods = {
-                    atom: this.requestAtom,
-                    template: this.requestTemplateDetail,
-                    image: this.requestImageDetailByCode
+                    atom: this.getAtomDetail,
+                    template: this.getTemplateDetail,
+                    image: this.getImageDetail
                 }
                 if (!Object.keys(methods).includes(this.type) || typeof methods[this.type] !== 'function') {
                     this.$bkMessage({ message: this.$t('store.typeError'), theme: 'error' })
                     return
                 }
-                return methods[this.type](this.code)
+                return methods[this.type]()
             },
 
-            async fetchRelativeProject () {
+            getAtomDetail () {
+                return this.$store.dispatch('store/requestAtom', this.code).then((res) => {
+                    this.name = res.name
+                    this.id = res.atomId
+                })
+            },
+
+            getTemplateDetail () {
+                return this.$store.dispatch('store/requestTemplate', this.code).then((res) => {
+                    this.name = res.templateName
+                    this.id = res.templateId
+                })
+            },
+
+            getImageDetail () {
+                return this.$store.dispatch('store/requestImageDetailByCode', this.code).then((res) => {
+                    this.name = res.imageName
+                    this.id = res.imageId
+                })
+            },
+
+            requestRelativeProject () {
                 const methods = {
-                    atom: this.requestRelativeProject,
-                    template: this.requestRelativeTplProject,
-                    image: this.requestRelativeImageProject
+                    atom: 'store/requestRelativeProject',
+                    template: 'store/requestRelativeTplProject',
+                    image: 'store/requestRelativeImageProject'
                 }
 
-                const res = await methods[this.type](this.code)
-                this.installedProject = res
+                return this.$store.dispatch(methods[this.type], this.code).then((res) => {
+                    this.installedProject = res
+                })
             },
 
-            async fetchProjectList () {
-                try {
-                    this.projectListLoading = true
-                    const res = await this.requestProjectList({
-                        enabled: true
-                    })
+            requestProjectList () {
+                this.projectListLoading = true
+                this.$store.dispatch('store/requestProjectList').then((res) => {
                     res.forEach((item) => {
                         const isInstalled = this.installedProject.some(project => project.projectCode === item.projectCode)
                         if (!isInstalled) this.projectList.push(item)
                     })
-                } catch (err) {
+                }).catch((err) => {
                     this.$bkMessage({ message: err.messgae || err, theme: 'error' })
-                } finally {
-                    this.projectListLoading = false
-                }
+                }).finally(() => (this.projectListLoading = false))
             },
 
             toBack () {
@@ -298,32 +303,27 @@
                 this.installError = !(Array.isArray(data) && data.length > 0)
             },
 
-            async confirm () {
-                try {
-                    if (!this.project.length) {
-                        this.installError = true
-                        return
-                    }
+            confirm () {
+                if (!this.project.length) {
+                    this.installError = true
+                    return
+                }
 
-                    const methods = {
-                        atom: this.installAtom,
-                        template: this.installTemplate,
-                        image: this.installImage
-                    }
-                    if (!Object.keys(methods).includes(this.type) || typeof methods[this.type] !== 'function') {
-                        this.$bkMessage({ message: this.$t('store.typeError'), theme: 'error' })
-                        return
-                    }
+                const methods = {
+                    atom: this.installAtom,
+                    template: this.installTemplate,
+                    image: this.installImage
+                }
+                if (!Object.keys(methods).includes(this.type) || typeof methods[this.type] !== 'function') {
+                    this.$bkMessage({ message: this.$t('store.typeError'), theme: 'error' })
+                    return
+                }
 
-                    this.isLoading = true
-                
-                    await methods[this.type]({
-                        [`${this.type}Code`]: this.code,
-                        [this.type === 'atom' ? 'projectCode' : 'projectCodeList']: this.project
-                    })
+                this.isLoading = true
+                methods[this.type]().then(() => {
                     this.isINstallSuccess = true
                     this.$bkMessage({ message: this.$t('store.安装成功'), theme: 'success' })
-                } catch (err) {
+                }).catch((err) => {
                     if (err.httpStatus === 200) {
                         const h = this.$createElement
                         const subHeader = h('p', {
@@ -346,9 +346,31 @@
                     } else {
                         this.$bkMessage({ message: err.message || err, theme: 'error' })
                     }
-                } finally {
-                    this.isLoading = false
+                }).finally(() => (this.isLoading = false))
+            },
+
+            installAtom () {
+                const params = {
+                    atomCode: this.code,
+                    projectCode: this.project
                 }
+                return this.$store.dispatch('store/installAtom', { params })
+            },
+
+            installTemplate () {
+                const params = {
+                    templateCode: this.code,
+                    projectCodeList: this.project
+                }
+                return this.$store.dispatch('store/installTemplate', { params })
+            },
+
+            installImage () {
+                const params = {
+                    imageCode: this.code,
+                    projectCodeList: this.project
+                }
+                return this.$store.dispatch('store/installImage', params)
             }
         }
     }

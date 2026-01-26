@@ -203,9 +203,6 @@ interface ExternalCodeccRepoResource {
         subModule: String? = null,
         @Parameter(description = "代码库ticketId")
         @QueryParam("credentialId")
-        credentialId: String,
-        @Parameter(description = "scmCode")
-        @QueryParam("scmCode")
-        scmCode: String? = null
+        credentialId: String
     ): Result<String>
 }

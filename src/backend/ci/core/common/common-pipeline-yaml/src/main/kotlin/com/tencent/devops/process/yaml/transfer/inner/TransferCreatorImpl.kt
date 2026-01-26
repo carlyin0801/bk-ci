@@ -110,7 +110,6 @@ class TransferCreatorImpl @Autowired constructor(
         val data = mutableMapOf<String, Any>()
         data["input"] = inputMap
 
-        step.namespace?.let { data["namespace"] = it }
         return MarketBuildAtomElement(
             id = step.taskId,
             name = step.name ?: "checkout",
@@ -126,7 +125,6 @@ class TransferCreatorImpl @Autowired constructor(
     ): MarketBuildAtomElement {
         val data = mutableMapOf<String, Any>()
         data["input"] = TransferUtil.mixParams(transferCache.getAtomDefaultValue(step.uses!!), step.with)
-        step.namespace?.let { data["namespace"] = it }
         return MarketBuildAtomElement(
             id = step.taskId,
             name = step.name ?: step.uses!!.split('@')[0],
@@ -140,7 +138,6 @@ class TransferCreatorImpl @Autowired constructor(
     override fun transferMarketBuildLessAtomElement(step: Step): MarketBuildLessAtomElement {
         val data = mutableMapOf<String, Any>()
         data["input"] = TransferUtil.mixParams(transferCache.getAtomDefaultValue(step.uses!!), step.with)
-        step.namespace?.let { data["namespace"] = it }
         return MarketBuildLessAtomElement(
             id = step.taskId,
             name = step.name ?: step.uses!!.split('@')[0],

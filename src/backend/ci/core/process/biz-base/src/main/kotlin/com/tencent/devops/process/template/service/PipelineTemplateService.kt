@@ -53,13 +53,14 @@ class PipelineTemplateService @Autowired constructor(
     private val client: Client
 ) {
 
-    fun getTemplateDetailInfo(templateCode: String): TemplateDetailInfo? {
+    fun getTemplateDetailInfo(templateCode: String): Result<TemplateDetailInfo?> {
         logger.info("getTemplateDetailInfo templateCode is:$templateCode")
         var templateRecord = templateDao.getLatestTemplate(dslContext, templateCode)
         if (templateRecord.srcTemplateId != null && templateRecord.type == TemplateType.CONSTRAINT.name) {
             templateRecord = templateDao.getLatestTemplate(dslContext, templateRecord.srcTemplateId)
         }
-        return TemplateDetailInfo(
+        return Result(
+            TemplateDetailInfo(
                 templateCode = templateRecord.id,
                 templateName = templateRecord.templateName,
                 templateModel = if (!StringUtils.isEmpty(templateRecord.template)) JsonUtil.to(
@@ -68,11 +69,12 @@ class PipelineTemplateService @Autowired constructor(
                 ) else null,
                 templateVersion = templateRecord.version
             )
+        )
     }
 
     fun checkImageReleaseStatus(userId: String, templateCode: String): Result<String?> {
         logger.info("start checkImageReleaseStatus templateCode is:$templateCode")
-        val templateModel = getTemplateDetailInfo(templateCode)?.templateModel
+        val templateModel = getTemplateDetailInfo(templateCode).data?.templateModel
             ?: return I18nUtil.generateResponseDataObject(
                 CommonMessageCode.SYSTEM_ERROR,
                 language = I18nUtil.getLanguage(userId)

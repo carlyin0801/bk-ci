@@ -10,102 +10,71 @@
             class="new-ui-form"
         >
             <bk-form-item
-                :label="nameLabel"
+                :label="$t('pipelineName')"
                 :required="true"
             >
                 <vuex-input
                     v-bk-focus
-                    :placeholder="namePlaceholder"
+                    :disabled="!editable"
+                    :placeholder="$t('pipelineNameInputTips')"
                     name="pipelineName"
                     :value="pipelineSetting.pipelineName"
                     v-validate.initial="'required|max:128'"
-                    :disabled="!(editable || $route.meta.edit)"
                     :max-length="128"
                     :handle-change="handleBaseInfoChange"
                 />
             </bk-form-item>
-            <bk-form-item
-                v-if="isTemplate"
-                :label="$t('template.type')"
-                disabled
-                :required="true"
-            >
-                <bk-radio-group
-                    :value="pipelineInfo?.type"
-                    disabled
-                >
-                    <bk-radio-button
-                        v-for="item in templateTypeList"
-                        :key="item.value"
-                        :value="item.value"
-                    >
-                        <span class="template-type-radio">
-                            <logo :name="item.icon" />
-                            {{ item.label }}
-                        </span>
-                    </bk-radio-button>
-                </bk-radio-group>
-            </bk-form-item>
-            
+
             <bk-form-item :required="false">
-                <constraint-wraper
-                    :classify="CLASSIFY_ENUM.SETTING"
-                    field="labels"
-                >
-                    <template v-slot:constraint-title>
-                        <div class="pipeline-label-selector-title">
-                            <label class="ui-inner-label">
-                                {{ $t('settings.label') }}
-                            </label>
-                            <span
-                                v-if="editable"
-                                @click="toManageLabel"
-                                :class="['pipeline-label-selector-title-manage', {
-                                    'pipeline-label-selector-title-manage-divider': instanceFromTemplate
-                                }]"
-                            >{{ $t('settings.manageLabel') }}</span>
-                        </div>
-                    </template>
-                    <template v-slot:constraint-area="{ props: { isOverride } }">
-                        <ul
-                            class="pipeline-label-selector"
+                <div class="layout-label">
+                    <label class="ui-inner-label">
+                        <span class="bk-label-text">{{ $t('settings.label') }} </span>
+                    </label>
+                    <label
+                        v-if="editable"
+                        class="ui-inner-label"
+                    >
+                        <span
+                            @click="toManageLabel"
+                            class="bk-label-text link-text"
+                        >{{ $t('settings.manageLabel') }}</span>
+                    </label>
+                </div>
+                <ul class="pipeline-label-selector">
+                    <template v-if="tagGroupList.length > 0">
+                        <li
+                            v-for="(item, index) in tagGroupList"
+                            :key="item.id"
                         >
-                            <template v-if="tagGroupList.length > 0">
-                                <li
-                                    v-for="(item, index) in tagGroupList"
-                                    :key="item.id"
-                                >
-                                    <label
-                                        :title="item.name"
-                                        class="pipeline-selector-label"
-                                    > {{ item.name }} </label>
-                                    <bk-select
-                                        class="sub-label-select"
-                                        :disabled="!(editable || isOverride)"
-                                        :value="labelValues[index]"
-                                        @selected="handleLabelSelect(index, arguments)"
-                                        @clear="handleLabelSelect(index, [[]])"
-                                        multiple
-                                    >
-                                        <bk-option
-                                            v-for="label in item.labels"
-                                            :key="label.id"
-                                            :id="label.id"
-                                            :name="label.name"
-                                        >
-                                        </bk-option>
-                                    </bk-select>
-                                </li>
-                            </template>
-                            <span
-                                class="no-label-placeholder"
-                                v-else
+                            <label
+                                :title="item.name"
+                                class="pipeline-selector-label"
+                            > {{ item.name }} </label>
+                            <bk-select
+                                class="sub-label-select"
+                                :disabled="!editable"
+                                :value="labelValues[index]"
+                                @selected="handleLabelSelect(index, arguments)"
+                                @clear="handleLabelSelect(index, [[]])"
+                                multiple
                             >
-                                {{ $t('noLabels') }}
-                            </span>
-                        </ul>
+                                <bk-option
+                                    v-for="label in item.labels"
+                                    :key="label.id"
+                                    :id="label.id"
+                                    :name="label.name"
+                                >
+                                </bk-option>
+                            </bk-select>
+                        </li>
                     </template>
-                </constraint-wraper>
+                    <span
+                        class="no-label-placeholder"
+                        v-else
+                    >
+                        {{ $t('noLabels') }}
+                    </span>
+                </ul>
             </bk-form-item>
 
             <bk-form-item
@@ -114,10 +83,10 @@
                 :error-msg="errors.first('desc')"
             >
                 <vuex-textarea
+                    :disabled="!editable"
                     name="desc"
                     :value="pipelineSetting.desc"
                     :maxlength="100"
-                    :disabled="!(editable || $route.meta.edit)"
                     :placeholder="$t('pipelineDescInputTips')"
                     v-validate.initial="'max:100'"
                     :handle-change="handleBaseInfoChange"
@@ -139,23 +108,16 @@
 <script>
     import VuexInput from '@/components/atomFormField/VuexInput/index.vue'
     import VuexTextarea from '@/components/atomFormField/VuexTextarea/index.vue'
-    import ConstraintWraper from '@/components/ConstraintWraper.vue'
-    import Logo from '@/components/Logo'
     import SyntaxStyleConfiguration from '@/components/syntaxStyleConfiguration'
-    import { CLASSIFY_ENUM } from '@/hook/useTemplateConstraint'
-    import { TEMPLATE_TYPE } from '@/utils/pipelineConst'
-    import { mapGetters, mapState } from 'vuex'
+    import { mapGetters } from 'vuex'
 
     export default {
         name: 'bkdevops-base-info-setting-tab',
         components: {
-            Logo,
             VuexTextarea,
             VuexInput,
-            SyntaxStyleConfiguration,
-            ConstraintWraper
+            SyntaxStyleConfiguration
         },
-
         props: {
             pipelineSetting: Object,
             editable: {
@@ -166,25 +128,13 @@
         },
         data () {
             return {
-                CLASSIFY_ENUM,
                 settings: {}
             }
         },
         computed: {
-            ...mapState('atom', [
-                'pipelineInfo'
-            ]),
             ...mapGetters({
-                tagGroupList: 'pipelines/getTagGroupList',
-                isTemplate: 'atom/isTemplate',
-                instanceFromTemplate: 'atom/instanceFromTemplate'
+                tagGroupList: 'pipelines/getTagGroupList'
             }),
-            nameLabel () {
-                return this.isTemplate ? this.$t('template.name') : this.$t('pipelineName')
-            },
-            namePlaceholder () {
-                return this.isTemplate ? this.$t('template.nameInputTips') : this.$t('pipelineNameInputTips')
-            },
             projectId () {
                 return this.$route.params.projectId
             },
@@ -208,15 +158,6 @@
             },
             defaultPipelineDialect () {
                 return this.curProject?.properties?.pipelineDialect
-            },
-            templateTypeList () {
-                return Object.keys(TEMPLATE_TYPE).map((key) => {
-                    return {
-                        value: TEMPLATE_TYPE[key],
-                        label: this.$t(`template.${key}`),
-                        icon: `${TEMPLATE_TYPE[key].toLowerCase()}-template`
-                    }
-                })
             }
         },
         watch: {
@@ -264,7 +205,7 @@
                 this.handleBaseInfoChange('labels', labels)
             },
             toManageLabel () {
-                const url = `${WEB_URL_PREFIX}/pipeline/${this.projectId}/group`
+                const url = `${WEB_URL_PREFIX}/pipeline/${this.projectId}/list/group`
                 window.open(url, '_blank')
             },
             inheritedChange (value) {
@@ -297,19 +238,9 @@
         }
         .bk-form-content {
             max-width: 560px;
-            .bk-form-radio-button .bk-radio-button-text {
-                height: 44px;
-                line-height: 44px;
-            }
-            .template-type-radio {
-                display: flex;
-                align-items: center;
-                font-size: 12px;
-                cursor: pointer;
-                grid-gap: 6px;
-            }
         }
         .layout-label {
+            width: 560px;
             height: 24px;
             display: flex;
             justify-content: space-between;
@@ -317,25 +248,6 @@
             .link-text {
                 color: #3A84FF;
                 cursor: pointer;
-            }
-        }
-        .pipeline-label-selector-title {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            align-items: center;
-            font-size: 12px;
-            flex: 1;
-            .pipeline-label-selector-title-manage {
-                color: #3A84FF;
-                cursor: pointer;
-                &.pipeline-label-selector-title-manage-divider:after {
-                    content: '|';
-                    display: inline-block;
-                    width: 1px;
-                    height: 16px;
-                    padding: 0 8px;
-                }
             }
         }
         .pipeline-label-selector {

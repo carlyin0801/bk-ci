@@ -214,11 +214,9 @@ class ProcessDataMigrateService @Autowired constructor(
             // 更新迁移计数器
             updateMigrationCounters(projectId)
             return PreMigrationResult(routingRuleMap)
-        } catch (ignored: Throwable) {
-            logger.error("doPreMigration execute bus failed for project $projectId", ignored)
+        } finally {
             // 解锁项目
             unlockProject(projectId)
-            throw ignored
         }
     }
 

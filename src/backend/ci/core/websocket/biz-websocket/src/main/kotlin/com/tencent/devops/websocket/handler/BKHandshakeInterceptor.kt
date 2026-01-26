@@ -59,8 +59,7 @@ class BKHandshakeInterceptor @Autowired constructor(
         if (request is ServletServerHttpRequest) {
             val sessionId = request.servletRequest.getParameter("sessionId")
             val userId = request.servletRequest.getHeader(AUTH_HEADER_DEVOPS_USER_ID)
-
-            if (!userId.isNullOrBlank() && !sessionId.isNullOrBlank()) {
+            if (userId != null && sessionId != null) {
                 WsRedisUtils.writeSessionIdByRedis(redisOperation, userId, sessionId)
                 logger.info("[WebSocket]-[$userId]-[$sessionId]-connection was successful")
                 SpringContextUtil.getBean(WebsocketService::class.java)
@@ -75,16 +74,6 @@ class BKHandshakeInterceptor @Autowired constructor(
         wsHandler: WebSocketHandler,
         attributes: MutableMap<String, Any>
     ): Boolean {
-        if (request is ServletServerHttpRequest) {
-            val sessionId = request.servletRequest.getParameter("sessionId")
-            val userId = request.servletRequest.getHeader(AUTH_HEADER_DEVOPS_USER_ID)
-
-            if (userId.isNullOrBlank() || sessionId.isNullOrBlank()) {
-                logger.warn("[WebSocket]-[userId=$userId]-[sessionId=$sessionId]-" +
-                    "connection rejected: missing required parameters")
-                return false
-            }
-        }
         return true
     }
 }

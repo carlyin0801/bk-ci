@@ -26,7 +26,6 @@ import com.tencent.devops.auth.pojo.vo.AuthApplyRedirectInfoVo
 import com.tencent.devops.auth.pojo.vo.AuthRedirectGroupInfoVo
 import com.tencent.devops.auth.pojo.vo.ManagerRoleGroupVO
 import com.tencent.devops.auth.pojo.vo.ResourceTypeInfoVo
-import com.tencent.devops.auth.service.AuthResourceGroupFactory
 import com.tencent.devops.auth.service.DeptService
 import com.tencent.devops.auth.service.iam.PermissionApplyService
 import com.tencent.devops.auth.service.iam.PermissionResourceMemberService
@@ -42,6 +41,7 @@ import com.tencent.devops.common.auth.api.pojo.DefaultGroupType
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.service.config.CommonConfig
 import com.tencent.devops.common.web.utils.I18nUtil
+import com.tencent.devops.process.api.user.UserPipelineViewResource
 import com.tencent.devops.project.api.service.ServiceProjectResource
 import com.tencent.devops.project.api.service.ServiceProjectTagResource
 import com.tencent.devops.project.constant.ProjectMessageCode
@@ -69,8 +69,7 @@ class RbacPermissionApplyService @Autowired constructor(
     val itsmService: ItsmService,
     val deptService: DeptService,
     val authResourceGroupApplyDao: AuthResourceGroupApplyDao,
-    val permissionResourceMemberService: PermissionResourceMemberService,
-    val authResourceGroupFactory: AuthResourceGroupFactory
+    val permissionResourceMemberService: PermissionResourceMemberService
 ) : PermissionApplyService {
     @Value("\${auth.iamSystem:}")
     private val systemId = ""
@@ -184,24 +183,21 @@ class RbacPermissionApplyService @Autowired constructor(
             if (!visitProjectPermission)
                 return ""
             bkIamPath = StringBuilder("/$systemId,${AuthResourceType.PROJECT.value},$projectId/")
-
-            // 获取资源的上级资源类型组（流水线组/云桌面组）
-            val resourceGroupType = authResourceGroupFactory.getResourceGroupType(resourceType)
-            if (resourceGroupType != null) {
-                val resourceCode = authResourceCodeConverter.iamCode2Code(
+            if (resourceType == AuthResourceType.PIPELINE_DEFAULT.value) {
+                val pipelineId = authResourceCodeConverter.iamCode2Code(
                     projectCode = projectId,
                     resourceType = resourceType,
                     iamResourceCode = iamResourceCode
                 )
-                // 获取资源所属的资源组（流水线组/云桌面组）
-                val resourceGroupIds = authResourceGroupFactory.getResourceGroupsByResource(
-                    projectCode = projectId,
-                    resourceGroupType = resourceGroupType,
-                    resourceCode = resourceCode
-                )
-                if (resourceGroupIds.isNotEmpty()) {
-                    resourceGroupIds.forEach { resourceGroupId ->
-                        bkIamPath.append("$systemId,$resourceGroupType,$resourceGroupId/")
+                // 获取包含该流水线的所有流水线组
+                val viewIds = client.get(UserPipelineViewResource::class).listViewIdsByPipelineId(
+                    userId = userId,
+                    projectId = projectId,
+                    pipelineId = pipelineId
+                ).data
+                if (viewIds != null && viewIds.isNotEmpty()) {
+                    viewIds.forEach {
+                        bkIamPath.append("$systemId,${AuthResourceType.PIPELINE_GROUP.value},$it/")
                     }
                 }
             }

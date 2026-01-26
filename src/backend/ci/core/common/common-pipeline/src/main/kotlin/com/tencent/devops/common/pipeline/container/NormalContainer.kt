@@ -60,9 +60,8 @@ data class NormalContainer(
     @get:Schema(title = "触发条件", required = false)
     @Deprecated(message = "do not use", replaceWith = ReplaceWith("@see JobControlOption.customVariables"))
     val conditions: List<NameAndValue>? = null,
-    @get:Schema(
-        title =
-            "是否可重试-仅限于构建详情展示重试，目前未作为编排的选项，暂设置为null不存储",
+    @get:Schema(title =
+        "是否可重试-仅限于构建详情展示重试，目前未作为编排的选项，暂设置为null不存储",
         required = false,
         readOnly = true
     )
@@ -102,7 +101,10 @@ data class NormalContainer(
     @get:Schema(title = "当前矩阵子容器的上下文组合（分裂后的子容器特有字段）", required = false)
     var matrixContext: Map<String, String>? = null,
     @get:Schema(title = "分裂后的容器集合（分裂后的父容器特有字段）", required = false)
-    var groupContainers: MutableList<NormalContainer>? = null
+    var groupContainers: MutableList<NormalContainer>? = null,
+    override var template: String? = null,
+    override var ref: String? = null,
+    override var variables: Map<String, String>? = null
 ) : Container {
     companion object {
         const val classType = "normal"
@@ -148,9 +150,5 @@ data class NormalContainer(
             mutexGroup?.timeoutVar = mutexGroup?.timeout.toString()
         }
         super.transformCompatibility()
-    }
-
-    override fun copyElements(elements: List<Element>): Container {
-        return this.copy(elements = elements)
     }
 }

@@ -27,9 +27,7 @@
 
 package com.tencent.devops.repository.service.hub
 
-import com.tencent.devops.common.api.constant.HttpStatus
 import com.tencent.devops.common.api.enums.RepositoryType
-import com.tencent.devops.repository.constant.RepositoryMessageCode
 import com.tencent.devops.repository.pojo.credential.AuthRepository
 import com.tencent.devops.repository.service.RepositoryScmConfigService
 import com.tencent.devops.repository.service.RepositoryService
@@ -107,14 +105,7 @@ class ScmFileApiService @Autowired constructor(
         return invokeApi(
             projectId = projectId,
             repositoryType = repositoryType,
-            repoHashIdOrName = repoHashIdOrName,
-            customErrorMappings = listOf(
-                ScmApiErrorMapping(
-                    httpStatus = HttpStatus.NOT_FOUND.value,
-                    errorCode = RepositoryMessageCode.ERROR_SCM_API_FILE_NOT_FOUND,
-                    params = listOf(ref, path)
-                )
-            )
+            repoHashIdOrName = repoHashIdOrName
         ) { providerProperties, providerRepository ->
             scmApiManager.getFileContent(
                 providerProperties = providerProperties,
@@ -133,14 +124,7 @@ class ScmFileApiService @Autowired constructor(
     ): Content? {
         return invokeApi(
             projectId = projectId,
-            authRepository = authRepository,
-            customErrorMappings = listOf(
-                ScmApiErrorMapping(
-                    httpStatus = HttpStatus.NOT_FOUND.value,
-                    errorCode = RepositoryMessageCode.ERROR_SCM_API_FILE_NOT_FOUND,
-                    params = listOf(ref, path)
-                )
-            )
+            authRepository = authRepository
         ) { providerProperties, providerRepository ->
             scmApiManager.getFileContent(
                 providerProperties = providerProperties,

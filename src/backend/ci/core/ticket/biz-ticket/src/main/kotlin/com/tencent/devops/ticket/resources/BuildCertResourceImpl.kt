@@ -49,19 +49,10 @@ class BuildCertResourceImpl @Autowired constructor(private val certService: Cert
         vmSeqId: String,
         vmName: String,
         certId: String,
-        publicKey: String,
-        padding: Boolean?
+        publicKey: String
     ): Result<CertIOS> {
         checkParams(buildId, vmSeqId, vmName, certId, publicKey)
-        return Result(
-            certService.queryIos(
-                projectId = projectId,
-                buildId = buildId,
-                certId = certId,
-                publicKey = publicKey,
-                padding = padding ?: false
-            )
-        )
+        return Result(certService.queryIos(projectId, buildId, certId, publicKey))
     }
 
     @AuditEntry(actionId = ActionId.CERT_VIEW)
@@ -71,19 +62,10 @@ class BuildCertResourceImpl @Autowired constructor(private val certService: Cert
         vmSeqId: String,
         vmName: String,
         certId: String,
-        publicKey: String,
-        padding: Boolean?
+        publicKey: String
     ): Result<CertAndroid> {
         checkParams(buildId, vmSeqId, vmName, certId, publicKey)
-        return Result(
-            certService.queryAndroid(
-                projectId = projectId,
-                buildId = buildId,
-                certId = certId,
-                publicKey = publicKey,
-                padding = padding ?: false
-            )
-        )
+        return Result(certService.queryAndroid(projectId, buildId, certId, publicKey))
     }
 
     override fun queryEnterprise(
@@ -92,19 +74,10 @@ class BuildCertResourceImpl @Autowired constructor(private val certService: Cert
         vmSeqId: String,
         vmName: String,
         certId: String,
-        publicKey: String,
-        padding: Boolean?
+        publicKey: String
     ): Result<CertEnterprise> {
         checkParams(buildId, vmSeqId, vmName, certId, publicKey)
-        return Result(
-            certService.queryEnterprise(
-                projectId = projectId,
-                buildId = buildId,
-                certId = certId,
-                publicKey = publicKey,
-                padding = padding ?: false
-            )
-        )
+        return Result(certService.queryEnterprise(projectId, buildId, certId, publicKey))
     }
 
     @Suppress("ALL")

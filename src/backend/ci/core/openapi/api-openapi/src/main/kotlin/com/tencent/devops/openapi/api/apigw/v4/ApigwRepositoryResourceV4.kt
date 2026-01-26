@@ -80,10 +80,7 @@ interface ApigwRepositoryResourceV4 {
         projectId: String,
         @Parameter(description = "仓库类型", required = false)
         @QueryParam("repositoryType")
-        repositoryType: ScmType?,
-        @Parameter(description = "代码库标识", required = false)
-        @QueryParam("scmCode")
-        scmCode: String?
+        repositoryType: ScmType?
     ): Result<Page<RepositoryInfo>>
 
     @Operation(summary = "关联代码库", tags = ["v4_app_repository_create", "v4_user_repository_create"])

@@ -1,11 +1,6 @@
 <template>
     <div class="pipeline-import-edit-header">
-        <template-bread-crumb
-            v-if="isTemplate"
-            :template-name="pipeline?.name"
-            :is-loading="!pipeline"
-        />
-        <pipeline-bread-crumb v-else />
+        <pipeline-bread-crumb />
         <mode-switch draft />
         <aside class="pipeline-edit-right-aside">
             <bk-button
@@ -13,6 +8,16 @@
                 :loading="saveStatus"
                 outline
                 theme="primary"
+                v-perm="{
+                    hasPermission: canEdit,
+                    disablePermissionApi: true,
+                    permissionData: {
+                        projectId,
+                        resourceType: 'pipeline',
+                        resourceCode: pipelineId,
+                        action: RESOURCE_ACTION.EDIT
+                    }
+                }"
                 @click="saveDraft"
             >
                 {{ $t("saveDraft") }}
@@ -23,21 +28,16 @@
 
 <script>
     import ModeSwitch from '@/components/ModeSwitch'
-    import TemplateBreadCrumb from '@/components/Template/TemplateBreadCrumb.vue'
+    import { UPDATE_PIPELINE_INFO } from '@/store/modules/atom/constants'
     import {
         RESOURCE_ACTION
     } from '@/utils/permission'
-    import { TEMPLATE_TYPE } from '@/utils/pipelineConst'
-    import {
-        showPipelineCheckMsg
-    } from '@/utils/util'
     import { mapActions, mapGetters, mapState } from 'vuex'
     import PipelineBreadCrumb from './PipelineBreadCrumb.vue'
 
     export default {
         components: {
             PipelineBreadCrumb,
-            TemplateBreadCrumb,
             ModeSwitch
         },
         data () {
@@ -54,7 +54,8 @@
                 'saveStatus',
                 'pipelineWithoutTrigger',
                 'pipelineSetting',
-                'pipelineYaml'
+                'pipelineYaml',
+                'pipelineInfo'
             ]),
             ...mapGetters({
                 isEditing: 'atom/isEditing',
@@ -63,8 +64,11 @@
             projectId () {
                 return this.$route.params.projectId
             },
-            isTemplate () {
-                return !!TEMPLATE_TYPE[this.pipelineSetting?.type]
+            pipelineId () {
+                return this.$route.params.pipelineId
+            },
+            canEdit () {
+                return this.pipelineInfo?.permissions?.canEdit ?? true
             }
         },
         methods: {
@@ -72,10 +76,7 @@
                 'setPipelineEditing',
                 'saveDraftPipeline',
                 'setSaveStatus',
-                'updateContainer',
-                'requestPipelineSummary',
-                'requestTemplateSummary',
-                'saveDraftTemplate'
+                'updateContainer'
             ]),
             formatParams (pipeline) {
                 const params = pipeline.stages[0].containers[0].params
@@ -93,55 +94,6 @@
                 })
             },
 
-            async handleSaveTemplatePipelineDraft (params) {
-                const { data: { templateId, version } } = await this.saveDraftTemplate(params)
-
-                this.$showTips({
-                    message: this.$t('editPage.saveDraftSuccess', [this.pipelineSetting.pipelineName]),
-                    theme: 'success'
-                })
-                this.setPipelineEditing(false)
-
-                await this.requestTemplateSummary({
-                    projectId: this.$route.params.projectId,
-                    templateId
-                })
-
-                this.$router.push({
-                    name: 'templateEdit',
-                    params: {
-                        ...this.$route.params,
-                        type: 'pipeline',
-                        version,
-                        templateId
-                    }
-                })
-            },
-            async handleSavePipelineDraft (params) {
-                const { data: { pipelineId } } = await this.saveDraftPipeline(params)
-
-                this.setPipelineEditing(false)
-
-                this.$bkMessage({
-                    theme: 'success',
-                    message: this.$t('editPage.saveDraftSuccess', [this.pipelineSetting.pipelineName]),
-                    limit: 1
-                })
-
-                await this.requestPipelineSummary({
-                    projectId: this.$route.params.projectId,
-                    pipelineId
-                })
-
-                this.$router.replace({
-                    name: 'pipelinesEdit',
-                    params: {
-                        projectId: this.$route.params.projectId,
-                        pipelineId
-                    }
-                })
-            },
-
             async saveDraft () {
                 try {
                     this.setSaveStatus(true)
@@ -149,53 +101,57 @@
                         stages: [
                             this.pipeline.stages[0],
                             ...this.pipelineWithoutTrigger.stages
-                        ],
-                        ...(this.isTemplate && { name: this.pipelineSetting.pipelineName })
+                        ]
                     })
                     const { pipelineSetting, checkPipelineInvalid, pipelineYaml } = this
                     const { inValid, message } = checkPipelineInvalid(pipeline.stages, pipelineSetting)
                     const { projectId } = this.$route.params
-                    const model = {
-                        ...pipeline,
-                        name: pipelineSetting.pipelineName,
-                        desc: pipelineSetting.desc
-                    }
                     if (inValid) {
                         throw new Error(message)
                     }
                     // 清除流水线参数渲染过程中添加的key
                     this.formatParams(pipeline)
-                    const params = this.isTemplate
-                        ? {
-                            projectId,
-                            storageType: this.pipelineMode,
-                            model,
-                            templateSetting: pipelineSetting,
-                            yaml: pipelineYaml,
-                            type: pipelineSetting?.type
-                        }
-                        : {
-                            projectId,
-                            storageType: this.pipelineMode,
-                            modelAndSetting: {
-                                model,
-                                setting: pipelineSetting
-                            },
-                            yaml: pipelineYaml
-                        }
 
                     // 请求执行构建
-                    if (this.isTemplate) {
-                        await this.handleSaveTemplatePipelineDraft(params)
-                    } else {
-                        await this.handleSavePipelineDraft(params)
-                    }
+                    const { data: { version, versionName, pipelineId } } = await this.saveDraftPipeline({
+                        projectId,
+                        storageType: this.pipelineMode,
+                        modelAndSetting: {
+                            model: {
+                                ...pipeline,
+                                name: pipelineSetting.pipelineName,
+                                desc: pipelineSetting.desc
+                            },
+                            setting: pipelineSetting
+                        },
+                        yaml: pipelineYaml
+                    })
+                    this.setPipelineEditing(false)
+                    this.$store.commit(`atom/${UPDATE_PIPELINE_INFO}`, {
+                        canDebug: true,
+                        canRelease: false,
+                        version,
+                        versionName
+                    })
+
+                    this.$bkMessage({
+                        theme: 'success',
+                        message: this.$t('editPage.saveDraftSuccess', [pipelineSetting.pipelineName]),
+                        limit: 1
+                    })
+                    this.$router.replace({
+                        name: 'pipelinesEdit',
+                        params: {
+                            projectId,
+                            pipelineId
+                        }
+                    })
                 } catch (e) {
-                    if (e.code === 2101244) {
-                        showPipelineCheckMsg(this.$bkMessage, e.message, this.$createElement)
-                    } else {
-                        this.handleError(e)
-                    }
+                    this.handleError(e, {
+                        projectId: this.$route.params.projectId,
+                        resourceCode: this.pipeline.pipelineId,
+                        action: this.$permissionResourceAction.EDIT
+                    })
                 } finally {
                     this.setSaveStatus(false)
                 }

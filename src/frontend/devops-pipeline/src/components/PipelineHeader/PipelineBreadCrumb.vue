@@ -6,11 +6,7 @@
             :back-router="manageRoute"
         >
             <template #prefix>
-                <Logo
-                    :size="16"
-                    class="icon-pipeline"
-                    name="pipeline"
-                />
+                <span class="devops-icon icon-pipeline"></span>
             </template>
             <template v-if="!isLoading">
                 <bk-breadcrumb-item
@@ -43,12 +39,10 @@
     import { mapGetters, mapState } from 'vuex'
     import BuildNumSwitcher from './BuildNumSwitcher'
     import PipelineNameCrumbItem from './PipelineNameCrumbItem'
-    import Logo from '@/components/Logo'
 
     export default {
         components: {
             PipelineNameCrumbItem,
-            Logo,
             BuildNumSwitcher
         },
         props: {
@@ -127,6 +121,7 @@
                 ]
             }
         },
+        // <build-num-switcher v-bind="buildNumConf" />
         watch: {
             'pipelineInfo.pipelineName': {
                 handler (val) {
@@ -160,9 +155,10 @@
             margin: 0 8px;
             font-size: 12px;
         }
-        .icon-pipeline {
-            margin-top: 5px;
-            color: #3A84FF;
+        .devops-icon.icon-pipeline {
+            font-size: 16px;
+            color: #63656E;
+            font-weight: 700;
         }
         .build-num-switcher-wrapper {
             display: grid;

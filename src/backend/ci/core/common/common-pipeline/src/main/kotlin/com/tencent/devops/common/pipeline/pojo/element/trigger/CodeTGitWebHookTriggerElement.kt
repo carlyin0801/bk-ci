@@ -45,8 +45,6 @@ data class CodeTGitWebHookTriggerElement(
     override var id: String? = null,
     @get:Schema(title = "状态", required = false)
     override var status: String? = null,
-    @get:Schema(title = "插件用户ID", required = false)
-    override var stepId: String? = null,
     @get:Schema(title = "数据", required = true)
     val data: CodeTGitWebHookTriggerData
 ) : WebHookTriggerElement(name, id, status) {

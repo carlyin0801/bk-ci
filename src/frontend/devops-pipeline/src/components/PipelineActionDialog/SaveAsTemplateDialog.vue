@@ -14,10 +14,9 @@
         @cancel="cancel"
     >
         <bk-form
-            ref="formRef"
             v-if="isSaveAsTemplateShow"
             v-bkloading="{ isLoading: isSubmiting }"
-            :model="model"
+            :model="formModel"
             label-width="120"
         >
             <bk-form-item
@@ -25,10 +24,8 @@
                 :key="item.name"
                 :desc="item.desc"
                 :property="item.name"
-                :required="item.required"
                 :rules="item.rules"
                 :label="$t(`template.${item.label}`)"
-                error-display-type="normal"
             >
                 <bk-input
                     v-if="item.name === 'templateName'"
@@ -86,22 +83,19 @@
                         name: 'templateName',
                         label: 'name',
                         placeholder: 'nameInputTips',
-                        required: true,
                         rules: [
                             {
                                 required: true,
-                                message: this.$t('template.nameInputTips'),
-                                trigger: 'change'
+                                message: this.$t('template.nameInputTips')
                             },
                             {
                                 max: 128,
-                                message: this.$t('pipelineNameInputTips'),
-                                trigger: 'change'
+                                message: this.$t('pipelineNameInputTips')
                             }
                         ]
                     },
                     {
-                        name: 'isCopySetting',
+                        name: 'applySetting',
                         label: 'applySetting',
                         desc: this.$t('template.tipsSetting')
                     }
@@ -113,15 +107,11 @@
             reset () {
                 this.model = {
                     templateName: '',
-                    isCopySetting: false
+                    applySetting: false
                 }
             },
             async submit () {
                 if (this.isSubmiting) return
-                
-                const valid = await this.$refs.formRef.validate()
-                if (!valid) return
-
                 let message = this.$t('newlist.saveAsTempSuc')
                 let theme = 'success'
                 try {

@@ -155,7 +155,6 @@ class StoreArchiveServiceImpl @Autowired constructor(
                 pkgPath = storePkgEnvRequest.pkgRepoPath,
                 target = storePkgEnvRequest.target,
                 shaContent = storePkgEnvRequest.shaContent,
-                sha256Content = storePkgEnvRequest.sha256Content,
                 preCmd = storePkgEnvRequest.preCmd,
                 osName = storePkgEnvRequest.osName,
                 osArch = storePkgEnvRequest.osArch,

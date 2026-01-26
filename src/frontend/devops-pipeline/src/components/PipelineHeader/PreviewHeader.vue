@@ -20,7 +20,12 @@
                 v-perm="{
                     hasPermission: canExecute,
                     disablePermissionApi: true,
-                    permissionData: execPermData
+                    permissionData: {
+                        projectId: projectId,
+                        resourceType: 'pipeline',
+                        resourceCode: pipelineId,
+                        action: RESOURCE_ACTION.EXECUTE
+                    }
                 }"
                 @click="handleClick"
             >
@@ -42,7 +47,12 @@
                     v-perm="{
                         hasPermission: canExecute,
                         disablePermissionApi: true,
-                        permissionData: execPermData
+                        permissionData: {
+                            projectId: projectId,
+                            resourceType: 'pipeline',
+                            resourceCode: pipelineId,
+                            action: RESOURCE_ACTION.EXECUTE
+                        }
                     }"
                     @click="handleClick"
                 >
@@ -61,8 +71,7 @@
 <script>
     import { UPDATE_PREVIEW_PIPELINE_NAME, bus } from '@/utils/bus'
     import {
-        RESOURCE_ACTION,
-        RESOURCE_TYPE
+        RESOURCE_ACTION
     } from '@/utils/permission'
     import { mapActions, mapGetters, mapState } from 'vuex'
     import PipelineBreadCrumb from './PipelineBreadCrumb'
@@ -89,14 +98,6 @@
             ]),
             RESOURCE_ACTION () {
                 return RESOURCE_ACTION
-            },
-            execPermData () {
-                return {
-                    projectId: this.projectId,
-                    resourceType: RESOURCE_TYPE.PIPELINE,
-                    resourceCode: this.spipelineId,
-                    action: RESOURCE_ACTION.EXECUTE
-                }
             },
             title () {
                 return this.$t(`details.${this.isDebugPipeline ? 'debug' : 'exec'}Preview`)

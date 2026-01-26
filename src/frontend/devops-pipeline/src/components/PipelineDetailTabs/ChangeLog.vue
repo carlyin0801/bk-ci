@@ -40,7 +40,7 @@
 
 <script>
     import { convertTime } from '@/utils/util'
-    import { mapActions, mapGetters } from 'vuex'
+    import { mapActions } from 'vuex'
     export default {
         data () {
             return {
@@ -56,9 +56,6 @@
             }
         },
         computed: {
-            ...mapGetters({
-                isTemplate: 'atom/isTemplate'
-            }),
             columns () {
                 return [{
                     prop: 'operator',
@@ -66,7 +63,9 @@
                 }, {
                     prop: 'operateTime',
                     label: this.$t('audit.operateTime'),
-                    formatter: row => convertTime(row.operateTime)
+                    formatter: (row) => {
+                        return convertTime(row.operateTime)
+                    }
                 }, {
                     prop: 'operationLogStr',
                     label: this.$t('audit.operateLogDesc')
@@ -88,29 +87,19 @@
                 'requestPipelineChangelogs',
                 'requestPipelineOperatorList'
             ]),
-            ...mapActions('templates', [
-                'requestTemplateChangelogs',
-                'requestTemplateOperatorList'
-            ]),
-
-            async getChangelogs (page = this.pagination.current, limit = this.pagination.limit) {
-                this.isLoading = true
+            async getChangelogs (page, limit) {
                 try {
-                    const { projectId, pipelineId, templateId } = this.$route.params
-
-                    const params = {
+                    this.isLoading = true
+                    const { projectId, pipelineId } = this.$route.params
+                    const { limit: pageSize, current } = this.pagination
+                    const changeLogs = await this.requestPipelineChangelogs({
                         projectId,
+                        pipelineId,
                         creator: this.filterCreator,
-                        page,
-                        pageSize: limit,
-                        archiveFlag: this.$route.query.archiveFlag,
-                        ...(this.isTemplate ? { templateId } : { pipelineId })
-                    }
-                
-                    const changeLogs = pipelineId
-                        ? await this.requestPipelineChangelogs(params)
-                        : await this.requestTemplateChangelogs(params)
-                
+                        page: page ?? current,
+                        pageSize: limit ?? pageSize,
+                        archiveFlag: this.$route.query.archiveFlag
+                    })
                     Object.assign(this.pagination, {
                         current: changeLogs.page,
                         limit: changeLogs.pageSize,
@@ -123,22 +112,17 @@
                     this.isLoading = false
                 }
             },
-
-            async init (page = this.pagination.current, limit = this.pagination.limit) {
-                const { projectId, pipelineId, templateId } = this.$route.params
-                const params = {
-                    projectId,
-                    archiveFlag: this.$route.query.archiveFlag,
-                    ...(this.isTemplate ? { templateId } : { pipelineId })
-                }
+            async init (page, limit) {
                 try {
-                    const fetchOperatorList = templateId
-                        ? this.requestTemplateOperatorList(params)
-                        : this.requestPipelineOperatorList(params)
+                    const { projectId, pipelineId } = this.$route.params
 
                     const [, operatorList] = await Promise.all([
                         this.getChangelogs(page, limit),
-                        fetchOperatorList
+                        this.requestPipelineOperatorList({
+                            projectId,
+                            pipelineId,
+                            archiveFlag: this.$route.query.archiveFlag
+                        })
                     ])
                     this.operatorList = operatorList
                 } catch (error) {

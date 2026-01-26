@@ -51,8 +51,7 @@ class BuildAgentCertResourceImpl @Autowired constructor(
         secretKey: String,
         buildId: String,
         certId: String,
-        publicKey: String,
-        padding: Boolean?
+        publicKey: String
     ): Result<CertIOS> {
         if (buildId.isBlank()) {
             throw ParamBlankException("Invalid buildId")
@@ -63,15 +62,7 @@ class BuildAgentCertResourceImpl @Autowired constructor(
         if (publicKey.isBlank()) {
             throw ParamBlankException("Invalid publicKey")
         }
-        return Result(
-            certService.queryIos(
-                projectId = projectId,
-                buildId = buildId,
-                certId = certId,
-                publicKey = publicKey,
-                padding = padding ?: false
-            )
-        )
+        return Result(certService.queryIos(projectId, buildId, certId, publicKey))
     }
 
     @AuditEntry(actionId = ActionId.CERT_VIEW)
@@ -81,8 +72,7 @@ class BuildAgentCertResourceImpl @Autowired constructor(
         secretKey: String,
         buildId: String,
         certId: String,
-        publicKey: String,
-        padding: Boolean?
+        publicKey: String
     ): Result<CertAndroid> {
         if (buildId.isBlank()) {
             throw ParamBlankException("Invalid buildId")
@@ -98,8 +88,7 @@ class BuildAgentCertResourceImpl @Autowired constructor(
                 projectId = projectId,
                 buildId = buildId,
                 certId = certId,
-                publicKey = publicKey,
-                padding = padding ?: false
+                publicKey = publicKey
             )
         )
     }

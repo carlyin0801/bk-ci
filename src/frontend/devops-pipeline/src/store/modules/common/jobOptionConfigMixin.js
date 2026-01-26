@@ -40,7 +40,7 @@ const jobOptionConfigMixin = {
                     default: false
                 },
                 timeoutVar: {
-                    rule: { timeoutsRule: this.pipelineDialect },
+                    rule: { timeoutsRule: true },
                     component: 'vuex-input',
                     label: this.$t('storeMap.mutualTimeout'),
                     desc: this.$t('storeMap.timeoutDesc'),
@@ -241,7 +241,7 @@ const jobOptionConfigMixin = {
                         {
                             key: 'prepareTimeout',
                             type: 'groupItem',
-                            rule: { timeoutsRule: this.pipelineDialect },
+                            rule: { timeoutsRule: true },
                             component: 'composite-input',
                             appendText: this.$t('storeMap.minutes'),
                             labelWidth: 90,
@@ -254,7 +254,7 @@ const jobOptionConfigMixin = {
                         {
                             key: 'timeoutVar',
                             type: 'groupItem',
-                            rule: { timeoutsRule: this.pipelineDialect },
+                            rule: { timeoutsRule: true },
                             component: 'composite-input',
                             appendText: this.$t('storeMap.minutes'),
                             labelWidth: 90,
@@ -267,7 +267,7 @@ const jobOptionConfigMixin = {
                     ]
                 },
                 timeoutVar: {
-                    rule: { timeoutsRule: this.pipelineDialect },
+                    rule: { timeoutsRule: true },
                     component: 'vuex-input',
                     required: true,
                     label: this.$t('storeMap.jobTimeout'),

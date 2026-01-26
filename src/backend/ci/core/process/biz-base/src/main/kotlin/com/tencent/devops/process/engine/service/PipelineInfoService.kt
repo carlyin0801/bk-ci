@@ -32,7 +32,6 @@ import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildAtomEle
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildLessAtomElement
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.process.engine.dao.PipelineInfoDao
-import com.tencent.devops.process.engine.pojo.PipelineInfo
 import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -46,11 +45,6 @@ class PipelineInfoService @Autowired constructor(
 
     fun getPipelineName(projectId: String, pipelineId: String): String? {
         return pipelineInfoDao.getPipelineInfo(dslContext, projectId, pipelineId)?.pipelineName
-    }
-
-    fun getPipelineInfo(projectId: String, pipelineId: String): PipelineInfo? {
-        val record = pipelineInfoDao.getPipelineInfo(dslContext, projectId, pipelineId)
-        return record?.let { pipelineInfoDao.convert(it, null) }
     }
 
     // 敏感入参解析

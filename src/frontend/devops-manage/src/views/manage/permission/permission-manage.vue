@@ -30,6 +30,7 @@
               v-model="searchValue"
               :data="searchData"
               unique-select
+              max-height="32"
               class="content-btn-search"
               :placeholder="filterTips"
               :key="searchName"

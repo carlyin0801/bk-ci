@@ -92,7 +92,7 @@
                     </bk-table-column>
                     <bk-table-column
                         :label="$t('operate')"
-                        :width="250"
+                        :width="320"
                         prop="operate"
                         fixed="right"
                     >
@@ -101,7 +101,7 @@
                             class="pipeline-history-version-operate"
                         >
                             <bk-button
-                                v-if="props.row.isDraft && !isTemplate"
+                                v-if="props.row.isDraft"
                                 text
                                 @click="goDebugRecords"
                             >
@@ -111,7 +111,7 @@
                                 v-if="props.row.canRollback && !archiveFlag"
                                 :has-permission="canEdit"
                                 :version="props.row.version"
-                                :rollback-id="isTemplate ? $route.params.templateId : $route.params.pipelineId"
+                                :pipeline-id="$route.params.pipelineId"
                                 :project-id="$route.params.projectId"
                                 :version-name="props.row.versionName"
                                 :draft-base-version-name="draftBaseVersionName"
@@ -179,8 +179,7 @@
         computed: {
             ...mapState('atom', ['pipelineInfo']),
             ...mapGetters({
-                draftBaseVersionName: 'atom/getDraftBaseVersionName',
-                isTemplate: 'atom/isTemplate'
+                draftBaseVersionName: 'atom/getDraftBaseVersionName'
             }),
             releaseVersion () {
                 return this.pipelineInfo?.releaseVersion
@@ -210,7 +209,7 @@
                 }, {
                     prop: 'creator',
                     width: 120,
-                    label: this.isTemplate ? this.$t('creator') : this.$t('template.lastModifiedBy')
+                    label: this.$t('creator')
                 }, {
                     prop: 'updateTime',
                     label: this.$t('lastUpdateTime'),
@@ -222,7 +221,7 @@
                 }, {
                     prop: 'updater',
                     width: 120,
-                    label: this.isTemplate ? this.$t('template.lastModifiedBy') : this.$t('audit.operator')
+                    label: this.$t('audit.operator')
                 }]
             },
             filterTips () {
@@ -231,14 +230,13 @@
             filterData () {
                 return [{
                     name: this.$t('version'),
-                    default: true,
                     id: 'versionName'
                 }, {
                     name: this.$t('versionDesc'),
                     id: 'description'
                 }, {
-                    name: this.isTemplate ? this.$t('template.lastModifiedBy') : this.$t('audit.operator'),
-                    id: 'updater'
+                    name: this.$t('audit.operator'),
+                    id: 'creator'
                 }]
             },
             filterQuery () {
@@ -265,10 +263,8 @@
             ...mapActions({
                 requestPipelineSummary: 'atom/requestPipelineSummary',
                 requestPipelineVersionList: 'pipelines/requestPipelineVersionList',
-                requestTemplateVersionList: 'templates/requestTemplateVersionList',
                 deletePipelineVersion: 'pipelines/deletePipelineVersion',
-                deleteTempalteVersion: 'templates/deleteTempalteVersion',
-                requestTemplateSummary: 'atom/requestTemplateSummary'
+                setHistoryPageStatus: 'pipelines/setHistoryPageStatus'
             }),
             handleShown () {
                 this.handlePageChange(1)
@@ -300,14 +296,12 @@
                 })
             },
             async getPipelineVersions (page) {
-                const { projectId, pipelineId, templateId } = this.$route.params
-                const dataSource = this.isTemplate ? this.requestTemplateVersionList : this.requestPipelineVersionList
-                const param = this.isTemplate ? { templateId } : { pipelineId }
-                const res = await dataSource({
+                const { projectId, pipelineId } = this.$route.params
+                const res = await this.requestPipelineVersionList({
                     projectId,
+                    pipelineId,
                     page,
                     pageSize: this.pagination.limit,
-                    ...param,
                     archiveFlag: this.archiveFlag,
                     ...this.filterQuery
                 })
@@ -331,32 +325,27 @@
             },
             async deleteVersion (row) {
                 if (this.releaseVersion !== row.version) {
-                    const { projectId, pipelineId, templateId } = this.$route.params
+                    const { projectId, pipelineId } = this.$route.params
                     const content = this.$t('deleteVersionConfirm', [row.versionName])
                     const confirm = await navConfirm({
                         content,
                         type: 'error',
                         theme: 'danger'
                     })
-                    const params = {
-                        projectId,
-                        version: row.version,
-                        ...(this.isTemplate ? { templateId } : { pipelineId })
-                    }
                     if (confirm) {
                         try {
-                            if (this.isTemplate) {
-                                await this.deleteTempalteVersion(params)
-                                this.requestTemplateSummary(this.$route.params)
-                            } else {
-                                await this.deletePipelineVersion(params)
-                                this.requestPipelineSummary(this.$route.params)
-                            }
+                            await this.deletePipelineVersion({
+                                projectId,
+                                pipelineId,
+                                version: row.version
+                            })
                             this.handlePageChange(1)
                             this.$showTips({
                                 message: this.$t('delete') + this.$t('version') + this.$t('success'),
                                 theme: 'success'
                             })
+
+                            this.requestPipelineSummary(this.$route.params)
                         } catch (err) {
                             this.$showTips({
                                 message: err.message || err,
@@ -417,7 +406,6 @@
                 > span {
                     flex-shrink: 0;
                     font-size: 16px;
-                    line-height: 16px;
                 }
                 &.active-version-name .icon-check-circle {
                     color: #2DCB56;

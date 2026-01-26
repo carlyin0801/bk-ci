@@ -11,9 +11,9 @@
                 disablePermissionApi: typeof hasPermission === 'boolean',
                 permissionData: {
                     projectId: projectId,
-                    resourceType,
-                    resourceCode: rollbackId,
-                    action: resourceAction
+                    resourceType: 'pipeline',
+                    resourceCode: pipelineId,
+                    action: RESOURCE_ACTION.EDIT
                 }
             }"
             @click.stop="handleClick"
@@ -64,9 +64,7 @@
 
 <script>
     import {
-        RESOURCE_ACTION,
-        RESOURCE_TYPE,
-        TEMPLATE_RESOURCE_ACTION
+        RESOURCE_ACTION
     } from '@/utils/permission'
     import { pipelineTabIdMap } from '@/utils/pipelineConst'
     import dayjs from 'dayjs'
@@ -104,7 +102,7 @@
                 type: String,
                 required: true
             },
-            rollbackId: {
+            pipelineId: {
                 type: String,
                 required: true
             },
@@ -131,17 +129,8 @@
                 'pipelineInfo'
             ]),
             ...mapGetters({
-                hasDraftPipeline: 'atom/hasDraftPipeline',
-                isTemplate: 'atom/isTemplate'
+                hasDraftPipeline: 'atom/hasDraftPipeline'
             }),
-            resourceType () {
-                return this.isTemplate ? RESOURCE_TYPE.TEMPLATE : RESOURCE_TYPE.PIPELINE
-            },
-            resourceAction () {
-                return this.isTemplate
-                    ? TEMPLATE_RESOURCE_ACTION.EDIT
-                    : RESOURCE_ACTION.EDIT
-            },
             isRollback () {
                 const { baseVersion, releaseVersion } = (this.pipelineInfo ?? {})
                 const isReleaseVersion = this.version === releaseVersion
@@ -179,26 +168,25 @@
         methods: {
             ...mapActions({
                 requestPipelineSummary: 'atom/requestPipelineSummary',
-                requestTemplateSummary: 'atom/requestTemplateSummary',
-                rollbackPipelineVersion: 'pipelines/rollbackPipelineVersion',
-                rollbackTemplateVersion: 'templates/rollbackTemplateVersion',
-                checkTemplatePipelineRollback: 'templates/checkTemplatePipelineRollback'
+                rollbackPipelineVersion: 'pipelines/rollbackPipelineVersion'
             }),
-            async handleClick () {
+            handleClick () {
                 if (this.isRollback) {
                     if (this.isTemplatePipeline) {
-                        const res = await this.checkTemplatePipelineRollback({
-                            ...this.$route.params,
-                            version: this.version
+                        this.$bkInfo({
+                            subTitle: this.$t('templateRollbackBackTips'),
+                            confirmFn: () => {
+                                this.$router.push({
+                                    name: 'createInstance',
+                                    params: {
+                                        projectId: this.projectId,
+                                        templateId: this.pipelineInfo?.templateId,
+                                        curVersionId: this.pipelineInfo?.templateVersion
+                                    },
+                                    hash: `#${this.pipelineId}`
+                                })
+                            }
                         })
-                        if (res.data) {
-                            this.showDraftConfirmDialog()
-                        } else {
-                            this.$showTips({
-                                theme: 'error',
-                                message: this.$t('template.templatePipelineRollbackNotAllowedTips')
-                            })
-                        }
                     } else {
                         this.showDraftConfirmDialog()
                     }
@@ -220,59 +208,36 @@
                 try {
                     this.loading = true
 
-                    let res
+                    const { version } = await this.rollbackPipelineVersion({
+                        ...this.$route.params,
+                        version: this.version
+                    })
 
-                    if (this.isTemplate) {
-                        res = await this.rollbackTemplateVersion({
-                            ...this.$route.params,
-                            version: this.version
-                        })
-                        await this.requestTemplateSummary(this.$route.params)
-                    } else {
-                        res = await this.rollbackPipelineVersion({
-                            ...this.$route.params,
-                            version: this.version
-                        })
-                        await this.requestPipelineSummary(this.$route.params)
-                    }
+                    await this.requestPipelineSummary(this.$route.params)
 
-                    if (res.version) {
-                        this.goEdit(res.version, true)
+                    if (version) {
+                        this.goEdit(version)
                     }
                 } catch (error) {
                     this.handleError(error, {
                         projectId: this.projectId,
-                        resourceType: this.resourceType,
-                        resourceCode: this.rollbackId,
-                        action: this.resourceAction
+                        resourceCode: this.pipelineId,
+                        action: this.$permissionResourceAction.EDIT
                     })
                 } finally {
                     this.loading = false
                 }
             },
-            goEdit (version, rollback = false) {
-                const routerName = this.isTemplate ? 'templateEdit' : 'pipelinesEdit'
-                const params = {
-                    ...this.$route.params,
-                    version,
-                }
-                const query = {
-                    ...(rollback || this.isRollback
-                        ? {
-                            type: 'rollback',
-                            versionName: this.versionName,
-                        } : {}
-                    ),
-                    ...(!this.isTemplate
-                        ? {
-                            tab: pipelineTabIdMap[this.$route.params.type] ?? 'pipeline'
-                        } : {}
-                    )
-                }
+            goEdit (version) {
                 this.$router.push({
-                    name: routerName,
-                    params,
-                    query
+                    name: 'pipelinesEdit',
+                    params: {
+                        ...this.$route.params,
+                        version
+                    },
+                    query: {
+                        tab: pipelineTabIdMap[this.$route.params.type] ?? 'pipeline'
+                    }
                 })
             }
         }

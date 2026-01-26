@@ -33,7 +33,8 @@ enum class PublicVarTypeEnum {
     CONSTANT, // 常量
     VARIABLE; // 变量
 
-    fun getI18n(): String {
-        return I18nUtil.getCodeLanMessage("PUBLIC_VAR_TYPE_${this.name}")
+    companion object {
+        fun getTypeDescription(type: PublicVarTypeEnum)
+        = I18nUtil.getCodeLanMessage("PUBLIC_VAR_TYPE_$type")
     }
 }

@@ -11,13 +11,12 @@
             >
                 <component
                     :is="obj.component"
-                    v-validate.initial="Object.assign({}, { crontabArrayRule: obj.required && obj.component === 'timer-cron-tab' })"
+                    v-bind="obj"
                     :name="key"
                     :value="element[key]"
                     :element="element"
-                    :disabled="disabled || !checkCanOverride(obj)"
+                    :disabled="disabled"
                     :handle-change="handleChange"
-                    v-bind="obj"
                 />
             </form-field>
         </template>
@@ -25,10 +24,10 @@
 </template>
 
 <script>
-    import TimerCronTab from '@/components/atomFormField/TimerCrontab/'
-    import BranchParameterArray from '../../AtomFormComponent/BranchParameterArray/index'
     import validMixins from '../../validMixins'
     import atomMixin from '../atomMixin'
+    import TimerCronTab from '@/components/atomFormField/TimerCrontab/'
+    import BranchParameterArray from '../../AtomFormComponent/BranchParameterArray/index'
     import CodelibSelector from './CodelibSelector'
     export default {
         components: {
@@ -37,23 +36,6 @@
             CodelibSelector
         },
         mixins: [atomMixin, validMixins],
-        computed: {
-            disabled () {
-                return this.element?.disabled ?? false
-            }
-        },
-        watch: {
-            element: {
-                handler (newVal, oldVal) {
-                    this.$nextTick(() => {
-                        if (this.$validator) {
-                            this.$validator.validateAll()
-                        }
-                    })
-                },
-                deep: true
-            }
-        },
         methods: {
             updateProps (newParam) {
                 this.updateAtom({

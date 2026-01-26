@@ -2,11 +2,16 @@
     <section class="sub-header">
         <div class="sub-header-left">
             <slot name="left">
-                <logo
-                    size="20"
-                    name="pipeline"
-                    slot="logo"
-                />
+                <span
+                    class="default-logo fl"
+                >
+                    <logo
+                        size="24"
+                        name="pipeline"
+                        slot="logo"
+                    />
+                </span>
+
                 <span class="default-title fl">
                     <bk-breadcrumb
                         separator-class="devops-icon icon-angle-right"
@@ -25,7 +30,6 @@
                         </bk-breadcrumb-item>
                     </bk-breadcrumb>
                 </span>
-                <slot name="middle"></slot>
             </slot>
         </div>
         <div class="sub-header-right">
@@ -85,8 +89,10 @@
             display: flex;
             flex: 1;
             align-items: center;
-            justify-content: center;
-            grid-gap: 8px;
+        }
+        .fl {
+            display: flex;
+            align-items: center;
         }
         &-right {
             display: flex;

@@ -21,6 +21,10 @@ import {
     UPDATE_CURRENT_TEMPLATE
 } from '@/store/constants'
 
+import {
+
+} from './constants'
+
 const prefix = 'store/api'
 const processPrefix = 'process/api'
 const Vue = window.Vue
@@ -104,10 +108,8 @@ export const actions = {
     /**
      * 模板列表
      */
-    requestTemplateList ({ commit }, params) {
-        return vue.$ajax.get(`${prefix}/user/market/desk/template/v2/list`, {
-            params
-        })
+    requestTemplateList ({ commit }, { templateName, page, pageSize }) {
+        return vue.$ajax.get(`${prefix}/user/market/desk/template/list?templateName=${templateName}&page=${page}&pageSize=${pageSize}`)
     },
     /*
      * 模板市场首页
@@ -126,8 +128,8 @@ export const actions = {
     /**
      * 获取流水线项目模板
      */
-    requestPipelineTemplate ({ commit }, params) {
-        return vue.$ajax.post(`${processPrefix}/user/pipeline/template/v2/${params.projectId}/list/simple`, params)
+    requestPipelineTemplate ({ commit }, { projectCode }) {
+        return vue.$ajax.get(`${processPrefix}/user/templates/projects/${projectCode}/templates?templateType=CUSTOMIZE&storeFlag=false`)
     },
 
     /**
@@ -151,26 +153,15 @@ export const actions = {
     /**
      * 获取模板标签
      */
-    requestTplLabel () {
+    requestTplLabel ({ commit }) {
         return vue.$ajax.get(`${prefix}/user/market/template/label/labels`)
     },
 
     /**
-     * 新版上架模板
+     * 上架模板
      */
-    releaseTemplate (_, params) {
-        return vue.$ajax.put(`${prefix}/user/market/desk/template/v2/release`, params)
-    },
-
-    requestTemplateVersionList (_, params) {
-        return vue.$ajax.post(`${processPrefix}/user/pipeline/template/v2/${params.projectId}/${params.templateId}/versions`, params)
-    },
-
-    /**
-     * 模板版本上架
-     */
-    releaseTemplateVersion (_, params) {
-        return vue.$ajax.put(`${prefix}/user/market/desk/template/v2/release/versions`, params)
+    editTemplate ({ commit }, { params }) {
+        return vue.$ajax.put(`${prefix}/user/market/desk/template/release`, params)
     },
 
     /**
@@ -181,10 +172,24 @@ export const actions = {
     },
 
     /**
+     * 根据templateCode获取模板详情
+     */
+    requestTemplate ({ commit }, templateCode) {
+        return vue.$ajax.get(`${prefix}/user/market/template/templateCodes/${templateCode}`)
+    },
+
+    /**
+     * 根据templateId获取模板详情
+     */
+    requestTempIdDetail ({ commit }, { templateId }) {
+        return vue.$ajax.get(`${prefix}/user/market/template/templateIds/${templateId}`)
+    },
+
+    /**
      * 获取模板发布进度
      */
-    requestTplRelease ({ commit }, templateCode) {
-        return vue.$ajax.get(`${prefix}/user/market/desk/template/release/process/templateCodes/${templateCode}`)
+    requestTplRelease ({ commit }, { templateId }) {
+        return vue.$ajax.get(`${prefix}/user/market/desk/template/release/process/${templateId}`)
     },
 
     /**
@@ -211,8 +216,8 @@ export const actions = {
     /**
      * 取消发布模板
      */
-    cancelReleaseTemplate ({ commit }, templateCode) {
-        return vue.$ajax.put(`${prefix}/user/market/desk/template/release/cancel/templateCodes/${templateCode}`)
+    cancelReleaseTemplate ({ commit }, { templateId }) {
+        return vue.$ajax.put(`${prefix}/user/market/desk/template/release/cancel/templateIds/${templateId}`)
     },
     
     /**
@@ -225,37 +230,19 @@ export const actions = {
     /**
      * 安装模板
      */
-    installTemplate ({ commit }, params) {
-        return vue.$ajax.post(`${prefix}/user/market/template/install/v2`, params)
+    installTemplate ({ commit }, { params }) {
+        return vue.$ajax.post(`${prefix}/user/market/template/install`, params)
     },
 
     /**
      * 下架模板
      */
-    offlineTemplate (_, { templateCode, ...params }) {
-        return vue.$ajax.put(`${prefix}/user/market/desk/template/v2/offline/templateCodes/${templateCode}/versions`, params)
-    },
-
-    /**
-     * 流水线模板管理员校验
-     */
-    templateUserValidate (_, { templateCode }) {
-        return vue.$ajax.get(`${prefix}/user/market/desk/store/member/codes/${templateCode}/user/validate?storeType=TEMPLATE`)
+    offlineTemplate ({ commit }, { templateCode }) {
+        return vue.$ajax.put(`${prefix}/user/market/desk/template/offline/templateCodes/${templateCode}/versions`)
     },
 
     updateCurrentaTemplate ({ commit }, { res }) {
         commit(UPDATE_CURRENT_TEMPLATE, res)
-    },
-    updatePublishStrategy: (state, { templateCode, publishStrategy }) => {
-        return vue.$ajax.put(`${prefix}/user/market/${templateCode}/store/publishStrategy`, {
-            publishStrategy
-        })
-    },
-    /**
-     * 获取模板版本列表
-     */
-    requestTemplateReleasedList ({ commit }, { templateCode, page, pageSize }) {
-        return vue.$ajax.get(`${prefix}/user/market/${templateCode}/template/published/history?page=${page}&pageSize=${pageSize}`)
     }
 }
 

@@ -351,7 +351,6 @@ class PipelineBuildContainerDao {
                     containerType = containerType,
                     containerId = containerId,
                     containerHashId = containerHashId,
-                    containPostTaskFlag = controlOption.containPostTaskFlag,
                     jobId = jobId,
                     matrixGroupFlag = matrixGroupFlag,
                     matrixGroupId = matrixGroupId,

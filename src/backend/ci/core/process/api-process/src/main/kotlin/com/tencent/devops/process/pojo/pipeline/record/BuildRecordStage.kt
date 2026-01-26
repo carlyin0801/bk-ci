@@ -82,7 +82,7 @@ data class BuildRecordStage(
                     stageId = stage.id!!,
                     executeCount = context.executeCount,
                     stageSeq = stageIndex,
-                    stageVar = mutableMapOf(Stage::name.name to (stage.name ?: "")),
+                    stageVar = mutableMapOf(),
                     status = buildStatus?.name,
                     timestamps = mapOf()
                 )

@@ -33,7 +33,6 @@ import com.fasterxml.jackson.annotation.JsonInclude
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class RemoteRule(
-    val id: String? = null,
     val name: String? = null,
     val enable: String? = null
 )

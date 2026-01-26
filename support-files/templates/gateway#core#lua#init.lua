@@ -100,16 +100,7 @@ config = {
         },
         special_domain = {},
         auto_prefix = ""
-    },
-    external_auth = {
-        base_url = "",
-        token = ""
-    },
-    frontend = {
-        host = "__BK_CI_FRONTEND_HOST__",
-    },
-    tag_service_table = {},
-    tag_project_table = {}
+    }
 }
 
 require("init_common")

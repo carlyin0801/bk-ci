@@ -7,7 +7,6 @@
 
         <transition-tab
             :panels="tabList"
-            :active-tab="currentTabName"
             @tab-change="tabChange"
         >
             <template v-slot:tool>
@@ -28,8 +27,8 @@
 </template>
 
 <script>
-    import breadCrumbs from '@/components/bread-crumbs.vue'
     import transitionTab from '@/components/transition-tab.vue'
+    import breadCrumbs from '@/components/bread-crumbs.vue'
     import cookie from 'js-cookie'
     let currentProjectCode = cookie.get(X_DEVOPS_PROJECT_ID)
     if (!currentProjectCode) currentProjectCode = (window.projectList[0] || {}).projectCode
@@ -42,6 +41,7 @@
 
         data () {
             return {
+                currentTabName: this.$route.name,
                 tabList: [
                     {
                         name: 'atomWork',
@@ -82,9 +82,6 @@
         },
 
         computed: {
-            currentTabName () {
-                return this.$route.name
-            },
             currentTab () {
                 return this.tabList.find(x => x.name === this.currentTabName)
             },
@@ -110,13 +107,15 @@
             }
         },
 
+        watch: {
+            currentTabName (name) {
+                this.$router.push({ name })
+            }
+        },
+
         methods: {
             tabChange (name) {
-                console.log('ctab change', name)
-                if (this.currentTabName !== name) {
-                    this.currentTabName = name
-                    this.$router.push({ name })
-                }
+                this.currentTabName = name
             }
         }
     }

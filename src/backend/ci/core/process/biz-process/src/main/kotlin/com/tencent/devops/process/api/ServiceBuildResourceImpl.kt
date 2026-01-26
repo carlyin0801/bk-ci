@@ -32,10 +32,8 @@ import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.exception.ParamBlankException
 import com.tencent.devops.common.api.pojo.BuildHistoryPage
 import com.tencent.devops.common.api.pojo.ErrorType
-import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.api.pojo.SimpleResult
-import com.tencent.devops.common.api.util.PageUtil
 import com.tencent.devops.common.auth.api.ActionId
 import com.tencent.devops.common.pipeline.enums.BuildRecordTimeStamp
 import com.tencent.devops.common.pipeline.enums.BuildStatus
@@ -43,7 +41,6 @@ import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.pipeline.enums.StartType
 import com.tencent.devops.common.pipeline.pojo.BuildFormProperty
 import com.tencent.devops.common.pipeline.pojo.BuildFormValue
-import com.tencent.devops.common.pipeline.pojo.PipelineBuildQuery
 import com.tencent.devops.common.pipeline.pojo.StageReviewRequest
 import com.tencent.devops.common.pipeline.pojo.time.BuildTimestampType
 import com.tencent.devops.common.web.RestResource
@@ -61,7 +58,6 @@ import com.tencent.devops.process.pojo.BuildHistoryWithVars
 import com.tencent.devops.process.pojo.BuildId
 import com.tencent.devops.process.pojo.BuildManualStartupInfo
 import com.tencent.devops.process.pojo.BuildTaskPauseInfo
-import com.tencent.devops.process.pojo.LightBuildHistory
 import com.tencent.devops.process.pojo.ReviewParam
 import com.tencent.devops.process.pojo.StageQualityRequest
 import com.tencent.devops.process.pojo.VmInfo
@@ -452,45 +448,6 @@ class ServiceBuildResourceImpl @Autowired constructor(
             triggerAlias = triggerAlias,
             triggerBranch = triggerBranch,
             triggerUser = triggerUser
-        )
-        return Result(result)
-    }
-
-    override fun getLightHistoryBuild(
-        userId: String,
-        projectId: String,
-        pipelineId: String,
-        page: Int,
-        pageSize: Int,
-        status: List<BuildStatus>?,
-        startTimeFrom: String?,
-        startTimeTo: String?,
-        endTimeFrom: String?,
-        endTimeTo: String?,
-        buildNoStart: Int?,
-        buildNoEnd: Int?
-    ): Result<Page<LightBuildHistory>> {
-        checkUserId(userId)
-        checkParam(projectId, pipelineId)
-        val offset = PageUtil.convertPageSizeToSQLLimit(page, pageSize).offset
-        val query = PipelineBuildQuery(
-            projectId = projectId,
-            pipelineId = pipelineId,
-            status = status?.filterNotNull(),
-            startTimeFrom = startTimeFrom,
-            startTimeTo = startTimeTo,
-            endTimeFrom = endTimeFrom,
-            endTimeTo = endTimeTo,
-            offset = offset,
-            limit = pageSize,
-            buildNoStart = buildNoStart,
-            buildNoEnd = buildNoEnd
-        )
-        val result = pipelineBuildFacadeService.getLightHistoryBuild(
-            userId = userId,
-            page = page,
-            pageSize = pageSize,
-            query = query
         )
         return Result(result)
     }

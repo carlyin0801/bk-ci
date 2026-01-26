@@ -1,5 +1,9 @@
 <template>
-    <div class="pipeline-detail-entry">
+    <div
+        :class="['pipeline-detail-entry', {
+            'show-pipeline-var': activeChild.showVar
+        }]"
+    >
         <aside class="pipeline-detail-entry-aside">
             <ul
                 v-for="item in asideNav"
@@ -61,7 +65,6 @@
         <show-variable
             v-if="activeChild.showVar && pipeline"
             :editable="false"
-            :can-edit-param="false"
             :pipeline-model="true"
             :pipeline="pipeline"
             :is-direct-show-version="isDirectShowVersion"
@@ -74,11 +77,11 @@
     import {
         BuildHistoryTab,
         ChangeLog,
-        DelegationPermission,
         PipelineConfig,
-        TriggerEvent
+        TriggerEvent,
+        DelegationPermission
     } from '@/components/PipelineDetailTabs'
-    import { ShowVariable } from '@/components/PipelineEditTabs/'
+    import { AuthorityTab, ShowVariable } from '@/components/PipelineEditTabs/'
     import { mapActions, mapGetters, mapState } from 'vuex'
 
     export default {
@@ -86,6 +89,7 @@
             BuildHistoryTab,
             TriggerEvent,
             PipelineConfig,
+            AuthorityTab,
             ChangeLog,
             Logo,
             ShowVariable,
@@ -172,6 +176,15 @@
                         title: this.$t('more'),
                         children: [
                             {
+                                title: this.$t('authSetting'),
+                                disableTooltip: {
+                                    content: this.$refs.disableToolTips?.[2],
+                                    disabled: this.isReleaseVersion,
+                                    delay: [300, 0]
+                                },
+                                name: 'permission'
+                            },
+                            {
                                 title: this.$t('delegationPermission'),
                                 name: 'delegation'
                             },
@@ -230,6 +243,10 @@
                         return {
                             component: 'PipelineConfig',
                             showVar: type === 'pipeline'
+                        }
+                    case 'permission':
+                        return {
+                            component: 'AuthorityTab'
                         }
                     case 'versionHistory':
                         return {

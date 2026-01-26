@@ -32,7 +32,7 @@
                     :class="obj.extCls"
                 >
                     <component
-                        :disabled="disabled && !checkCanOverride(obj)"
+                        :disabled="disabled"
                         :is="obj.component"
                         :container="container"
                         :element="element"

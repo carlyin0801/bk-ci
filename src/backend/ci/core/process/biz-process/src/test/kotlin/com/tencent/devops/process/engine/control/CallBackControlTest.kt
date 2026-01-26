@@ -27,7 +27,6 @@
 
 package com.tencent.devops.process.engine.control
 
-import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.event.enums.ActionType
 import com.tencent.devops.common.event.pojo.pipeline.PipelineBuildStatusBroadCastEvent
@@ -35,11 +34,11 @@ import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.event.CallBackEvent
 import com.tencent.devops.common.pipeline.event.ProjectPipelineCallBack
 import com.tencent.devops.process.TestBase
+import com.tencent.devops.process.engine.service.PipelineBuildDetailService
 import com.tencent.devops.process.engine.service.PipelineRepositoryService
 import com.tencent.devops.process.engine.service.ProjectPipelineCallBackService
 import com.tencent.devops.process.engine.service.ProjectPipelineCallBackUrlGenerator
-import com.tencent.devops.process.engine.service.record.PipelineBuildRecordService
-import com.tencent.devops.process.pojo.pipeline.ModelRecord
+import com.tencent.devops.process.pojo.pipeline.ModelDetail
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import io.micrometer.core.instrument.MeterRegistry
 import io.mockk.every
@@ -47,11 +46,10 @@ import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.time.LocalDateTime
 
 class CallBackControlTest : TestBase() {
 
-    private val pipelineBuildRecordService: PipelineBuildRecordService = mockk()
+    private val pipelineBuildDetailService: PipelineBuildDetailService = mockk()
     private val pipelineRepositoryService: PipelineRepositoryService = mockk(relaxed = true)
     private val projectPipelineCallBackService: ProjectPipelineCallBackService = mockk()
     private val client: Client = mockk()
@@ -60,7 +58,7 @@ class CallBackControlTest : TestBase() {
     private val projectPipelineCallBackUrlGenerator: ProjectPipelineCallBackUrlGenerator = mockk()
 
     private val callBackControl = CallBackControl(
-        pipelineBuildRecordService = pipelineBuildRecordService,
+        pipelineBuildDetailService = pipelineBuildDetailService,
         pipelineRepositoryService = pipelineRepositoryService,
         projectPipelineCallBackService = projectPipelineCallBackService,
         client = client,
@@ -70,7 +68,7 @@ class CallBackControlTest : TestBase() {
     )
 
     private val testUrl = "https://mock/callback"
-    private var modelRecord: ModelRecord? = null
+    private var modelDetail: ModelDetail? = null
 
     private var callbacks: MutableList<ProjectPipelineCallBack>? = null
 
@@ -79,7 +77,7 @@ class CallBackControlTest : TestBase() {
 
         val existsModel = genModel(stageSize = 4, jobSize = 3, elementSize = 2)
 
-        modelRecord = ModelRecord(
+        modelDetail = ModelDetail(
             id = buildId,
             pipelineId = pipelineId,
             pipelineName = "testCase",
@@ -96,29 +94,16 @@ class CallBackControlTest : TestBase() {
             latestBuildNum = 1,
             latestVersion = 1,
             lastModifyUser = "yongyiduan",
-            executeTime = 100,
-            buildMsg = null,
-            curVersionName = null,
-            errorInfoList = null,
-            executeCount = 1,
-            material = null,
-            queueTime = LocalDateTime.now().timestampmilli(),
-            recordList = emptyList(),
-            queueTimeCost = 0L,
-            remark = null,
-            stageStatus = null,
-            startUserList = listOf("admin"),
-            webhookInfo = null
+            executeTime = 100
         )
 
         every {
-            pipelineBuildRecordService.getBuildRecord(
+            pipelineBuildDetailService.get(
                 projectId = projectId,
-                pipelineId = pipelineId,
                 buildId = buildId,
                 refreshStatus = false
             )
-        } returns (modelRecord)
+        } returns (modelDetail)
     }
 
     @Test
@@ -191,7 +176,7 @@ class CallBackControlTest : TestBase() {
     @Test
     fun `stage running cover finish`() {
         val expectStatus = BuildStatus.RUNNING.name
-        val existsModel = modelRecord!!.model
+        val existsModel = modelDetail!!.model
         val currentTimeMillis = System.currentTimeMillis()
         existsModel.stages.forEachIndexed { si, s ->
             if (si == 0) {
@@ -243,7 +228,7 @@ class CallBackControlTest : TestBase() {
     @Test
     fun `stage failure cover other`() {
         val expectStatus = BuildStatus.FAILED.name
-        val existsModel = modelRecord!!.model
+        val existsModel = modelDetail!!.model
         val currentTimeMillis = System.currentTimeMillis()
         existsModel.stages.forEachIndexed { si, s ->
             if (si == 0) {

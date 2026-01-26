@@ -66,7 +66,7 @@ import com.tencent.devops.store.common.dao.StoreStatisticDao
 import com.tencent.devops.store.common.dao.StoreStatisticTotalDao
 import com.tencent.devops.store.common.dao.StoreVersionLogDao
 import com.tencent.devops.store.common.service.StoreCommonService
-import com.tencent.devops.store.utils.VersionUtils
+import com.tencent.devops.store.common.utils.VersionUtils
 import com.tencent.devops.store.constant.StoreMessageCode
 import com.tencent.devops.store.pojo.common.enums.ReleaseTypeEnum
 import com.tencent.devops.store.pojo.common.enums.StoreStatusEnum
@@ -407,8 +407,7 @@ abstract class StoreCommonServiceImpl : StoreCommonService {
         storeType: StoreTypeEnum,
         cancelFlag: Boolean,
         releaseType: ReleaseTypeEnum?,
-        version: String?,
-        lastVersionContent: String?
+        version: String?
     ): StoreShowVersionInfo {
         // 确定默认显示的发布类型
         val defaultShowReleaseType = when {
@@ -437,8 +436,7 @@ abstract class StoreCommonServiceImpl : StoreCommonService {
                     version = defaultShowVersion,
                     lastVersion = dbVersion,
                     releaseType = defaultShowReleaseType.name,
-                    defaultFlag = true,
-                    lastVersionContent = lastVersionContent
+                    defaultFlag = true
                 )
             )
 

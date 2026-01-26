@@ -47,7 +47,6 @@ import com.tencent.devops.repository.api.ServiceGithubResource
 import com.tencent.devops.repository.api.ServiceOauthResource
 import com.tencent.devops.repository.api.ServiceRepositoryResource
 import com.tencent.devops.repository.api.scm.ServiceGitResource
-import com.tencent.devops.repository.api.scm.ServiceScmFileApiResource
 import com.tencent.devops.repository.api.scm.ServiceScmOauthResource
 import com.tencent.devops.repository.api.scm.ServiceScmRepositoryApiResource
 import com.tencent.devops.repository.api.scm.ServiceScmResource
@@ -66,16 +65,12 @@ import com.tencent.devops.repository.pojo.credential.AuthRepository
 import com.tencent.devops.repository.pojo.enums.RepoAuthType
 import com.tencent.devops.repository.pojo.enums.TokenTypeEnum
 import com.tencent.devops.scm.api.enums.ScmEventType
-import com.tencent.devops.scm.api.pojo.Content
-import com.tencent.devops.scm.api.pojo.Tree
-import com.tencent.devops.scm.api.pojo.repository.ScmServerRepository
 import com.tencent.devops.scm.api.pojo.repository.git.GitScmServerRepository
 import com.tencent.devops.scm.code.git.CodeGitWebhookEvent
 import com.tencent.devops.scm.pojo.RepoSessionRequest
 import com.tencent.devops.scm.pojo.RevisionInfo
 import com.tencent.devops.ticket.api.ServiceCredentialResource
 import com.tencent.devops.ticket.pojo.enums.CredentialType
-import jakarta.ws.rs.NotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -84,6 +79,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Base64
+import jakarta.ws.rs.NotFoundException
 
 @Suppress("ALL")
 @Service
@@ -436,7 +432,7 @@ class ScmProxyService @Autowired constructor(private val client: Client) {
                 }
             }
             is ScmGitRepository, is ScmSvnRepository -> {
-                return client.get(ServiceScmRepositoryApiResource::class).listBranches(
+                return client.get(ServiceScmRepositoryApiResource::class).findBranches(
                     projectId = projectId,
                     authRepository = AuthRepository(repo),
                     search = search,
@@ -536,7 +532,7 @@ class ScmProxyService @Autowired constructor(private val client: Client) {
                 }
             }
             is ScmGitRepository -> {
-                return client.get(ServiceScmRepositoryApiResource::class).listTags(
+                return client.get(ServiceScmRepositoryApiResource::class).findTags(
                     projectId = projectId,
                     authRepository = AuthRepository(repo),
                     search = search,
@@ -997,45 +993,6 @@ class ScmProxyService @Autowired constructor(private val client: Client) {
         CodeEventType.TAG_PUSH -> ScmEventType.TAG
         CodeEventType.ISSUES -> ScmEventType.ISSUE
         CodeEventType.POST_COMMIT -> ScmEventType.POST_COMMIT
-        CodeEventType.NOTE -> ScmEventType.NOTE
-        CodeEventType.REVIEW -> ScmEventType.PULL_REQUEST_REVIEW
         else -> throw IllegalArgumentException("unknown code event type: $this")
-    }
-
-    fun getServerRepository(projectId: String, authRepository: AuthRepository): ScmServerRepository {
-        return client.get(ServiceScmRepositoryApiResource::class).getServerRepository(
-            projectId = projectId,
-            authRepository = authRepository
-        ).data!!
-    }
-
-    fun getFileContent(
-        projectId: String,
-        path: String,
-        ref: String,
-        authRepository: AuthRepository
-    ): Content {
-        return client.get(ServiceScmFileApiResource::class).getFileContent(
-            projectId = projectId,
-            path = path,
-            ref = ref,
-            authRepository = authRepository
-        ).data!!
-    }
-
-    fun listFileTree(
-        projectId: String,
-        path: String,
-        ref: String,
-        recursive: Boolean = false,
-        authRepository: AuthRepository
-    ): List<Tree>? {
-        return client.get(ServiceScmFileApiResource::class).listFileTree(
-            projectId = projectId,
-            path = path,
-            ref = ref,
-            recursive = recursive,
-            authRepository = authRepository
-        ).data
     }
 }

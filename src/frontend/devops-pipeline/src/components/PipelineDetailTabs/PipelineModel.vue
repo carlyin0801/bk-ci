@@ -4,7 +4,6 @@
             :editable="false"
             :show-header="false"
             :pipeline="pipelineWithoutTrigger"
-            is-preview
             v-on="$listeners"
         >
         </pipeline>
@@ -12,15 +11,15 @@
 </template>
 
 <script>
-    import Pipeline from '@/components/Pipeline'
     import { mapState } from 'vuex'
+    import Pipeline from '@/components/Pipeline'
 
     export default {
         components: {
             Pipeline
         },
         computed: {
-            ...mapState('atom', ['pipelineWithoutTrigger'])
+            ...mapState('atom', ['pipelineWithoutTrigger', 'pipeline'])
         }
     }
 </script>

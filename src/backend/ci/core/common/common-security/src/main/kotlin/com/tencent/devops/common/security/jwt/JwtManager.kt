@@ -93,6 +93,7 @@ class JwtManager(
         if (tokenExpireAt != null) {
             // 如果未超时
             if (tokenExpireAt > Instant.now().toEpochMilli()) {
+                logger.info("Verify jwt cache hit, tokenExpireAt: $tokenExpireAt")
                 return true
             }
         }
@@ -102,6 +103,7 @@ class JwtManager(
                 .build()
                 .parseSignedClaims(token)
                 .payload
+            logger.info("Verify jwt sub:${claims["sub"]}")
             val expireAt = claims.get("exp", Date::class.java)
             if (expireAt != null) {
                 logger.info("Verify jwt expireAt: $expireAt")

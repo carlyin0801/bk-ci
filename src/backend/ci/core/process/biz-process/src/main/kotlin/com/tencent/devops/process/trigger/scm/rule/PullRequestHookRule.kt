@@ -1,6 +1,5 @@
 package com.tencent.devops.process.trigger.scm.rule
 
-import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.webhook.pojo.code.WebHookParams
 import com.tencent.devops.common.webhook.service.code.GitScmService
 import com.tencent.devops.common.webhook.service.code.filter.WebhookFilterResponse
@@ -25,7 +24,6 @@ import org.springframework.stereotype.Service
 
 @Service
 class PullRequestHookRule @Autowired constructor(
-    private val client: Client,
     private val gitScmService: GitScmService,
     // stream没有这个配置
     @Autowired(required = false)
@@ -68,7 +66,7 @@ class PullRequestHookRule @Autowired constructor(
             BranchCondition(BranchFilterType.SOURCE_BRANCH),
             PathCondition(),
             UserCondition(),
-            ThirdCondition(client, gitScmService, callbackCircuitBreakerRegistry)
+            ThirdCondition(webhook, gitScmService, callbackCircuitBreakerRegistry)
         )
         return WebhookConditionChain(conditions).match(context)
     }

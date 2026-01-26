@@ -28,10 +28,8 @@
 package com.tencent.devops.process.api
 
 import com.tencent.devops.common.api.pojo.Result
-import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.process.api.user.UserPublicVarResource
-import com.tencent.devops.process.permission.`var`.PublicVarGroupPermissionService
 import com.tencent.devops.process.pojo.`var`.`do`.PublicVarDO
 import com.tencent.devops.process.pojo.`var`.vo.PublicVarGroupVO
 import com.tencent.devops.process.service.`var`.PublicVarGroupService
@@ -41,8 +39,7 @@ import org.springframework.beans.factory.annotation.Autowired
 @RestResource
 class UserPublicVarResourceImpl @Autowired constructor(
     val publicVarGroupService: PublicVarGroupService,
-    val publicVarService: PublicVarService,
-    val publicVarGroupPermissionService: PublicVarGroupPermissionService
+    val publicVarService: PublicVarService
 ) : UserPublicVarResource {
 
     override fun listGroupPublicVar(
@@ -51,13 +48,6 @@ class UserPublicVarResourceImpl @Autowired constructor(
         groupName: String,
         version: Int?
     ): Result<PublicVarGroupVO> {
-        // 校验查看权限
-        publicVarGroupPermissionService.checkPublicVarGroupPermissionWithMessage(
-            userId = userId,
-            projectId = projectId,
-            permission = AuthPermission.VIEW,
-            groupName = groupName
-        )
         return Result(publicVarGroupService.getPipelineGroupsVar(
             projectId = projectId,
             groupName = groupName,
@@ -71,13 +61,7 @@ class UserPublicVarResourceImpl @Autowired constructor(
         groupName: String,
         version: Int?
     ): Result<List<PublicVarDO>> {
-        // 校验查看权限
-        publicVarGroupPermissionService.checkPublicVarGroupPermissionWithMessage(
-            userId = userId,
-            projectId = projectId,
-            permission = AuthPermission.VIEW,
-            groupName = groupName
-        )
         return Result(publicVarService.getVariables(userId, projectId, groupName, version))
     }
+
 }

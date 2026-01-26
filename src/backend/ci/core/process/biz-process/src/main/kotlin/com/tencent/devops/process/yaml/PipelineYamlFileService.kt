@@ -27,11 +27,12 @@
 
 package com.tencent.devops.process.yaml
 
+import com.tencent.devops.common.client.Client
 import com.tencent.devops.model.process.tables.records.TPipelineYamlBranchFileRecord
-import com.tencent.devops.process.dao.yaml.PipelineYamlBranchFileDao
-import com.tencent.devops.process.service.scm.ScmProxyService
+import com.tencent.devops.process.engine.dao.PipelineYamlBranchFileDao
 import com.tencent.devops.process.yaml.actions.GitActionCommon
 import com.tencent.devops.process.yaml.common.Constansts
+import com.tencent.devops.repository.api.scm.ServiceScmFileApiResource
 import com.tencent.devops.repository.pojo.credential.AuthRepository
 import com.tencent.devops.scm.api.enums.ContentKind
 import com.tencent.devops.scm.api.pojo.Content
@@ -42,22 +43,22 @@ import org.springframework.stereotype.Service
 
 @Service
 class PipelineYamlFileService @Autowired constructor(
+    private val client: Client,
     private val dslContext: DSLContext,
-    private val pipelineYamlBranchFileDao: PipelineYamlBranchFileDao,
-    private val scmProxyService: ScmProxyService
+    private val pipelineYamlBranchFileDao: PipelineYamlBranchFileDao
 ) {
     fun listFileTree(
         projectId: String,
         ref: String,
         authRepository: AuthRepository
     ): List<Tree> {
-        return scmProxyService.listFileTree(
+        return client.get(ServiceScmFileApiResource::class).listFileTree(
             projectId = projectId,
             path = Constansts.ciFileDirectoryName,
             ref = ref,
             recursive = true,
             authRepository = authRepository
-        )?.filter {
+        ).data?.filter {
             it.kind == ContentKind.FILE && GitActionCommon.checkYamlPipelineFile(it.path)
         } ?: emptyList()
     }
@@ -68,26 +69,28 @@ class PipelineYamlFileService @Autowired constructor(
         ref: String,
         authRepository: AuthRepository
     ): Content {
-        return scmProxyService.getFileContent(
+        return client.get(ServiceScmFileApiResource::class).getFileContent(
             projectId = projectId,
             path = path,
             ref = ref,
             authRepository = authRepository
-        )
+        ).data!!
     }
 
     fun getBranchFilePath(
         projectId: String,
         repoHashId: String,
         branch: String,
-        filePath: String
+        filePath: String,
+        includeDeleted: Boolean = false
     ): TPipelineYamlBranchFileRecord? {
         return pipelineYamlBranchFileDao.get(
             dslContext = dslContext,
             projectId = projectId,
             repoHashId = repoHashId,
             branch = branch,
-            filePath = filePath
+            filePath = filePath,
+            includeDeleted = includeDeleted
         )
     }
 

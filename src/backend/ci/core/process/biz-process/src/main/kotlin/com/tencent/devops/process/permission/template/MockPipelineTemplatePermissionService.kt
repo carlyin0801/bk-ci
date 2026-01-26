@@ -30,50 +30,20 @@ package com.tencent.devops.process.permission.template
 import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.auth.api.AuthProjectApi
 import com.tencent.devops.common.auth.code.PipelineAuthServiceCode
-import com.tencent.devops.process.dao.template.PipelineTemplateInfoDao
-import org.jooq.DSLContext
 
-class MockPipelineTemplatePermissionService(
+class MockPipelineTemplatePermissionService constructor(
     authProjectApi: AuthProjectApi,
-    pipelineAuthServiceCode: PipelineAuthServiceCode,
-    private val templateDao: PipelineTemplateInfoDao,
-    private val dslContext: DSLContext
+    pipelineAuthServiceCode: PipelineAuthServiceCode
 ) : AbstractPipelineTemplatePermissionService(
     authProjectApi = authProjectApi,
     pipelineAuthServiceCode = pipelineAuthServiceCode
 ) {
-    override fun checkPipelineTemplatePermission(
-        userId: String,
-        projectId: String,
-        permission: AuthPermission,
-        templateId: String?
-    ): Boolean {
-        return true
-    }
-
-    override fun checkPipelineTemplatePermissionWithMessage(
-        userId: String,
-        projectId: String,
-        permission: AuthPermission,
-        templateId: String?
-    ): Boolean {
-        return true
-    }
-
-    override fun hasCreateTemplateInstancePermission(userId: String, projectId: String): Boolean {
-        return true
-    }
-
     override fun getResourcesByPermission(
         userId: String,
         projectId: String,
         permissions: Set<AuthPermission>
     ): Map<AuthPermission, List<String>> {
-        val templateIds = templateDao.listAllIds(
-            dslContext = dslContext,
-            projectId = projectId
-        )
-        return permissions.associateWith { templateIds }
+        return emptyMap()
     }
 
     override fun createResource(

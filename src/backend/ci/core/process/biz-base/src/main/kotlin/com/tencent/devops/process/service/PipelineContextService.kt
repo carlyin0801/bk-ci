@@ -41,8 +41,8 @@ import com.tencent.devops.common.pipeline.type.BuildType
 import com.tencent.devops.common.pipeline.utils.PIPELINE_GIT_EVENT
 import com.tencent.devops.common.pipeline.utils.PIPELINE_GIT_TIME_TRIGGER_KIND
 import com.tencent.devops.process.engine.control.ControlUtils
+import com.tencent.devops.process.engine.service.PipelineBuildDetailService
 import com.tencent.devops.process.engine.service.record.ContainerBuildRecordService
-import com.tencent.devops.process.engine.service.record.PipelineBuildRecordService
 import com.tencent.devops.process.engine.service.record.TaskBuildRecordService
 import com.tencent.devops.process.utils.JOB_RETRY_TASK_ID
 import com.tencent.devops.process.utils.PIPELINE_RETRY_START_TASK_ID
@@ -62,7 +62,7 @@ import org.springframework.stereotype.Service
 )
 @Service
 class PipelineContextService @Autowired constructor(
-    private val pipelineBuildRecordService: PipelineBuildRecordService,
+    private val pipelineBuildDetailService: PipelineBuildDetailService,
     private val taskBuildRecordService: TaskBuildRecordService,
     private val containerBuildRecordService: ContainerBuildRecordService
 ) {
@@ -79,9 +79,7 @@ class PipelineContextService @Autowired constructor(
         model: Model? = null,
         executeCount: Int? = 1
     ): MutableMap<String, String> {
-        val modelDetail = model ?: pipelineBuildRecordService.getBuildRecord(
-            projectId = projectId, pipelineId = pipelineId, buildId = buildId
-        )?.model ?: return mutableMapOf()
+        val modelDetail = model ?: pipelineBuildDetailService.get(projectId, buildId)?.model ?: return mutableMapOf()
         val contextMap = mutableMapOf<String, String>()
         var previousStageStatus = BuildStatus.RUNNING
         val failTaskNameList = mutableListOf<String>()
@@ -158,9 +156,7 @@ class PipelineContextService @Autowired constructor(
         buildId: String,
         variables: Map<String, String>
     ): Map<String, String> {
-        val modelDetail = pipelineBuildRecordService.getBuildRecord(
-            projectId = projectId, pipelineId = pipelineId, buildId = buildId
-        ) ?: return emptyMap()
+        val modelDetail = pipelineBuildDetailService.get(projectId, buildId) ?: return emptyMap()
         val contextMap = mutableMapOf<String, String>()
         var previousStageStatus = BuildStatus.RUNNING
         val failTaskNameList = mutableListOf<String>()
@@ -245,14 +241,13 @@ class PipelineContextService @Autowired constructor(
         variables: Map<String, String>
     ): String? {
         if (containerId == null || executeCount == null) return null
-        val fixedExecuteCount = executeCount.coerceAtLeast(1) // 至少取第一次执行结果
         return containerBuildRecordService.getRecord(
             transactionContext = null,
             projectId = projectId,
             pipelineId = pipelineId,
             buildId = buildId,
             containerId = containerId,
-            executeCount = fixedExecuteCount
+            executeCount = executeCount.coerceAtLeast(1) // 至少取第一次执行结果
         )?.containerVar?.getOrDefault(JOB_RETRY_TASK_ID, null)?.toString() ?: kotlin.run {
             // 兼容通过BK_CI_RETRY_TASK_ID的老方式，如果 BK_CI_RETRY_TASK_ID 有值
             // 并且其对应的container id是当前运行的，就正常返回
@@ -262,7 +257,7 @@ class PipelineContextService @Autowired constructor(
                     pipelineId = pipelineId,
                     buildId = buildId,
                     taskId = taskId,
-                    executeCount = fixedExecuteCount
+                    executeCount = executeCount
                 )?.containerId == containerId
             ) {
                 return taskId

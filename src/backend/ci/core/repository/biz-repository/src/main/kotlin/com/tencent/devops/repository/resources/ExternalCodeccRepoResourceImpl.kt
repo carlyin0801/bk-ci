@@ -138,8 +138,7 @@ class ExternalCodeccRepoResourceImpl @Autowired constructor(
         reversion: String?,
         branch: String?,
         subModule: String?,
-        credentialId: String,
-        scmCode: String?
+        credentialId: String
     ): Result<String> {
         return Result(
             repoFileService.getFileContentByUrl(
@@ -150,8 +149,7 @@ class ExternalCodeccRepoResourceImpl @Autowired constructor(
                 reversion = reversion,
                 branch = branch,
                 subModule = subModule,
-                credentialId = credentialId,
-                scmCode = scmCode
+                credentialId = credentialId
             )
         )
     }

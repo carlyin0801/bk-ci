@@ -417,15 +417,15 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
         englishName: String,
         accessToken: String?
     ): ProjectVO? {
-        val record = projectDao.getByEnglishName(
-            dslContext = dslContext,
-            englishName = englishName
-        ) ?: throw OperationException("project $englishName not found")
+        val record = projectDao.getByEnglishName(dslContext, englishName) ?: return null
         val projectVO = ProjectUtils.packagingBean(record)
         val englishNames = getProjectFromAuth(userId, accessToken)
-        if (englishNames.isEmpty() || !englishNames.contains(projectVO.englishName)) {
-            logger.warn("The user don't have the permission to visit the project")
-            throw OperationException("The user don't have the permission to visit the project")
+        if (englishNames.isEmpty()) {
+            return null
+        }
+        if (!englishNames.contains(projectVO.englishName)) {
+            logger.warn("The user don't have the permission to get the project $englishName")
+            return null
         }
         return projectVO
     }
@@ -1024,16 +1024,6 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
         try {
 
             val projects = getProjectFromAuth(userId, null)
-            val projectsWithManagePermission = getProjectFromAuth(
-                userId = userId,
-                accessToken = null,
-                permission = AuthPermission.MANAGE
-            )
-            val projectsWithViewPermission = getProjectFromAuth(
-                userId = userId,
-                accessToken = null,
-                permission = AuthPermission.VIEW
-            )
             logger.info("projects：$projects")
             val list = ArrayList<ProjectVO>()
             projectDao.listByEnglishName(
@@ -1046,13 +1036,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
                 channelCodes = splitStr(channelCodes).toSet(),
                 sortType = sort
             ).map {
-                list.add(
-                    ProjectUtils.packagingBean(
-                        tProjectRecord = it,
-                        managePermission = projectsWithManagePermission?.contains(it.englishName),
-                        viewPermission = projectsWithViewPermission?.contains(it.englishName)
-                    )
-                )
+                list.add(ProjectUtils.packagingBean(it))
             }
             success = true
             return list
@@ -1443,7 +1427,7 @@ abstract class AbsProjectServiceImpl @Autowired constructor(
         var projectIds = redisOperation.getSetMembers(SECRECY_PROJECT_REDIS_KEY)
         if (projectIds.isNullOrEmpty()) {
             projectIds = projectDao.listSecrecyProject(dslContext)?.map { it.value1() }?.toSet()
-            if (!projectIds.isNullOrEmpty()) {
+            if (projectIds != null) {
                 redisOperation.sadd(SECRECY_PROJECT_REDIS_KEY, *projectIds.toTypedArray())
             }
         }

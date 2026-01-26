@@ -31,6 +31,7 @@ package com.tencent.devops.common.websocket.enum
  */
 enum class RefreshType(val binary: Long) {
     HISTORY(binary = 2),
+    DETAIL(binary = 4),
     STATUS(binary = 8),
     RECORD(binary = 16)
 }

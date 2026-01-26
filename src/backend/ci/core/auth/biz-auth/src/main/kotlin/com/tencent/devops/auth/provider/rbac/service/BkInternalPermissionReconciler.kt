@@ -3,7 +3,6 @@ package com.tencent.devops.auth.provider.rbac.service
 import com.tencent.devops.auth.dao.AuthResourceDao
 import com.tencent.devops.auth.service.BkInternalPermissionCache
 import com.tencent.devops.auth.service.BkInternalPermissionService
-import com.tencent.devops.auth.service.iam.PermissionResourceGroupPermissionService
 import com.tencent.devops.auth.service.iam.PermissionResourceGroupSyncService
 import com.tencent.devops.common.auth.api.AuthPermission
 import com.tencent.devops.common.auth.api.pojo.ProjectConditionDTO
@@ -40,8 +39,7 @@ class BkInternalPermissionReconciler(
     val redisOperation: RedisOperation,
     val authResourceService: AuthResourceDao,
     val dslContext: DSLContext,
-    val permissionResourceGroupService: PermissionResourceGroupSyncService,
-    val permissionResourceGroupPermissionService: PermissionResourceGroupPermissionService
+    val permissionResourceGroupService: PermissionResourceGroupSyncService
 ) {
 
     private val project2StatusCache = CacheHelper.createCache<String, Boolean>(duration = 60)
@@ -61,12 +59,6 @@ class BkInternalPermissionReconciler(
             .register(meterRegistry)
     }
 
-    private fun threadPoolTasksRejectedCounter(): Counter {
-        return Counter.builder("permission.thread.pool.tasks.rejected.count")
-            .description("Counts the thread pool tasks rejected")
-            .register(meterRegistry)
-    }
-
     private val threadPoolExecutor = ThreadPoolExecutor(
         corePoolSize ?: 5,
         corePoolSize ?: 5,
@@ -75,7 +67,6 @@ class BkInternalPermissionReconciler(
         LinkedBlockingQueue(500),
         Executors.defaultThreadFactory()
     ) { _, executor ->
-        threadPoolTasksRejectedCounter().increment()
         logger.warn("Permission post processor task rejected. Pool status: {}", executor.toString())
     }
 
@@ -121,9 +112,6 @@ class BkInternalPermissionReconciler(
             )
             try {
                 permissionResourceGroupService.syncByCondition(
-                    projectConditionDTO = ProjectConditionDTO(projectCodes = listOf(projectCode))
-                )
-                permissionResourceGroupPermissionService.syncPermissionsByCondition(
                     projectConditionDTO = ProjectConditionDTO(projectCodes = listOf(projectCode))
                 )
                 redisOperation.delete(inconsistencyCountKey)

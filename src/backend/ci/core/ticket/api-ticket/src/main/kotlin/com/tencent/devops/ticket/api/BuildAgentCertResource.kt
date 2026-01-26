@@ -73,10 +73,7 @@ interface BuildAgentCertResource {
         certId: String,
         @Parameter(description = "Base64编码的加密公钥", required = true)
         @QueryParam("publicKey")
-        publicKey: String,
-        @Parameter(description = "是否填充,如果bcpPro版本高于1.46,则传true,否则传false", required = false)
-        @QueryParam("padding")
-        padding: Boolean? = false
+        publicKey: String
     ): Result<CertIOS>
 
     @Operation(summary = "按证书ID获取android加密的证书内容")
@@ -100,9 +97,6 @@ interface BuildAgentCertResource {
         certId: String,
         @Parameter(description = "Base64编码的加密公钥", required = true)
         @QueryParam("publicKey")
-        publicKey: String,
-        @Parameter(description = "是否填充,如果bcpPro版本高于1.46,则传true,否则传false", required = false)
-        @QueryParam("padding")
-        padding: Boolean? = false
+        publicKey: String
     ): Result<CertAndroid>
 }

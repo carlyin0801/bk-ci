@@ -54,13 +54,7 @@ class ServicePTemplateResourceImpl @Autowired constructor(
         projectId: String,
         addMarketTemplateRequest: MarketTemplateRequest
     ): Result<Map<String, String>> {
-        return Result(
-            templateFacadeService.addMarketTemplate(
-                userId = userId,
-                projectId = projectId,
-                addMarketTemplateRequest = addMarketTemplateRequest
-            )
-        )
+        return templateFacadeService.addMarketTemplate(userId, projectId, addMarketTemplateRequest)
     }
 
     override fun updateMarketTemplateReference(
@@ -68,17 +62,11 @@ class ServicePTemplateResourceImpl @Autowired constructor(
         projectId: String,
         updateMarketTemplateRequest: MarketTemplateRequest
     ): Result<Boolean> {
-        return Result(
-            templateFacadeService.updateMarketTemplateReference(
-                userId = userId,
-                projectId = projectId,
-                updateMarketTemplateRequest = updateMarketTemplateRequest
-            )
-        )
+        return templateFacadeService.updateMarketTemplateReference(userId, projectId, updateMarketTemplateRequest)
     }
 
     override fun getTemplateDetailInfo(templateCode: String): Result<TemplateDetailInfo?> {
-        return Result(pipelineTemplateService.getTemplateDetailInfo(templateCode))
+        return pipelineTemplateService.getTemplateDetailInfo(templateCode)
     }
 
     override fun checkImageReleaseStatus(userId: String, templateCode: String): Result<String?> {
@@ -86,7 +74,7 @@ class ServicePTemplateResourceImpl @Autowired constructor(
     }
 
     override fun getSrcTemplateCodes(projectId: String): Result<List<String>> {
-        return Result(templateFacadeService.getSrcTemplateCodes(projectId))
+        return templateFacadeService.getSrcTemplateCodes(projectId)
     }
 
     override fun getTemplateIdBySrcCode(
@@ -163,13 +151,11 @@ class ServicePTemplateResourceImpl @Autowired constructor(
         templateId: String,
         storeFlag: Boolean
     ): Result<Boolean> {
-        return Result(
-            templateFacadeService.updateTemplateStoreFlag(
-                userId = userId,
-                projectId = projectId,
-                templateId = templateId,
-                storeFlag = storeFlag
-            )
+        return templateFacadeService.updateTemplateStoreFlag(
+            userId = userId,
+            projectId = projectId,
+            templateId = templateId,
+            storeFlag = storeFlag
         )
     }
 
@@ -188,11 +174,7 @@ class ServicePTemplateResourceImpl @Autowired constructor(
         )
     }
 
-    override fun checkTemplate(
-        userId: String,
-        projectId: String,
-        templateId: String
-    ): Result<Boolean> {
+    override fun checkTemplate(userId: String, projectId: String, templateId: String): Result<Boolean> {
         return Result(templateFacadeService.checkTemplate(templateId, projectId, userId))
     }
 }

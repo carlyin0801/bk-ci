@@ -34,7 +34,6 @@ import com.tencent.devops.repository.pojo.RepositoryWebhookRequest
 import com.tencent.devops.repository.pojo.webhook.WebhookData
 import com.tencent.devops.repository.pojo.webhook.WebhookParseRequest
 import com.tencent.devops.repository.service.RepositoryWebhookService
-import com.tencent.devops.scm.api.pojo.webhook.Webhook
 import org.springframework.beans.factory.annotation.Autowired
 
 @Suppress("ALL")
@@ -48,22 +47,6 @@ class ServiceRepositoryWebhookResourceImpl @Autowired constructor(
         request: WebhookParseRequest
     ): Result<WebhookData?> {
         return Result(repositoryWebhookService.webhookParse(scmCode = scmCode, request = request))
-    }
-
-    override fun webhookParseByRepo(
-        scmCode: String,
-        projectId: String,
-        repoHashId: String,
-        request: WebhookParseRequest
-    ): Result<Webhook?> {
-        return Result(
-            repositoryWebhookService.webhookParseByRepo(
-                scmCode = scmCode,
-                projectId = projectId,
-                repoHashId = repoHashId,
-                request = request
-            )
-        )
     }
 
     override fun saveWebhookRequest(repositoryWebhookRequest: RepositoryWebhookRequest): Result<Boolean> {

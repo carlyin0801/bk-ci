@@ -44,7 +44,6 @@ import com.tencent.devops.repository.dao.RepositoryDao
 import com.tencent.devops.repository.dao.RepositoryScmConfigDao
 import com.tencent.devops.repository.dao.RepositoryScmProviderDao
 import com.tencent.devops.repository.pojo.RepoCredentialTypeVo
-import com.tencent.devops.repository.pojo.RepositoryConfigVisibility
 import com.tencent.devops.repository.pojo.RepositoryConfigLogoInfo
 import com.tencent.devops.repository.pojo.RepositoryScmConfig
 import com.tencent.devops.repository.pojo.RepositoryScmConfigReq
@@ -81,8 +80,7 @@ class RepositoryScmConfigService @Autowired constructor(
     private val repositoryScmProviderDao: RepositoryScmProviderDao,
     private val repositoryDao: RepositoryDao,
     private val uploadFileService: RepositoryUploadFileService,
-    private val authPlatformApi: AuthPlatformApi,
-    private val repositoryConfigVisibilityService: RepositoryConfigVisibilityService
+    private val authPlatformApi: AuthPlatformApi
 ) {
     @Value("\${aes.scm.props:#{null}}")
     private val aesKey: String = ""
@@ -166,15 +164,6 @@ class RepositoryScmConfigService @Autowired constructor(
                 request = request,
                 oldProviderProperties = scmConfig.providerProps
             )
-            // 如果状态一开始是部署中,clientId开始为空,修改后clientId有值,则将状态改成成功
-            val status = if (scmConfig.status == ScmConfigStatus.DEPLOYING &&
-                scmConfig.providerProps.oauth2ClientProperties?.clientId.isNullOrEmpty() &&
-                providerProperties.oauth2Enabled == true
-            ) {
-                ScmConfigStatus.SUCCESS
-            } else {
-                scmConfig.status
-            }
             val newScmConfig = scmConfig.copy(
                 scmCode = scmCode,
                 name = name,
@@ -185,11 +174,9 @@ class RepositoryScmConfigService @Autowired constructor(
                 credentialTypeList = request.credentialTypeList,
                 oauthType = oauthType,
                 oauthScmCode = oauthScmCode,
-                status = status,
                 mergeEnabled = mergeEnabled,
                 pacEnabled = pacEnabled,
                 webhookEnabled = webhookEnabled,
-                oauth2Enabled = request.credentialTypeList.contains(RepoCredentialType.OAUTH),
                 providerProps = providerProperties,
                 updater = userId
             )
@@ -211,11 +198,8 @@ class RepositoryScmConfigService @Autowired constructor(
             limit = sqlLimit.limit,
             offset = sqlLimit.offset
         )
-        val scmCodes = scmConfigs.map { it.scmCode }
-        val finalScmCodes = validateUserPermission(userId, scmCodes)
-        return scmConfigs.filter {
-            finalScmCodes.contains(it.scmCode)
-        }.map {
+
+        return scmConfigs.map {
             ScmConfigBaseInfo(
                 scmCode = it.scmCode,
                 name = it.name,
@@ -486,59 +470,6 @@ class RepositoryScmConfigService @Autowired constructor(
         } ?: listOf()
     }
 
-    fun listDept(
-        scmCode: String,
-        userId: String,
-        limit: Int,
-        offset: Int
-    ): SQLPage<RepositoryConfigVisibility> {
-        validateUserPlatformPermission(userId)
-        val record = repositoryConfigVisibilityService.listDept(
-            scmCode = scmCode,
-            limit = limit,
-            offset = offset
-        )
-        val count = repositoryConfigVisibilityService.countDept(
-            scmCode = scmCode
-        ).toLong()
-        return SQLPage(count = count, records = record)
-    }
-
-    fun addDept(
-        scmCode: String,
-        userId: String,
-        checkPermission: Boolean = true,
-        deptList: List<RepositoryConfigVisibility>
-    ) {
-        if (checkPermission) {
-            validateUserPlatformPermission(userId)
-        }
-        if (deptList.isNotEmpty()) {
-            repositoryConfigVisibilityService.createDept(
-                scmCode = scmCode,
-                userId = userId,
-                deptList = deptList
-            )
-        }
-    }
-
-    fun deleteDept(
-        scmCode: String,
-        userId: String,
-        checkPermission: Boolean = true,
-        deptList: List<Int>
-    ) {
-        if (checkPermission) {
-            validateUserPlatformPermission(userId)
-        }
-        if (deptList.isNotEmpty()) {
-            repositoryConfigVisibilityService.deleteDept(
-                scmCode = scmCode,
-                deptList = deptList.toSet()
-            )
-        }
-    }
-
     private fun getProviderConfig(scmCode: String): RepositoryScmProvider? {
         val scmConfig = repositoryScmConfigDao.get(dslContext, scmCode) ?: throw ErrorCodeException(
             errorCode = RepositoryMessageCode.ERROR_SCM_CONFIG_NOT_FOUND,
@@ -715,14 +646,6 @@ class RepositoryScmConfigService @Autowired constructor(
             )
         }
     }
-
-    private fun validateUserPermission(
-        userId: String,
-        scmCodes: List<String>
-    ) = repositoryConfigVisibilityService.listScmCode(
-        userId = userId,
-        scmCodes = scmCodes
-    )
 
     /**
      * 根据平台编码和事件类型获取事件描述

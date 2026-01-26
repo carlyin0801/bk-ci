@@ -62,19 +62,14 @@ abstract class StoreMemberServiceImpl : StoreMemberService {
 
     @Autowired
     lateinit var client: Client
-
     @Autowired
     lateinit var dslContext: DSLContext
-
     @Autowired
     lateinit var storeMemberDao: StoreMemberDao
-
     @Autowired
     lateinit var storeProjectRelDao: StoreProjectRelDao
-
     @Autowired
     lateinit var storeNotifyService: StoreNotifyService
-
     @Autowired
     lateinit var storeInnerPipelineConfig: StoreInnerPipelineConfig
 
@@ -161,13 +156,11 @@ abstract class StoreMemberServiceImpl : StoreMemberService {
             if (null != projectCode) projectCodeList.add(projectCode)
             val projectMap = client.get(ServiceProjectResource::class)
                 .getNameByCode(projectCodeList.joinToString(",")).data
-            Result(
-                generateStoreMemberItem(
-                    memberRecord = memberRecord,
-                    projectCode = projectCode ?: "",
-                    projectName = projectMap?.get(projectCode) ?: ""
-                )
-            )
+            Result(generateStoreMemberItem(
+                memberRecord = memberRecord,
+                projectCode = projectCode ?: "",
+                projectName = projectMap?.get(projectCode) ?: ""
+            ))
         } else {
             Result(data = null)
         }
@@ -219,42 +212,31 @@ abstract class StoreMemberServiceImpl : StoreMemberService {
             }
             dslContext.transaction { t ->
                 val context = DSL.using(t)
-                val storeTypeByte = storeType.type.toByte()
-                storeMemberDao.addStoreMember(context, userId, storeCode, item, type, storeTypeByte)
-                when {
-                    storeType == StoreTypeEnum.TEMPLATE -> {
-                        // 模板无调试项目
-                    }
-
-                    testProjectCode != null -> {
-                        storeProjectRelDao.updateUserStoreTestProject(
-                            dslContext = context,
-                            userId = item,
-                            storeCode = storeCode,
-                            storeType = storeType,
-                            projectCode = testProjectCode,
-                            storeProjectType = StoreProjectTypeEnum.TEST
-                        )
-                    }
-
-                    collaborationFlag != true && storeType != StoreTypeEnum.DEVX -> {
-                        // 协作申请方式，添加成员时无需再添加调试项目
-                        val fixTestProjectCode = storeProjectRelDao.getUserStoreTestProjectCode(
+                storeMemberDao.addStoreMember(context, userId, storeCode, item, type, storeType.type.toByte())
+                if (null != testProjectCode) {
+                    storeProjectRelDao.updateUserStoreTestProject(
+                        dslContext = context,
+                        userId = item,
+                        storeCode = storeCode,
+                        storeType = storeType,
+                        projectCode = testProjectCode,
+                        storeProjectType = StoreProjectTypeEnum.TEST
+                    )
+                } else if (collaborationFlag != true && storeType != StoreTypeEnum.DEVX) {
+                    // 协作申请方式，添加成员时无需再添加调试项目
+                    storeProjectRelDao.addStoreProjectRel(
+                        dslContext = context,
+                        userId = item,
+                        storeCode = storeCode,
+                        projectCode = storeProjectRelDao.getUserStoreTestProjectCode(
                             dslContext = context,
                             userId = userId,
                             storeCode = storeCode,
                             storeType = storeType
-                        ) ?: return@transaction
-
-                        storeProjectRelDao.addStoreProjectRel(
-                            dslContext = context,
-                            userId = item,
-                            storeCode = storeCode,
-                            projectCode = fixTestProjectCode,
-                            type = StoreProjectTypeEnum.TEST.type.toByte(),
-                            storeType = storeTypeByte
-                        )
-                    }
+                        )!!,
+                        type = StoreProjectTypeEnum.TEST.type.toByte(),
+                        storeType = storeType.type.toByte()
+                    )
                 }
             }
             receivers.add(item)

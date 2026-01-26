@@ -63,7 +63,9 @@ object YamlCommonUtils {
     fun exportToFile(yaml: String, fileName: String): Response {
         // 流式下载
         val fileStream = StreamingOutput { output ->
-            output.write(yaml.toByteArray(Charsets.UTF_8))
+            val sb = StringBuilder()
+            sb.append(yaml)
+            output.write(sb.toString().toByteArray())
             output.flush()
         }
         val encodedFileName = URLEncoder.encode("$fileName.yml", "UTF-8")

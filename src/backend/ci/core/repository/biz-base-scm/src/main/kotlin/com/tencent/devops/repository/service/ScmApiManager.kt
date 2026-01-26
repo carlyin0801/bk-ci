@@ -27,6 +27,7 @@
 
 package com.tencent.devops.repository.service
 
+import com.tencent.devops.scm.api.exception.NotFoundScmApiException
 import com.tencent.devops.scm.api.pojo.BranchListOptions
 import com.tencent.devops.scm.api.pojo.Change
 import com.tencent.devops.scm.api.pojo.CheckRun
@@ -178,7 +179,11 @@ class ScmApiManager constructor(
         providerRepository: ScmProviderRepository,
         name: String
     ): Reference? {
-        return scmProviderManager.refs(providerProperties).findBranch(providerRepository, name)
+        return try {
+            scmProviderManager.refs(providerProperties).findBranch(providerRepository, name)
+        } catch (e: NotFoundScmApiException) {
+            null
+        }
     }
 
     fun listBranches(
@@ -273,7 +278,11 @@ class ScmApiManager constructor(
         path: String,
         ref: String
     ): Content? {
-        return scmProviderManager.files(providerProperties).find(providerRepository, path, ref)
+        return try {
+            return scmProviderManager.files(providerProperties).find(providerRepository, path, ref)
+        } catch (e: NotFoundScmApiException) {
+            null
+        }
     }
 
     fun createFile(

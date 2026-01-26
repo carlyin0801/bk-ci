@@ -29,12 +29,7 @@ package com.tencent.devops.process.trigger.scm
 
 import com.tencent.devops.common.event.dispatcher.SampleEventDispatcher
 import com.tencent.devops.process.engine.utils.PipelineUtils
-import com.tencent.devops.process.pojo.pipeline.PipelineYamlDiff
-import com.tencent.devops.process.pojo.pipeline.enums.YamlFileActionType.CREATE
-import com.tencent.devops.process.pojo.pipeline.enums.YamlFileActionType.RENAME
-import com.tencent.devops.process.pojo.pipeline.enums.YamlFileActionType.UPDATE
-import com.tencent.devops.process.pojo.pipeline.enums.YamlFileType
-import com.tencent.devops.process.trigger.scm.converter.WebhookYamlDiffConverterManager
+import com.tencent.devops.process.trigger.scm.converter.WebhookConverterManager
 import com.tencent.devops.process.trigger.scm.listener.WebhookTriggerContext
 import com.tencent.devops.process.trigger.scm.listener.WebhookTriggerManager
 import com.tencent.devops.process.yaml.PipelineYamlService
@@ -42,11 +37,13 @@ import com.tencent.devops.process.yaml.PipelineYamlViewService
 import com.tencent.devops.process.yaml.actions.GitActionCommon
 import com.tencent.devops.process.yaml.common.Constansts
 import com.tencent.devops.process.yaml.mq.PipelineYamlFileEvent
+import com.tencent.devops.process.yaml.pojo.YamlFileActionType.CREATE
+import com.tencent.devops.process.yaml.pojo.YamlFileActionType.RENAME
+import com.tencent.devops.process.yaml.pojo.YamlFileActionType.UPDATE
 import com.tencent.devops.repository.pojo.Repository
 import com.tencent.devops.scm.api.pojo.webhook.Webhook
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.time.LocalDateTime
 
 /**
  * PAC流水线webhook事件监听者
@@ -55,22 +52,20 @@ import java.time.LocalDateTime
 class PacWebhookEventListener(
     private val pipelineYamlViewService: PipelineYamlViewService,
     private val pipelineYamlService: PipelineYamlService,
+    private val eventDispatcher: SampleEventDispatcher,
     private val webhookTriggerManager: WebhookTriggerManager,
-    private val webhookYamlDiffConverterManager: WebhookYamlDiffConverterManager,
-    private val sampleEventDispatcher: SampleEventDispatcher,
+    private val webhookConverterManager: WebhookConverterManager,
+    private val webhookGrayService: WebhookGrayService
 ) : WebHookEventListener {
 
     companion object {
         private val logger = LoggerFactory.getLogger(PacWebhookEventListener::class.java)
     }
 
-    override fun onEvent(
-        eventId: Long,
-        eventTime: LocalDateTime?,
-        repository: Repository,
-        webhook: Webhook,
-        replayPipelineId: String?
-    ) {
+    override fun onEvent(eventId: Long, repository: Repository, webhook: Webhook, replayPipelineId: String?) {
+        if (!webhookGrayService.isPacGrayRepo(repository.scmCode, repository.projectName)) {
+            return
+        }
         if (repository.enablePac != true) return
         val projectId = repository.projectId!!
         val context = WebhookTriggerContext(
@@ -79,35 +74,31 @@ class PacWebhookEventListener(
             eventId = eventId
         )
         try {
-            val yamlDiffs = webhookYamlDiffConverterManager.convert(
+            val yamlFileEvents = webhookConverterManager.convert(
                 eventId = eventId,
                 repository = repository,
                 webhook = webhook
             )
-            val finalYamlDiffs = filterReplayYamlFile(
+            val filterYamlFileEvents = filterReplayYamlFile(
                 projectId = projectId,
                 repository = repository,
-                yamlDiffs = yamlDiffs,
+                yamlFileEvents = yamlFileEvents,
                 replayPipelineId = replayPipelineId
             )
             createPipelineView(
                 userId = repository.userName,
                 projectId = projectId,
                 repository = repository,
-                yamlDiffs = finalYamlDiffs
+                yamlFileEvents = filterYamlFileEvents
             )
-            finalYamlDiffs.forEach {
-                val yamlFileEvent = PipelineYamlFileEvent(
-                    repository = repository,
-                    yamlDiff = it,
-                    eventTime = eventTime
-                )
-                sampleEventDispatcher.dispatch(yamlFileEvent)
+            filterYamlFileEvents.forEach {
+                eventDispatcher.dispatch(it)
             }
         } catch (ignored: Exception) {
             logger.error(
-                "[PAC_PIPELINE]|Failed to dispatch yaml file event|$eventId|" +
-                        "$projectId|${repository.repoHashId}|${webhook.eventType}",
+                "[PAC_PIPELINE]|Failed to dispatch yaml file event|eventId:$eventId|" +
+                        "projectId:$projectId|repoHashId:${repository.repoHashId}|" +
+                        "eventType:${webhook.eventType}",
                 ignored
             )
             webhookTriggerManager.fireError(context = context, exception = ignored)
@@ -120,9 +111,9 @@ class PacWebhookEventListener(
     private fun filterReplayYamlFile(
         projectId: String,
         repository: Repository,
-        yamlDiffs: List<PipelineYamlDiff>,
+        yamlFileEvents: List<PipelineYamlFileEvent>,
         replayPipelineId: String?
-    ): List<PipelineYamlDiff> {
+    ): List<PipelineYamlFileEvent> {
         return if (replayPipelineId != null) {
             val pipelineYamlInfo = if (PipelineUtils.isPipelineId(replayPipelineId)) {
                 pipelineYamlService.getPipelineYamlInfo(projectId = projectId, pipelineId = replayPipelineId)
@@ -136,9 +127,9 @@ class PacWebhookEventListener(
                 logger.warn("replay pipeline not enable pac|$projectId|$replayPipelineId")
                 return emptyList()
             }
-            yamlDiffs.filter { it.filePath == pipelineYamlInfo.filePath }
+            yamlFileEvents.filter { it.filePath == pipelineYamlInfo.filePath }
         } else {
-            yamlDiffs
+            yamlFileEvents
         }
     }
 
@@ -146,11 +137,11 @@ class PacWebhookEventListener(
         projectId: String,
         userId: String,
         repository: Repository,
-        yamlDiffs: List<PipelineYamlDiff>
+        yamlFileEvents: List<PipelineYamlFileEvent>
     ) {
-        val directories = yamlDiffs.filter {
-            // 流水线创建、更新、重命名事件
-            it.fileType == YamlFileType.PIPELINE && setOf(CREATE, UPDATE, RENAME).contains(it.actionType)
+        val directories = yamlFileEvents.filter {
+            // 创建、更新、重命名事件
+            setOf(CREATE, UPDATE, RENAME).contains(it.actionType)
         }.map { GitActionCommon.getCiDirectory(it.filePath) }.toSet()
         if (directories.isNotEmpty()) {
             // 创建yaml流水线组

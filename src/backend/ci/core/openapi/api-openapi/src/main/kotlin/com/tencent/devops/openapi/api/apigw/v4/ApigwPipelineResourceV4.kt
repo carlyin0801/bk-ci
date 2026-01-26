@@ -481,10 +481,7 @@ interface ApigwPipelineResourceV4 {
         page: Int? = null,
         @Parameter(description = "每页条数(默认20, 最大100)", required = false, example = "20")
         @QueryParam("pageSize")
-        pageSize: Int? = null,
-        @Parameter(description = "流水线名称", required = false)
-        @QueryParam("filterByPipelineName")
-        filterByPipelineName: String? = null,
+        pageSize: Int? = null
     ): Result<Page<Pipeline>>
 
     @Operation(summary = "获取流水线状态", tags = ["v4_app_pipeline_status", "v4_user_pipeline_status"])

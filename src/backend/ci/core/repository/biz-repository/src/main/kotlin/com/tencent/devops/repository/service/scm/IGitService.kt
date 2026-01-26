@@ -401,14 +401,4 @@ interface IGitService {
         gitProjectId: String,
         gitCreateMergeRequest: GitCreateMergeRequest
     ): Result<GitMrInfo>
-
-    fun getRecentGitCommitMessages(
-        userId: String,
-        branch: String?,
-        codeSrc: String?,
-        gitProjectId: Long?,
-        commitNumber: Int,
-        prefixes: String?,
-        keywords: String?
-    ): Result<String>
 }

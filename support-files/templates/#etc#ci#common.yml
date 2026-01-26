@@ -266,13 +266,7 @@ spring:
         databaseShardingStrategy: SHARDING
       - index: 68
         name: T_PIPELINE_BUILD_CHECK_RUN
-        databaseShardingStrategy: SHARDING
-      - index: 69
-        name: T_PIPELINE_BUILD_PARAM_COMBINATION
-        databaseShardingStrategy: SHARDING
-      - index: 70
-        name: T_PIPELINE_BUILD_PARAM_COMBINATION_DETAIL
-        databaseShardingStrategy: SHARDING
+        broadcastFlag: true
 
 endpoints:
   metrics:

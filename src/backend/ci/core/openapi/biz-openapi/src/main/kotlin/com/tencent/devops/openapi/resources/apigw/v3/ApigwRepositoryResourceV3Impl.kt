@@ -67,19 +67,14 @@ class ApigwRepositoryResourceV3Impl @Autowired constructor(private val client: C
         apigwType: String?,
         userId: String,
         projectId: String,
-        repositoryType: ScmType?,
-        scmCode: String?
+        repositoryType: ScmType?
     ): Result<Page<RepositoryInfo>> {
-        logger.info(
-            "OPENAPI_REPOSITORY_V3|$userId|get user's use repostitories in project|$projectId|" +
-                    "$repositoryType|$scmCode"
-        )
+        logger.info("OPENAPI_REPOSITORY_V3|$userId|get user's use repostitories in project|$projectId|$repositoryType")
         return client.get(ServiceRepositoryResource::class).hasPermissionList(
             userId = userId,
             projectId = projectId,
             repositoryType = repositoryType?.name,
-            permission = Permission.USE,
-            scmCode = scmCode
+            permission = Permission.USE
         )
     }
 

@@ -1,11 +1,11 @@
 <template>
     <section class="devops-empty-tips">
-        <bk-exception
+        <img
             v-if="imgType !== 'noCollect'"
+            :src="noDataSrc"
+            alt=""
             class="no-data-pic"
-            type="empty"
-            scene="part"
-        />
+        >
         <img
             v-if="imgType === 'noCollect'"
             :src="noCollect"
@@ -35,6 +35,7 @@
 </template>
 
 <script>
+    import noData from '@/images/box.png'
     export default {
         props: {
             imgType: {
@@ -71,6 +72,7 @@
         },
         data () {
             return {
+                noDataSrc: '',
                 noCollect: '',
                 permParams: {}
             }
@@ -85,6 +87,7 @@
             }
         },
         created () {
+            this.noDataSrc = noData
             this.noCollect = require(`../../images/${this.$i18n.locale}-no-collect.png`)
             
             if (this.permissionData) this.permParams.permissionData = this.permissionData
@@ -119,16 +122,17 @@
                 }
             }
         }
+        .no-data-pic {
+            margin-top: 90px;
+            margin-bottom: 14px;
+            max-width: 320px;
+            max-height: 320px;
+        }
         .no-collect-pic {
             margin-top: 40px;
             margin-bottom: 24px;
             width: 320px;
             height: 320px;
-        }
-    }
-    .no-data-pic {
-        .bk-exception-text.part-text {
-            display: none !important;
         }
     }
 </style>

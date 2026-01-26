@@ -53,16 +53,8 @@ class JobQuotaService constructor(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(JobQuotaService::class.java)
-
-        // 重试配置常量
         private const val RETRY_TIME = 5
-        private const val RETRY_DELTA_MILLIS = 60 * 1000
-        private const val RETRY_DELTA_SECONDS = RETRY_DELTA_MILLIS / 1000
-
-        // 默认值常量
-        private const val DEFAULT_EXECUTE_COUNT = 1
-        private const val DEFAULT_VM_SEQ_ID = "1"
-        private const val DEFAULT_QUEUE_TIMEOUT_MINUTES = 10
+        private const val RETRY_DELTA = 60 * 1000
     }
 
     @Value("\${dispatch.jobQuota.enable:false}")
@@ -73,15 +65,13 @@ class JobQuotaService constructor(
         jobType: JobQuotaVmType?,
         demoteQueueRouteKeySuffix: String
     ): Boolean {
-        // 如果未启用配额检查或 jobType 为空，直接通过
-        if (!isJobQuotaEnabled(jobType)) {
+        if (null == jobType || !jobQuotaEnable) {
+            logger.info("JobQuota not enabled or VmType is null, job quota check will be skipped.")
             return true
         }
 
         with(startupEvent) {
-            val logPrefix = buildLogPrefix(projectId, jobType!!, buildId, vmSeqId, executeCount)
-
-            // 检查并添加运行中的 Job
+            val logPrefix = "$projectId|$jobType|$buildId|$vmSeqId|$executeCount"
             val checkResult = checkAndAddRunningJob(
                 projectId = projectId,
                 buildId = buildId,
@@ -89,24 +79,22 @@ class JobQuotaService constructor(
                 containerId = containerId,
                 containerHashId = containerHashId,
                 executeCount = executeCount,
-                channelCode = channelCode,
+                channelCode = startupEvent.channelCode,
                 vmType = jobType
             )
 
-            // 检查通过，返回 true
             if (checkResult == null || checkResult) {
                 logger.info("$logPrefix Check job quota success.")
                 return true
             }
 
-            // 检查失败，处理配额超限情况
-            handleJobQuotaOverrun(
+            jobQuoteOverrunHandler(
                 logPrefix = logPrefix,
                 buildId = buildId,
                 containerId = containerId,
                 containerHashId = containerHashId,
                 executeCount = executeCount,
-                queueTimeoutMinutes = queueTimeoutMinutes ?: DEFAULT_QUEUE_TIMEOUT_MINUTES,
+                queueTimeoutMinutes = queueTimeoutMinutes ?: 10,
                 jobType = jobType,
                 demoteQueueRouteKeySuffix = demoteQueueRouteKeySuffix,
                 startupEvent = startupEvent
@@ -116,15 +104,7 @@ class JobQuotaService constructor(
         }
     }
 
-    /**
-     * 处理 Job 配额超限情况
-     * 根据重试次数采取不同的处理策略：
-     * 1. 前 5 次：普通队列重试
-     * 2. 第 5 次：转移到降级队列
-     * 3. 之后：在降级队列中继续重试
-     * 4. 超过最大重试次数：抛出异常
-     */
-    fun handleJobQuotaOverrun(
+    fun jobQuoteOverrunHandler(
         logPrefix: String,
         buildId: String,
         containerId: String,
@@ -135,78 +115,94 @@ class JobQuotaService constructor(
         demoteQueueRouteKeySuffix: String,
         startupEvent: IEvent
     ) {
-        val maxJobRetry = calculateMaxRetryTimes(queueTimeoutMinutes)
+        val maxJobRetry = queueTimeoutMinutes * 60 * 1000 / RETRY_DELTA
         val dispatchService = SpringContextUtil.getBean(DispatchService::class.java)
-        val effectiveExecuteCount = executeCount ?: DEFAULT_EXECUTE_COUNT
 
-        when {
-            // 阶段 1: 普通队列重试（前 5 次）
-            startupEvent.retryTime < RETRY_TIME -> {
-                logger.info("$logPrefix Job quota excess. Delay $RETRY_DELTA_MILLIS ms and retry. " +
-                        "RetryTime: ${startupEvent.retryTime}")
+        if (startupEvent.retryTime < RETRY_TIME) {
+            logger.info("$logPrefix Job quota excess. delay: " +
+                    "$RETRY_DELTA and retry. retryTime: ${startupEvent.retryTime}")
 
-                printYellowLog(
-                    buildId = buildId,
-                    containerId = containerId,
-                    containerHashId = containerHashId,
-                    executeCount = effectiveExecuteCount,
+            buildLogPrinter.addYellowLine(
+                buildId = buildId,
+                message = I18nUtil.getCodeLanMessage(
                     messageCode = BK_JOB_REACHED_MAX_QUOTA_SOON_RETRY,
-                    params = arrayOf(jobType.displayName, "$RETRY_DELTA_SECONDS", "${startupEvent.retryTime}")
-                )
+                    params = arrayOf(jobType.displayName, "${RETRY_DELTA / 1000}", "${startupEvent.retryTime}"),
+                    language = I18nUtil.getDefaultLocaleLanguage()
+                ),
+                tag = VMUtils.genStartVMTaskId(containerId),
+                containerHashId = containerHashId,
+                executeCount = executeCount ?: 1,
+                jobId = null,
+                stepId = VMUtils.genStartVMTaskId(containerId)
+            )
 
-                retryEvent(startupEvent, dispatchService)
-            }
+            startupEvent.retryTime += 1
+            startupEvent.delayMills = RETRY_DELTA
+            dispatchService.redispatch(startupEvent)
+        } else if (startupEvent.retryTime == RETRY_TIME) { // 重试次数刚刚超过最大重试次数，会将消息丢到降级队列
+            logger.warn("$logPrefix Job quota excess. Send event to demoteQueue.")
 
-            // 阶段 2: 转移到降级队列（第 5 次）
-            startupEvent.retryTime == RETRY_TIME -> {
-                logger.warn("$logPrefix Job quota excess. Transferring event to demote queue.")
-
-                printYellowLog(
-                    buildId = buildId,
-                    containerId = containerId,
-                    containerHashId = containerHashId,
-                    executeCount = effectiveExecuteCount,
+            buildLogPrinter.addYellowLine(
+                buildId = buildId,
+                message = I18nUtil.getCodeLanMessage(
                     messageCode = BK_JOB_REACHED_MAX_QUOTA_AND_ALREADY_DELAYED,
                     params = arrayOf(jobType.displayName, "${startupEvent.retryTime}")
-                )
+                ),
+                tag = VMUtils.genStartVMTaskId(containerId),
+                containerHashId = containerHashId,
+                executeCount = executeCount ?: 1,
+                jobId = null,
+                stepId = VMUtils.genStartVMTaskId(containerId)
+            )
 
-                retryEventInDemoteQueue(startupEvent, demoteQueueRouteKeySuffix, dispatchService)
+            startupEvent.retryTime += 1
+            startupEvent.delayMills = RETRY_DELTA
+            if (startupEvent is PipelineAgentStartupEvent) {
+                startupEvent.routeKeySuffix = demoteQueueRouteKeySuffix
             }
+            dispatchService.redispatch(transferDemoteEvent(startupEvent))
+        } else if (startupEvent.retryTime < maxJobRetry) {
+            logger.info("$logPrefix DemoteQueue job quota excess. delay: " +
+                    "$RETRY_DELTA and retry. retryTime: ${startupEvent.retryTime}")
 
-            // 阶段 3: 降级队列中继续重试
-            startupEvent.retryTime < maxJobRetry -> {
-                logger.info("$logPrefix DemoteQueue job quota excess. Delay $RETRY_DELTA_MILLIS ms and retry. " +
-                        "RetryTime: ${startupEvent.retryTime}")
-
-                printYellowLog(
-                    buildId = buildId,
-                    containerId = containerId,
-                    containerHashId = containerHashId,
-                    executeCount = effectiveExecuteCount,
+            buildLogPrinter.addYellowLine(
+                buildId = buildId,
+                message = I18nUtil.getCodeLanMessage(
                     messageCode = BK_JOB_REACHED_MAX_QUOTA_AND_SOON_DELAYED,
-                    params = arrayOf(jobType.displayName, "$RETRY_DELTA_SECONDS", "${startupEvent.retryTime}")
-                )
+                    params = arrayOf(jobType.displayName, "${RETRY_DELTA / 1000}", "${startupEvent.retryTime}")
+                ),
+                tag = VMUtils.genStartVMTaskId(containerId),
+                containerHashId = containerHashId,
+                executeCount = executeCount ?: 1,
+                jobId = null,
+                stepId = VMUtils.genStartVMTaskId(containerId)
+            )
 
-                retryEventInDemoteQueue(startupEvent, demoteQueueRouteKeySuffix, dispatchService)
+            startupEvent.retryTime += 1
+            startupEvent.delayMills = RETRY_DELTA
+            if (startupEvent is PipelineAgentStartupEvent) {
+                startupEvent.routeKeySuffix = demoteQueueRouteKeySuffix
             }
-
-            // 阶段 4: 超过最大重试次数，抛出异常
-            else -> {
-                logger.error("$logPrefix Maximum number of retries reached. " +
-                        "RetryTime: ${startupEvent.retryTime}, MaxJobRetry: $maxJobRetry")
-                throwJobQuotaExcessException()
-            }
+            dispatchService.redispatch(transferDemoteEvent(startupEvent))
+        } else {
+            logger.info("$logPrefix DemoteQueue Job Maximum number of retries reached. " +
+                    "RetryTime: ${startupEvent.retryTime}, MaxJobRetry: $maxJobRetry")
+            val errorMessage = I18nUtil.getCodeLanMessage(DispatchSdkErrorCode.JOB_QUOTA_EXCESS.toString())
+            throw BuildFailureException(
+                errorType = ErrorType.USER,
+                errorCode = DispatchSdkErrorCode.JOB_QUOTA_EXCESS,
+                formatErrorMessage = errorMessage,
+                errorMessage = errorMessage
+            )
         }
     }
 
-    /**
-     * 检查并添加运行中的 Job（无代理模式）
-     */
     fun checkAndAddRunningJob(
         agentLessStartupEvent: PipelineBuildLessStartupEvent,
         vmType: JobQuotaVmType?
     ): Boolean {
-        if (!isJobQuotaEnabled(vmType)) {
+        if (null == vmType || !jobQuotaEnable) {
+            logger.info("JobQuota not enabled or VmType is null, job quota check will be skipped.")
             return true
         }
 
@@ -218,15 +214,12 @@ class JobQuotaService constructor(
                 containerId = containerId,
                 containerHashId = containerHashId,
                 executeCount = executeCount,
-                channelCode = channelCode,
-                vmType = vmType!!
+                channelCode = agentLessStartupEvent.channelCode,
+                vmType = vmType
             ) ?: true
         }
     }
 
-    /**
-     * 移除运行中的 Job
-     */
     fun removeRunningJob(
         projectId: String,
         pipelineId: String,
@@ -234,33 +227,22 @@ class JobQuotaService constructor(
         vmSeqId: String?,
         executeCount: Int?
     ) {
-        if (!jobQuotaEnable) {
-            return
-        }
-
-        val effectiveVmSeqId = vmSeqId ?: DEFAULT_VM_SEQ_ID
-        val effectiveExecuteCount = executeCount ?: DEFAULT_EXECUTE_COUNT
-
-        logger.info("Remove running job: [$projectId|$buildId|$effectiveVmSeqId|$effectiveExecuteCount]")
-
-        try {
-            client.get(ServiceJobQuotaBusinessResource::class).removeRunningJob(
-                projectId = projectId,
-                pipelineId = pipelineId,
-                buildId = buildId,
-                vmSeqId = effectiveVmSeqId,
-                executeCount = effectiveExecuteCount
-            )
-        } catch (e: Throwable) {
-            logger.error("Failed to remove running job quota: " +
-                    "[$projectId|$buildId|$effectiveVmSeqId|$effectiveExecuteCount]", e)
+        if (jobQuotaEnable) {
+            logger.info("Remove running job to dispatch:[$projectId|$buildId|$vmSeqId]")
+            try {
+                client.get(ServiceJobQuotaBusinessResource::class).removeRunningJob(
+                    projectId = projectId,
+                    pipelineId = pipelineId,
+                    buildId = buildId,
+                    vmSeqId = vmSeqId ?: "1",
+                    executeCount = executeCount ?: 1
+                )
+            } catch (e: Throwable) {
+                logger.error("Remove running job quota failed.[$projectId]|[$buildId]|[$vmSeqId]", e)
+            }
         }
     }
 
-    /**
-     * 检查并添加运行中的 Job（内部方法）
-     * @return true-检查通过，false-配额超限，null-检查失败（默认通过）
-     */
     private fun checkAndAddRunningJob(
         projectId: String,
         buildId: String,
@@ -269,37 +251,34 @@ class JobQuotaService constructor(
         containerHashId: String?,
         executeCount: Int?,
         channelCode: String,
-        vmType: JobQuotaVmType
+        vmType: JobQuotaVmType?
     ): Boolean? {
-        val effectiveExecuteCount = executeCount ?: DEFAULT_EXECUTE_COUNT
-        val logPrefix = buildLogPrefix(projectId, vmType, buildId, vmSeqId, effectiveExecuteCount)
+        if (null == vmType || !jobQuotaEnable) {
+            logger.info("JobQuota not enabled or VmType is null, job quota check will be skipped.")
+            return true
+        }
 
-        logger.info("$logPrefix Start checking job quota.")
-
+        logger.info("$projectId|$vmType|$buildId|$vmSeqId|$executeCount Start check job quota.")
         return try {
             client.get(ServiceJobQuotaBusinessResource::class).checkAndAddRunningJob(
                 projectId = projectId,
                 vmType = vmType,
                 buildId = buildId,
                 vmSeqId = vmSeqId,
-                executeCount = effectiveExecuteCount,
+                executeCount = executeCount ?: 1,
                 containerId = containerId,
                 containerHashId = containerHashId,
                 channelCode = channelCode
             ).data
         } catch (e: Throwable) {
-            logger.error("$logPrefix Failed to check job quota, allowing by default.", e)
-            // 检查失败时默认通过，避免阻塞构建
+            logger.error("$projectId|$vmType|$buildId|$vmSeqId|$executeCount Check job quota failed.", e)
             true
         }
     }
 
-    /**
-     * 转换为降级事件
-     */
     private fun transferDemoteEvent(event: IEvent): IEvent {
-        return if (event is PipelineAgentStartupEvent) {
-            PipelineAgentStartupDemoteEvent(
+        if (event is PipelineAgentStartupEvent) {
+            return PipelineAgentStartupDemoteEvent(
                 source = event.source,
                 projectId = event.projectId,
                 pipelineId = event.pipelineId,
@@ -330,105 +309,7 @@ class JobQuotaService constructor(
                 delayMills = event.delayMills
             )
         } else {
-            event
+            return event
         }
-    }
-
-    // ==================== 辅助方法 ====================
-
-    /**
-     * 检查是否启用了 Job 配额功能
-     */
-    private fun isJobQuotaEnabled(jobType: JobQuotaVmType?): Boolean {
-        if (jobType == null || !jobQuotaEnable) {
-            logger.info("JobQuota not enabled or VmType is null, job quota check will be skipped.")
-            return false
-        }
-        return true
-    }
-
-    /**
-     * 构建日志前缀
-     */
-    private fun buildLogPrefix(
-        projectId: String,
-        jobType: JobQuotaVmType,
-        buildId: String,
-        vmSeqId: String,
-        executeCount: Int?
-    ): String {
-        return "$projectId|$jobType|$buildId|$vmSeqId|${executeCount ?: DEFAULT_EXECUTE_COUNT}"
-    }
-
-    /**
-     * 计算最大重试次数
-     */
-    private fun calculateMaxRetryTimes(queueTimeoutMinutes: Int): Int {
-        return queueTimeoutMinutes * 60 * 1000 / RETRY_DELTA_MILLIS
-    }
-
-    /**
-     * 打印黄色日志
-     */
-    private fun printYellowLog(
-        buildId: String,
-        containerId: String,
-        containerHashId: String?,
-        executeCount: Int,
-        messageCode: String,
-        params: Array<String>
-    ) {
-        val taskId = VMUtils.genStartVMTaskId(containerId)
-        buildLogPrinter.addYellowLine(
-            buildId = buildId,
-            message = I18nUtil.getCodeLanMessage(
-                messageCode = messageCode,
-                params = params,
-                language = I18nUtil.getDefaultLocaleLanguage()
-            ),
-            tag = taskId,
-            containerHashId = containerHashId,
-            executeCount = executeCount,
-            jobId = null,
-            stepId = taskId
-        )
-    }
-
-    /**
-     * 重试事件（普通队列）
-     */
-    private fun retryEvent(event: IEvent, dispatchService: DispatchService) {
-        event.retryTime += 1
-        event.delayMills = RETRY_DELTA_MILLIS
-        dispatchService.redispatch(event)
-    }
-
-    /**
-     * 重试事件（降级队列）
-     */
-    private fun retryEventInDemoteQueue(
-        event: IEvent,
-        demoteQueueRouteKeySuffix: String,
-        dispatchService: DispatchService
-    ) {
-        event.retryTime += 1
-        event.delayMills = RETRY_DELTA_MILLIS
-        if (event is PipelineAgentStartupEvent) {
-            event.routeKeySuffix = demoteQueueRouteKeySuffix
-        }
-        dispatchService.redispatch(transferDemoteEvent(event))
-    }
-
-    /**
-     * 抛出配额超限异常
-     */
-    private fun throwJobQuotaExcessException(): Nothing {
-        val errorMessage = I18nUtil.getCodeLanMessage(DispatchSdkErrorCode.JOB_QUOTA_EXCESS.toString())
-        throw BuildFailureException(
-            errorType = ErrorType.USER,
-            errorCode = DispatchSdkErrorCode.JOB_QUOTA_EXCESS,
-            formatErrorMessage = errorMessage,
-            errorMessage = errorMessage
-        )
     }
 }

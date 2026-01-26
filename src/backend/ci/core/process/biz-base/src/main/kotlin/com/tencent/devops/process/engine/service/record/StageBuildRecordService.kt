@@ -44,6 +44,8 @@ import com.tencent.devops.process.engine.dao.PipelineBuildDao
 import com.tencent.devops.process.engine.dao.PipelineResourceDao
 import com.tencent.devops.process.engine.dao.PipelineResourceVersionDao
 import com.tencent.devops.process.engine.pojo.PipelineBuildStageControlOption
+import com.tencent.devops.process.engine.service.PipelineElementService
+import com.tencent.devops.process.engine.service.detail.StageBuildDetailService
 import com.tencent.devops.process.pojo.BuildStageStatus
 import com.tencent.devops.process.pojo.pipeline.record.BuildRecordStage
 import com.tencent.devops.process.service.StageTagService
@@ -61,10 +63,12 @@ class StageBuildRecordService(
     private val recordStageDao: BuildRecordStageDao,
     private val recordContainerDao: BuildRecordContainerDao,
     private val recordTaskDao: BuildRecordTaskDao,
-    pipelineBuildDao: PipelineBuildDao,
+    private val stageBuildDetailService: StageBuildDetailService,
+    private val pipelineBuildDao: PipelineBuildDao,
     recordModelService: PipelineRecordModelService,
     pipelineResourceDao: PipelineResourceDao,
     pipelineResourceVersionDao: PipelineResourceVersionDao,
+    pipelineElementService: PipelineElementService,
     stageTagService: StageTagService,
     buildRecordModelDao: BuildRecordModelDao,
     pipelineEventDispatcher: PipelineEventDispatcher,
@@ -78,7 +82,8 @@ class StageBuildRecordService(
     recordModelService = recordModelService,
     pipelineResourceDao = pipelineResourceDao,
     pipelineBuildDao = pipelineBuildDao,
-    pipelineResourceVersionDao = pipelineResourceVersionDao
+    pipelineResourceVersionDao = pipelineResourceVersionDao,
+    pipelineElementService = pipelineElementService
 ) {
 
     fun getRecord(
@@ -121,6 +126,9 @@ class StageBuildRecordService(
                 if (stageVar[Stage::startEpoch.name] == null) {
                     stageVar[Stage::startEpoch.name] = System.currentTimeMillis()
                 }
+            } else if (buildStatus.isFinish() && stageVar[Stage::startEpoch.name] != null) {
+                stageVar[Stage::elapsed.name] =
+                    System.currentTimeMillis() - stageVar[Stage::startEpoch.name].toString().toLong()
             }
             updateStageRecord(
                 projectId = projectId, pipelineId = pipelineId, buildId = buildId,
@@ -128,36 +136,10 @@ class StageBuildRecordService(
                 buildStatus = buildStatus
             )
         }
-        return getHistoryStageStatusList(
-            projectId = projectId,
-            pipelineId = pipelineId,
-            buildId = buildId,
-            executeCount = executeCount,
-            buildStatus = buildStatus
+        return stageBuildDetailService.updateStageStatus(
+            projectId = projectId, buildId = buildId, stageId = stageId,
+            buildStatus = buildStatus, executeCount = executeCount
         )
-    }
-
-    private fun getHistoryStageStatusList(
-        projectId: String,
-        pipelineId: String,
-        buildId: String,
-        executeCount: Int,
-        buildStatus: BuildStatus,
-        reviewers: List<String>? = null
-    ): List<BuildStageStatus> {
-        val recordStages = recordStageDao.getRecords(
-            dslContext = dslContext,
-            projectId = projectId,
-            pipelineId = pipelineId,
-            buildId = buildId,
-            executeCount = executeCount
-        )
-        val historyStageStatusList = fetchHistoryStageStatus(
-            recordStages = recordStages,
-            buildStatus = buildStatus,
-            reviewers = reviewers
-        )
-        return historyStageStatusList
     }
 
     fun stageSkip(
@@ -186,12 +168,10 @@ class StageBuildRecordService(
                 stageVar = mutableMapOf()
             )
         }
-        return getHistoryStageStatusList(
+        return stageBuildDetailService.stageSkip(
             projectId = projectId,
-            pipelineId = pipelineId,
             buildId = buildId,
-            executeCount = executeCount,
-            buildStatus = BuildStatus.RUNNING
+            stageId = stageId
         )
     }
 
@@ -214,6 +194,7 @@ class StageBuildRecordService(
             val stageVar = mutableMapOf<String, Any>()
             stageVar[Stage::startEpoch.name] = System.currentTimeMillis()
             stageVar[Stage::stageControlOption.name] = controlOption.stageControlOption
+            stageVar[Stage::startEpoch.name] = System.currentTimeMillis()
             checkIn?.let { stageVar[Stage::checkIn.name] = checkIn }
             checkOut?.let { stageVar[Stage::checkOut.name] = checkOut }
             updateStageRecord(
@@ -226,13 +207,13 @@ class StageBuildRecordService(
                 )
             )
         }
-        return getHistoryStageStatusList(
+        return stageBuildDetailService.stagePause(
             projectId = projectId,
-            pipelineId = pipelineId,
             buildId = buildId,
-            executeCount = executeCount,
-            buildStatus = BuildStatus.REVIEWING,
-            reviewers = checkIn?.groupToReview()?.reviewers
+            stageId = stageId,
+            controlOption = controlOption,
+            checkIn = checkIn,
+            checkOut = checkOut
         )
     }
 
@@ -271,6 +252,10 @@ class StageBuildRecordService(
                 )
             )
         }
+        stageBuildDetailService.stageCancel(
+            projectId = projectId, buildId = buildId, stageId = stageId, controlOption = controlOption,
+            checkIn = checkIn, checkOut = checkOut
+        )
     }
 
     fun stageCheckQuality(
@@ -324,12 +309,10 @@ class StageBuildRecordService(
             )
             pipelineBuildDao.updateStatus(dslContext, projectId, buildId, oldBuildStatus, newBuildStatus)
         }
-        return getHistoryStageStatusList(
-            projectId = projectId,
-            pipelineId = pipelineId,
-            buildId = buildId,
-            executeCount = executeCount,
-            buildStatus = newBuildStatus
+        return stageBuildDetailService.stageCheckQuality(
+            projectId = projectId, buildId = buildId, stageId = stageId,
+            controlOption = controlOption,
+            checkIn = checkIn, checkOut = checkOut
         )
     }
 
@@ -344,6 +327,11 @@ class StageBuildRecordService(
         checkOut: StagePauseCheck?
     ) {
         logger.info("[$buildId]|stage_review|stageId=$stageId")
+        stageBuildDetailService.stageReview(
+            projectId = projectId, buildId = buildId, stageId = stageId,
+            controlOption = controlOption,
+            checkIn = checkIn, checkOut = checkOut
+        )
         update(
             projectId, pipelineId, buildId, executeCount, BuildStatus.STAGE_SUCCESS,
             cancelUser = null, operation = "stageReview#$stageId"
@@ -399,12 +387,9 @@ class StageBuildRecordService(
                 )
             )
         }
-        return getHistoryStageStatusList(
-            projectId = projectId,
-            pipelineId = pipelineId,
-            buildId = buildId,
-            executeCount = executeCount,
-            buildStatus = BuildStatus.RUNNING
+        return stageBuildDetailService.stageStart(
+            projectId = projectId, buildId = buildId, stageId = stageId,
+            controlOption = controlOption, checkIn = checkIn, checkOut = checkOut
         )
     }
 
@@ -442,13 +427,9 @@ class StageBuildRecordService(
             if (buildStatus?.isRunning() == true && recordStage.startTime == null) {
                 startTime = now
             }
-            val dbStageVar = recordStage.stageVar
             if (buildStatus?.isFinish() == true) {
                 if (recordStage.endTime == null) {
                     endTime = now
-                }
-                dbStageVar[Stage::startEpoch.name]?.let {
-                    stageVar[Stage::elapsed.name] = System.currentTimeMillis() - it.toString().toLong()
                 }
                 val recordContainers = recordContainerDao.getRecords(
                     dslContext = context, projectId = projectId,
@@ -475,7 +456,7 @@ class StageBuildRecordService(
                 buildId = buildId,
                 stageId = stageId,
                 executeCount = executeCount,
-                stageVar = dbStageVar.plus(stageVar),
+                stageVar = recordStage.stageVar.plus(stageVar),
                 buildStatus = buildStatus,
                 startTime = recordStage.startTime ?: startTime,
                 endTime = endTime,

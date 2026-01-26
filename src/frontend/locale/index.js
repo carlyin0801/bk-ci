@@ -2,7 +2,6 @@ import axios from 'axios'
 import { lang, locale } from 'bk-magic-vue'
 import cookies from 'js-cookie'
 import VueI18n from 'vue-i18n'
-import { createI18n } from 'vue-i18n-bridge'
 const DEFAULT_LOCALE = window.INIT_LOCALE || 'zh-CN'
 const LS_KEY = 'blueking_language'
 const loadedModule = {}
@@ -101,15 +100,13 @@ function getLanguageCode (lang) {
     return 'ZH'
 }
 
-export default (r, Vue, initSetLocale = false) => {
+export default (r, initSetLocale = false) => {
     const { messages, localeList } = importAll(r)
     
     const initLocale = getLsLocale()
     const lang = getLanguageCode(initLocale.split('_')[0].toLocaleUpperCase())
-
-    Vue.use(VueI18n, { bridge: true })
-    const i18n = createI18n({
-        legacy: false,
+    
+    const i18n = new VueI18n({
         locale: initLocale,
         fallbackLocale: initLocale,
         messages: localeList.reduce((acc, { key }) => {
@@ -119,8 +116,7 @@ export default (r, Vue, initSetLocale = false) => {
             }
             return acc
         }, {})
-    }, VueI18n)
-    Vue.use(i18n)
+    })
     locale.i18n((...args) => i18n.t(...args))
     setLocale(initLocale, initSetLocale)
 

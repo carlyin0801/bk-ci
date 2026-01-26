@@ -124,7 +124,7 @@ object BkRepoUtils {
             size = size,
             createdTime = LocalDateTime.parse(createdDate, DateTimeFormatter.ISO_DATE_TIME).timestamp(),
             modifiedTime = LocalDateTime.parse(lastModifiedDate, DateTimeFormatter.ISO_DATE_TIME).timestamp(),
-            checksums = FileChecksums(sha256, "", md5 ?: "", crc64ecma),
+            checksums = FileChecksums(sha256, "", md5 ?: ""),
             meta = metadata.entries.associate { Pair(it.key, it.value.toString()) },
             url = "/bkrepo/api/user/generic/$projectId/$repoName$fullPath?download=true"
         )
@@ -143,8 +143,7 @@ object BkRepoUtils {
                 .timestamp(),
             artifactoryType = ArtifactoryType.CUSTOM_DIR,
             properties = properties,
-            md5 = md5,
-            crc64ecma = crc64ecma,
+            md5 = md5
         )
     }
 }

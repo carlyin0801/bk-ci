@@ -18,7 +18,7 @@
                 'editfromImport'
             ])
         },
-        created () {
+        created (to, from, next) {
             if (!this.editfromImport) {
                 this.$router.replace({
                     name: 'pipelineList'

@@ -27,11 +27,11 @@
 </template>
 
 <script>
-    import codeRepo from '@/components/manage/over-view/code-repo'
-    import news from '@/components/manage/over-view/news'
-    import totalStatic from '@/components/manage/over-view/total-static'
-    import trend from '@/components/manage/over-view/trend'
     import { mapGetters } from 'vuex'
+    import totalStatic from '@/components/manage/over-view/total-static'
+    import news from '@/components/manage/over-view/news'
+    import codeRepo from '@/components/manage/over-view/code-repo'
+    import trend from '@/components/manage/over-view/trend'
 
     export default {
         components: {
@@ -89,11 +89,10 @@
             }
         }
         .view-right {
-            flex-shrink: 0;
+            width: 3.81rem;
             display: flex;
             flex-direction: column;
             height: 100%;
-            overflow: hidden;
             .view-news {
                 flex: 1;
                 padding: 16px 0;

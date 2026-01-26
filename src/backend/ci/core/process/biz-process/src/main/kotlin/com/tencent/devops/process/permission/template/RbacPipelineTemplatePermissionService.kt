@@ -38,12 +38,10 @@ import com.tencent.devops.common.client.Client
 import com.tencent.devops.process.constant.ProcessMessageCode
 import com.tencent.devops.process.engine.dao.PipelineInfoDao
 import com.tencent.devops.process.permission.PipelinePermissionService
-import com.tencent.devops.process.pojo.template.v2.PipelineTemplateCommonCondition
-import com.tencent.devops.process.service.template.v2.PipelineTemplateInfoService
 import com.tencent.devops.project.api.service.ServiceProjectResource
-import jakarta.ws.rs.NotFoundException
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
+import jakarta.ws.rs.NotFoundException
 
 @Suppress("LongParameterList")
 class RbacPipelineTemplatePermissionService constructor(
@@ -52,8 +50,7 @@ class RbacPipelineTemplatePermissionService constructor(
     val pipelineInfoDao: PipelineInfoDao,
     val client: Client,
     val authResourceApi: AuthResourceApi,
-    val pipelinePermissionService: PipelinePermissionService,
-    val pipelineTemplateInfoService: PipelineTemplateInfoService,
+    private val pipelinePermissionService: PipelinePermissionService,
     authProjectApi: AuthProjectApi,
     pipelineAuthServiceCode: PipelineAuthServiceCode
 ) : AbstractPipelineTemplatePermissionService(
@@ -137,32 +134,15 @@ class RbacPipelineTemplatePermissionService constructor(
         projectId: String,
         permissions: Set<AuthPermission>
     ): Map<AuthPermission, List<String>> {
-        return if (enableTemplatePermissionManage(projectId)) {
-            permissions.associateWith {
-                authPermissionApi.getUserResourceByPermission(
-                    user = userId,
-                    serviceCode = pipelineAuthServiceCode,
-                    resourceType = resourceType,
-                    projectCode = projectId,
-                    permission = it,
-                    supplier = null
-                )
-            }
-        } else {
-            val templateIds = pipelineTemplateInfoService.list(
-                commonCondition = PipelineTemplateCommonCondition(projectId = projectId)
-            ).map { it.id }
-            val isManager = authProjectApi.checkProjectManager(
-                userId = userId,
+        return permissions.associateWith {
+            authPermissionApi.getUserResourceByPermission(
+                user = userId,
                 serviceCode = pipelineAuthServiceCode,
-                projectCode = projectId
+                resourceType = resourceType,
+                projectCode = projectId,
+                permission = it,
+                supplier = null
             )
-            permissions.associateWith { permission ->
-                when {
-                    permission == AuthPermission.LIST || isManager -> templateIds
-                    else -> emptyList()
-                }
-            }
         }
     }
 

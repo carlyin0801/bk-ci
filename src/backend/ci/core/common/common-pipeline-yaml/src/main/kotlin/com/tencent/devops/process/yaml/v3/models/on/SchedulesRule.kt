@@ -39,9 +39,8 @@ import io.swagger.v3.oas.annotations.media.Schema
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SchedulesRule(
-    override val id: String? = null,
-    override val name: String? = null,
-    override val enable: Boolean? = true,
+    val name: String? = null,
+    val enable: Boolean? = true,
     val cron: Any? = null,
     val interval: Interval? = null,
 
@@ -66,7 +65,7 @@ data class SchedulesRule(
     @get:Schema(title = "start-params")
     @JsonProperty("start-params")
     val startParams: Map<String, String>? = null
-) : Rule(id, name, enable) {
+) {
     data class Interval(
         val week: List<String>,
         @get:Schema(title = "time-points")

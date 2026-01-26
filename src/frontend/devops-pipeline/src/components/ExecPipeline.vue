@@ -113,7 +113,7 @@
                         :user-name="userName"
                         :pipeline="curPipeline"
                         v-bind="$attrs"
-                        @click="handlePipelineClick"
+                        @click="handlePiplineClick"
                         @stage-check="handleStageCheck"
                         @stage-retry="handleRetry"
                         @atom-quality-check="qualityCheck"
@@ -292,7 +292,7 @@
     import BkPipeline, { loadI18nMessages } from 'bkui-pipeline'
     import simplebar from 'simplebar-vue'
     import 'simplebar-vue/dist/simplebar.min.css'
-    import { mapActions, mapGetters, mapState } from 'vuex'
+    import { mapActions, mapState, mapGetters } from 'vuex'
     export default {
         components: {
             simplebar,
@@ -685,7 +685,7 @@
                 this.showErrors = true
             },
 
-            handlePipelineClick (args) {
+            handlePiplineClick (args) {
                 this.toggleAsidePropertyPanel({
                     isShow: true,
                     editingElementPos: args

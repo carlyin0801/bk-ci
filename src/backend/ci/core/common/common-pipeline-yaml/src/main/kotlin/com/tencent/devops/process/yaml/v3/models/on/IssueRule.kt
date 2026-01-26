@@ -33,8 +33,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class IssueRule(
-    override val id: String? = null,
-    override val name: String? = null,
-    override val enable: Boolean? = true,
+    val name: String? = null,
+    val enable: Boolean? = true,
     val action: List<String>? = null
-) : Rule(id, name, enable)
+)

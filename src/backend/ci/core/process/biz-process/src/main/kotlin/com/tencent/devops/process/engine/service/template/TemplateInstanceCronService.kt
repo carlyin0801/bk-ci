@@ -47,7 +47,7 @@ import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_PIPELINE_ELE
 import com.tencent.devops.process.engine.dao.template.TemplateDao
 import com.tencent.devops.process.engine.dao.template.TemplateInstanceBaseDao
 import com.tencent.devops.process.engine.dao.template.TemplateInstanceItemDao
-import com.tencent.devops.process.pojo.template.TemplateInstanceStatus
+import com.tencent.devops.process.pojo.template.TemplateInstanceBaseStatus
 import com.tencent.devops.process.pojo.template.TemplateInstanceUpdate
 import com.tencent.devops.process.service.template.TemplateFacadeService
 import com.tencent.devops.process.util.TempNotifyTemplateUtils
@@ -86,16 +86,8 @@ class TemplateInstanceCronService @Autowired constructor(
     @Value("\${template.maxErrorReasonLength:200}")
     private val maxErrorReasonLength: Int = 200
 
-    @Value("\${template.enableTemplateInstanceCron:false}")
-    private val enableTemplateInstanceCron: Boolean = false
-
-    // todo 新版本上线后，停止该定时
     @Scheduled(cron = "0 0/1 * * * ?")
     fun templateInstance() {
-        if (!enableTemplateInstanceCron) {
-            logger.info("template instance cron is disabled")
-            return
-        }
         val profile = SpringContextUtil.getBean(Profile::class.java)
         val activeProfiles = profile.getActiveProfiles()
         val key = if (activeProfiles.size > 1) {
@@ -113,7 +105,7 @@ class TemplateInstanceCronService @Autowired constructor(
                 logger.info("get lock[$key] failed, skip")
                 return
             }
-            val statusList = listOf(TemplateInstanceStatus.INIT.name, TemplateInstanceStatus.INSTANCING.name)
+            val statusList = listOf(TemplateInstanceBaseStatus.INIT.name, TemplateInstanceBaseStatus.INSTANCING.name)
             val templateInstanceBaseList = templateInstanceBaseDao.getTemplateInstanceBaseList(
                 dslContext = dslContext,
                 statusList = statusList,
@@ -137,7 +129,7 @@ class TemplateInstanceCronService @Autowired constructor(
                     dslContext = dslContext,
                     projectId = projectId,
                     baseId = baseId,
-                    status = TemplateInstanceStatus.INSTANCING.name,
+                    status = TemplateInstanceBaseStatus.INSTANCING.name,
                     userId = "system"
                 )
                 val successPipelines = ArrayList<String>()
@@ -208,7 +200,7 @@ class TemplateInstanceCronService @Autowired constructor(
                         } catch (exception: ErrorCodeException) {
                             logger.info(
                                 "Fail to update the pipeline|$projectId|${templateInstanceItem.pipelineId}|" +
-                                    "$userId|${exception.message}"
+                                        "$userId|${exception.message}"
                             )
                             val message = I18nUtil.generateResponseDataObject(
                                 messageCode = exception.errorCode,

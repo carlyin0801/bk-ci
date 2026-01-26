@@ -137,8 +137,7 @@
                         this.$router.push({
                             name: 'pipelineImportEdit',
                             params: {
-                                tab: 'pipeline',
-                                isTemplatePipeline: false
+                                tab: 'pipeline'
                             }
                         })
                     })

@@ -159,7 +159,7 @@ class AtomArchiveResourceApi : AbstractBuildResourceApi(), AtomArchiveSDKApi {
             destPath = destPath,
             buildVariables = buildVariables
         )
-        return file.inputStream().use { ShaUtils.sha256InputStream(it) }
+        return file.inputStream().use { ShaUtils.sha1InputStream(it) }
     }
 
     override fun uploadAtomPkgFile(
@@ -245,8 +245,7 @@ class AtomArchiveResourceApi : AbstractBuildResourceApi(), AtomArchiveSDKApi {
         atomFilePath: String,
         file: File,
         authFlag: Boolean,
-        queryCacheFlag: Boolean,
-        containerType: String?
+        queryCacheFlag: Boolean
     ) {
         val filePath = when (realm) {
             REALM_LOCAL -> "$BK_CI_ATOM_DIR/$atomFilePath"

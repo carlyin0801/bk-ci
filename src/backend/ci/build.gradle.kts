@@ -1,5 +1,6 @@
 plugins {
-    id("com.tencent.devops.boot") version "1.1.0"
+    id("com.tencent.devops.boot") version "1.0.0"
+    detektCheck
     nexusPublishing
     licenseReport // 检查License合规
 }
@@ -24,7 +25,6 @@ allprojects {
     // 新增maven 仓库
     repositories {
         add(maven { url = uri("https://repo.jenkins-ci.org/releases") })
-        add(maven { url = uri("https://central.sonatype.com/repository/maven-snapshots/") })
     }
 
     // 版本管理
@@ -131,10 +131,6 @@ allprojects {
                 entry("devops-scm-api")
                 entry("devops-scm-spring-boot-starter")
             }
-            // lettuce 6.4.1 有BUG
-            dependency("io.lettuce:lettuce-core:6.4.2.RELEASE")
-            // spring-amqp 3.2.0 有BUG https://github.com/spring-projects/spring-amqp/issues/2914
-            dependency("org.springframework.amqp:spring-amqp:3.2.8")
         }
     }
 

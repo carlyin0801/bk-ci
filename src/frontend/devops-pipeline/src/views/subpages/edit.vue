@@ -11,38 +11,13 @@
             :btns="noPermissionTipsConfig.btns"
         >
         </empty-tips>
-        <YamlPipelineEditor
-            v-else-if="isCodeMode"
-            :editable="editable"
-        />
+        <YamlPipelineEditor v-else-if="isCodeMode" />
         <template v-else>
             <show-variable
                 v-if="currentTab === 'pipeline' && pipeline"
-                :editable="editable"
+                :editable="!isTemplatePipeline"
                 :pipeline="pipeline"
             />
-            <div
-                v-if="instanceFromTemplate"
-                class="constraint-pipeline-tips"
-                :class="{ 'when-show-variable': currentTab === 'pipeline' && showVariable }"
-            >
-                <bk-alert
-                    type="info"
-                >
-                    <div slot="title">
-                        <span>
-                            {{ $t('constraintPipelineEditTips') }}
-                        </span>
-                
-                        <a
-                            class="text-link ml10"
-                            @click="handleToUpgradePipeline"
-                        >
-                            {{ $t('template.goUpgrade') }}
-                        </a>
-                    </div>
-                </bk-alert>
-            </div>
             <header
                 class="choose-type-switcher"
                 :class="{ 'when-show-variable': currentTab === 'pipeline' && showVariable }"
@@ -151,17 +126,11 @@
                 'pipelineYaml',
                 'pipelineSetting',
                 'editfromImport',
-                'showVariable',
-                'instanceFromTemplate'
+                'showVariable'
             ]),
-            editable () {
-                return !(this.instanceFromTemplate || this.pipelineInfo?.mode === 'CONSTRAINT')
-            },
             ...mapGetters({
                 isCodeMode: 'isCodeMode',
-                getPipelineSubscriptions: 'atom/getPipelineSubscriptions',
-                isTemplate: 'atom/isTemplate',
-                instanceFromTemplate: 'atom/instanceFromTemplate',
+                getPipelineSubscriptions: 'atom/getPipelineSubscriptions'
             }),
             pipelineVersion () {
                 return this.pipelineInfo?.version
@@ -178,6 +147,9 @@
             curPanel () {
                 return this.panels.find((panel) => panel.name === this.currentTab)
             },
+            isTemplatePipeline () {
+                return this.pipelineInfo?.instanceFromTemplate ?? false
+            },
             panels () {
                 return [
                     {
@@ -185,7 +157,6 @@
                         label: this.$t('pipeline'),
                         component: 'PipelineEditTab',
                         bindData: {
-                            editable: this.editable,
                             pipeline: this.pipelineWithoutTrigger,
                             isLoading: !this.pipelineWithoutTrigger
                         }
@@ -195,7 +166,7 @@
                         label: this.$t('settings.trigger'),
                         component: 'TriggerTab',
                         bindData: {
-                            editable: this.editable,
+                            editable: !this.isTemplatePipeline,
                             pipeline: this.pipeline
                         }
                     },
@@ -204,7 +175,6 @@
                         label: this.$t('settings.notify'),
                         component: 'NotifyTab',
                         bindData: {
-                            editable: !this.instanceFromTemplate,
                             failSubscriptionList: this.getPipelineSubscriptions('fail'),
                             successSubscriptionList: this.getPipelineSubscriptions('success'),
                             updateSubscription: (name, value) => {
@@ -224,7 +194,6 @@
                         component: 'BaseSettingTab',
                         bindData: {
                             pipelineSetting: this.pipelineSetting,
-                            editable: !this.instanceFromTemplate,
                             updatePipelineSetting: (...args) => {
                                 this.setPipelineEditing(true)
                                 this.updatePipelineSetting(...args)
@@ -319,7 +288,6 @@
                     this.isLoading = true
                     await this.requestPipeline({
                         ...this.$route.params,
-                        editMode: true,
                         version: this.pipelineVersion
                     })
                     this.isLoading = false
@@ -384,10 +352,6 @@
                     projectId: this.projectId,
                     templateId
                 })
-            },
-            handleToUpgradePipeline () {
-                const { pipelineId, pipelineName, templateId, templateVersion } = this.pipelineInfo
-                window.open(`/console/pipeline/${this.projectId}/template/${templateId}/${templateVersion}/instance/upgrade?pipelineId=${pipelineId}&pipelineName=${pipelineName}`, '_blank')
             }
         }
     }
@@ -521,12 +485,6 @@
 
         .bk-tab-content {
             overflow: auto;
-        }
-    }
-    .constraint-pipeline-tips {
-        padding: 20px 20px 0;
-        &.when-show-variable {
-            margin-right: 476px;
         }
     }
 }

@@ -248,8 +248,7 @@ class BkRepoReportResourceApi : AbstractBuildResourceApi(), ReportSDKApi {
             Result(ReportPluginConfig(
                 enableCompress = false,
                 enableCompressPipelines = emptyList(),
-                compressThreshold = Long.MAX_VALUE,
-                compressSizeLimit = 0
+                compressThreshold = Long.MAX_VALUE
             ))
         }
 

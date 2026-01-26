@@ -62,14 +62,6 @@ open class V2BuildParametersCompatibilityTransformer : BuildParametersCompatibil
             // 如果编排中指定为常量，则必须以编排的默认值为准，不支持触发时传参覆盖
             val value = when {
                 param.constant == true -> {
-                    // perf：常量值还能被修改问题优化 #12313
-                    val overrideValue = paramValues[key] ?: paramValues[param.id]
-                    if (overrideValue != null && param.defaultValue != overrideValue) {
-                        logger.info(
-                            "OPERATIONAL_DATA_COLLECTION|CONSTANT_VARIABLE_MODIFY|$userId|$projectId|" +
-                                "$pipelineId|[${param.id}]overrideValue=$overrideValue"
-                        )
-                    }
                     // 常量需要在启动是强制设为只读
                     param.readOnly = true
                     param.defaultValue
@@ -80,7 +72,7 @@ open class V2BuildParametersCompatibilityTransformer : BuildParametersCompatibil
 //            }
                 param.type == BuildFormPropertyType.CUSTOM_FILE && param.enableVersionControl == true -> {
                     // 与前端约定，对于自定义文件路径需要，解析出版本控制信息
-                    val versionControlInfo = paramValues[key]?.toString()?.let { str ->
+                    val versionControlInfo = paramValues[key]?.let { str ->
                         try {
                             JsonUtil.to(str, CustomFileVersionControlInfo::class.java)
                         } catch (ignore: Throwable) {
@@ -94,13 +86,12 @@ open class V2BuildParametersCompatibilityTransformer : BuildParametersCompatibil
                         param.value ?: param.defaultValue
                     }
                 }
-
                 else -> {
                     val overrideValue = paramValues[key] ?: paramValues[param.id]
                     if (!param.required && overrideValue != null) {
                         logger.warn(
                             "BKSystemErrorMonitor|parseTriggerParam|$userId|$projectId|$pipelineId|[$key] " +
-                                "not required, overrideValue=$overrideValue, defaultValue=${param.defaultValue}"
+                                    "not required, overrideValue=$overrideValue, defaultValue=${param.defaultValue}"
                         )
                     }
                     overrideValue ?: param.defaultValue
@@ -131,8 +122,7 @@ open class V2BuildParametersCompatibilityTransformer : BuildParametersCompatibil
                 readOnly = param.readOnly,
                 desc = param.desc,
                 defaultValue = param.defaultValue,
-                latestRandomStringInPath = randomStringInPath,
-                sensitive = param.sensitive
+                latestRandomStringInPath = randomStringInPath
             )
         }
 

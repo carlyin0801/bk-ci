@@ -1,76 +1,53 @@
 <template>
-    <constraint-wraper
-        :classify="CLASSIFY_ENUM.SETTING"
-        field="notices"
-        show-label
-        :show-constraint-area-bg="false"
-        :space-between="false"
-    >
-        <template v-slot:constraint-area="{ props: { isOverride, toggleConstraint } }">
-            <bk-card
-                v-for="card in notifyList"
-                :key="card.type"
-                :is-collapse="true"
-                :collapse-icons="icons"
-                :border="false"
-                class="notify-item"
+    <section>
+        <bk-card
+            v-for="card in notifyList"
+            :key="card.type"
+            :is-collapse="true"
+            :collapse-icons="icons"
+            :border="false"
+            class="notify-item"
+        >
+            <div
+                slot="header"
+                class="item-header"
             >
-                <div
-                    slot="header"
-                    class="item-header"
+                <span class="notify-title">{{ card.name }}</span>
+                <bk-link
+                    v-if="editable"
+                    theme="primary"
+                    icon="bk-icon icon-plus"
+                    @click.stop="handleEdit(card.type, -1)"
                 >
-                    <span class="notify-title">{{ card.name }}</span>
-                    <bk-link
-                        v-if="editable || isOverride"
-                        theme="primary"
-                        icon="bk-icon icon-plus"
-                        @click.stop="handleEdit(card.type, -1)"
-                    >
-                        {{ $t('newui.addNotice') }}
-                    </bk-link>
-                </div>
-                <div class="item-content-area">
+                    {{ $t('newui.addNotice') }}
+                </bk-link>
+            </div>
+            <div class="item-content-area">
+                <template v-for="(item, index) in getRenderInfo(card.type)">
                     <div
-                        v-for="(item, index) in getRenderInfo(card.type)"
                         :key="index"
                         class="item-content"
                     >
                         <div
-                            v-if="editable || isOverride"
+                            v-if="editable"
                             class="operate-icons"
                         >
+                            <i
+                                class="devops-icon icon-edit"
+                                @click="handleEdit(card.type, index)"
+                            ></i>
                             <bk-popover
-                                :disabled="isOverride"
-                                ref="noticeEditPopover"
-                                transfer
-                            >
-                                <bk-button
-                                    text
-                                    class="devops-icon icon-edit"
-                                    :disabled="!(editable || isOverride)"
-                                    @click="handleEdit(card.type, index)"
-                                ></bk-button>
-                                <div slot="content">
-                                    <span>{{ $t('constraintConfTips') }}</span>
-                                    <a
-                                        class="text-link"
-                                        @click="toggleConstraint($refs.noticeEditPopover?.[index]?.instance)"
-                                    >{{ $t('unfollow') }}</a>
-                                </div>
-                            </bk-popover>
-                            <bk-popover
-                                :disabled="!(editable || isOverride)"
+                                class="setting-more-dot-menu"
                                 placement="bottom-start"
                                 theme="project-manage-more-dot-menu light"
                                 trigger="click"
                                 :arrow="false"
                                 :distance="0"
                             >
-                                <span
-                                    :class="['notices-more-menu-trigger', { 'notices-more-is-disabled': !(editable || isOverride) }]"
-                                >
+                                <span class="more-menu-trigger">
                                     <i
                                         class="devops-icon icon-more"
+                                        style="display: inline-block;margin-top: 2px;font-size: 18px"
                                     ></i>
                                 </span>
                                 <ul
@@ -86,20 +63,19 @@
                                 </ul>
                             </bk-popover>
                         </div>
-                    
-                        <div
-                            class="item-info"
-                            v-for="field in renderFields"
-                            :key="field.col"
-                        >
-                            <div class="info-label">
-                                {{ field.label }}
+                        <template v-for="field in renderFields">
+                            <div
+                                class="item-info"
+                                :key="field.col"
+                            >
+                                <div class="info-label">
+                                    {{ field.label }}
+                                </div>
+                                <div class="info-content">
+                                    {{ getShowContent(field.col, item[field.col]) }}
+                                </div>
                             </div>
-                            <div class="info-content">
-                                {{ getShowContent(field.col, item[field.col]) }}
-                            </div>
-                        </div>
-                    
+                        </template>
                         <div
                             class="item-info"
                             v-if="item.wechatGroupFlag && item.wechatGroup && item.types && item.types.includes('WEWORK')"
@@ -112,55 +88,53 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </bk-card>
-        
-            <bk-sideslider
-                quick-close
-                :width="640"
-                :title="slideTitle"
-                :is-show.sync="showSlider"
-                ext-cls="edit-notify-container"
+                </template>
+            </div>
+        </bk-card>
+
+        <bk-sideslider
+            quick-close
+            :width="640"
+            :title="slideTitle"
+            :is-show.sync="showSlider"
+            ext-cls="edit-notify-container"
+        >
+            <div
+                class="edit-notify-content"
+                slot="content"
             >
-                <div
-                    class="edit-notify-content"
-                    slot="content"
+                <notify-setting
+                    ref="notifySettingTab"
+                    :project-group-and-users="projectGroupAndUsers"
+                    :subscription="sliderEditItem"
+                    :update-subscription="updateEditItem"
+                />
+            </div>
+            <div
+                class="edit-notify-footer"
+                slot="footer"
+            >
+                <bk-button
+                    theme="primary"
+                    @click="handleSaveNotify"
                 >
-                    <notify-setting
-                        ref="notifySettingTab"
-                        :project-group-and-users="projectGroupAndUsers"
-                        :subscription="sliderEditItem"
-                        :update-subscription="updateEditItem"
-                    />
-                </div>
-                <div
-                    class="edit-notify-footer"
-                    slot="footer"
+                    {{ $t('confirm') }}
+                </bk-button>
+                <bk-button
+                    style="margin-left: 4px;"
+                    @click="hideSlider"
                 >
-                    <bk-button
-                        theme="primary"
-                        @click="handleSaveNotify"
-                    >
-                        {{ $t('confirm') }}
-                    </bk-button>
-                    <bk-button
-                        style="margin-left: 4px;"
-                        @click="hideSlider"
-                    >
-                        {{ $t('cancel') }}
-                    </bk-button>
-                </div>
-            </bk-sideslider>
-        </template>
-    </constraint-wraper>
+                    {{ $t('cancel') }}
+                </bk-button>
+            </div>
+        </bk-sideslider>
+    </section>
 </template>
 
 <script>
-    import ConstraintWraper from '@/components/ConstraintWraper.vue'
-    import NotifySetting from '@/components/pipelineSetting/NotifySetting'
-    import { CLASSIFY_ENUM } from '@/hook/useTemplateConstraint'
+    import { mapActions } from 'vuex'
     import { deepCopy } from '@/utils/util'
-    import { mapGetters, mapActions } from 'vuex'
+    import NotifySetting from '@/components/pipelineSetting/NotifySetting'
 
     const defaultSuc = {
         types: [],
@@ -187,10 +161,8 @@
     export default {
         name: 'notify-tab',
         components: {
-            NotifySetting,
-            ConstraintWraper
+            NotifySetting
         },
-        
         props: {
             editable: {
                 type: Boolean,
@@ -202,7 +174,6 @@
         },
         data () {
             return {
-                CLASSIFY_ENUM,
                 showSlider: false,
                 sliderEditItem: {},
                 editType: '', // 当前编辑通知类型，成功或失败
@@ -249,9 +220,6 @@
             }
         },
         computed: {
-            ...mapGetters('atom', [
-                'isTemplate'
-            ]),
             slideTitle () {
                 const actionType = this.editIndex > -1 ? this.$t('newui.editNotice') : this.$t('newui.addNotice')
                 const targetType = this.editType === 'failSubscriptionList' ? this.$t('settings.whenFail') : this.$t('settings.whenSuc')
@@ -293,9 +261,6 @@
                     this.sliderEditItem = deepCopy(this[type][index])
                 } else {
                     this.sliderEditItem = deepCopy(type === 'failSubscriptionList' ? defaultFail : defaultSuc)
-                    if (this.isTemplate) {
-                        this.sliderEditItem.detailFlag = true
-                    }
                 }
             },
             handleSaveNotify () {
@@ -354,15 +319,12 @@
                 padding: 24px 24px 8px;
                 margin-bottom: 16px;
                 .operate-icons {
-                    .notices-more-menu-trigger.notices-more-is-disabled {
-                        cursor: not-allowed;
-                        color: #C4C6CC;
-                    }
                     position: absolute;
                     top: 10px;
-                    right: 10px;
+                    right: 12px;
                     display: flex;
                     align-items: center;
+                    grid-gap: 10px;
                     font-size: 16px;
                 }
                 &:nth-child(odd) {

@@ -42,7 +42,7 @@
 </template>
 
 <script>
-    import CopyIcon from '@/components/CopyIcon'
+    import CopyIcon from '@/components/copyIcon'
     import { mapActions } from 'vuex'
 
     export default {

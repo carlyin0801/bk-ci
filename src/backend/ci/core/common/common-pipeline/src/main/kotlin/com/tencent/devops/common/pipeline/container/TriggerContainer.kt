@@ -58,9 +58,10 @@ data class TriggerContainer(
     var templateParams: List<BuildFormProperty>? = null,
     @get:Schema(title = "构建版本号", required = false)
     var buildNo: BuildNo? = null,
-    @get:Schema(
-        title =
-            "是否可重试-仅限于构建详情展示重试，目前未作为编排的选项，暂设置为null不存储",
+    @get:Schema(title = "公共变量序号集合", required = false)
+    var publicParamsIndex:  Map<String, Int?>? = null,
+    @get:Schema(title =
+        "是否可重试-仅限于构建详情展示重试，目前未作为编排的选项，暂设置为null不存储",
         required = false,
         readOnly = true
     )
@@ -82,7 +83,10 @@ data class TriggerContainer(
     @get:Schema(title = "各项耗时", required = true)
     override var timeCost: BuildRecordTimeCost? = null,
     @get:Schema(title = "开机任务序号", required = false, readOnly = true)
-    override var startVMTaskSeq: Int? = null
+    override var startVMTaskSeq: Int? = null,
+    override var template: String? = null,
+    override var ref: String? = null,
+    override var variables: Map<String, String>? = null
 ) : Container {
     companion object {
         const val classType = "trigger"
@@ -110,7 +114,5 @@ data class TriggerContainer(
         super.transformCompatibility()
     }
 
-    override fun copyElements(elements: List<Element>): Container {
-        return this.copy(elements = elements)
-    }
+    fun fetchPublicParamsIndex() = publicParamsIndex
 }

@@ -39,16 +39,8 @@ import java.time.LocalDateTime
 
 @Component
 class JobQuotaRedisUtils {
-    fun getJobQuotaProjectLock(
-        projectId: String,
-        jobType: JobQuotaVmType,
-        channelCode: String
-    ): RedisLock {
-        return RedisLock(
-            redisOperation = getRedisStringSerializerOperation(),
-            lockKey = "$JOB_PROJECT_LOCK_KEY$projectId${jobType.name}$channelCode",
-            expiredTimeInSeconds = 60L
-        )
+    fun getJobQuotaProjectLock(projectId: String, jobType: JobQuotaVmType): RedisLock {
+        return RedisLock(getRedisStringSerializerOperation(), "$JOB_PROJECT_LOCK_KEY$projectId${jobType.name}", 60L)
     }
 
     fun getJobStatisticsLock(): RedisLock {
@@ -102,7 +94,6 @@ class JobQuotaRedisUtils {
         return getRedisStringSerializerOperation().hscan(getDayJobConcurrencyKey(lastWeekDay.name))
     }
 
-    // 记录一天中该项目的并发峰值
     fun saveJobConcurrency(
         projectId: String,
         runningJobCount: Int,
@@ -118,11 +109,11 @@ class JobQuotaRedisUtils {
             projectDayJobConcurrencyKey
         )?.toLongOrNull()
 
-        if (maxConcurrency == null || maxConcurrency < runningJobCount) {
+        if (maxConcurrency == null || maxConcurrency < (runningJobCount + 1)) {
             getRedisStringSerializerOperation().hset(
                 dayJobConcurrencyKey,
                 projectDayJobConcurrencyKey,
-                runningJobCount.toString()
+                (runningJobCount + 1).toString()
             )
         }
     }
@@ -181,7 +172,7 @@ class JobQuotaRedisUtils {
 
         // 判断如果是跨天的构建任务，并发数加一
         if (agentStartTime.dayOfYear != LocalDateTime.now().dayOfYear) {
-            saveJobConcurrency(projectId, 1, jobType, channelCode)
+            saveJobConcurrency(projectId, 0, jobType, channelCode)
         }
 
         getRedisStringSerializerOperation().hIncrBy(

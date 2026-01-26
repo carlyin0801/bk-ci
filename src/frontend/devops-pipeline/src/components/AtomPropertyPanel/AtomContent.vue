@@ -9,7 +9,7 @@
             v-bkloading="{ isLoading: fetchingAtmoModal }"
         >
             <form-field
-                v-if="atom"
+                v-if="atom && !isTriggerContainer(container)"
                 :desc="$t('editPage.stepIdDesc')"
                 label="Step ID"
                 :is-error="errors.has('stepId')"
@@ -169,7 +169,7 @@
 
                 <div
                     v-if="atom"
-                    :class="{ 'atom-form-box': true, 'readonly': !isOverride && !editable && !isRemoteAtom }"
+                    :class="{ 'atom-form-box': true, 'readonly': !editable && !isRemoteAtom }"
                 >
                     <!-- <div class='desc-tips' v-if="!isNewAtomTemplate(atom.htmlTemplateVersion) && atom.description"> <span>插件描述：</span> {{ atom.description }}</div> -->
                     <div
@@ -186,7 +186,6 @@
                         :set-parent-validate="setAtomValidate"
                         :disabled="!editable"
                         :is-instance-template="isInstanceTemplate"
-                        :pipeline-dialect="pipelineDialect"
                         class="atom-content"
                     >
                     </div>
@@ -205,7 +204,6 @@
                             :element="element"
                             :container="container"
                             :set-parent-validate="setAtomValidate"
-                            :pipeline-dialect="pipelineDialect"
                             :disabled="!editable"
                         />
                     </div>
@@ -353,7 +351,6 @@
                 'atomVersionList',
                 'isPropertyPanelVisible',
                 'showPanelType',
-                'pipelineSetting',
                 'editingElementPos'
             ]),
             projectId () {
@@ -384,14 +381,6 @@
                 const { container, elementIndex, getElement } = this
                 const element = getElement(container, elementIndex)
                 return element
-            },
-            pipelineDialect () {
-                if (this.pipelineSetting?.pipelineAsCodeSettings) {
-                    const { inheritedDialect, pipelineDialect, projectDialect } = this.pipelineSetting?.pipelineAsCodeSettings
-                    return inheritedDialect ? projectDialect : pipelineDialect
-                } else {
-                    return 'CLASSIC'
-                }
             },
             allStepId () {
                 const stepIdList = []
@@ -501,9 +490,13 @@
                     return RemoteAtom
                 }
                 if (this.isNewAtomTemplate(this.htmlTemplateVersion)) {
-                    // 使用正则匹配所有 webhook 插件：以 code 开头且以 WebHookTrigger 结尾
-                    const isWebHookAtom = /^code.*WebHookTrigger$/i.test(this.atomCode)
-                    return isWebHookAtom ? CodeWebHookTrigger : NormalAtomV2
+                    const atomMap = {
+                        codeTGitWebHookTrigger: CodeWebHookTrigger,
+                        codeP4WebHookTrigger: CodeWebHookTrigger,
+                        codeScmGitWebHookTrigger: CodeWebHookTrigger,
+                        codeScmSvnWebHookTrigger: CodeWebHookTrigger
+                    }
+                    return atomMap[this.atomCode] || NormalAtomV2
                 }
                 const atomMap = {
                     timerTrigger: TimerTrigger,
@@ -529,11 +522,7 @@
                     manualReviewUserTask: ManualReviewUserTask
                 }
                 return atomMap[this.atomCode] || NormalAtom
-            },
-            isOverride () {
-                console.log(this.atom, this.element)
-                return this.editable || this.element?.isOverride
-            },
+            }
         },
         watch: {
             atomCode (atomCode) {

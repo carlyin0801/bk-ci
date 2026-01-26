@@ -106,7 +106,6 @@ After=network.target
 
 [Service]
 Type=forking
-ExecStartPre=/bin/rm -f $workspace/runtime/*.pid 
 ExecStart=$workspace/start.sh
 ExecStop=$workspace/stop.sh
 WorkingDirectory=$workspace

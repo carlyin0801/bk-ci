@@ -28,7 +28,6 @@
 package com.tencent.devops.common.pipeline.option
 
 import com.fasterxml.jackson.core.type.TypeReference
-import com.tencent.devops.common.api.constant.CommonMessageCode.BK_JOB_MATRIX_STR_ERROR
 import com.tencent.devops.common.api.util.EnvUtils
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.api.util.KeyReplacement
@@ -36,7 +35,6 @@ import com.tencent.devops.common.api.util.ReplacementUtils
 import com.tencent.devops.common.api.util.YamlUtil
 import com.tencent.devops.common.pipeline.matrix.DispatchInfo
 import com.tencent.devops.common.pipeline.matrix.MatrixConfig
-import com.tencent.devops.common.web.utils.I18nUtil
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.regex.Pattern
 import org.slf4j.LoggerFactory
@@ -162,11 +160,11 @@ data class MatrixControlOption(
                 emptyMap(), mutableListOf(), mutableListOf()
             )
         }
-        val contextStr = replaceJsonPattern(
-            command = strategyStr,
-            buildContext = buildContext
-        )
         try {
+            val contextStr = replaceJsonPattern(
+                command = strategyStr,
+                buildContext = buildContext
+            )
             // 适用于matrix中是包含了key的map类型JSON，这种情况必包含strategy，可能包含include和exclude
             val matrixMap = JsonUtil.to<Map<String, List<Any>?>>(contextStr)
             return MatrixConfig(
@@ -185,9 +183,7 @@ data class MatrixControlOption(
             )
         } catch (ignore: Exception) {
             // 适用于不包含key的list类型JSON,这种情况只会是strategy
-            val str = kotlin.runCatching { YamlUtil.to<Map<String, Any>>(strategyStr) }.getOrElse {
-                throw Exception(I18nUtil.getCodeLanMessage(BK_JOB_MATRIX_STR_ERROR, params = arrayOf(contextStr)))
-            }
+            val str = YamlUtil.to<Map<String, Any>>(strategyStr)
             return MatrixConfig(
                 strategy = str.map {
                     it.key to when (it.value) {
@@ -223,9 +219,7 @@ data class MatrixControlOption(
                 command = caseStr,
                 buildContext = buildContext ?: throw Exception("empty buildContext")
             )
-            kotlin.runCatching { JsonUtil.to<List<Map<String, String>>>(contextStr) }.getOrElse {
-                throw Exception(I18nUtil.getCodeLanMessage(BK_JOB_MATRIX_STR_ERROR, params = arrayOf(contextStr)))
-            }
+            JsonUtil.to(contextStr)
         }
         return includeCaseList.map { map ->
             map.map {

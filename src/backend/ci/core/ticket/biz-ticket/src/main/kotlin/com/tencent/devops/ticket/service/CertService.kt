@@ -179,45 +179,26 @@ interface CertService {
 
     fun getTls(projectId: String, certId: String): CertTlsInfo
 
-    fun queryIos(
-        projectId: String,
-        buildId: String,
-        certId: String,
-        publicKey: String,
-        padding: Boolean
-    ): CertIOS
+    fun queryIos(projectId: String, buildId: String, certId: String, publicKey: String): CertIOS
 
     fun queryEnterprise(
         projectId: String,
         buildId: String,
         certId: String,
-        publicKey: String,
-        padding: Boolean
+        publicKey: String
     ): CertEnterprise
 
-    fun queryEnterpriseByProject(
-        projectId: String,
-        certId: String,
-        publicKey: String,
-        padding: Boolean
-    ): CertEnterprise
+    fun queryEnterpriseByProject(projectId: String, certId: String, publicKey: String): CertEnterprise
 
-    fun queryAndroid(
-        projectId: String,
-        buildId: String,
-        certId: String,
-        publicKey: String,
-        padding: Boolean
-    ): CertAndroid
+    fun queryAndroid(projectId: String, buildId: String, certId: String, publicKey: String): CertAndroid
 
     fun queryAndroidByProject(
         projectId: String,
         certId: String,
-        publicKey: String,
-        padding: Boolean
+        publicKey: String
     ): CertAndroidWithCredential
 
-    fun queryTlsByProject(projectId: String, certId: String, publicKey: String, padding: Boolean): CertTls
+    fun queryTlsByProject(projectId: String, certId: String, publicKey: String): CertTls
 
     fun getCertByIds(
         projectId: String? = null,

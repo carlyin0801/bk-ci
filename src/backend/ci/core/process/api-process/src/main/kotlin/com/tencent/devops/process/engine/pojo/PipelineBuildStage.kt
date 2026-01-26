@@ -45,6 +45,5 @@ data class PipelineBuildStage(
     val controlOption: PipelineBuildStageControlOption?,
     var checkIn: StagePauseCheck? = null,
     var checkOut: StagePauseCheck? = null,
-    val stageIdForUser: String? = null,
-    var name: String? = ""
+    val stageIdForUser: String? = null
 )

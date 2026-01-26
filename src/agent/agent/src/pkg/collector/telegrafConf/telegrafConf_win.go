@@ -37,8 +37,6 @@ const TelegrafConf = `
   agentSecret = "{{.AgentSecret}}"
   hostName = "{{.HostName}}"
   hostIp = "{{.HostIp}}"
-  cpuProductInfo = "{{.CPUProductInfo}}"
-  gpuProductInfo = "{{.GPUProductInfo}}"
 [agent]
   interval = "1m"
   round_interval = true

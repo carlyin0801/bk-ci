@@ -70,7 +70,7 @@ class BuildLessListener @Autowired constructor(
             if (!jobQuotaService.checkAndAddRunningJob(event, JobQuotaVmType.BUILD_LESS)) {
                 logger.warn("[${event.buildId}]|BUILD_LESS| AgentLess Job quota exceed quota.")
                 with(event) {
-                    jobQuotaService.handleJobQuotaOverrun(
+                    jobQuotaService.jobQuoteOverrunHandler(
                         logPrefix = "$projectId$pipelineId$buildId$vmSeqId$executeCount",
                         buildId = buildId,
                         containerId = containerId,

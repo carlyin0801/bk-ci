@@ -64,8 +64,8 @@
         v-if="type === 'renewal'"
         :label="t('到期时间')"
       >
-        <span class="expired">{{ expiredDisplay }}{{ status === 'EXPIRED' ? '' : t('天')}}</span>
-        <img class="arrows-icon" src="../../../svg/arrows-right.svg">
+        <span class="expired">{{ expiredDisplay }}{{ t('天')}}</span>
+        <img class="arrows-icon" src="../../../svg/arrows-right.svg?inline">
         <span class="new-expired">{{ newExpiredDisplay }}{{ t('天')}}</span>
       </bk-form-item>
       <bk-form-item
@@ -139,10 +139,6 @@ export default {
       type: String,
       default: '',
     },
-    status: {
-      type: String,
-      default: ''
-    }
   },
   emits: ['update:show'],
   data() {
@@ -204,9 +200,9 @@ export default {
         31104000: 360,
       };
       if (this.currentActive === 'custom') {
-        return this.status === 'EXPIRED' ? Number(this.customTime) : Number(this.expiredDisplay) + Number(this.customTime);
+        return Number(this.expiredDisplay) + Number(this.customTime);
       }
-      return this.status === 'EXPIRED' ? timeMap[this.currentActive] : Number(this.expiredDisplay) + timeMap[this.currentActive];
+      return Number(this.expiredDisplay) + timeMap[this.currentActive];
     },
   },
   created() {

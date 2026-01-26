@@ -1,4 +1,4 @@
-FROM bkci/os:0.0.2
+FROM bkci/os:0.0.1
 
 LABEL maintainer="Tencent BlueKing Devops"
 

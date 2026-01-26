@@ -46,21 +46,6 @@ import org.springframework.beans.factory.annotation.Autowired
 class ServiceScmRepositoryApiResourceImpl @Autowired constructor(
     private val repositoryApiService: ScmRepositoryApiService
 ) : ServiceScmRepositoryApiResource {
-
-    override fun getServerRepositoryById(
-        projectId: String,
-        repositoryType: RepositoryType?,
-        repoHashIdOrName: String
-    ): Result<ScmServerRepository> {
-        return Result(
-            repositoryApiService.findRepository(
-                projectId = projectId,
-                repositoryType = repositoryType,
-                repoHashIdOrName = repoHashIdOrName
-            )
-        )
-    }
-
     override fun getServerRepository(
         projectId: String,
         authRepository: AuthRepository
@@ -83,7 +68,7 @@ class ServiceScmRepositoryApiResourceImpl @Autowired constructor(
         )
     }
 
-    override fun listBranches(
+    override fun findBranches(
         projectId: String,
         authRepository: AuthRepository,
         search: String?,
@@ -91,7 +76,7 @@ class ServiceScmRepositoryApiResourceImpl @Autowired constructor(
         pageSize: Int
     ): Result<List<Reference>> {
         return Result(
-            repositoryApiService.listBranches(
+            repositoryApiService.findBranches(
                 projectId = projectId,
                 authRepository = authRepository,
                 search = search,
@@ -115,7 +100,7 @@ class ServiceScmRepositoryApiResourceImpl @Autowired constructor(
         )
     }
 
-    override fun listTags(
+    override fun findTags(
         projectId: String,
         authRepository: AuthRepository,
         search: String?,
@@ -123,7 +108,7 @@ class ServiceScmRepositoryApiResourceImpl @Autowired constructor(
         pageSize: Int
     ): Result<List<Reference>> {
         return Result(
-            repositoryApiService.listTags(
+            repositoryApiService.findTags(
                 projectId = projectId,
                 authRepository = authRepository,
                 search = search,

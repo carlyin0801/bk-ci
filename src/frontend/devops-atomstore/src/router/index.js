@@ -31,14 +31,19 @@ const imageWork = () => import(/* webpackChunkName: 'workList' */ '@/views/workL
 
 const install = () => import(/* webpackChunkName: 'install' */ '@/views/install.vue') // 研发商店安装页面
 const manage = () => import(/* webpackChunkName: 'manage' */ '@/views/manage/index.vue') // 研发商店管理页面
+const detail = () => import(/* webpackChunkName: 'detail' */ '@/views/manage/detail/index.vue') // 研发商店管理页面
 const show = () => import(/* webpackChunkName: 'detail' */ '@/views/manage/detail/show.vue') // 研发商店管理页面
 const edit = () => import(/* webpackChunkName: 'detail' */ '@/views/manage/detail/edit.vue') // 研发商店管理页面
+const overView = () => import(/* webpackChunkName: 'overView' */ '@/views/manage/over-view/index.vue') // 研发商店管理页面
 const statisticData = () => import(/* webpackChunkName: 'overView' */ '@/views/manage/over-view/statistic-data.vue') // 研发商店管理页面
 const statisticPipeline = () => import(/* webpackChunkName: 'overView' */ '@/views/manage/over-view/statistic-pipeline.vue') // 研发商店管理页面
 const approval = () => import(/* webpackChunkName: 'approval' */ '@/views/manage/approval.vue') // 研发商店管理页面
 const setting = () => import(/* webpackChunkName: 'setting' */ '@/views/manage/setting/index.vue') // 研发商店管理页面
-
+const memberSetting = () => import(/* webpackChunkName: 'setting' */ '@/views/manage/setting/member-setting.vue') // 研发商店管理页面
+const privateSetting = () => import(/* webpackChunkName: 'setting' */ '@/views/manage/setting/private-setting.vue') // 研发商店管理页面
+const apiSetting = () => import(/* webpackChunkName: 'setting' */ '@/views/manage/setting/api-setting.vue') // 研发商店管理页面
 const releaseManage = () => import(/* webpackChunkName: 'releaseManage' */ '@/views/manage/release-manage/index.vue') // 研发商店管理页面
+const version = () => import(/* webpackChunkName: 'releaseManage' */ '@/views/manage/release-manage/version.vue') // 研发商店管理页面
 
 const editAtom = () => import(/* webpackChunkName: 'editAtom' */ '@/views/edit_atom.vue') // 上架/升级流水线插件
 const releaseProgress = () => import(/* webpackChunkName: 'releaseProgress' */ '@/views/release_progress.vue') // 发布进度
@@ -137,29 +142,60 @@ const routes = [
                 component: manage,
                 children: [
                     {
-                        path: 'detail/show',
-                        name: 'show',
-                        component: show
-                    },
-                    {
-                        path: 'detail/edit',
-                        name: 'edit',
-                        component: edit
+                        path: 'detail',
+                        name: 'detail',
+                        component: detail,
+                        children: [
+                            {
+                                path: 'show',
+                                name: 'show',
+                                component: show
+                            },
+                            {
+                                path: 'edit',
+                                name: 'edit',
+                                component: edit
+                            }
+                        ]
                     },
                     {
                         path: 'setting',
                         name: 'setting',
-                        component: setting
+                        component: setting,
+                        children: [
+                            {
+                                path: 'member',
+                                name: 'member',
+                                component: memberSetting
+                            },
+                            {
+                                path: 'private',
+                                name: 'private',
+                                component: privateSetting
+                            },
+                            {
+                                path: 'api',
+                                name: 'api',
+                                component: apiSetting
+                            }
+                        ]
                     },
                     {
-                        path: 'overview/statisticData',
-                        name: 'statisticData',
-                        component: statisticData
-                    },
-                    {
-                        path: 'overview/statisticPipeline',
-                        name: 'statisticPipeline',
-                        component: statisticPipeline
+                        path: 'overview',
+                        name: 'overView',
+                        component: overView,
+                        children: [
+                            {
+                                path: 'statisticData',
+                                name: 'statisticData',
+                                component: statisticData
+                            },
+                            {
+                                path: 'statisticPipeline',
+                                name: 'statisticPipeline',
+                                component: statisticPipeline
+                            }
+                        ]
                     },
                     {
                         path: 'approval',
@@ -169,7 +205,14 @@ const routes = [
                     {
                         path: 'releaseManage',
                         name: 'releaseManage',
-                        component: releaseManage
+                        component: releaseManage,
+                        children: [
+                            {
+                                path: 'version',
+                                name: 'version',
+                                component: version
+                            }
+                        ]
                     }
                 ],
                 meta: {
@@ -202,7 +245,7 @@ const routes = [
                 }
             },
             {
-                path: 'editTemplate/:templateCode?',
+                path: 'editTemplate/:templateId',
                 name: 'editTemplate',
                 component: editTemplate,
                 meta: {
@@ -225,7 +268,7 @@ const routes = [
                 }
             },
             {
-                path: 'upgradeTemplate/:templateCode',
+                path: 'upgradeTemplate/:templateId',
                 name: 'upgradeTemplate',
                 component: upgradeTemplate,
                 meta: {

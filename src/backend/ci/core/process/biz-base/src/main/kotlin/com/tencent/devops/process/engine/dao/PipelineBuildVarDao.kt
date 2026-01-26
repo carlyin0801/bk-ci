@@ -132,24 +132,14 @@ class PipelineBuildVarDao @Autowired constructor() {
             val list = mutableListOf<BuildParameters>()
             result.forEach {
                 if (it.varType != null) {
-                    list.add(
-                        BuildParameters(
-                            key = it.key,
-                            value = it.value,
-                            valueType = BuildFormPropertyType.valueOf(it.varType),
-                            readOnly = it.readOnly,
-                            sensitive = it.sensitive
-                        )
-                    )
+                    list.add(BuildParameters(
+                        key = it.key,
+                        value = it.value,
+                        valueType = BuildFormPropertyType.valueOf(it.varType),
+                        readOnly = it.readOnly
+                    ))
                 } else {
-                    list.add(
-                        BuildParameters(
-                            key = it.key,
-                            value = it.value,
-                            readOnly = it.readOnly,
-                            sensitive = it.sensitive
-                        )
-                    )
+                    list.add(BuildParameters(key = it.key, value = it.value, readOnly = it.readOnly))
                 }
             }
             return list
@@ -184,38 +174,28 @@ class PipelineBuildVarDao @Autowired constructor() {
     ) {
         with(T_PIPELINE_BUILD_VAR) {
             val maxLength = VALUE.dataType.length()
-            dslContext.insertInto(
-                this,
-                BUILD_ID,
-                KEY,
-                VALUE,
-                PROJECT_ID,
-                PIPELINE_ID,
-                VAR_TYPE,
-                READ_ONLY,
-                SENSITIVE
-            ).also {
-                variables.forEach { v ->
-                    val valueString = v.value.toString()
-                    if (valueString.length > maxLength) {
-                        LOG.warn("$buildId|ABANDON_DATA|len[${v.key}]=${valueString.length}(max=$maxLength)")
-                        return@forEach
+            dslContext.insertInto(this, BUILD_ID, KEY, VALUE, PROJECT_ID, PIPELINE_ID, VAR_TYPE, READ_ONLY)
+                .also {
+                    variables.forEach { v ->
+                        val valueString = v.value.toString()
+                        if (valueString.length > maxLength) {
+                            LOG.warn("$buildId|ABANDON_DATA|len[${v.key}]=${valueString.length}(max=$maxLength)")
+                            return@forEach
+                        }
+                        it.values(
+                            buildId,
+                            v.key,
+                            valueString,
+                            projectId,
+                            pipelineId,
+                            v.valueType?.name ?: "STRING",
+                            v.readOnly
+                        )
                     }
-                    it.values(
-                        buildId,
-                        v.key,
-                        valueString,
-                        projectId,
-                        pipelineId,
-                        v.valueType?.name ?: "STRING",
-                        v.readOnly,
-                        v.sensitive
-                    )
                 }
-            }.onDuplicateKeyUpdate()
+                .onDuplicateKeyUpdate()
                 .set(VALUE, MySQLDSL.values(VALUE))
                 .set(VAR_TYPE, MySQLDSL.values(VAR_TYPE))
-                .set(SENSITIVE, MySQLDSL.values(SENSITIVE))
                 .execute()
         }
     }
@@ -232,10 +212,6 @@ class PipelineBuildVarDao @Autowired constructor() {
                 val valueType = v.valueType
                 if (valueType != null) {
                     baseStep.set(VAR_TYPE, valueType.name)
-                }
-                // 仅当 sensitive 不为 null 时更新
-                if (v.sensitive != null) {
-                    baseStep.set(SENSITIVE, v.sensitive)
                 }
                 baseStep.set(VALUE, v.value.toString()).where(
                     BUILD_ID.eq(buildId).and(KEY.eq(v.key)).and(

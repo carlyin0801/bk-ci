@@ -178,18 +178,4 @@ class ServiceStoreComponentResourceImpl @Autowired constructor(
             )
         )
     }
-
-    override fun getStoreUpgradeStatusInfo(
-        userId: String,
-        storeType: String,
-        storeCode: String,
-        version: String
-    ): Result<String?> {
-        return storeComponentQueryService.getStoreUpgradeStatusInfo(
-            userId = userId,
-            storeType = storeType,
-            storeCode = storeCode,
-            version = version
-        )
-    }
 }

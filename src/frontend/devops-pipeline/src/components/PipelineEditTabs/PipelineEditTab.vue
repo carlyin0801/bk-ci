@@ -4,7 +4,6 @@
         v-if="!isLoading"
         :pipeline="pipeline"
         :show-header="false"
-        :editable="editable"
     ></pipeline>
 </template>
 
@@ -19,11 +18,7 @@
         },
         props: {
             isLoading: Boolean,
-            pipeline: Object,
-            editable: {
-                type: Boolean,
-                default: true
-            }
+            pipeline: Object
         },
         data () {
             return {

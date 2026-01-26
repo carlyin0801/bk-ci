@@ -180,7 +180,6 @@
                 this.$router.push({
                     name: 'install',
                     query: {
-                        name: this.detail.name,
                         code: this.detail.imageCode,
                         type: 'image',
                         from: 'details'

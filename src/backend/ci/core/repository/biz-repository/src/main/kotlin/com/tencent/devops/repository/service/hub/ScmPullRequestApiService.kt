@@ -185,6 +185,7 @@ class ScmPullRequestApiService @Autowired constructor(
         authRepository: AuthRepository
     ): List<Comment> {
         return invokeApi(
+            projectId = projectId,
             authRepository = authRepository
         ) { providerProperties, providerRepository ->
             scmApiManager.listPullRequestComment(

@@ -49,8 +49,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [TEXTAREA]: {
         id: 'textarea',
@@ -62,8 +61,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [BOOLEAN]: {
         id: 'bool',
@@ -77,8 +75,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [ENUM]: {
         id: 'select',
@@ -93,8 +90,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [MULTIPLE]: {
         id: 'multiple',
@@ -109,8 +105,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [CHECKBOX]: {
         id: 'checkbox',
@@ -123,8 +118,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [SVN_TAG]: {
         id: 'svntag',
@@ -141,8 +135,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [GIT_REF]: {
         id: 'gitref',
@@ -158,8 +151,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [REPO_REF]: {
         id: 'reporef',
@@ -175,8 +167,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [CODE_LIB]: {
         id: 'codelib',
@@ -192,8 +183,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [SUB_PIPELINE]: {
         id: 'subPipeline',
@@ -208,8 +198,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     },
     [CUSTOM_FILE]: {
         id: 'file',
@@ -224,8 +213,7 @@ export const DEFAULT_PARAM = {
         required: true,
         readOnly: false,
         category: '',
-        displayCondition: {},
-        asInstanceInput: true
+        displayCondition: {}
     }
 }
 

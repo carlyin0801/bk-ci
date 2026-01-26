@@ -52,6 +52,10 @@
                     routeName: 'pipelinesGroup'
                 },
                 {
+                    label: 'templateManage',
+                    routeName: 'pipelinesTemplate'
+                },
+                {
                     label: 'pluginManage',
                     routeName: 'atomManage'
                 },

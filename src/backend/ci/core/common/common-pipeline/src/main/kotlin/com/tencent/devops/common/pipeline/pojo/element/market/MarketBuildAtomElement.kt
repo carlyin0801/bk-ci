@@ -72,7 +72,6 @@ data class MarketBuildAtomElement(
             name = name,
             id = stepId,
             uses = "${getAtomCode()}@$version",
-            namespace = data["namespace"]?.toString()?.ifBlank { null },
             with = TransferUtil.simplifyParams(defaultValue, input).ifEmpty { null }
         )
     }

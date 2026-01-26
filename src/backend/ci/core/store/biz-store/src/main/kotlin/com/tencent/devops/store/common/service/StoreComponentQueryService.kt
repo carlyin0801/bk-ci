@@ -131,11 +131,4 @@ interface StoreComponentQueryService {
         osName: String? = null,
         osArch: String? = null
     ): VersionInfo?
-
-    fun getStoreUpgradeStatusInfo(
-        userId: String,
-        storeType: String,
-        storeCode: String,
-        version: String
-    ): Result<String?>
 }

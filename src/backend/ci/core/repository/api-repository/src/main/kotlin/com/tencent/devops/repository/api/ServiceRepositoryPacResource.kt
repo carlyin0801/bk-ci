@@ -78,7 +78,6 @@ interface ServiceRepositoryPacResource {
         @QueryParam("scmType")
         scmType: ScmType
     ): Result<Repository?>
-
     @Operation(summary = "开启pac")
     @PUT
     @Path("/{projectId}/{repositoryHashId}/enable")

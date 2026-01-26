@@ -1,15 +1,18 @@
 <template>
-    <div class="info-collapse-panel">
-        <div
+    <bk-collapse v-model="activeName">
+        <bk-collapse-item
+            hide-arrow
+            ext-cls="no-animation-collapse"
             v-for="panel in panels"
             :key="panel.name"
-            class="no-animation-collapse"
+            :name="panel.name"
         >
             <header class="pipeline-base-config-panel-header">
                 {{ $t(panel.name) }}
             </header>
             <div
                 class="base-info-panel-content"
+                slot="content"
             >
                 <p
                     v-for="row in panel.rows"
@@ -49,7 +52,7 @@
                             </div>
                         </bk-popover>
                         <span class="base-info-block-row-value">
-                            <template v-if="Array.isArray(row.value)">
+                            <template v-if="['label', 'pipelineGroup'].includes(row.key)">
                                 <template v-if="row.value.length > 0">
                                     <bk-tag
                                         v-for="label in row.value"
@@ -57,33 +60,32 @@
                                         class="base-info-block-row-value-label"
                                         @click="goPipelineManageList(row.key, label.id)"
                                     >
-                                        {{ label.name || label }}
+                                        {{ row.key === 'pipelineGroup' ? label.name : label }}
                                     </bk-tag>
                                 </template>
                                 <template v-else>
                                     --
                                 </template>
                             </template>
-                            <template v-else>
+                            <template v-else-if="['namingConvention', 'modificationDetail', 'creatorDetail'].includes(row.key)">
                                 <span>{{ row.value || '--' }}</span>
-                                <span
-                                    v-if="row.grayDesc"
-                                    class="base-info-block-row-value-gray"
-                                >{{ row.grayDesc }}</span>
+                                <span class="base-info-block-row-value-gray">{{ row.grayDesc }}</span>
+                            </template>
+                            <template v-else>
+                                {{ row.value || '--' }}
                             </template>
                         </span>
                     </template>
                 </p>
             </div>
-        </div>
-    </div>
+        </bk-collapse-item>
+    </bk-collapse>
 </template>
 <script>
-    import NamingConventionTip from '@/components/namingConventionTip.vue'
     import { convertTime } from '@/utils/util'
-    import { BUILD_CANCEL_POLICY_DEFAULT } from '@/store/constants'
-    import { mapActions, mapGetters, mapState } from 'vuex'
-
+    import NamingConventionTip from '@/components/namingConventionTip.vue'
+    import { mapState, mapActions } from 'vuex'
+    
     export default {
         components: {
             NamingConventionTip
@@ -105,9 +107,6 @@
             }
         },
         computed: {
-            ...mapGetters('atom', [
-                'isTemplate'
-            ]),
             ...mapState('pipelines', [
                 'allPipelineGroup'
             ]),
@@ -125,72 +124,43 @@
                 const { inheritedDialect, projectDialect, pipelineDialect } = basicInfo?.pipelineAsCodeSettings ?? {}
                 const namingConvention = inheritedDialect ? this.namingStyle[projectDialect] : this.namingStyle[pipelineDialect]
                 const groupList = this.allPipelineGroup.length ? this.allPipelineGroup : this.currentGroups
-                const viewNameList = groupList?.filter(item => basicInfo?.viewNames?.includes(item.name) ?? false)
-                return this.isTemplate
-                    ? [
-                        {
-                            key: 'name',
-                            value: basicInfo?.pipelineName
-                        },
-                        {
-                            key: 'desc',
-                            value: basicInfo?.desc
-                        },
-                        {
-                            key: 'template.templateType',
-                            value: this.$t(`template.${basicInfo?.type}`)
-                        },
-                        {
-                            key: 'label',
-                            value: basicInfo?.labelNames ?? []
-                        },
-                        {
-                            key: 'creator',
-                            value: basicInfo?.creator
-                        },
-                        {
-                            key: 'createTime',
-                            value: basicInfo?.createTime ? convertTime(basicInfo?.createTime) : '--'
-                        }
-                    ]
-                    : [
-                        {
-                            key: 'pipelineName',
-                            value: basicInfo?.pipelineName
-                        },
-                        {
-                            key: 'label',
-                            value: basicInfo?.labelNames ?? []
-                        },
-                        {
-                            key: 'pipelineGroup',
-                            value: viewNameList ?? []
-                        },
-                        {
-                            key: 'desc',
-                            value: basicInfo?.desc
-                        },
-                        {
-                            key: 'namingConvention',
-                            value: namingConvention,
-                            grayDesc: inheritedDialect ? ` ( ${this.$t('inheritedProject')} )` : ''
-                        },
-                        {
-                            key: 'modificationDetail',
-                            value: basicInfo?.versionUpdater,
-                            grayDesc: ` | ${convertTime(basicInfo?.versionUpdateTime)}`
-                        },
-                        {
-                            key: 'creatorDetail',
-                            value: basicInfo?.creator,
-                            grayDesc: ` | ${convertTime(basicInfo?.createTime)}`
-                        }
-                    ]
+                const viweNameList = groupList?.filter(item => basicInfo?.viewNames?.includes(item.name) ?? false)
+                return [
+                    {
+                        key: 'pipelineName',
+                        value: basicInfo?.pipelineName ?? '--'
+                    },
+                    {
+                        key: 'label',
+                        value: basicInfo?.labelNames ?? []
+                    },
+                    {
+                        key: 'pipelineGroup',
+                        value: viweNameList ?? []
+                    },
+                    {
+                        key: 'desc',
+                        value: basicInfo?.desc ?? '--'
+                    },
+                    {
+                        key: 'namingConvention',
+                        value: namingConvention ?? '--',
+                        grayDesc: inheritedDialect ? ` ( ${this.$t('inheritedProject')} )` : ''
+                    },
+                    {
+                        key: 'modificationDetail',
+                        value: basicInfo?.versionUpdater ?? '--',
+                        grayDesc: ` | ${convertTime(basicInfo?.versionUpdateTime)}`
+                    },
+                    {
+                        key: 'creatorDetail',
+                        value: basicInfo?.creator ?? '--',
+                        grayDesc: ` | ${convertTime(basicInfo?.createTime)}`
+                    }
+                ]
             },
-
             executeConfRows () {
                 const runLockType = this.basicInfo?.runLockType?.toLowerCase?.()
-                const buildCancelPolicy = this.basicInfo?.buildCancelPolicy || BUILD_CANCEL_POLICY_DEFAULT
                 return [
                     {
                         key: 'customBuildNum',
@@ -209,11 +179,7 @@
                             key: 'parallelConfDetail'
                         }]
                         : []
-                    ),
-                    {
-                        key: 'settings.buildCancelPolicyLabel',
-                        value: this.$t(`settings.buildCancelPolicyOptions.${buildCancelPolicy}`)
-                    }
+                    )
                 ]
             },
             parallelSettingRows () {
@@ -242,7 +208,7 @@
                                     label: 'settings.lagestTime',
                                     value: Number.isInteger(this.basicInfo?.waitQueueTimeMinute) ? `${this.basicInfo?.waitQueueTimeMinute}${this.$t('settings.minutes')}` : '--'
                                 }
-
+    
                             ]
                             : []
                         )
@@ -293,10 +259,74 @@
 </script>
 
 <style lang="scss">
-    @import url('@/scss/info-collapsed.scss');
-</style>
-<style lang="scss" scoped>
 .pipeline-base-config-panel-header {
-    margin: 0 10px 18px;
+    font-size: 14px;
+    font-weight: 700;
+    height: 24px;
+    line-height: 24px;
+    border-bottom: 1px solid #DCDEE5;
+}
+.no-animation-collapse {
+    .collapse-transition {
+        transition: none !important;
+    }
+}
+.base-info-panel-content {
+    display: grid;
+    grid-gap: 16px;
+    grid-template-rows: minmax(18px, auto);
+    margin-bottom: 32px;
+    .parallel-conf-detail {
+        border: 1px solid #DCDEE5;
+        margin-left: 130px;
+        padding: 0 25px;
+        border-radius: 2px;
+        width: 600px;
+        .parallel-conf-detail-row {
+            line-height: 32px;
+            align-items: center;
+            grid-template-columns: 150px 1fr;
+            > label {
+                color: #63656e;
+            }
+            > span {
+                color: #313238;
+            }
+        }
+    }
+
+    >p,
+    .parallel-conf-detail-row {
+        display: grid;
+        grid-auto-flow: column;
+        grid-template-columns: 120px 1fr;
+        align-items: flex-start;
+        grid-gap: 10px;
+        font-size: 12px;
+        color: #63656e;
+
+        >label {
+            text-align: right;
+            line-height: 18px;
+            color: #979BA5;
+        }
+
+        .bk-tag {
+            margin-top: 0;
+        }
+    }
+
+    .dotted {
+        line-height: 18px;
+        color: #979BA5;
+        border-bottom: 1px dashed #979BA5;
+    }
+    .bk-tooltip {
+        text-align: right !important;
+    }
+
+}
+.base-info-block-row-value-gray {
+    color: #979BA5;
 }
 </style>

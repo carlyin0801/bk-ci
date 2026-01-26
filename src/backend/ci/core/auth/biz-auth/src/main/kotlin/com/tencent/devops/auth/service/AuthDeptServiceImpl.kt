@@ -341,8 +341,7 @@ class AuthDeptServiceImpl(
         return if (departedMembersCache.getIfPresent(userId) == true) {
             true
         } else {
-            val userInfo = getUserInfo(userId)
-            userInfo == null || userInfo.departed == true
+            getUserInfo(userId) == null
         }.also {
             if (it) {
                 departedMembersCache.put(userId, true)
@@ -467,8 +466,7 @@ class AuthDeptServiceImpl(
                 name = it.userId,
                 displayName = it.userName,
                 type = ManagerScopesEnum.USER,
-                deptInfo = it.departments,
-                departed = it.departed
+                deptInfo = it.departments
             )
         } ?: getUserInfoFromExternal(userId).also {
             if (it != null) userInfoCache.put(userId, it)
@@ -593,7 +591,6 @@ class AuthDeptServiceImpl(
 
     fun getUserDeptTreeIds(responseData: String): Set<String> {
         val deptInfo = JsonUtil.to(responseData, object : TypeReference<List<UserDeptTreeInfo>>() {})
-        if (deptInfo.isEmpty()) return emptySet()
         val deptTreeId = mutableSetOf<String>()
         val deptTree = deptInfo[0]
         deptTreeId.add(deptTree.id)

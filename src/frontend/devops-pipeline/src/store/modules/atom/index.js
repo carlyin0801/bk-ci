@@ -88,9 +88,7 @@ export default {
         yamlHighlightBlockMap: {},
         switchingVersion: false,
         isElementModified: false,
-        isGetPluginHeadTab: false,
-        paramSets: [],
-        storeStatus: ''
+        isGetPluginHeadTab: false
     },
     mutations,
     actions,

@@ -16,19 +16,16 @@
                 @update-key="(newValue) => updateKey(model, newValue)"
                 @update-value="(newValue) => updateValue(model, newValue)"
                 :param-values="paramValues"
-                :pipeline-dialect="pipelineDialect"
             ></parameter-com>
-            <div :class="parameter.rowAttributes?.[0].label ? 'label-icon' : 'simple-label-icon'">
-                <i
-                    class="bk-icon icon-plus-circle"
-                    @click="plusParam(parameter, paramIndex)"
-                ></i>
-                <i
-                    class="bk-icon icon-minus-circle"
-                    v-if="curParameters.length > 1"
-                    @click="minusParam(paramIndex)"
-                ></i>
-            </div>
+            <i
+                class="bk-icon icon-plus-circle"
+                @click="plusParam(parameter, paramIndex)"
+            ></i>
+            <i
+                class="bk-icon icon-minus-circle"
+                v-if="curParameters.length > 1"
+                @click="minusParam(paramIndex)"
+            ></i>
         </li>
     </ul>
 </template>
@@ -151,12 +148,10 @@
         }
         .param-com {
             margin-bottom: 10px;
-            margin-right: 10px;
-            display: flex;
+            display: grid;
             align-items: center;
             grid-gap: 10px;
             grid-auto-flow: column;
-            line-height: 0;
             .input-com {
                 min-width: 0;
                 display: block;
@@ -166,12 +161,6 @@
         .input-label {
             flex: 1;
         }
-    }
-    .label-icon {
-        margin-top: 12px;
-    }
-    .simple-label-icon {
-        margin-bottom: 12px;
     }
     .bk-icon {
         margin-left: 5px;
