@@ -38,6 +38,8 @@ import com.tencent.devops.common.pipeline.container.NormalContainer
 import com.tencent.devops.common.pipeline.container.Stage
 import com.tencent.devops.common.pipeline.container.VMBuildContainer
 import com.tencent.devops.common.pipeline.enums.BuildStatus
+import com.tencent.devops.common.pipeline.pojo.CancelPosition
+import com.tencent.devops.common.pipeline.pojo.DependOnJobInfo
 import com.tencent.devops.common.pipeline.utils.BuildStatusSwitcher
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.prometheus.BkTimed
@@ -136,20 +138,38 @@ class BuildCancelControl @Autowired constructor(
                 // 往redis中设置取消构建标识以防止重复提交
                 setBuildCancelActionRedisFlag(buildId)
             }
-            cancelAllPendingTask(event = event, model = model)
+            val cancelPositions = cancelAllPendingTask(event = event, model = model)
+            event.cancelInfo?.let { info ->
+                if (cancelPositions.isNotEmpty()) {
+                    info.cancelPositions = cancelPositions
+                    info.cancelPositionCount = cancelPositions.size
+                }
+            }
 
             if (event.actionType == ActionType.TERMINATE) {
-                // 修改detail model
+                // TERMINATE路径：在buildCancel中一并保存cancelInfo，避免多次DB写入
                 pipelineBuildRecordService.buildCancel(
                     projectId = event.projectId,
                     pipelineId = event.pipelineId,
                     buildId = event.buildId,
                     buildStatus = event.status,
                     cancelUser = event.userId,
-                    executeCount = buildInfo.executeCount ?: 1
+                    executeCount = buildInfo.executeCount ?: 1,
+                    cancelInfo = event.cancelInfo
                 )
                 sendBuildFinishEvent(event)
                 return true
+            }
+
+            // 非TERMINATE路径：此处保存cancelInfo，后续buildEnd流程不会覆盖modelVar中已有的key
+            event.cancelInfo?.let { info ->
+                pipelineBuildRecordService.saveBuildCancelInfo(
+                    projectId = event.projectId,
+                    pipelineId = event.pipelineId,
+                    buildId = event.buildId,
+                    executeCount = buildInfo.executeCount ?: 1,
+                    cancelInfo = info
+                )
             }
 
             // 排队的则不再获取Pending Stage，防止Final Stage被执行
@@ -227,11 +247,34 @@ class BuildCancelControl @Autowired constructor(
         )
     }
 
+    /**
+     * 取消位置收集的上下文，将Stage级和构建级公共参数封装为一个对象，避免方法参数过多
+     */
+    private data class CancelPositionContext(
+        val projectId: String,
+        val pipelineId: String,
+        val buildId: String,
+        val executeCount: Int,
+        val stageIndex: Int,
+        val stageName: String,
+        val stageId: String,
+        val containerInfoMap: Map<String, ContainerBriefInfo>
+    )
+
+    private data class ContainerBriefInfo(
+        val name: String,
+        val matrixGroupFlag: Boolean?
+    )
+
     @Suppress("ALL")
-    private fun cancelAllPendingTask(event: PipelineBuildCancelEvent, model: Model) {
+    private fun cancelAllPendingTask(
+        event: PipelineBuildCancelEvent,
+        model: Model
+    ): List<CancelPosition> {
         val projectId = event.projectId
         val pipelineId = event.pipelineId
         val buildId = event.buildId
+        val cancelPositions = mutableListOf<CancelPosition>()
         val variables: Map<String, String> by lazy {
             buildVariableService.getAllVariable(
                 projectId,
@@ -258,25 +301,38 @@ class BuildCancelControl @Autowired constructor(
                 }
             }
 
+            val ctx = CancelPositionContext(
+                projectId = projectId,
+                pipelineId = pipelineId,
+                buildId = buildId,
+                executeCount = executeCount,
+                stageIndex = index,
+                stageName = stage.name ?: "",
+                stageId = stage.id ?: "",
+                containerInfoMap = buildContainerInfoMap(stage)
+            )
+            var containerSeq = 0
             stage.containers.forEach nextC@{ container ->
-                if (container.status.isNullOrBlank() || BuildStatus.parse(container.status).isFinish()) { // 未启动的和已完成的忽略
+                containerSeq++
+                if (container.status.isNullOrBlank() || BuildStatus.parse(container.status).isFinish()) {
                     return@nextC
                 }
-                val stageId = stage.id ?: ""
+                collectCancelPositions(cancelPositions, ctx, container, containerSeq)
                 cancelContainerPendingTask(
-                    stageId = stageId,
+                    stageId = ctx.stageId,
                     event = event,
                     variables = variables,
                     container = container,
                     executeCount = executeCount
                 )
                 container.fetchGroupContainers()?.forEach matrix@{ c ->
-                    if (c.status.isNullOrBlank() || BuildStatus.parse(c.status).isFinish()) { // 未启动的和已完成的忽略
+                    if (c.status.isNullOrBlank() || BuildStatus.parse(c.status).isFinish()) {
                         return@matrix
                     }
+                    collectCancelPositions(cancelPositions, ctx, c, containerSeq, matrixFlag = true)
                     cancelContainerPendingTask(
                         event = event,
-                        stageId = stageId,
+                        stageId = ctx.stageId,
                         variables = variables,
                         container = c,
                         executeCount = executeCount
@@ -284,6 +340,106 @@ class BuildCancelControl @Autowired constructor(
                 }
             }
         }
+        return cancelPositions
+    }
+
+    private fun buildContainerInfoMap(stage: Stage): Map<String, ContainerBriefInfo> {
+        val map = mutableMapOf<String, ContainerBriefInfo>()
+        stage.containers.forEach { c ->
+            val info = ContainerBriefInfo(name = c.name, matrixGroupFlag = c.matrixGroupFlag)
+            c.id?.let { map[it] = info }
+            c.containerId?.let { map[it] = info }
+            c.jobId?.let { map[it] = info }
+        }
+        return map
+    }
+
+    private fun collectCancelPositions(
+        cancelPositions: MutableList<CancelPosition>,
+        ctx: CancelPositionContext,
+        container: Container,
+        containerSeq: Int,
+        matrixFlag: Boolean = false
+    ) {
+        val containerStatus = BuildStatus.parse(container.status)
+        val containerName = container.name
+        val containerId = container.containerId ?: container.id ?: return
+        val matrixValue = matrixFlag.takeIf { it }
+
+        if (containerStatus == BuildStatus.RUNNING) {
+            var taskSeq = 0
+            var hasRunningTask = false
+            container.elements.forEach { element ->
+                taskSeq++
+                val elementStatus = BuildStatus.parse(element.status)
+                if (elementStatus.isRunning()) {
+                    hasRunningTask = true
+                    cancelPositions.add(
+                        CancelPosition(
+                            position = "${ctx.stageIndex}-$containerSeq-$taskSeq",
+                            componentPath = "${ctx.stageName}/$containerName/${element.name}",
+                            statusAtCancel = elementStatus.name,
+                            stageId = ctx.stageId,
+                            containerId = containerId,
+                            taskId = element.id,
+                            matrixFlag = matrixValue
+                        )
+                    )
+                }
+            }
+            if (!hasRunningTask) {
+                cancelPositions.add(
+                    CancelPosition(
+                        position = "${ctx.stageIndex}-$containerSeq",
+                        componentPath = "${ctx.stageName}/$containerName",
+                        statusAtCancel = containerStatus.name,
+                        stageId = ctx.stageId,
+                        containerId = containerId,
+                        matrixFlag = matrixValue
+                    )
+                )
+            }
+        } else {
+            val dependOnJobs = resolveDependOnJobs(container, ctx)
+            cancelPositions.add(
+                CancelPosition(
+                    position = "${ctx.stageIndex}-$containerSeq",
+                    componentPath = "${ctx.stageName}/$containerName",
+                    statusAtCancel = containerStatus.name,
+                    stageId = ctx.stageId,
+                    containerId = containerId,
+                    matrixFlag = matrixValue,
+                    dependOnJobs = dependOnJobs
+                )
+            )
+        }
+    }
+
+    private fun resolveDependOnJobs(
+        container: Container,
+        ctx: CancelPositionContext
+    ): List<DependOnJobInfo>? {
+        val jobControlOption = when (container) {
+            is VMBuildContainer -> container.jobControlOption
+            is NormalContainer -> container.jobControlOption
+            else -> null
+        } ?: return null
+        val depMap = jobControlOption.dependOnContainerId2JobIds
+        if (depMap.isNullOrEmpty()) return null
+        val infos = depMap.mapNotNull { (depContainerId, _) ->
+            val depInfo = ctx.containerInfoMap[depContainerId] ?: return@mapNotNull null
+            DependOnJobInfo(
+                jobName = depInfo.name,
+                projectId = ctx.projectId,
+                pipelineId = ctx.pipelineId,
+                buildId = ctx.buildId,
+                executeCount = ctx.executeCount,
+                stageId = ctx.stageId,
+                containerId = depContainerId,
+                matrixFlag = depInfo.matrixGroupFlag?.takeIf { it }
+            )
+        }
+        return infos.ifEmpty { null }
     }
 
     private fun cancelContainerPendingTask(

@@ -72,6 +72,7 @@ import com.tencent.devops.process.engine.control.lock.ConcurrencyGroupLock
 import com.tencent.devops.process.engine.control.lock.PipelineBuildNoLock
 import com.tencent.devops.process.engine.control.lock.PipelineBuildStartLock
 import com.tencent.devops.process.engine.pojo.BuildInfo
+import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
 import com.tencent.devops.process.engine.pojo.LatestRunningBuild
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildCancelEvent
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildFinishEvent
@@ -795,7 +796,10 @@ class BuildStartControl @Autowired constructor(
                 PipelineBuildCancelEvent(
                     source = TAG, projectId = projectId, pipelineId = pipelineId,
                     userId = userId, buildId = buildId, status = BuildStatus.UNEXEC,
-                    executeCount = executeCount
+                    executeCount = executeCount,
+                    cancelInfo = BuildCancelInfo.ofSystem(
+                        cancelReasonCode = ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_MODEL_NOT_FOUND
+                    )
                 )
             )
             return // model不存在直接取消构建

@@ -27,6 +27,7 @@
 
 package com.tencent.devops.process.engine.service.record
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.pojo.ErrorInfo
 import com.tencent.devops.common.api.util.JsonUtil
@@ -42,6 +43,7 @@ import com.tencent.devops.common.pipeline.container.VMBuildContainer
 import com.tencent.devops.common.pipeline.enums.BuildRecordTimeStamp
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.StartType
+import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
 import com.tencent.devops.common.pipeline.pojo.BuildFormProperty
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGitWebHookTriggerElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGithubWebHookTriggerElement
@@ -430,6 +432,28 @@ class PipelineBuildRecordService @Autowired constructor(
             prevBuildInfo != null && prevBuildInfo.version != buildInfo.version
         }
         LogUtils.printCostTimeWE(watcher)
+        val cancelInfo = buildRecordModel?.modelVar?.get(BuildCancelInfo.MODEL_VAR_KEY)?.let {
+            JsonUtil.anyToOrNull(it, object : TypeReference<BuildCancelInfo>() {})
+        }?.apply {
+            cancelReasonCode?.let { code ->
+                cancelReason = I18nUtil.getCodeLanMessage(
+                    messageCode = code,
+                    params = cancelReasonParams?.toTypedArray(),
+                    defaultMessage = cancelReason
+                )
+            }
+            cancelTypeDesc = I18nUtil.getCodeLanMessage(
+                messageCode = "buildCancelType.${cancelType.displayName}",
+                defaultMessage = cancelType.displayName
+            )
+            cancelPositions?.forEach { pos ->
+                val status = BuildStatus.parse(pos.statusAtCancel)
+                pos.statusAtCancelDesc = I18nUtil.getCodeLanMessage(
+                    messageCode = "buildStatus.${status.statusName}",
+                    defaultMessage = pos.statusAtCancel
+                )
+            }
+        }
         return ModelRecord(
             id = buildInfo.buildId,
             pipelineId = buildInfo.pipelineId,
@@ -477,7 +501,8 @@ class PipelineBuildRecordService @Autowired constructor(
                 projectId = projectId,
                 artifactQualityList = buildInfo.artifactQualityList
             ),
-            versionChange = versionChange
+            versionChange = versionChange,
+            cancelInfo = cancelInfo
         )
     }
 
@@ -566,7 +591,8 @@ class PipelineBuildRecordService @Autowired constructor(
         buildId: String,
         buildStatus: BuildStatus,
         cancelUser: String,
-        executeCount: Int
+        executeCount: Int,
+        cancelInfo: BuildCancelInfo? = null
     ) {
         logger.info("[$buildId]|BUILD_CANCEL|cancelUser=$cancelUser|buildStatus=$buildStatus")
         dslContext.transaction { configuration ->
@@ -626,6 +652,7 @@ class PipelineBuildRecordService @Autowired constructor(
 
             val modelVar = mutableMapOf<String, Any>()
             modelVar[Model::timeCost.name] = recordModel.generateBuildTimeCost(recordStages)
+            cancelInfo?.let { modelVar[BuildCancelInfo.MODEL_VAR_KEY] = it }
             recordModelDao.updateRecord(
                 context, projectId, pipelineId, buildId, executeCount, buildStatus,
                 recordModel.modelVar.plus(modelVar), null, LocalDateTime.now(),
@@ -763,6 +790,69 @@ class PipelineBuildRecordService @Autowired constructor(
             executeCount = executeCount,
             cancelUser = cancelUserId
         )
+    }
+
+    fun saveBuildCancelInfo(
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        executeCount: Int,
+        cancelInfo: BuildCancelInfo
+    ) {
+        dslContext.transaction { configuration ->
+            val context = DSL.using(configuration)
+            val recordModel = recordModelDao.getRecord(
+                dslContext = context, projectId = projectId, pipelineId = pipelineId,
+                buildId = buildId, executeCount = executeCount
+            ) ?: run {
+                logger.warn("ENGINE|$buildId|saveBuildCancelInfo| get record failed.")
+                return@transaction
+            }
+            val modelVar = recordModel.modelVar.toMutableMap()
+            modelVar[BuildCancelInfo.MODEL_VAR_KEY] = cancelInfo
+            recordModelDao.updateRecord(
+                dslContext = context, projectId = projectId, pipelineId = pipelineId,
+                buildId = buildId, executeCount = executeCount, cancelUser = null,
+                modelVar = modelVar, buildStatus = null,
+                startTime = null, endTime = null, errorInfoList = null,
+                timestamps = null
+            )
+        }
+    }
+
+    /**
+     * 仅在cancelInfo尚未存在时保存，避免覆盖用户主动取消等高优先级的cancelInfo。
+     * 适用于心跳超时、Job执行超时等系统级场景。
+     */
+    fun saveBuildCancelInfoIfAbsent(
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        executeCount: Int,
+        cancelInfo: BuildCancelInfo
+    ) {
+        dslContext.transaction { configuration ->
+            val context = DSL.using(configuration)
+            val recordModel = recordModelDao.getRecord(
+                dslContext = context, projectId = projectId, pipelineId = pipelineId,
+                buildId = buildId, executeCount = executeCount
+            ) ?: run {
+                logger.warn("ENGINE|$buildId|saveBuildCancelInfoIfAbsent| get record failed.")
+                return@transaction
+            }
+            if (recordModel.modelVar.containsKey(BuildCancelInfo.MODEL_VAR_KEY)) {
+                return@transaction
+            }
+            val modelVar = recordModel.modelVar.toMutableMap()
+            modelVar[BuildCancelInfo.MODEL_VAR_KEY] = cancelInfo
+            recordModelDao.updateRecord(
+                dslContext = context, projectId = projectId, pipelineId = pipelineId,
+                buildId = buildId, executeCount = executeCount, cancelUser = null,
+                modelVar = modelVar, buildStatus = null,
+                startTime = null, endTime = null, errorInfoList = null,
+                timestamps = null
+            )
+        }
     }
 
     fun getBuildCancelUser(

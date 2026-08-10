@@ -837,4 +837,31 @@ object ProcessMessageCode {
 
     // [{0}]创作环境下的创作节点为空
     const val BK_CREATIVE_STREAM_ENV_NODE_IS_EMPTY = "bkCreativeStreamEnvNodeIsEmpty"
+
+    // 用户手动取消构建
+    const val BK_BUILD_CANCEL_USER_MANUAL = "bkBuildCancelUserManual"
+    // 用户强制终止构建
+    const val BK_BUILD_CANCEL_USER_FORCE_TERMINATE = "bkBuildCancelUserForceTerminate"
+    // 用户重启构建，原构建被取消
+    const val BK_BUILD_CANCEL_USER_RESTART = "bkBuildCancelUserRestart"
+    // 系统服务端关闭构建
+    const val BK_BUILD_CANCEL_SYSTEM_SERVICE_SHUTDOWN = "bkBuildCancelSystemServiceShutdown"
+    // 系统取消：排队已满，新构建入队导致排队中的构建被自动取消
+    const val BK_BUILD_CANCEL_SYSTEM_QUEUE_FULL = "bkBuildCancelSystemQueueFull"
+    // 系统取消：并发组[{0}]互斥，新构建入队导致排队中的构建被自动取消
+    const val BK_BUILD_CANCEL_SYSTEM_CONCURRENCY_GROUP = "bkBuildCancelSystemConcurrencyGroup"
+    // 系统取消：并发组[{0}]中有更高优先级的构建等待执行
+    const val BK_BUILD_CANCEL_SYSTEM_CONCURRENCY_PRIORITY = "bkBuildCancelSystemConcurrencyPriority"
+    // 系统取消：流水线编排模型不存在，无法启动构建
+    const val BK_BUILD_CANCEL_SYSTEM_MODEL_NOT_FOUND = "bkBuildCancelSystemModelNotFound"
+    // 系统取消：流水线被删除，运行中的构建被终止
+    const val BK_BUILD_CANCEL_SYSTEM_PIPELINE_DELETED = "bkBuildCancelSystemPipelineDeleted"
+    // 系统取消：构建机Agent心跳超时，与节点失联
+    const val BK_BUILD_CANCEL_SYSTEM_HEARTBEAT_TIMEOUT = "bkBuildCancelSystemHeartbeatTimeout"
+    // 系统取消：Job执行超时({0}分钟)，已被系统终止
+    const val BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT = "bkBuildCancelSystemJobExecTimeout"
+    // 系统取消：Job排队超时，已被系统终止
+    const val BK_BUILD_CANCEL_SYSTEM_JOB_QUEUE_TIMEOUT = "bkBuildCancelSystemJobQueueTimeout"
+    // 父流水线已取消，子流水线构建随之终止
+    const val BK_BUILD_CANCEL_PARENT_PIPELINE = "bkBuildCancelParentPipeline"
 }

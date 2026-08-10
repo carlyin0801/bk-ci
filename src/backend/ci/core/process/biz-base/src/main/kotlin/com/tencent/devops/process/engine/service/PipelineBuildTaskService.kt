@@ -31,7 +31,10 @@ import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatch
 import com.tencent.devops.common.event.enums.ActionType
 import com.tencent.devops.common.log.utils.BuildLogPrinter
 import com.tencent.devops.common.pipeline.enums.BuildStatus
+import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
+import com.tencent.devops.common.pipeline.pojo.ParentPipelineInfo
 import com.tencent.devops.common.redis.RedisOperation
+import com.tencent.devops.process.constant.ProcessMessageCode
 import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.process.engine.common.Timeout
 import com.tencent.devops.process.engine.control.FastKillUtils
@@ -50,7 +53,8 @@ class PipelineBuildTaskService @Autowired constructor(
     private val pipelineEventDispatcher: PipelineEventDispatcher,
     private val buildLogPrinter: BuildLogPrinter,
     private val pipelineTaskService: PipelineTaskService,
-    private val pipelineRuntimeService: PipelineRuntimeService
+    private val pipelineRuntimeService: PipelineRuntimeService,
+    private val pipelineRepositoryService: PipelineRepositoryService
 ) {
 
     /**
@@ -177,13 +181,28 @@ class PipelineBuildTaskService @Autowired constructor(
                         stepId = null
                     )
                 }
+                val parentPipelineName = pipelineRepositoryService.getPipelineInfo(
+                    buildTask.projectId, buildTask.pipelineId
+                )?.pipelineName
+                val parentBuildNum = pipelineRuntimeService.getBuildInfo(
+                    buildTask.projectId, buildId
+                )?.buildNum
                 pipelineRuntimeService.cancelBuild(
                     projectId = subBuildInfo.projectId,
                     pipelineId = subBuildInfo.pipelineId,
                     buildId = subBuildInfo.buildId,
                     userId = subBuildInfo.startUser,
                     executeCount = subBuildInfo.executeCount ?: 1,
-                    buildStatus = BuildStatus.CANCELED
+                    buildStatus = BuildStatus.CANCELED,
+                    cancelInfo = BuildCancelInfo.ofParentPipeline(
+                        cancelReasonCode = ProcessMessageCode.BK_BUILD_CANCEL_PARENT_PIPELINE,
+                        parentPipelineInfo = ParentPipelineInfo(
+                            pipelineId = buildTask.pipelineId,
+                            pipelineName = parentPipelineName,
+                            buildId = buildId,
+                            buildNum = parentBuildNum
+                        )
+                    )
                 )
             } catch (ignored: Exception) {
                 logger.warn("ENGINE|$buildId|TerminateSubPipeline|subBuildId=${subBuildInfo.buildId}|e=$ignored")

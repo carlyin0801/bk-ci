@@ -32,9 +32,11 @@ import com.tencent.devops.common.api.pojo.ErrorType
 import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
 import com.tencent.devops.common.event.enums.ActionType
 import com.tencent.devops.common.log.utils.BuildLogPrinter
+import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
 import com.tencent.devops.common.pipeline.utils.HeartBeatUtils
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.web.utils.I18nUtil
+import com.tencent.devops.process.constant.ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_HEARTBEAT_TIMEOUT
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_TIP_MESSAGE
 import com.tencent.devops.process.engine.common.BS_CANCEL_BUILD_SOURCE
 import com.tencent.devops.process.engine.common.VMUtils
@@ -42,6 +44,7 @@ import com.tencent.devops.process.engine.pojo.event.PipelineBuildContainerEvent
 import com.tencent.devops.process.engine.pojo.event.PipelineContainerAgentHeartBeatEvent
 import com.tencent.devops.process.engine.service.PipelineContainerService
 import com.tencent.devops.process.engine.service.PipelineRuntimeService
+import com.tencent.devops.process.engine.service.record.PipelineBuildRecordService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -53,7 +56,8 @@ class HeartbeatControl @Autowired constructor(
     private val redisOperation: RedisOperation,
     private val pipelineEventDispatcher: PipelineEventDispatcher,
     private val pipelineContainerService: PipelineContainerService,
-    private val pipelineRuntimeService: PipelineRuntimeService
+    private val pipelineRuntimeService: PipelineRuntimeService,
+    private val pipelineBuildRecordService: PipelineBuildRecordService
 ) {
 
     companion object {
@@ -148,5 +152,20 @@ class HeartbeatControl @Autowired constructor(
                 errorCode = ErrorCode.THIRD_PARTY_BUILD_ENV_ERROR
             )
         )
+
+        // 保存构建级别的取消信息，仅在尚未存在时写入，避免覆盖用户主动取消的信息
+        try {
+            pipelineBuildRecordService.saveBuildCancelInfoIfAbsent(
+                projectId = container.projectId,
+                pipelineId = container.pipelineId,
+                buildId = container.buildId,
+                executeCount = container.executeCount,
+                cancelInfo = BuildCancelInfo.ofSystem(
+                    cancelReasonCode = BK_BUILD_CANCEL_SYSTEM_HEARTBEAT_TIMEOUT
+                )
+            )
+        } catch (e: Exception) {
+            LOG.warn("ENGINE|${event.buildId}|HEARTBEAT_TIMEOUT|save cancel info failed", e)
+        }
     }
 }

@@ -30,6 +30,7 @@ package com.tencent.devops.process.pojo.pipeline
 import com.tencent.devops.common.api.pojo.ErrorInfo
 import com.tencent.devops.common.archive.pojo.ArtifactQualityMetadataAnalytics
 import com.tencent.devops.common.pipeline.Model
+import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
 import com.tencent.devops.process.pojo.BuildStageStatus
 import com.tencent.devops.process.pojo.PipelineBuildMaterial
 import com.tencent.devops.process.pojo.code.WebhookInfo
@@ -110,5 +111,7 @@ data class ModelRecord(
     @get:Schema(title = "版本是否变更", required = false)
     val versionChange: Boolean? = false,
     @get:Schema(title = "取消构建权限", required = false)
-    var cancelBuildPerm: Boolean? = null
+    var cancelBuildPerm: Boolean? = null,
+    @get:Schema(title = "取消详情信息", required = false)
+    val cancelInfo: BuildCancelInfo? = null
 )

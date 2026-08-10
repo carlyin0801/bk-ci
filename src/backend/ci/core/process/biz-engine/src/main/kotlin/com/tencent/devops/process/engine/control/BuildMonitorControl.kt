@@ -41,7 +41,10 @@ import com.tencent.devops.common.pipeline.pojo.BuildNoType
 import com.tencent.devops.common.pipeline.pojo.StageReviewRequest
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.web.utils.I18nUtil
+import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
 import com.tencent.devops.process.constant.ProcessMessageCode
+import com.tencent.devops.process.constant.ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT
+import com.tencent.devops.process.constant.ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_JOB_QUEUE_TIMEOUT
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_JOB_QUEUE_TIMEOUT
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_QUEUE_TIMEOUT
 import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_TIMEOUT_IN_BUILD_QUEUE
@@ -63,6 +66,7 @@ import com.tencent.devops.process.engine.service.PipelineRuntimeService
 import com.tencent.devops.process.engine.service.PipelineSettingService
 import com.tencent.devops.process.engine.service.PipelineStageService
 import com.tencent.devops.process.engine.service.record.ContainerBuildRecordService
+import com.tencent.devops.process.engine.service.record.PipelineBuildRecordService
 import com.tencent.devops.process.pojo.StageQualityRequest
 import com.tencent.devops.quality.api.v2.pojo.ControlPointPosition
 import org.slf4j.LoggerFactory
@@ -87,6 +91,7 @@ class BuildMonitorControl @Autowired constructor(
     private val pipelineRuntimeExtService: PipelineRuntimeExtService,
     private val pipelineStageService: PipelineStageService,
     private val containerBuildRecordService: ContainerBuildRecordService,
+    private val pipelineBuildRecordService: PipelineBuildRecordService,
     private val pipelineRepositoryService: PipelineRepositoryService,
     private val redisOperation: RedisOperation
 ) {
@@ -314,6 +319,21 @@ class BuildMonitorControl @Autowired constructor(
                     errorTypeName = ErrorType.USER.name
                 )
             )
+            // 保存构建级别的取消信息（仅在尚未存在时写入）
+            try {
+                pipelineBuildRecordService.saveBuildCancelInfoIfAbsent(
+                    projectId = projectId,
+                    pipelineId = pipelineId,
+                    buildId = buildId,
+                    executeCount = executeCount,
+                    cancelInfo = BuildCancelInfo.ofSystem(
+                        cancelReasonCode = BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT,
+                        cancelReasonParams = listOf("$minute")
+                    )
+                )
+            } catch (e: Exception) {
+                LOG.warn("ENGINE|$buildId|JOB_EXEC_TIMEOUT|save cancel info failed", e)
+            }
         }
 
         return interval
@@ -471,6 +491,20 @@ class BuildMonitorControl @Autowired constructor(
                     )
                 )
             )
+            // 保存构建级别的取消信息（仅在尚未存在时写入）
+            try {
+                pipelineBuildRecordService.saveBuildCancelInfoIfAbsent(
+                    projectId = event.projectId,
+                    pipelineId = event.pipelineId,
+                    buildId = event.buildId,
+                    executeCount = event.executeCount,
+                    cancelInfo = BuildCancelInfo.ofSystem(
+                        cancelReasonCode = BK_BUILD_CANCEL_SYSTEM_JOB_QUEUE_TIMEOUT
+                    )
+                )
+            } catch (e: Exception) {
+                LOG.warn("ENGINE|${event.buildId}|JOB_QUEUE_TIMEOUT|save cancel info failed", e)
+            }
         } else {
             // 判断当前监控的排队构建是否可以尝试启动(仅当前是在队列中排第1位的构建可以)
             val canStart = if (buildInfo.concurrencyGroup.isNullOrBlank()) { // 旧版串行队列

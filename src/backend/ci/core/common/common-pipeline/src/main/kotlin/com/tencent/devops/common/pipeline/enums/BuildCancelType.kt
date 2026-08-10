@@ -25,31 +25,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.process.engine.pojo.event
+package com.tencent.devops.common.pipeline.enums
 
-import com.tencent.devops.common.event.pojo.pipeline.IPipelineEvent
-import com.tencent.devops.common.pipeline.enums.BuildStatus
-import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
-import com.tencent.devops.common.event.annotation.Event
-import com.tencent.devops.common.stream.constants.StreamBinding
-import com.tencent.devops.common.event.enums.ActionType
+import com.tencent.devops.common.api.annotation.BkFieldI18n
+import com.tencent.devops.common.api.enums.I18nTranslateTypeEnum
 
-/**
- *
- *
- * @version 1.0
- */
-@Event(destination = StreamBinding.PIPELINE_BUILD_CANCEL)
-data class PipelineBuildCancelEvent(
-    override val source: String,
-    override val projectId: String,
-    override val pipelineId: String,
-    override val userId: String,
-    val buildId: String,
-    val status: BuildStatus = BuildStatus.CANCELED,
-    val buildNum: Int? = null,
-    val executeCount: Int?,
-    override var actionType: ActionType = ActionType.END,
-    override var delayMills: Int = 2000,
-    val cancelInfo: BuildCancelInfo? = null
-) : IPipelineEvent(actionType, source, projectId, pipelineId, userId, delayMills)
+enum class BuildCancelType(
+    @BkFieldI18n(
+        translateType = I18nTranslateTypeEnum.VALUE,
+        keyPrefixName = "buildCancelType",
+        reusePrefixFlag = false
+    )
+    val displayName: String
+) {
+    USER("user"),
+    SYSTEM("system"),
+    PARENT_PIPELINE("parentPipeline");
+
+    companion object {
+        fun parse(name: String?): BuildCancelType? {
+            return try {
+                if (name == null) null else valueOf(name)
+            } catch (ignored: Exception) {
+                null
+            }
+        }
+    }
+}
