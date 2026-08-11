@@ -29,7 +29,7 @@ package com.tencent.devops.process.engine.pojo.event
 
 import com.tencent.devops.common.event.pojo.pipeline.IPipelineEvent
 import com.tencent.devops.common.pipeline.enums.BuildStatus
-import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
+import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
 import com.tencent.devops.common.event.annotation.Event
 import com.tencent.devops.common.stream.constants.StreamBinding
 import com.tencent.devops.common.event.enums.ActionType
@@ -51,5 +51,5 @@ data class PipelineBuildCancelEvent(
     val executeCount: Int?,
     override var actionType: ActionType = ActionType.END,
     override var delayMills: Int = 2000,
-    val cancelInfo: BuildCancelInfo? = null
+    val buildEndInfo: BuildEndInfo? = null
 ) : IPipelineEvent(actionType, source, projectId, pipelineId, userId, delayMills)

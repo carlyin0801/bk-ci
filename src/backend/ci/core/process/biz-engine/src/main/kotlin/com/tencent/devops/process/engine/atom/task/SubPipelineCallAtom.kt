@@ -35,7 +35,7 @@ import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.log.utils.BuildLogPrinter
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.ChannelCode
-import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
+import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
 import com.tencent.devops.common.pipeline.pojo.ParentPipelineInfo
 import com.tencent.devops.common.pipeline.pojo.element.SubPipelineCallElement
 import com.tencent.devops.common.pipeline.pojo.element.atom.SubPipelineType
@@ -137,8 +137,8 @@ class SubPipelineCallAtom constructor(
                         userId = subBuildInfo.startUser,
                         executeCount = subBuildInfo.executeCount ?: 1,
                         buildStatus = BuildStatus.CANCELED,
-                        cancelInfo = BuildCancelInfo.ofParentPipeline(
-                            cancelReasonCode = ProcessMessageCode.BK_BUILD_CANCEL_PARENT_PIPELINE,
+                        buildEndInfo = BuildEndInfo.ofCancelParentPipeline(
+                            reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_PARENT_PIPELINE,
                             parentPipelineInfo = ParentPipelineInfo(
                                 pipelineId = task.pipelineId,
                                 pipelineName = parentPipelineName,

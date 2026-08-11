@@ -30,20 +30,33 @@ package com.tencent.devops.common.pipeline.enums
 import com.tencent.devops.common.api.annotation.BkFieldI18n
 import com.tencent.devops.common.api.enums.I18nTranslateTypeEnum
 
-enum class BuildCancelType(
+/**
+ * 构建终态子类型，覆盖取消/失败/超时等所有非正常结束场景。
+ * 命名规范: {大类}_{子类型}，如 CANCEL_USER、FAIL_EXEC、TIMEOUT_JOB
+ */
+enum class BuildEndType(
     @BkFieldI18n(
         translateType = I18nTranslateTypeEnum.VALUE,
-        keyPrefixName = "buildCancelType",
+        keyPrefixName = "buildEndType",
         reusePrefixFlag = false
     )
     val displayName: String
 ) {
-    USER("user"),
-    SYSTEM("system"),
-    PARENT_PIPELINE("parentPipeline");
+    // ---- 取消类 ----
+    CANCEL_USER("cancelUser"),
+    CANCEL_SYSTEM("cancelSystem"),
+    CANCEL_PARENT_PIPELINE("cancelParentPipeline");
+
+    // ---- 后续扩展(示例，当前不启用) ----
+    // FAIL_EXEC("failExec"),
+    // FAIL_QUALITY("failQuality"),
+    // FAIL_REVIEW("failReview"),
+    // FAIL_SUB_PIPELINE("failSubPipeline"),
+    // TIMEOUT_JOB("timeoutJob"),
+    // TIMEOUT_STEP("timeoutStep");
 
     companion object {
-        fun parse(name: String?): BuildCancelType? {
+        fun parse(name: String?): BuildEndType? {
             return try {
                 if (name == null) null else valueOf(name)
             } catch (ignored: Exception) {

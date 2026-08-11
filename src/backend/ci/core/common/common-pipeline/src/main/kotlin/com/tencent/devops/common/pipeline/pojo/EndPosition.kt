@@ -29,16 +29,19 @@ package com.tencent.devops.common.pipeline.pojo
 
 import io.swagger.v3.oas.annotations.media.Schema
 
-@Schema(title = "取消位置详情")
-data class CancelPosition(
+/**
+ * 构建终态位置详情，统一描述取消/失败/超时时被影响的具体组件。
+ */
+@Schema(title = "终态位置详情")
+data class EndPosition(
     @get:Schema(title = "位置编码(如3-1-1表示Stage3的Job1的Task1, 3-2表示Stage3的Job2)", required = true)
     val position: String,
     @get:Schema(title = "组件路径(如: 质量检查/单元测试/执行单测)", required = true)
     val componentPath: String,
-    @get:Schema(title = "取消时的组件状态枚举值(BuildStatus.name)", required = true)
-    val statusAtCancel: String,
-    @get:Schema(title = "取消时的组件状态描述(国际化)", required = false)
-    var statusAtCancelDesc: String? = null,
+    @get:Schema(title = "终态时的组件状态枚举值(BuildStatus.name)", required = true)
+    val statusAtEnd: String,
+    @get:Schema(title = "终态时的组件状态描述(国际化)", required = false)
+    var statusAtEndDesc: String? = null,
     @get:Schema(title = "阶段ID(锚点定位)", required = true)
     val stageId: String,
     @get:Schema(title = "容器ID(锚点定位)", required = true)

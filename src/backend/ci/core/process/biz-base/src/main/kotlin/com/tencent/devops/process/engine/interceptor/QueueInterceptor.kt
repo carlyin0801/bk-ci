@@ -41,7 +41,7 @@ import com.tencent.devops.process.constant.ProcessMessageCode.BK_MAX_PARALLEL
 import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_PIPELINE_QUEUE_FULL
 import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_PIPELINE_SUMMARY_NOT_FOUND
 import com.tencent.devops.process.engine.control.lock.ConcurrencyGroupLock
-import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
+import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
 import com.tencent.devops.process.engine.pojo.Response
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildCancelEvent
 import com.tencent.devops.process.engine.service.PipelineRedisService
@@ -212,8 +212,8 @@ class QueueInterceptor @Autowired constructor(
                     buildId = buildInfo.buildId,
                     status = BuildStatus.CANCELED,
                     executeCount = buildInfo.executeCount,
-                    cancelInfo = BuildCancelInfo.ofSystem(
-                        cancelReasonCode = ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_QUEUE_FULL
+                    buildEndInfo = BuildEndInfo.ofCancelSystem(
+                        reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_QUEUE_FULL
                     )
                 )
             )
@@ -273,9 +273,9 @@ class QueueInterceptor @Autowired constructor(
                     buildId = buildInfo.buildId,
                     status = BuildStatus.CANCELED,
                     executeCount = buildInfo.executeCount,
-                    cancelInfo = BuildCancelInfo.ofSystem(
-                        cancelReasonCode = ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_CONCURRENCY_GROUP,
-                        cancelReasonParams = listOf(groupName)
+                    buildEndInfo = BuildEndInfo.ofCancelSystem(
+                        reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_CONCURRENCY_GROUP,
+                        reasonParams = listOf(groupName)
                     )
                 )
             )

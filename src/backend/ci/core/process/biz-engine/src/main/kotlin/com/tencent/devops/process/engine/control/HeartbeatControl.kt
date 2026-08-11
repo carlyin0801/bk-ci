@@ -32,7 +32,7 @@ import com.tencent.devops.common.api.pojo.ErrorType
 import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
 import com.tencent.devops.common.event.enums.ActionType
 import com.tencent.devops.common.log.utils.BuildLogPrinter
-import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
+import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
 import com.tencent.devops.common.pipeline.utils.HeartBeatUtils
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.web.utils.I18nUtil
@@ -155,17 +155,17 @@ class HeartbeatControl @Autowired constructor(
 
         // 保存构建级别的取消信息，仅在尚未存在时写入，避免覆盖用户主动取消的信息
         try {
-            pipelineBuildRecordService.saveBuildCancelInfoIfAbsent(
+            pipelineBuildRecordService.saveBuildEndInfoIfAbsent(
                 projectId = container.projectId,
                 pipelineId = container.pipelineId,
                 buildId = container.buildId,
                 executeCount = container.executeCount,
-                cancelInfo = BuildCancelInfo.ofSystem(
-                    cancelReasonCode = BK_BUILD_CANCEL_SYSTEM_HEARTBEAT_TIMEOUT
+                buildEndInfo = BuildEndInfo.ofCancelSystem(
+                    reasonCode = BK_BUILD_CANCEL_SYSTEM_HEARTBEAT_TIMEOUT
                 )
             )
         } catch (e: Exception) {
-            LOG.warn("ENGINE|${event.buildId}|HEARTBEAT_TIMEOUT|save cancel info failed", e)
+            LOG.warn("ENGINE|${event.buildId}|HEARTBEAT_TIMEOUT|save buildEndInfo failed", e)
         }
     }
 }

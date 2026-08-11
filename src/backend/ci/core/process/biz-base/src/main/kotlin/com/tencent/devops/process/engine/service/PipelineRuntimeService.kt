@@ -57,7 +57,7 @@ import com.tencent.devops.common.pipeline.container.VMBuildContainer
 import com.tencent.devops.common.pipeline.enums.BuildRecordTimeStamp
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.ChannelCode
-import com.tencent.devops.common.pipeline.pojo.BuildCancelInfo
+import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
 import com.tencent.devops.common.pipeline.enums.EnvControlTaskType
 import com.tencent.devops.common.pipeline.enums.StageRunCondition
 import com.tencent.devops.common.pipeline.enums.StartType
@@ -247,8 +247,8 @@ class PipelineRuntimeService @Autowired constructor(
                         buildId = build.buildId,
                         status = BuildStatus.TERMINATE,
                         executeCount = build.executeCount,
-                        cancelInfo = BuildCancelInfo.ofSystem(
-                            cancelReasonCode = ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_PIPELINE_DELETED
+                        buildEndInfo = BuildEndInfo.ofCancelSystem(
+                            reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_PIPELINE_DELETED
                         )
                     )
                 )
@@ -770,7 +770,7 @@ class PipelineRuntimeService @Autowired constructor(
         executeCount: Int,
         buildStatus: BuildStatus,
         terminateFlag: Boolean = false,
-        cancelInfo: BuildCancelInfo? = null
+        buildEndInfo: BuildEndInfo? = null
     ): Boolean {
         logger.info("[$buildId]|SHUTDOWN_BUILD|userId=$userId|status=$buildStatus|terminateFlag=$terminateFlag")
         // 记录该构建取消人信息
@@ -793,7 +793,7 @@ class PipelineRuntimeService @Autowired constructor(
                 status = buildStatus,
                 actionType = actionType,
                 executeCount = executeCount,
-                cancelInfo = cancelInfo
+                buildEndInfo = buildEndInfo
             ),
             PipelineBuildCancelBroadCastEvent(
                 source = "cancelBuild",
@@ -2298,9 +2298,9 @@ class PipelineRuntimeService @Autowired constructor(
                     userId = userId,
                     executeCount = buildInfo?.executeCount ?: 1,
                     buildStatus = BuildStatus.CANCELED,
-                    cancelInfo = BuildCancelInfo.ofSystem(
-                            cancelReasonCode = ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_CONCURRENCY_PRIORITY,
-                            cancelReasonParams = listOf(groupName)
+                    buildEndInfo = BuildEndInfo.ofCancelSystem(
+                            reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_CONCURRENCY_PRIORITY,
+                            reasonParams = listOf(groupName)
                         )
                 )
                 logger.info("Cancel the pipeline($pipelineId) of instance($buildId) by the user($userId)")
