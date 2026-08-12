@@ -148,6 +148,7 @@ class SubPipelineCallAtom constructor(
                         buildEndInfo = BuildEndInfo.ofCancelParentPipeline(
                             reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_PARENT_PIPELINE,
                             parentPipelineInfo = ParentPipelineInfo(
+                                projectId = task.projectId,
                                 pipelineId = task.pipelineId,
                                 pipelineName = parentPipelineName,
                                 buildId = task.buildId,

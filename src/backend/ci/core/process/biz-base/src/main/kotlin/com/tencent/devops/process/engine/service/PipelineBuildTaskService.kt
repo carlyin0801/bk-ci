@@ -205,6 +205,7 @@ class PipelineBuildTaskService @Autowired constructor(
                     buildEndInfo = BuildEndInfo.ofCancelParentPipeline(
                         reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_PARENT_PIPELINE,
                         parentPipelineInfo = ParentPipelineInfo(
+                            projectId = buildTask.projectId,
                             pipelineId = buildTask.pipelineId,
                             pipelineName = parentPipelineName,
                             buildId = buildId,

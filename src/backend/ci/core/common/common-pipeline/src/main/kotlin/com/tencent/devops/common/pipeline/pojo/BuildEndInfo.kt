@@ -124,6 +124,8 @@ data class BuildEndInfo(
 
 @Schema(title = "父流水线信息")
 data class ParentPipelineInfo(
+    @get:Schema(title = "父流水线所属项目ID", required = true)
+    val projectId: String,
     @get:Schema(title = "父流水线ID", required = true)
     val pipelineId: String,
     @get:Schema(title = "父流水线名称", required = false)
