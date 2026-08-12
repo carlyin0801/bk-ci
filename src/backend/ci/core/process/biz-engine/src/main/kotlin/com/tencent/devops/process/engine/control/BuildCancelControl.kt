@@ -359,58 +359,18 @@ class BuildCancelControl @Autowired constructor(
         containerSeq: Int,
         matrixFlag: Boolean = false
     ) {
-        val containerStatus = BuildStatus.parse(container.status)
-        val containerName = container.name
-        val containerId = container.containerId ?: container.id ?: return
-        val matrixValue = matrixFlag.takeIf { it }
-
-        if (containerStatus == BuildStatus.RUNNING) {
-            var taskSeq = 0
-            var hasRunningTask = false
-            container.elements.forEach { element ->
-                taskSeq++
-                val elementStatus = BuildStatus.parse(element.status)
-                if (elementStatus.isRunning()) {
-                    hasRunningTask = true
-                    endPositions.add(
-                        EndPosition(
-                            position = "${ctx.stageIndex}-$containerSeq-$taskSeq",
-                            componentPath = "${ctx.stageName}/$containerName/${element.name}",
-                            statusAtEnd = elementStatus.name,
-                            stageId = ctx.stageId,
-                            containerId = containerId,
-                            taskId = element.id,
-                            matrixFlag = matrixValue
-                        )
-                    )
-                }
-            }
-            if (!hasRunningTask) {
-                endPositions.add(
-                    EndPosition(
-                        position = "${ctx.stageIndex}-$containerSeq",
-                        componentPath = "${ctx.stageName}/$containerName",
-                        statusAtEnd = containerStatus.name,
-                        stageId = ctx.stageId,
-                        containerId = containerId,
-                        matrixFlag = matrixValue
-                    )
-                )
-            }
-        } else {
-            val dependOnJobs = resolveDependOnJobs(container, ctx)
-            endPositions.add(
-                EndPosition(
-                    position = "${ctx.stageIndex}-$containerSeq",
-                    componentPath = "${ctx.stageName}/$containerName",
-                    statusAtEnd = containerStatus.name,
-                    stageId = ctx.stageId,
-                    containerId = containerId,
-                    matrixFlag = matrixValue,
-                    dependOnJobs = dependOnJobs
-                )
+        val dependOnJobs = if (BuildStatus.parse(container.status) != BuildStatus.RUNNING) {
+            resolveDependOnJobs(container, ctx)
+        } else null
+        endPositions.addAll(
+            EndPositionUtils.collectContainerEndPositions(
+                stagePosition = StagePosition(ctx.stageIndex, ctx.stageName, ctx.stageId),
+                container = container,
+                containerSeq = containerSeq,
+                matrixFlag = matrixFlag,
+                dependOnJobs = dependOnJobs
             )
-        }
+        )
     }
 
     private fun resolveDependOnJobs(

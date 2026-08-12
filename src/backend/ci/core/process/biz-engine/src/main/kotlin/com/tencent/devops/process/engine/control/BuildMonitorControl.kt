@@ -41,7 +41,6 @@ import com.tencent.devops.common.pipeline.pojo.BuildNoType
 import com.tencent.devops.common.pipeline.pojo.StageReviewRequest
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.web.utils.I18nUtil
-import com.tencent.devops.common.pipeline.Model
 import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
 import com.tencent.devops.common.pipeline.pojo.EndPosition
 import com.tencent.devops.process.constant.ProcessMessageCode
@@ -326,14 +325,14 @@ class BuildMonitorControl @Autowired constructor(
             )
             // 保存构建级别的终态信息（含受影响容器位置，仅在尚未存在时写入）
             try {
-                val endPosition = buildEndPositionFromModel(buildInfo, this)
+                val endPositions = resolveEndPositionsFromModel(buildInfo, this)
                 val endInfo = BuildEndInfo.ofCancelSystem(
                     reasonCode = BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT,
                     reasonParams = listOf("$minute")
                 ).apply {
-                    if (endPosition != null) {
-                        positions = listOf(endPosition)
-                        positionCount = 1
+                    if (endPositions.isNotEmpty()) {
+                        positions = endPositions
+                        positionCount = endPositions.size
                     }
                 }
                 pipelineBuildRecordService.saveBuildEndInfoIfAbsent(
@@ -570,13 +569,13 @@ class BuildMonitorControl @Autowired constructor(
     }
 
     /**
-     * 从 Model 中定位超时容器，计算正确的 position 和 componentPath。
+     * 从 Model 中定位超时容器，生成终态位置信息（支持 task 级粒度）。
      * 超时是低频事件，加载一次 model 代价可接受。
      */
-    private fun buildEndPositionFromModel(
+    private fun resolveEndPositionsFromModel(
         buildInfo: BuildInfo,
         container: PipelineBuildContainer
-    ): EndPosition? {
+    ): List<EndPosition> {
         val model = pipelineBuildRecordService.getRecordModel(
             projectId = container.projectId,
             pipelineId = container.pipelineId,
@@ -584,48 +583,11 @@ class BuildMonitorControl @Autowired constructor(
             buildId = container.buildId,
             executeCount = container.executeCount,
             debug = buildInfo.debug
-        ) ?: return null
-        return resolveEndPosition(model, container.stageId, container.containerId, container.status)
-    }
-
-    private fun resolveEndPosition(
-        model: Model,
-        targetStageId: String,
-        targetContainerId: String,
-        containerStatus: BuildStatus
-    ): EndPosition? {
-        model.stages.forEachIndexed { stageIndex, stage ->
-            if (stageIndex == 0) return@forEachIndexed
-            if (stage.id != targetStageId) return@forEachIndexed
-            val stageName = stage.name ?: ""
-            var containerSeq = 0
-            stage.containers.forEach { c ->
-                containerSeq++
-                val cId = c.containerId ?: c.id ?: return@forEach
-                if (cId == targetContainerId) {
-                    return EndPosition(
-                        position = "$stageIndex-$containerSeq",
-                        componentPath = "$stageName/${c.name}",
-                        statusAtEnd = containerStatus.name,
-                        stageId = targetStageId,
-                        containerId = targetContainerId
-                    )
-                }
-                c.fetchGroupContainers()?.forEach { mc ->
-                    val mcId = mc.containerId ?: mc.id ?: return@forEach
-                    if (mcId == targetContainerId) {
-                        return EndPosition(
-                            position = "$stageIndex-$containerSeq",
-                            componentPath = "$stageName/${mc.name}",
-                            statusAtEnd = containerStatus.name,
-                            stageId = targetStageId,
-                            containerId = targetContainerId,
-                            matrixFlag = true
-                        )
-                    }
-                }
-            }
-        }
-        return null
+        ) ?: return emptyList()
+        return EndPositionUtils.resolveEndPositions(
+            model = model,
+            targetStageId = container.stageId,
+            targetContainerId = container.containerId
+        )
     }
 }
