@@ -846,21 +846,21 @@ object ProcessMessageCode {
     const val BK_BUILD_CANCEL_USER_RESTART = "bkBuildCancelUserRestart"
     // 系统服务端关闭构建
     const val BK_BUILD_CANCEL_SYSTEM_SERVICE_SHUTDOWN = "bkBuildCancelSystemServiceShutdown"
-    // 系统取消：排队已满，新构建入队导致排队中的构建被自动取消
+    // 排队已满，新构建入队导致排队中的构建被自动取消
     const val BK_BUILD_CANCEL_SYSTEM_QUEUE_FULL = "bkBuildCancelSystemQueueFull"
-    // 系统取消：并发组[{0}]互斥，新构建入队导致排队中的构建被自动取消
+    // 并发组[{0}]互斥，新构建入队导致排队中的构建被自动取消
     const val BK_BUILD_CANCEL_SYSTEM_CONCURRENCY_GROUP = "bkBuildCancelSystemConcurrencyGroup"
-    // 系统取消：并发组[{0}]中有更高优先级的构建等待执行
+    // 并发组[{0}]中有更高优先级的构建等待执行
     const val BK_BUILD_CANCEL_SYSTEM_CONCURRENCY_PRIORITY = "bkBuildCancelSystemConcurrencyPriority"
-    // 系统取消：流水线编排模型不存在，无法启动构建
+    // 流水线编排模型不存在，无法启动构建
     const val BK_BUILD_CANCEL_SYSTEM_MODEL_NOT_FOUND = "bkBuildCancelSystemModelNotFound"
-    // 系统取消：流水线被删除，运行中的构建被终止
+    // 流水线被删除，运行中的构建被终止
     const val BK_BUILD_CANCEL_SYSTEM_PIPELINE_DELETED = "bkBuildCancelSystemPipelineDeleted"
-    // 系统取消：构建机Agent心跳超时，与节点失联
+    // 构建机Agent心跳超时，与节点失联
     const val BK_BUILD_CANCEL_SYSTEM_HEARTBEAT_TIMEOUT = "bkBuildCancelSystemHeartbeatTimeout"
-    // 系统取消：Job执行超时({0}分钟)，已被系统终止
+    // Job执行超时({0}分钟)，已被系统终止
     const val BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT = "bkBuildCancelSystemJobExecTimeout"
-    // 系统取消：Job排队超时，已被系统终止
+    // Job排队超时，已被系统终止
     const val BK_BUILD_CANCEL_SYSTEM_JOB_QUEUE_TIMEOUT = "bkBuildCancelSystemJobQueueTimeout"
     // 父流水线已取消，子流水线构建随之终止
     const val BK_BUILD_CANCEL_PARENT_PIPELINE = "bkBuildCancelParentPipeline"

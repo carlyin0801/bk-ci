@@ -32,7 +32,10 @@ import com.tencent.devops.common.api.pojo.ErrorType
 import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
 import com.tencent.devops.common.event.enums.ActionType
 import com.tencent.devops.common.log.utils.BuildLogPrinter
+import com.tencent.devops.common.pipeline.Model
+import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
+import com.tencent.devops.common.pipeline.pojo.EndPosition
 import com.tencent.devops.common.pipeline.utils.HeartBeatUtils
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.web.utils.I18nUtil
@@ -40,6 +43,8 @@ import com.tencent.devops.process.constant.ProcessMessageCode.BK_BUILD_CANCEL_SY
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_TIP_MESSAGE
 import com.tencent.devops.process.engine.common.BS_CANCEL_BUILD_SOURCE
 import com.tencent.devops.process.engine.common.VMUtils
+import com.tencent.devops.process.engine.pojo.BuildInfo
+import com.tencent.devops.process.engine.pojo.PipelineBuildContainer
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildContainerEvent
 import com.tencent.devops.process.engine.pojo.event.PipelineContainerAgentHeartBeatEvent
 import com.tencent.devops.process.engine.service.PipelineContainerService
@@ -153,19 +158,90 @@ class HeartbeatControl @Autowired constructor(
             )
         )
 
-        // 保存构建级别的取消信息，仅在尚未存在时写入，避免覆盖用户主动取消的信息
+        // 保存构建级别的终态信息（含受影响容器位置），仅在尚未存在时写入
         try {
+            val endPosition = buildEndPositionFromModel(buildInfo, container)
+            val buildEndInfo = BuildEndInfo.ofCancelSystem(
+                reasonCode = BK_BUILD_CANCEL_SYSTEM_HEARTBEAT_TIMEOUT
+            ).apply {
+                if (endPosition != null) {
+                    positions = listOf(endPosition)
+                    positionCount = 1
+                }
+            }
             pipelineBuildRecordService.saveBuildEndInfoIfAbsent(
                 projectId = container.projectId,
                 pipelineId = container.pipelineId,
                 buildId = container.buildId,
                 executeCount = container.executeCount,
-                buildEndInfo = BuildEndInfo.ofCancelSystem(
-                    reasonCode = BK_BUILD_CANCEL_SYSTEM_HEARTBEAT_TIMEOUT
-                )
+                buildEndInfo = buildEndInfo
             )
         } catch (e: Exception) {
             LOG.warn("ENGINE|${event.buildId}|HEARTBEAT_TIMEOUT|save buildEndInfo failed", e)
         }
+    }
+
+    /**
+     * 从 Model 中定位超时容器，计算正确的 position（如"2-1"）和 componentPath（如"编译/构建Job"）。
+     * 超时是低频事件，加载一次 model 代价可接受。
+     */
+    private fun buildEndPositionFromModel(
+        buildInfo: BuildInfo,
+        container: PipelineBuildContainer
+    ): EndPosition? {
+        val model = pipelineBuildRecordService.getRecordModel(
+            projectId = container.projectId,
+            pipelineId = container.pipelineId,
+            version = buildInfo.version,
+            buildId = container.buildId,
+            executeCount = container.executeCount,
+            debug = buildInfo.debug
+        ) ?: return null
+        return resolveEndPosition(model, container.stageId, container.containerId, container.status)
+    }
+
+    /**
+     * 遍历 model 找到目标容器，与 BuildCancelControl.collectEndPositions 一致的计算逻辑。
+     */
+    private fun resolveEndPosition(
+        model: Model,
+        targetStageId: String,
+        targetContainerId: String,
+        containerStatus: BuildStatus
+    ): EndPosition? {
+        model.stages.forEachIndexed { stageIndex, stage ->
+            if (stageIndex == 0) return@forEachIndexed // 跳过触发器Stage
+            if (stage.id != targetStageId) return@forEachIndexed
+            val stageName = stage.name ?: ""
+            var containerSeq = 0
+            stage.containers.forEach { c ->
+                containerSeq++
+                val cId = c.containerId ?: c.id ?: return@forEach
+                if (cId == targetContainerId) {
+                    return EndPosition(
+                        position = "$stageIndex-$containerSeq",
+                        componentPath = "$stageName/${c.name}",
+                        statusAtEnd = containerStatus.name,
+                        stageId = targetStageId,
+                        containerId = targetContainerId
+                    )
+                }
+                // 检查矩阵子容器
+                c.fetchGroupContainers()?.forEach { mc ->
+                    val mcId = mc.containerId ?: mc.id ?: return@forEach
+                    if (mcId == targetContainerId) {
+                        return EndPosition(
+                            position = "$stageIndex-$containerSeq",
+                            componentPath = "$stageName/${mc.name}",
+                            statusAtEnd = containerStatus.name,
+                            stageId = targetStageId,
+                            containerId = targetContainerId,
+                            matrixFlag = true
+                        )
+                    }
+                }
+            }
+        }
+        return null
     }
 }

@@ -41,7 +41,9 @@ import com.tencent.devops.common.pipeline.pojo.BuildNoType
 import com.tencent.devops.common.pipeline.pojo.StageReviewRequest
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.web.utils.I18nUtil
+import com.tencent.devops.common.pipeline.Model
 import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
+import com.tencent.devops.common.pipeline.pojo.EndPosition
 import com.tencent.devops.process.constant.ProcessMessageCode
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_JOB_QUEUE_TIMEOUT
@@ -136,7 +138,7 @@ class BuildMonitorControl @Autowired constructor(
 
         // 由于30天对应的毫秒数值过大，以Int的上限值作为下一次monitor时间
         val stageMinInt = monitorStage(event, buildInfo)
-        val jobMinInt = monitorContainer(event)
+        val jobMinInt = monitorContainer(event, buildInfo)
 
         val minInterval = min(jobMinInt, stageMinInt)
 
@@ -157,7 +159,7 @@ class BuildMonitorControl @Autowired constructor(
         return true
     }
 
-    private fun monitorContainer(event: PipelineBuildMonitorEvent): Long {
+    private fun monitorContainer(event: PipelineBuildMonitorEvent, buildInfo: BuildInfo): Long {
 
         var minInterval = Timeout.CONTAINER_MAX_MILLS
         // #5090 ==0 是为了兼容旧的监控事件
@@ -197,7 +199,7 @@ class BuildMonitorControl @Autowired constructor(
         }
 
         for (container in containers) {
-            val interval = container.checkNextContainerMonitorIntervals(event.userId)
+            val interval = container.checkNextContainerMonitorIntervals(event.userId, buildInfo)
             // 根据最小的超时时间来决定下一次监控执行的时间
             if (interval in 1 until minInterval) {
                 minInterval = interval
@@ -264,7 +266,10 @@ class BuildMonitorControl @Autowired constructor(
         return minInterval
     }
 
-    private fun PipelineBuildContainer.checkNextContainerMonitorIntervals(userId: String): Long {
+    private fun PipelineBuildContainer.checkNextContainerMonitorIntervals(
+        userId: String,
+        buildInfo: BuildInfo
+    ): Long {
 
         val usedTimeMills: Long = if (status.isRunning() && startTime != null) {
             System.currentTimeMillis() - startTime!!.timestampmilli()
@@ -319,17 +324,24 @@ class BuildMonitorControl @Autowired constructor(
                     errorTypeName = ErrorType.USER.name
                 )
             )
-            // 保存构建级别的取消信息（仅在尚未存在时写入）
+            // 保存构建级别的终态信息（含受影响容器位置，仅在尚未存在时写入）
             try {
+                val endPosition = buildEndPositionFromModel(buildInfo, this)
+                val endInfo = BuildEndInfo.ofCancelSystem(
+                    reasonCode = BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT,
+                    reasonParams = listOf("$minute")
+                ).apply {
+                    if (endPosition != null) {
+                        positions = listOf(endPosition)
+                        positionCount = 1
+                    }
+                }
                 pipelineBuildRecordService.saveBuildEndInfoIfAbsent(
                     projectId = projectId,
                     pipelineId = pipelineId,
                     buildId = buildId,
                     executeCount = executeCount,
-                    buildEndInfo = BuildEndInfo.ofCancelSystem(
-                        reasonCode = BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT,
-                        reasonParams = listOf("$minute")
-                    )
+                    buildEndInfo = endInfo
                 )
             } catch (e: Exception) {
                 LOG.warn("ENGINE|$buildId|JOB_EXEC_TIMEOUT|save buildEndInfo failed", e)
@@ -555,5 +567,65 @@ class BuildMonitorControl @Autowired constructor(
         }
 
         return true
+    }
+
+    /**
+     * 从 Model 中定位超时容器，计算正确的 position 和 componentPath。
+     * 超时是低频事件，加载一次 model 代价可接受。
+     */
+    private fun buildEndPositionFromModel(
+        buildInfo: BuildInfo,
+        container: PipelineBuildContainer
+    ): EndPosition? {
+        val model = pipelineBuildRecordService.getRecordModel(
+            projectId = container.projectId,
+            pipelineId = container.pipelineId,
+            version = buildInfo.version,
+            buildId = container.buildId,
+            executeCount = container.executeCount,
+            debug = buildInfo.debug
+        ) ?: return null
+        return resolveEndPosition(model, container.stageId, container.containerId, container.status)
+    }
+
+    private fun resolveEndPosition(
+        model: Model,
+        targetStageId: String,
+        targetContainerId: String,
+        containerStatus: BuildStatus
+    ): EndPosition? {
+        model.stages.forEachIndexed { stageIndex, stage ->
+            if (stageIndex == 0) return@forEachIndexed
+            if (stage.id != targetStageId) return@forEachIndexed
+            val stageName = stage.name ?: ""
+            var containerSeq = 0
+            stage.containers.forEach { c ->
+                containerSeq++
+                val cId = c.containerId ?: c.id ?: return@forEach
+                if (cId == targetContainerId) {
+                    return EndPosition(
+                        position = "$stageIndex-$containerSeq",
+                        componentPath = "$stageName/${c.name}",
+                        statusAtEnd = containerStatus.name,
+                        stageId = targetStageId,
+                        containerId = targetContainerId
+                    )
+                }
+                c.fetchGroupContainers()?.forEach { mc ->
+                    val mcId = mc.containerId ?: mc.id ?: return@forEach
+                    if (mcId == targetContainerId) {
+                        return EndPosition(
+                            position = "$stageIndex-$containerSeq",
+                            componentPath = "$stageName/${mc.name}",
+                            statusAtEnd = containerStatus.name,
+                            stageId = targetStageId,
+                            containerId = targetContainerId,
+                            matrixFlag = true
+                        )
+                    }
+                }
+            }
+        }
+        return null
     }
 }
