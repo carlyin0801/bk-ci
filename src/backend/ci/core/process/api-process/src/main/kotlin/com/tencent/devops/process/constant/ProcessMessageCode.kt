@@ -844,7 +844,7 @@ object ProcessMessageCode {
     const val BK_BUILD_CANCEL_USER_FORCE_TERMINATE = "bkBuildCancelUserForceTerminate"
     // 用户重启构建，原构建被取消
     const val BK_BUILD_CANCEL_USER_RESTART = "bkBuildCancelUserRestart"
-    // 系统服务端关闭构建
+    // 系统服务端取消构建
     const val BK_BUILD_CANCEL_SYSTEM_SERVICE_SHUTDOWN = "bkBuildCancelSystemServiceShutdown"
     // 排队已满，新构建入队导致排队中的构建被自动取消
     const val BK_BUILD_CANCEL_SYSTEM_QUEUE_FULL = "bkBuildCancelSystemQueueFull"

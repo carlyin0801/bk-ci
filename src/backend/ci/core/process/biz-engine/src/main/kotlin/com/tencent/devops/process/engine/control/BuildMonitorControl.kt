@@ -513,8 +513,8 @@ class BuildMonitorControl @Autowired constructor(
                         reasonCode = BK_BUILD_CANCEL_SYSTEM_JOB_QUEUE_TIMEOUT
                     )
                 )
-            } catch (e: Exception) {
-                LOG.warn("ENGINE|${event.buildId}|JOB_QUEUE_TIMEOUT|save buildEndInfo failed", e)
+            } catch (ignored: Throwable) {
+                LOG.warn("ENGINE|${event.buildId}|JOB_QUEUE_TIMEOUT|save buildEndInfo failed", ignored)
             }
         } else {
             // 判断当前监控的排队构建是否可以尝试启动(仅当前是在队列中排第1位的构建可以)

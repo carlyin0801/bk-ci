@@ -40,6 +40,7 @@ import com.tencent.devops.process.engine.common.Timeout
 import com.tencent.devops.process.engine.control.FastKillUtils
 import com.tencent.devops.process.engine.pojo.PipelineBuildTask
 import com.tencent.devops.process.engine.pojo.event.PipelineBuildContainerEvent
+import com.tencent.devops.process.engine.service.record.PipelineBuildRecordService
 import com.tencent.devops.process.engine.utils.BuildUtils
 import com.tencent.devops.process.util.TaskUtils
 import org.slf4j.LoggerFactory
@@ -54,7 +55,8 @@ class PipelineBuildTaskService @Autowired constructor(
     private val buildLogPrinter: BuildLogPrinter,
     private val pipelineTaskService: PipelineTaskService,
     private val pipelineRuntimeService: PipelineRuntimeService,
-    private val pipelineRepositoryService: PipelineRepositoryService
+    private val pipelineRepositoryService: PipelineRepositoryService,
+    private val pipelineBuildRecordService: PipelineBuildRecordService
 ) {
 
     /**
@@ -187,6 +189,12 @@ class PipelineBuildTaskService @Autowired constructor(
                 val parentBuildNum = pipelineRuntimeService.getBuildInfo(
                     buildTask.projectId, buildId
                 )?.buildNum
+                // 父构建的取消人在cancelBuild中已先于取消事件同步落库，此处可直接读取
+                val parentOperator = pipelineBuildRecordService.getBuildCancelUser(
+                    projectId = buildTask.projectId,
+                    buildId = buildId,
+                    executeCount = buildTask.executeCount ?: 1
+                )
                 pipelineRuntimeService.cancelBuild(
                     projectId = subBuildInfo.projectId,
                     pipelineId = subBuildInfo.pipelineId,
@@ -200,7 +208,8 @@ class PipelineBuildTaskService @Autowired constructor(
                             pipelineId = buildTask.pipelineId,
                             pipelineName = parentPipelineName,
                             buildId = buildId,
-                            buildNum = parentBuildNum
+                            buildNum = parentBuildNum,
+                            operator = parentOperator
                         )
                     )
                 )

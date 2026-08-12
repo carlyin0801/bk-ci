@@ -53,6 +53,8 @@ data class BuildEndInfo(
     val reasonParams: List<String>? = null,
     @get:Schema(title = "终态时间戳(毫秒)", required = false)
     val endTime: Long? = null,
+    @get:Schema(title = "构建运行总时长(毫秒，读取时按构建开始/结束时间计算)", required = false)
+    var totalCostTime: Long? = null,
     @get:Schema(title = "被影响的组件位置列表", required = false)
     var positions: List<EndPosition>? = null,
     @get:Schema(title = "被影响位置总数", required = false)
@@ -129,5 +131,7 @@ data class ParentPipelineInfo(
     @get:Schema(title = "父构建ID", required = true)
     val buildId: String,
     @get:Schema(title = "父构建号", required = false)
-    val buildNum: Int? = null
+    val buildNum: Int? = null,
+    @get:Schema(title = "父流水线操作人(仅用户主动操作时有值)", required = false)
+    val operator: String? = null
 )

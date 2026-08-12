@@ -174,8 +174,8 @@ class HeartbeatControl @Autowired constructor(
                 executeCount = container.executeCount,
                 buildEndInfo = buildEndInfo
             )
-        } catch (e: Exception) {
-            LOG.warn("ENGINE|${event.buildId}|HEARTBEAT_TIMEOUT|save buildEndInfo failed", e)
+        } catch (ignored: Throwable) {
+            LOG.warn("ENGINE|${event.buildId}|HEARTBEAT_TIMEOUT|save buildEndInfo failed", ignored)
         }
     }
 

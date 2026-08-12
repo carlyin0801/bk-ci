@@ -432,9 +432,13 @@ class PipelineBuildRecordService @Autowired constructor(
             prevBuildInfo != null && prevBuildInfo.version != buildInfo.version
         }
         LogUtils.printCostTimeWE(watcher)
+        // 构建运行总时长：从构建开始到结束，未结束时按当前时刻计算；排队中未启动的构建为空
+        // 需在apply块外计算，避免块内endTime被BuildEndInfo.endTime属性遮蔽
+        val buildRunCostTime = startTime?.let { (endTime ?: System.currentTimeMillis()) - it }
         val buildEndInfo = buildRecordModel?.modelVar?.get(BuildEndInfo.MODEL_VAR_KEY)?.let {
             JsonUtil.anyToOrNull(it, object : TypeReference<BuildEndInfo>() {})
         }?.apply {
+            totalCostTime = buildRunCostTime
             reasonCode?.let { code ->
                 reason = I18nUtil.getCodeLanMessage(
                     messageCode = code,

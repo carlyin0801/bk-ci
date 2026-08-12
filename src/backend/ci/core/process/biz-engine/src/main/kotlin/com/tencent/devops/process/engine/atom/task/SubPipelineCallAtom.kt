@@ -53,6 +53,7 @@ import com.tencent.devops.process.engine.exception.BuildTaskException
 import com.tencent.devops.process.engine.pojo.PipelineBuildTask
 import com.tencent.devops.process.engine.service.PipelineRepositoryService
 import com.tencent.devops.process.engine.service.PipelineRuntimeService
+import com.tencent.devops.process.engine.service.record.PipelineBuildRecordService
 import com.tencent.devops.process.utils.PIPELINE_START_CHANNEL
 import org.springframework.stereotype.Component
 
@@ -62,7 +63,8 @@ class SubPipelineCallAtom constructor(
     private val client: Client,
     private val buildLogPrinter: BuildLogPrinter,
     private val pipelineRuntimeService: PipelineRuntimeService,
-    private val pipelineRepositoryService: PipelineRepositoryService
+    private val pipelineRepositoryService: PipelineRepositoryService,
+    private val pipelineBuildRecordService: PipelineBuildRecordService
 ) : IAtomTask<SubPipelineCallElement> {
 
     override fun getParamElement(task: PipelineBuildTask): SubPipelineCallElement {
@@ -130,6 +132,12 @@ class SubPipelineCallAtom constructor(
                     val parentBuildNum = pipelineRuntimeService.getBuildInfo(
                         task.projectId, task.buildId
                     )?.buildNum
+                    // 父构建的取消人在cancelBuild中已先于取消事件同步落库，此处可直接读取
+                    val parentOperator = pipelineBuildRecordService.getBuildCancelUser(
+                        projectId = task.projectId,
+                        buildId = task.buildId,
+                        executeCount = task.executeCount ?: 1
+                    )
                     pipelineRuntimeService.cancelBuild(
                         projectId = subBuildInfo.projectId,
                         pipelineId = subBuildInfo.pipelineId,
@@ -143,7 +151,8 @@ class SubPipelineCallAtom constructor(
                                 pipelineId = task.pipelineId,
                                 pipelineName = parentPipelineName,
                                 buildId = task.buildId,
-                                buildNum = parentBuildNum
+                                buildNum = parentBuildNum,
+                                operator = parentOperator
                             )
                         )
                     )
