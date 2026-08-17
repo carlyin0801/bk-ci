@@ -172,8 +172,8 @@ class BuildEndControl @Autowired constructor(
         LOG.info("ENGINE|$buildId|$source|BUILD_FINISH|$pipelineId|es=$status|bs=${buildInfo.status}")
 
         // 任务与阶段在错误信息聚合、终态详情解析中都要用到，此处统一加载一次避免重复查询
-        val buildTasks = pipelineTaskService.getAllBuildTask(projectId, buildId)
-        val buildStages = pipelineStageService.getAllBuildStage(projectId, buildId)
+        val buildTasks = pipelineTaskService.getAllBuildTask(projectId, buildId).toList()
+        val buildStages = pipelineStageService.getAllBuildStage(projectId, buildId).toList()
 
         fixBuildInfo(buildInfo, buildTasks, buildStages)
 
