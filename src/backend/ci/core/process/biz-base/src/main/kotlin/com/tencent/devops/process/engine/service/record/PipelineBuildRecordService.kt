@@ -40,6 +40,8 @@ import com.tencent.devops.common.pipeline.Model
 import com.tencent.devops.common.pipeline.container.Container
 import com.tencent.devops.common.pipeline.container.NormalContainer
 import com.tencent.devops.common.pipeline.container.VMBuildContainer
+import com.tencent.devops.common.pipeline.enums.BuildEndCategory
+import com.tencent.devops.common.pipeline.enums.BuildEndType
 import com.tencent.devops.common.pipeline.enums.BuildRecordTimeStamp
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.StartType
@@ -435,10 +437,14 @@ class PipelineBuildRecordService @Autowired constructor(
         // 构建运行总时长：从构建开始到结束，未结束时按当前时刻计算；排队中未启动的构建为空
         // 需在apply块外计算，避免块内endTime被BuildEndInfo.endTime属性遮蔽
         val buildRunCostTime = startTime?.let { (endTime ?: System.currentTimeMillis()) - it }
-        val buildEndInfo = buildRecordModel?.modelVar?.get(BuildEndInfo.MODEL_VAR_KEY)?.let {
-            JsonUtil.anyToOrNull(it, object : TypeReference<BuildEndInfo>() {})
-        }?.apply {
+        val buildEndInfo = (
+            buildRecordModel?.modelVar?.get(BuildEndInfo.MODEL_VAR_KEY)?.let {
+                JsonUtil.anyToOrNull(it, object : TypeReference<BuildEndInfo>() {})
+            } ?: synthesizeSuccessEndInfo(buildInfo.status)
+            )?.apply {
             totalCostTime = buildRunCostTime
+            // 卡片样式跟随构建真实状态，取不到明确归属时才退回子类型自带的归类
+            endCategory = BuildEndCategory.fromBuildStatus(buildInfo.status) ?: endType.category
             reasonCode?.let { code ->
                 reason = I18nUtil.getCodeLanMessage(
                     messageCode = code,
@@ -446,16 +452,14 @@ class PipelineBuildRecordService @Autowired constructor(
                     defaultMessage = reason
                 )
             }
-            endTypeDesc = I18nUtil.getCodeLanMessage(
-                messageCode = "buildEndType.${endType.displayName}",
-                defaultMessage = endType.displayName
-            )
+            endTypeDesc = translateEndType(endType)
             positions?.forEach { pos ->
                 val status = BuildStatus.parse(pos.statusAtEnd)
                 pos.statusAtEndDesc = I18nUtil.getCodeLanMessage(
                     messageCode = "buildStatus.${status.statusName}",
                     defaultMessage = pos.statusAtEnd
                 )
+                pos.endTypeDesc = pos.endType?.let { translateEndType(it) }
             }
         }
         return ModelRecord(
@@ -509,6 +513,23 @@ class PipelineBuildRecordService @Autowired constructor(
             buildEndInfo = buildEndInfo
         )
     }
+
+    /**
+     * 普通成功的构建不在结束时落库终态详情，避免每次构建成功都额外写一次记录表；
+     * 读取时按构建状态合成，保证前端对所有终态都能拿到统一结构。
+     * 阶段准入被驳回等有额外信息的成功场景已在构建结束时落库，不会走到这里。
+     */
+    private fun synthesizeSuccessEndInfo(status: BuildStatus): BuildEndInfo? =
+        if (status.isSuccess() || status == BuildStatus.STAGE_SUCCESS) {
+            BuildEndInfo.of(BuildEndType.SUCCESS)
+        } else {
+            null
+        }
+
+    private fun translateEndType(endType: BuildEndType): String = I18nUtil.getCodeLanMessage(
+        messageCode = "buildEndType.${endType.displayName}",
+        defaultMessage = endType.displayName
+    )
 
     fun getRecordInfo(pipelineId: String, projectId: String, buildId: String, queryDslContext: DSLContext? = null) =
         recordModelDao.getRecordInfoList(

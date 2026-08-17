@@ -27,20 +27,27 @@
 
 package com.tencent.devops.common.pipeline.pojo
 
+import com.tencent.devops.common.pipeline.enums.BuildEndCategory
 import com.tencent.devops.common.pipeline.enums.BuildEndType
 import io.swagger.v3.oas.annotations.media.Schema
 
 /**
- * 构建终态详情——统一描述取消/失败/超时等所有非正常结束场景。
+ * 构建终态详情——统一描述取消/失败/超时/成功等所有结束场景。
  *
- * 当前阶段实现取消（CANCEL_USER / CANCEL_SYSTEM / CANCEL_PARENT_PIPELINE），
- * 后续可无缝扩展失败（FAIL_*）和超时（TIMEOUT_*）等类型，
- * 复用同一套 endType / reason / positions / parentPipelineInfo 字段。
+ * 所有终态共用同一套 endType / reason / positions 字段，
+ * 新增终态子类型只需扩展 [BuildEndType] 并补充对应工厂方法，读取侧与前端无需改动。
+ *
+ * **[reason] 与 [reasonCode] 的取值规则**：读取时若 [reasonCode] 有值，会用其国际化文案覆盖 [reason]，
+ * [reason] 仅作为词条缺失时的兜底默认值。因此写入方二者只应择一：
+ * 文案可枚举（取消、超时等）时填 [reasonCode]；
+ * 文案是运行时产生的具体内容（插件错误信息、审核驳回意见）时只填 [reason]。
  */
 @Schema(title = "构建终态详情")
 data class BuildEndInfo(
     @get:Schema(title = "终态子类型", required = true)
     val endType: BuildEndType,
+    @get:Schema(title = "终态大类", required = false)
+    var endCategory: BuildEndCategory? = null,
     @get:Schema(title = "操作人(仅用户主动操作时有值)", required = false)
     val operator: String? = null,
     @get:Schema(title = "终态原因(兜底文案)", required = false)
@@ -62,6 +69,16 @@ data class BuildEndInfo(
     @get:Schema(title = "父流水线信息(父流水线级联终止时)", required = false)
     val parentPipelineInfo: ParentPipelineInfo? = null
 ) {
+    /**
+     * 统一设置位置列表，保证 positions 与 positionCount 不会出现不一致。
+     * 空列表时 positions 置空，避免前端渲染出空的位置区块。
+     */
+    fun withPositions(endPositions: List<EndPosition>): BuildEndInfo {
+        positions = endPositions.takeIf { it.isNotEmpty() }
+        positionCount = endPositions.size
+        return this
+    }
+
     companion object {
         const val MODEL_VAR_KEY = "buildEndInfo"
 
@@ -117,6 +134,31 @@ data class BuildEndInfo(
                 reasonParams = reasonParams,
                 endTime = System.currentTimeMillis(),
                 parentPipelineInfo = parentPipelineInfo
+            )
+        }
+
+        /**
+         * 通用构造：失败/超时/成功等所有非取消场景。
+         *
+         * 刻意不按大类拆成 ofFail/ofTimeout/ofSuccess——写入时点只知道**结束成因**（由 [endType] 表达），
+         * 并不知道构建最终会以什么状态收尾。以 Agent 心跳超时为例，它派发的是 TERMINATE 事件，
+         * 构建最终可能是 CANCELED / TERMINATE / FAILED，取决于是否有Job卡在领取阶段、
+         * 是否配置了 finally Stage 等。用带大类语义的方法名会让调用方误以为已经确定了终态归类。
+         * 归类统一在读取时由 [BuildEndCategory.fromBuildStatus] 按构建真实状态给出。
+         *
+         */
+        fun of(
+            endType: BuildEndType,
+            reason: String? = null,
+            reasonCode: String? = null,
+            reasonParams: List<String>? = null
+        ): BuildEndInfo {
+            return BuildEndInfo(
+                endType = endType,
+                reason = reason,
+                reasonCode = reasonCode,
+                reasonParams = reasonParams,
+                endTime = System.currentTimeMillis()
             )
         }
     }

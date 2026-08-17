@@ -864,4 +864,22 @@ object ProcessMessageCode {
     const val BK_BUILD_CANCEL_SYSTEM_JOB_QUEUE_TIMEOUT = "bkBuildCancelSystemJobQueueTimeout"
     // 父流水线已取消，子流水线构建随之终止
     const val BK_BUILD_CANCEL_PARENT_PIPELINE = "bkBuildCancelParentPipeline"
+
+    // ---- 构建终态(失败/超时/成功)原因 ----
+    // 人工审核被驳回
+    const val BK_BUILD_END_FAIL_REVIEW = "bkBuildEndFailReview"
+    // 子流水线执行失败
+    const val BK_BUILD_END_FAIL_SUB_PIPELINE = "bkBuildEndFailSubPipeline"
+    // 本次构建存在多种失败原因
+    const val BK_BUILD_END_FAIL_MULTIPLE = "bkBuildEndFailMultiple"
+    // 质量红线未达标(无指标详情时的兜底文案)
+    const val BK_BUILD_END_FAIL_QUALITY = "bkBuildEndFailQuality"
+    // 质量红线指标[{0}]实际值{1}，未达到阈值要求{2}
+    const val BK_BUILD_END_FAIL_QUALITY_INDICATOR = "bkBuildEndFailQualityIndicator"
+    // 质量红线指标[{0}]等{1}项未达标
+    const val BK_BUILD_END_FAIL_QUALITY_INDICATORS = "bkBuildEndFailQualityIndicators"
+    // 本步骤超过执行时限({0}分钟)
+    const val BK_BUILD_END_TIMEOUT_STEP = "bkBuildEndTimeoutStep"
+    // 阶段准入审核被驳回，后续阶段不再执行
+    const val BK_BUILD_END_STAGE_REVIEW_ABORT = "bkBuildEndStageReviewAbort"
 }

@@ -35,6 +35,7 @@ import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatch
 import com.tencent.devops.common.event.enums.ActionType
 import com.tencent.devops.common.log.utils.BuildLogPrinter
 import com.tencent.devops.common.pipeline.container.TriggerContainer
+import com.tencent.devops.common.pipeline.enums.BuildEndType
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.pojo.BuildNo
 import com.tencent.devops.common.pipeline.pojo.BuildNoType
@@ -326,15 +327,11 @@ class BuildMonitorControl @Autowired constructor(
             // 保存构建级别的终态信息（含受影响容器位置，仅在尚未存在时写入）
             try {
                 val endPositions = resolveEndPositionsFromModel(buildInfo, this)
-                val endInfo = BuildEndInfo.ofCancelSystem(
+                val endInfo = BuildEndInfo.of(
+                    endType = BuildEndType.TIMEOUT_JOB,
                     reasonCode = BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT,
                     reasonParams = listOf("$minute")
-                ).apply {
-                    if (endPositions.isNotEmpty()) {
-                        positions = endPositions
-                        positionCount = endPositions.size
-                    }
-                }
+                ).withPositions(endPositions)
                 pipelineBuildRecordService.saveBuildEndInfoIfAbsent(
                     projectId = projectId,
                     pipelineId = pipelineId,
@@ -509,7 +506,8 @@ class BuildMonitorControl @Autowired constructor(
                     pipelineId = event.pipelineId,
                     buildId = event.buildId,
                     executeCount = event.executeCount,
-                    buildEndInfo = BuildEndInfo.ofCancelSystem(
+                    buildEndInfo = BuildEndInfo.of(
+                        endType = BuildEndType.TIMEOUT_QUEUE,
                         reasonCode = BK_BUILD_CANCEL_SYSTEM_JOB_QUEUE_TIMEOUT
                     )
                 )

@@ -31,8 +31,11 @@ import com.tencent.devops.common.api.annotation.BkFieldI18n
 import com.tencent.devops.common.api.enums.I18nTranslateTypeEnum
 
 /**
- * 构建终态子类型，覆盖取消/失败/超时等所有非正常结束场景。
- * 命名规范: {大类}_{子类型}，如 CANCEL_USER、FAIL_EXEC、TIMEOUT_JOB
+ * 构建终态子类型，覆盖取消/失败/超时/成功等所有结束场景。
+ * 命名规范: {大类}_{子类型}，如 CANCEL_USER、FAIL_EXEC、TIMEOUT_JOB。
+ *
+ * 新增子类型只需在此追加枚举项并补充 buildEndType.{displayName} 国际化词条，
+ * 前端可直接按 category 归类展示，无需感知具体子类型。
  */
 enum class BuildEndType(
     @BkFieldI18n(
@@ -40,20 +43,40 @@ enum class BuildEndType(
         keyPrefixName = "buildEndType",
         reusePrefixFlag = false
     )
-    val displayName: String
+    val displayName: String,
+    val category: BuildEndCategory
 ) {
     // ---- 取消类 ----
-    CANCEL_USER("cancelUser"),
-    CANCEL_SYSTEM("cancelSystem"),
-    CANCEL_PARENT_PIPELINE("cancelParentPipeline");
+    CANCEL_USER("cancelUser", BuildEndCategory.CANCEL),
+    CANCEL_SYSTEM("cancelSystem", BuildEndCategory.CANCEL),
+    CANCEL_PARENT_PIPELINE("cancelParentPipeline", BuildEndCategory.CANCEL),
 
-    // ---- 后续扩展(示例，当前不启用) ----
-    // FAIL_EXEC("failExec"),
-    // FAIL_QUALITY("failQuality"),
-    // FAIL_REVIEW("failReview"),
-    // FAIL_SUB_PIPELINE("failSubPipeline"),
-    // TIMEOUT_JOB("timeoutJob"),
-    // TIMEOUT_STEP("timeoutStep");
+    // ---- 失败类 ----
+    // 插件执行失败等常规失败
+    FAIL_EXEC("failExec", BuildEndCategory.FAIL),
+    // 质量红线拦截未达标
+    FAIL_QUALITY("failQuality", BuildEndCategory.FAIL),
+    // 人工审核驳回
+    FAIL_REVIEW("failReview", BuildEndCategory.FAIL),
+    // 子流水线执行失败导致父构建失败
+    FAIL_SUB_PIPELINE("failSubPipeline", BuildEndCategory.FAIL),
+    // 同一次构建中同时存在多种失败子类型
+    FAIL_MULTIPLE("failMultiple", BuildEndCategory.FAIL),
+
+    // ---- 超时类 ----
+    // Job 超过执行时限，其下步骤被终止
+    TIMEOUT_JOB("timeoutJob", BuildEndCategory.TIMEOUT),
+    // 单个步骤超过自身执行时限
+    TIMEOUT_STEP("timeoutStep", BuildEndCategory.TIMEOUT),
+    // 构建排队超时
+    TIMEOUT_QUEUE("timeoutQueue", BuildEndCategory.TIMEOUT),
+    // 构建机Agent心跳超时
+    TIMEOUT_HEARTBEAT("timeoutHeartbeat", BuildEndCategory.TIMEOUT),
+
+    // ---- 成功类 ----
+    SUCCESS("success", BuildEndCategory.SUCCESS),
+    // 阶段准入被驳回，后续阶段不再执行，构建按成功结束
+    SUCCESS_STAGE_ABORT("successStageAbort", BuildEndCategory.SUCCESS);
 
     companion object {
         fun parse(name: String?): BuildEndType? {
@@ -61,6 +84,39 @@ enum class BuildEndType(
                 if (name == null) null else valueOf(name)
             } catch (ignored: Exception) {
                 null
+            }
+        }
+    }
+}
+
+/**
+ * 构建终态大类，供前端按类别渲染不同样式的详情卡片。
+ */
+enum class BuildEndCategory {
+    CANCEL,
+    FAIL,
+    TIMEOUT,
+    SUCCESS;
+
+    companion object {
+        /**
+         * 按构建最终状态归类，取不到明确归属（如构建尚未结束）时返回 null。
+         *
+         * 卡片样式必须跟随构建的真实状态，而不是 [BuildEndType.category]：
+         * Job执行超时、Agent心跳超时走的是 TERMINATE 事件链路，构建最终状态可能是
+         * CANCELED / TERMINATE / FAILED 中的任意一种（取决于是否有Job卡在领取阶段、
+         * 是否配置了 finally Stage、是否开启 fastKill），并不固定为超时。
+         * 若直接用子类型的 category 归类，会出现状态标签显示「已取消」而详情卡片是「超时」的矛盾。
+         * 子类型本身仍描述真实成因，作为卡片内的原因标签展示。
+         */
+        fun fromBuildStatus(status: BuildStatus): BuildEndCategory? {
+            return when {
+                // 需先于 isFailure 判断：超时类状态同时也满足 isFailure
+                status.isTimeout() -> TIMEOUT
+                status.isCancel() -> CANCEL
+                status.isSuccess() || status == BuildStatus.STAGE_SUCCESS -> SUCCESS
+                status.isFailure() -> FAIL
+                else -> null
             }
         }
     }

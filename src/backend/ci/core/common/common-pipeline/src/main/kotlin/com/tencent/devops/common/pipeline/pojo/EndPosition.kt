@@ -27,10 +27,14 @@
 
 package com.tencent.devops.common.pipeline.pojo
 
+import com.tencent.devops.common.pipeline.enums.BuildEndType
 import io.swagger.v3.oas.annotations.media.Schema
 
 /**
  * 构建终态位置详情，统一描述取消/失败/超时时被影响的具体组件。
+ *
+ * 位置级 endType 用于「多类失败」场景：同一次构建中不同位置的终止原因可能不同
+ * （如一个位置是插件执行失败、另一个是质量红线未达标），前端需按位置分别渲染标签。
  */
 @Schema(title = "终态位置详情")
 data class EndPosition(
@@ -42,6 +46,10 @@ data class EndPosition(
     val statusAtEnd: String,
     @get:Schema(title = "终态时的组件状态描述(国际化)", required = false)
     var statusAtEndDesc: String? = null,
+    @get:Schema(title = "该位置的终态子类型(多类失败时用于区分每个位置的原因)", required = false)
+    val endType: BuildEndType? = null,
+    @get:Schema(title = "该位置终态子类型描述(国际化)", required = false)
+    var endTypeDesc: String? = null,
     @get:Schema(title = "阶段ID(锚点定位)", required = true)
     val stageId: String,
     @get:Schema(title = "容器ID(锚点定位)", required = true)
@@ -50,8 +58,42 @@ data class EndPosition(
     val taskId: String? = null,
     @get:Schema(title = "是否构建矩阵", required = false)
     val matrixFlag: Boolean? = null,
+    @get:Schema(title = "错误类型(ErrorType.num，前端据此展示错误图标)", required = false)
+    val errorType: Int? = null,
+    @get:Schema(title = "错误码", required = false)
+    val errorCode: Int? = null,
+    @get:Schema(title = "错误信息", required = false)
+    val errorMsg: String? = null,
+    @get:Schema(title = "操作人(人工审核驳回等场景的处理人)", required = false)
+    val operator: String? = null,
+    @get:Schema(title = "审核意见(人工审核驳回原因)", required = false)
+    val reviewSuggest: String? = null,
+    @get:Schema(title = "容器HashId(日志跳转)", required = false)
+    val containerHashId: String? = null,
+    @get:Schema(title = "步骤ID(日志跳转)", required = false)
+    val stepId: String? = null,
+    @get:Schema(title = "子流水线信息(子流水线失败时填充，供跳转子构建详情)", required = false)
+    val subPipelineInfo: SubPipelineInfo? = null,
     @get:Schema(title = "依赖Job导航信息(DEPENDENT_WAITING状态时填充)", required = false)
     val dependOnJobs: List<DependOnJobInfo>? = null
+)
+
+/**
+ * 子流水线导航信息，用于「子流水线失败」位置跳转到子构建详情页。
+ * 子流水线可能与父流水线不属于同一项目，因此必须携带 projectId。
+ */
+@Schema(title = "子流水线信息")
+data class SubPipelineInfo(
+    @get:Schema(title = "子流水线所属项目ID", required = true)
+    val projectId: String,
+    @get:Schema(title = "子流水线ID", required = true)
+    val pipelineId: String,
+    @get:Schema(title = "子流水线名称", required = false)
+    val pipelineName: String? = null,
+    @get:Schema(title = "子构建ID", required = true)
+    val buildId: String,
+    @get:Schema(title = "子构建号", required = false)
+    val buildNum: Int? = null
 )
 
 @Schema(title = "依赖Job导航信息")
