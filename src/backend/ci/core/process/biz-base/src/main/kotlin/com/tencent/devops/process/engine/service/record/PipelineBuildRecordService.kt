@@ -40,7 +40,6 @@ import com.tencent.devops.common.pipeline.Model
 import com.tencent.devops.common.pipeline.container.Container
 import com.tencent.devops.common.pipeline.container.NormalContainer
 import com.tencent.devops.common.pipeline.container.VMBuildContainer
-import com.tencent.devops.common.pipeline.enums.BuildEndCategory
 import com.tencent.devops.common.pipeline.enums.BuildEndType
 import com.tencent.devops.common.pipeline.enums.BuildRecordTimeStamp
 import com.tencent.devops.common.pipeline.enums.BuildStatus
@@ -443,8 +442,8 @@ class PipelineBuildRecordService @Autowired constructor(
             } ?: synthesizeSuccessEndInfo(buildInfo.status)
             )?.apply {
             totalCostTime = buildRunCostTime
-            // 卡片样式跟随构建真实状态，取不到明确归属时才退回子类型自带的归类
-            endCategory = BuildEndCategory.fromBuildStatus(buildInfo.status) ?: endType.category
+            // 按结束成因归类，与 endType 恒定一致；构建真实状态由 ModelRecord.status 单独表达
+            endCategory = endType.category
             reasonCode?.let { code ->
                 reason = I18nUtil.getCodeLanMessage(
                     messageCode = code,

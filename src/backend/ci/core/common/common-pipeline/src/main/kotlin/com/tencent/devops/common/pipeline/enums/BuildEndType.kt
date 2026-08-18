@@ -90,34 +90,16 @@ enum class BuildEndType(
 }
 
 /**
- * 构建终态大类，供前端按类别渲染不同样式的详情卡片。
+ * 构建终态大类，供前端按类别渲染不同样式的详情卡片（失败卡片/超时卡片/取消卡片/成功卡片）。
+ *
+ * 归类依据是**结束成因**（[BuildEndType.category]），而非构建最终状态。二者并不总是一致：
+ * Job执行超时、Agent心跳超时走的是 TERMINATE 事件链路，构建最终状态可能是
+ * CANCELED / TERMINATE / FAILED 中的任意一种，但对用户而言它就是一次超时，
+ * 应当渲染成超时卡片并展示超时时限与终止位置。构建的真实状态由 `ModelRecord.status` 单独表达。
  */
 enum class BuildEndCategory {
     CANCEL,
     FAIL,
     TIMEOUT,
-    SUCCESS;
-
-    companion object {
-        /**
-         * 按构建最终状态归类，取不到明确归属（如构建尚未结束）时返回 null。
-         *
-         * 卡片样式必须跟随构建的真实状态，而不是 [BuildEndType.category]：
-         * Job执行超时、Agent心跳超时走的是 TERMINATE 事件链路，构建最终状态可能是
-         * CANCELED / TERMINATE / FAILED 中的任意一种（取决于是否有Job卡在领取阶段、
-         * 是否配置了 finally Stage、是否开启 fastKill），并不固定为超时。
-         * 若直接用子类型的 category 归类，会出现状态标签显示「已取消」而详情卡片是「超时」的矛盾。
-         * 子类型本身仍描述真实成因，作为卡片内的原因标签展示。
-         */
-        fun fromBuildStatus(status: BuildStatus): BuildEndCategory? {
-            return when {
-                // 需先于 isFailure 判断：超时类状态同时也满足 isFailure
-                status.isTimeout() -> TIMEOUT
-                status.isCancel() -> CANCEL
-                status.isSuccess() || status == BuildStatus.STAGE_SUCCESS -> SUCCESS
-                status.isFailure() -> FAIL
-                else -> null
-            }
-        }
-    }
+    SUCCESS
 }

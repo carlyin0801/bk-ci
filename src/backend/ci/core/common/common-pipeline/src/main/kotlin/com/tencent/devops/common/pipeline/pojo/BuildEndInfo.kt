@@ -46,7 +46,10 @@ import io.swagger.v3.oas.annotations.media.Schema
 data class BuildEndInfo(
     @get:Schema(title = "终态子类型", required = true)
     val endType: BuildEndType,
-    @get:Schema(title = "终态大类", required = false)
+    @get:Schema(
+        title = "终态大类(结束成因归类，恒等于endType所属大类；构建最终状态见ModelRecord.status，二者可能不同类)",
+        required = false
+    )
     var endCategory: BuildEndCategory? = null,
     @get:Schema(title = "操作人(仅用户主动操作时有值)", required = false)
     val operator: String? = null,
@@ -140,12 +143,12 @@ data class BuildEndInfo(
         /**
          * 通用构造：失败/超时/成功等所有非取消场景。
          *
-         * 刻意不按大类拆成 ofFail/ofTimeout/ofSuccess——写入时点只知道**结束成因**（由 [endType] 表达），
-         * 并不知道构建最终会以什么状态收尾。以 Agent 心跳超时为例，它派发的是 TERMINATE 事件，
-         * 构建最终可能是 CANCELED / TERMINATE / FAILED，取决于是否有Job卡在领取阶段、
-         * 是否配置了 finally Stage 等。用带大类语义的方法名会让调用方误以为已经确定了终态归类。
-         * 归类统一在读取时由 [BuildEndCategory.fromBuildStatus] 按构建真实状态给出。
+         * 刻意不按大类拆成 ofFail/ofTimeout/ofSuccess——调用方在写入时点表达的是**结束成因**
+         * （由 [endType] 承载），大类由 [BuildEndType.category] 直接决定，无需调用方重复指定，
+         * 拆成三个方法只会让实现完全相同的重载散落各处。
          *
+         * 注意结束成因与构建最终状态是两回事：Agent 心跳超时派发的是 TERMINATE 事件，
+         * 构建最终可能以 CANCELED / TERMINATE / FAILED 收尾，但成因始终是 TIMEOUT_HEARTBEAT。
          */
         fun of(
             endType: BuildEndType,
