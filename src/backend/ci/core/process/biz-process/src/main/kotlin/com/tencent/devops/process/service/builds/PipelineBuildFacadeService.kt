@@ -120,6 +120,8 @@ import com.tencent.devops.process.engine.service.PipelineRuntimeService
 import com.tencent.devops.process.engine.service.PipelineStageService
 import com.tencent.devops.process.engine.service.PipelineTaskService
 import com.tencent.devops.process.engine.service.WebhookBuildParameterService
+import com.tencent.devops.process.engine.service.record.BuildRunningContext
+import com.tencent.devops.process.engine.service.record.BuildRunningInfoResolver
 import com.tencent.devops.process.engine.service.record.ContainerBuildRecordService
 import com.tencent.devops.process.engine.service.record.PipelineBuildRecordService
 import com.tencent.devops.process.engine.service.record.TaskBuildRecordService
@@ -220,7 +222,8 @@ class PipelineBuildFacadeService(
     private val pipelineTriggerEventService: PipelineTriggerEventService,
     private val pipelineRecordModelService: PipelineRecordModelService,
     private val historyConditionQueryStrategyFactory: HistoryConditionQueryStrategyFactory,
-    private val createStreamService: CreateStreamTriggerSupportService
+    private val createStreamService: CreateStreamTriggerSupportService,
+    private val buildRunningInfoResolver: BuildRunningInfoResolver
 ) {
 
     @Value("\${pipeline.build.cancel.intervalLimitTime:60}")
@@ -1785,6 +1788,17 @@ class PipelineBuildFacadeService(
             )
             buildRecord.cancelBuildPerm = cancelBuildPerm
         }
+        // 运行态详情随时间实时变化，只能在读取时现算；已结束的构建由 buildEndInfo 表达，不会进入解析
+        buildRecord.buildRunningInfo = buildRunningInfoResolver.resolve(
+            BuildRunningContext(
+                buildInfo = buildInfo,
+                model = buildRecord.model,
+                executeCount = buildRecord.executeCount,
+                queueTime = buildRecord.queueTime,
+                startTime = buildRecord.startTime,
+                triggerDesc = buildRecord.trigger
+            )
+        )
         return buildRecord
     }
 

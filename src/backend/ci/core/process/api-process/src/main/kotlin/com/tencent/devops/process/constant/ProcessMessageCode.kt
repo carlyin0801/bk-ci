@@ -882,4 +882,12 @@ object ProcessMessageCode {
     const val BK_BUILD_END_TIMEOUT_STEP = "bkBuildEndTimeoutStep"
     // 阶段准入审核被驳回，后续阶段不再执行
     const val BK_BUILD_END_STAGE_REVIEW_ABORT = "bkBuildEndStageReviewAbort"
+
+    // ---- 构建运行态(排队中/执行中)详情 ----
+    // 执行前暂停无固定处理人名单，由是否具备执行权限决定
+    const val BK_BUILD_RUNNING_HANDLER_EXECUTE_PERM = "bkBuildRunningHandlerExecutePerm"
+    // 无Job在运行且存在等待中的Job时的当前阶段提示
+    const val BK_BUILD_RUNNING_JOB_QUEUING = "bkBuildRunningJobQueuing"
+    // 无Job在运行且存在待人工处理项时的当前阶段提示
+    const val BK_BUILD_RUNNING_PENDING_MANUAL = "bkBuildRunningPendingManual"
 }

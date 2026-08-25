@@ -78,6 +78,12 @@ class ModelPositionIndex internal constructor(
     fun locateStage(stageId: String?): StagePosition? = stageId?.let { stageMap[it] }
 
     fun locateContainer(containerId: String?): ContainerLocation? = containerId?.let { containerMap[it] }
+
+    /** 按 Model 顺序遍历所有阶段，供需要全量扫描的场景（如收集阶段级待人工处理项）使用 */
+    fun stages(): Collection<StagePosition> = stageMap.values
+
+    /** 按 Model 顺序遍历所有容器（含矩阵子容器），供需要全量扫描的场景使用 */
+    fun containers(): Collection<ContainerLocation> = containerMap.values
 }
 
 /**
@@ -171,7 +177,8 @@ object EndPositionUtils {
      */
     fun buildPositionIndex(model: Model): ModelPositionIndex {
         val stageMap = LinkedHashMap<String, StagePosition>()
-        val containerMap = HashMap<String, ContainerLocation>()
+        // 用 LinkedHashMap 保证遍历顺序与 Model 中的编排顺序一致，页面上的位置列表才是稳定有序的
+        val containerMap = LinkedHashMap<String, ContainerLocation>()
         model.stages.forEachIndexed { stageIndex, stage ->
             if (stageIndex == 0) return@forEachIndexed
             val stageId = stage.id ?: return@forEachIndexed
