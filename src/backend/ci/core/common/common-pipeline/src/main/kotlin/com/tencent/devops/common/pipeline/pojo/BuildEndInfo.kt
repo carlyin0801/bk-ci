@@ -58,13 +58,18 @@ data class BuildEndInfo(
     @get:Schema(title = "终态子类型描述(国际化)", required = false)
     var endTypeDesc: String? = null,
     @get:Schema(title = "终态原因国际化标识", required = false)
-    val reasonCode: String? = null,
+    var reasonCode: String? = null,
     @get:Schema(title = "终态原因国际化占位符参数", required = false)
-    val reasonParams: List<String>? = null,
+    var reasonParams: List<String>? = null,
     @get:Schema(title = "终态时间戳(毫秒)", required = false)
     val endTime: Long? = null,
     @get:Schema(title = "构建运行总时长(毫秒，读取时按构建开始/结束时间计算)", required = false)
     var totalCostTime: Long? = null,
+    @get:Schema(
+        title = "已等待时长(毫秒，仅SUCCESS_STAGE_REVIEWING等待审核中场景有值，读取时按审核开始时间计算)",
+        required = false
+    )
+    var waitCostTime: Long? = null,
     @get:Schema(title = "被影响的组件位置列表", required = false)
     var positions: List<EndPosition>? = null,
     @get:Schema(title = "被影响位置总数", required = false)
@@ -79,6 +84,16 @@ data class BuildEndInfo(
     fun withPositions(endPositions: List<EndPosition>): BuildEndInfo {
         positions = endPositions.takeIf { it.isNotEmpty() }
         positionCount = endPositions.size
+        return this
+    }
+
+    /**
+     * 补充/覆盖终态原因国际化标识，用于位置信息收集完成后才能确定占位符参数的场景，
+     * 如用户取消需要在文案中带出被终止的在途位置数。
+     */
+    fun withReason(reasonCode: String, reasonParams: List<String>? = null): BuildEndInfo {
+        this.reasonCode = reasonCode
+        this.reasonParams = reasonParams
         return this
     }
 
@@ -147,8 +162,8 @@ data class BuildEndInfo(
          * （由 [endType] 承载），大类由 [BuildEndType.category] 直接决定，无需调用方重复指定，
          * 拆成三个方法只会让实现完全相同的重载散落各处。
          *
-         * 注意结束成因与构建最终状态是两回事：Agent 心跳超时派发的是 TERMINATE 事件，
-         * 构建最终可能以 CANCELED / TERMINATE / FAILED 收尾，但成因始终是 TIMEOUT_HEARTBEAT。
+         * 注意结束成因与构建最终状态是两回事：Job 执行超时派发的是 TERMINATE 事件，
+         * 构建最终可能以 CANCELED / TERMINATE / FAILED 收尾，但成因始终是 TIMEOUT_JOB。
          */
         fun of(
             endType: BuildEndType,

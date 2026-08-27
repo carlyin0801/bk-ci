@@ -44,12 +44,14 @@ import com.tencent.devops.common.pipeline.pojo.element.SubPipelineCallElement
 import com.tencent.devops.common.pipeline.pojo.element.agent.ManualReviewUserTaskElement
 import com.tencent.devops.common.pipeline.pojo.element.quality.QualityGateInElement
 import com.tencent.devops.common.pipeline.pojo.element.quality.QualityGateOutElement
+import com.tencent.devops.common.quality.pojo.QualityRuleInterceptRecord
 import com.tencent.devops.common.quality.pojo.enums.QualityOperation
 import com.tencent.devops.process.constant.ProcessMessageCode
 import com.tencent.devops.process.engine.common.BS_MANUAL_ACTION_SUGGEST
 import com.tencent.devops.process.engine.common.BS_MANUAL_ACTION_USERID
 import com.tencent.devops.process.engine.pojo.PipelineBuildStage
 import com.tencent.devops.process.engine.pojo.PipelineBuildTask
+import com.tencent.devops.process.engine.service.SubPipelineTaskService
 import com.tencent.devops.quality.api.v2.ServiceQualityInterceptResource
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -94,6 +96,15 @@ class BuildEndInfoResolver @Autowired constructor(
             QualityGateOutElement.classType
         )
 
+        /**
+         * 子流水线插件同时存在内置插件与市场插件两种形态，二者失败都应归类为子流水线失败。
+         * 不能按错误码判定：市场插件走的是 USER_INPUT_INVAILD 这类通用错误码，其他插件也会使用。
+         */
+        private val SUB_PIPELINE_ATOM_CODES = setOf(
+            SubPipelineCallElement.classType,
+            SubPipelineTaskService.SUB_PIPELINE_EXEC_ATOM_CODE
+        )
+
         /** 单条终态原因的最大长度，避免异常长的插件错误信息撑爆 MODEL_VAR */
         private const val REASON_MAX_LENGTH = 512
 
@@ -126,12 +137,13 @@ class BuildEndInfoResolver @Autowired constructor(
         val index = EndPositionUtils.buildPositionIndex(context.model)
         val positions = collectStageAbortPositions(context, index)
         if (positions.isEmpty()) return null
-        // 驳回意见作为终态原因展示，多个驳回时取第一个
-        val suggest = positions.firstNotNullOfOrNull { it.reviewSuggest?.takeIf { s -> s.isNotBlank() } }
+        // 阶段准入被驳回后构建即结束，只会有一个驳回位置，驳回意见可直接作为构建级原因展示；
+        // 极端情况下（准入准出同时驳回）退化为国际化兜底文案，避免只展示其中一条造成歧义
+        val suggest = positions.singleOrNull()?.reviewSuggest?.takeIf { it.isNotBlank() }
         return BuildEndInfo.of(
             endType = BuildEndType.SUCCESS_STAGE_ABORT,
             reason = suggest?.take(REASON_MAX_LENGTH),
-            reasonCode = if (suggest.isNullOrBlank()) ProcessMessageCode.BK_BUILD_END_STAGE_REVIEW_ABORT else null
+            reasonCode = if (suggest == null) ProcessMessageCode.BK_BUILD_END_STAGE_REVIEW_ABORT else null
         ).withPositions(positions)
     }
 
@@ -144,9 +156,10 @@ class BuildEndInfoResolver @Autowired constructor(
         if (context.errorInfoList.isNullOrEmpty() && !hasReviewAbort) return null
 
         val index = EndPositionUtils.buildPositionIndex(context.model)
-        val positions = collectAbnormalPositions(context, index)
-        if (positions.isEmpty()) return null
+        val collected = collectAbnormalPositions(context, index)
+        if (collected.isEmpty()) return null
 
+        val positions = fillFailPositionReasons(context, index, collected)
         val endType = aggregateEndType(positions)
         return buildAbnormalEndInfo(context, endType, positions).withPositions(positions)
     }
@@ -154,63 +167,154 @@ class BuildEndInfoResolver @Autowired constructor(
     /**
      * 汇总构建级终态子类型：位置子类型唯一时直接采用；
      * 全部为超时类时取第一个具体超时类型；否则视为多类失败。
+     *
+     * FastKill 是连带影响而非独立失败原因（必然由同阶段其他位置的失败引发），
+     * 参与归类只会把「一个插件失败 + 若干个被 FastKill 终止」误判为多类失败，因此先剔除。
      */
     private fun aggregateEndType(positions: List<EndPosition>): BuildEndType {
         val distinct = positions.mapNotNull { it.endType }.distinct()
+        val causes = distinct.filter { it != BuildEndType.FAIL_FAST_KILL }.ifEmpty { distinct }
         return when {
-            distinct.isEmpty() -> BuildEndType.FAIL_EXEC
-            distinct.size == 1 -> distinct.first()
-            distinct.all { it.category == BuildEndCategory.TIMEOUT } -> distinct.first()
+            causes.isEmpty() -> BuildEndType.FAIL_EXEC
+            causes.size == 1 -> causes.first()
+            causes.all { it.category == BuildEndCategory.TIMEOUT } -> causes.first()
             else -> BuildEndType.FAIL_MULTIPLE
         }
     }
 
     /**
-     * 按终态子类型组装原因文案。能拿到具体运行时文案（红线指标、驳回意见、插件错误信息）时优先使用，
-     * 否则退化为国际化兜底文案。
+     * 组装构建级终态信息。
+     *
+     * 失败类不设构建级原因：同一次构建可能有多个失败位置，各自的原因（驳回意见、红线指标、
+     * 子流水线名）只能逐位置表达，构建级取其中一条会与位置列表相互矛盾
+     * （多个人工审核驳回时只展示一条驳回意见即是此问题）。
+     * 超时类与取消类的原因对整次构建唯一，仍保留在构建级。
      */
     private fun buildAbnormalEndInfo(
         context: BuildEndContext,
         endType: BuildEndType,
         positions: List<EndPosition>
     ): BuildEndInfo {
-        return when (endType) {
-            BuildEndType.FAIL_QUALITY -> buildQualityEndInfo(context)
-            BuildEndType.FAIL_REVIEW -> failPreferringReason(
-                endType = endType,
-                reason = positions.firstNotNullOfOrNull { it.reviewSuggest?.takeIf { s -> s.isNotBlank() } },
-                fallbackCode = ProcessMessageCode.BK_BUILD_END_FAIL_REVIEW
-            )
-            BuildEndType.FAIL_SUB_PIPELINE -> failPreferringReason(
-                endType = endType,
-                reason = firstErrorMsg(positions),
-                fallbackCode = ProcessMessageCode.BK_BUILD_END_FAIL_SUB_PIPELINE
-            )
-            BuildEndType.FAIL_MULTIPLE -> BuildEndInfo.of(
-                endType = endType,
-                reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_MULTIPLE
-            )
-            BuildEndType.TIMEOUT_STEP -> buildStepTimeoutEndInfo(context, positions)
+        return when {
+            endType == BuildEndType.TIMEOUT_STEP -> buildStepTimeoutEndInfo(context, positions)
             // Job超时的时限来自 JobControlOption，构建任务上取不到，
             // 正常路径已由 BuildMonitorControl 携带准确分钟数先行落库，此处兜底不编造数值
-            else -> BuildEndInfo.of(endType = endType, reason = firstErrorMsg(positions))
-        }
-    }
-
-    /**
-     * reason 与 reasonCode 互斥：读取侧一旦发现 reasonCode 就会用国际化文案覆盖 reason，
-     * 因此拿得到运行时具体文案时只填 reason，拿不到时才退化为国际化兜底词条。
-     */
-    private fun failPreferringReason(endType: BuildEndType, reason: String?, fallbackCode: String): BuildEndInfo {
-        return if (reason.isNullOrBlank()) {
-            BuildEndInfo.of(endType = endType, reasonCode = fallbackCode)
-        } else {
-            BuildEndInfo.of(endType = endType, reason = reason.take(REASON_MAX_LENGTH))
+            endType.category == BuildEndCategory.TIMEOUT -> BuildEndInfo.of(
+                endType = endType,
+                reason = firstErrorMsg(positions)
+            )
+            else -> BuildEndInfo.of(endType = endType)
         }
     }
 
     private fun firstErrorMsg(positions: List<EndPosition>): String? =
         positions.firstNotNullOfOrNull { it.errorMsg?.takeIf { msg -> msg.isNotBlank() } }?.take(REASON_MAX_LENGTH)
+
+    /**
+     * 逐位置补齐失败原因：驳回意见、质量红线指标、子流水线名称、FastKill 连带说明。
+     * 质量红线指标需跨模块查询，仅在确实存在红线失败位置时查询一次。
+     */
+    private fun fillFailPositionReasons(
+        context: BuildEndContext,
+        index: ModelPositionIndex,
+        positions: List<EndPosition>
+    ): List<EndPosition> {
+        val qualityRecords = if (positions.any { it.endType == BuildEndType.FAIL_QUALITY }) {
+            listFailedQualityRecords(context)
+        } else {
+            emptyList()
+        }
+        val fastKillCauseJobs = if (positions.any { it.endType == BuildEndType.FAIL_FAST_KILL }) {
+            resolveFastKillCauseJobs(context, index)
+        } else {
+            emptyMap()
+        }
+        return positions.map { position ->
+            when (position.endType) {
+                // 无驳回意见时不给空原因，让前端只渲染「人工审核驳回」标签
+                BuildEndType.FAIL_REVIEW -> position.copy(
+                    reason = position.reviewSuggest?.takeIf { it.isNotBlank() }?.take(REASON_MAX_LENGTH)
+                )
+                BuildEndType.FAIL_QUALITY -> position.withQualityReason(qualityRecords)
+                BuildEndType.FAIL_SUB_PIPELINE -> position.withSubPipelineReason()
+                BuildEndType.FAIL_FAST_KILL -> position.withFastKillReason(fastKillCauseJobs[position.stageId])
+                else -> position
+            }
+        }
+    }
+
+    private fun EndPosition.withQualityReason(records: List<QualityRuleInterceptRecord>): EndPosition {
+        // 控制点插件ID对应位置的插件ID，取不到时（如Stage级红线）退化为全部未通过指标
+        val matched = records.filter { it.controlPointElementId == taskId }.ifEmpty { records }
+        return when (matched.size) {
+            0 -> copy(reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_QUALITY)
+            1 -> matched.first().let { record ->
+                val threshold = record.value?.takeIf { it.isNotBlank() }
+                    // 阈值缺失时「超过阈值」会成为半句话，退化为不带指标详情的兜底文案
+                    ?: return copy(reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_QUALITY)
+                copy(
+                    reasonCode = record.operation.thresholdBreachCode(),
+                    reasonParams = listOf(record.indicatorName, threshold)
+                )
+            }
+            else -> copy(
+                reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_QUALITY_INDICATORS,
+                reasonParams = listOf(matched.first().indicatorName, matched.size.toString())
+            )
+        }
+    }
+
+    /**
+     * 红线未达标的说法取决于阈值方向：阈值是上限（如代码坏味道数 <= 50）时实际值高于阈值，
+     * 阈值是下限（如覆盖率 >= 80）时实际值低于阈值，两种情况的文案不能混用。
+     */
+    private fun QualityOperation.thresholdBreachCode(): String = when (this) {
+        QualityOperation.LT, QualityOperation.LE -> ProcessMessageCode.BK_BUILD_END_FAIL_QUALITY_INDICATOR_EXCEED
+        else -> ProcessMessageCode.BK_BUILD_END_FAIL_QUALITY_INDICATOR_BELOW
+    }
+
+    /**
+     * 子流水线失败位置展示子流水线名称，供用户识别是哪条子流水线出的问题；
+     * 构建号不进文案，由前端从 [SubPipelineInfo] 取用于跳转入口，避免与设计稿的展示形态不一致。
+     * 存量构建未记录名称时退化为国际化兜底文案。
+     */
+    private fun EndPosition.withSubPipelineReason(): EndPosition {
+        val subPipelineName = subPipelineInfo?.pipelineName?.takeIf { it.isNotBlank() }
+            ?: return copy(reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_SUB_PIPELINE)
+        return copy(reason = subPipelineName.take(REASON_MAX_LENGTH))
+    }
+
+    private fun EndPosition.withFastKillReason(causeJobName: String?): EndPosition {
+        return if (causeJobName.isNullOrBlank()) {
+            // 找不到引发终止的Job时保留插件自身的错误信息（错误码2199010已说明成因）
+            copy(reason = errorMsg?.takeIf { it.isNotBlank() }?.take(REASON_MAX_LENGTH))
+        } else {
+            copy(
+                reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_FAST_KILL,
+                reasonParams = listOf(causeJobName)
+            )
+        }
+    }
+
+    /**
+     * 按阶段找出引发 FastKill 的 Job 名称：FastKill 只终止同一阶段内的其他 Job，
+     * 因此取同阶段第一个非 FastKill 的失败位置所在 Job。
+     */
+    private fun resolveFastKillCauseJobs(
+        context: BuildEndContext,
+        index: ModelPositionIndex
+    ): Map<String, String> {
+        val causeJobs = mutableMapOf<String, String>()
+        context.errorInfoList?.forEach { errorInfo ->
+            if (classifyError(errorInfo) == BuildEndType.FAIL_FAST_KILL) return@forEach
+            val stageId = errorInfo.stageId?.takeIf { it.isNotBlank() } ?: return@forEach
+            if (causeJobs.containsKey(stageId)) return@forEach
+            index.locateContainer(errorInfo.containerId)?.container?.name
+                ?.takeIf { it.isNotBlank() }
+                ?.let { causeJobs[stageId] = it }
+        }
+        return causeJobs
+    }
 
     /**
      * 收集失败/超时位置：以 errorInfoList 为主，再补齐不在其中的人工审核驳回位置。
@@ -350,7 +454,8 @@ class BuildEndInfoResolver @Autowired constructor(
         context.buildStages.forEach { stage ->
             val stagePosition = index.locateStage(stage.stageId) ?: return@forEach
             stage.abortedChecks().forEach { check ->
-                val abortGroup = check.reviewGroups?.lastOrNull { it.status == ManualReviewAction.ABORT.name }
+                val abortIndex = check.reviewGroups?.indexOfLast { it.status == ManualReviewAction.ABORT.name }
+                val abortGroup = abortIndex?.takeIf { it >= 0 }?.let { check.reviewGroups?.get(it) }
                 positions.add(
                     EndPosition(
                         position = stagePosition.position,
@@ -360,7 +465,9 @@ class BuildEndInfoResolver @Autowired constructor(
                         stageId = stagePosition.stageId,
                         containerId = "",
                         operator = abortGroup?.operator,
-                        reviewSuggest = abortGroup?.suggest?.takeIf { it.isNotBlank() }
+                        reviewSuggest = abortGroup?.suggest?.takeIf { it.isNotBlank() },
+                        reviewGroupSeq = abortIndex?.takeIf { it >= 0 }?.plus(1),
+                        reviewGroupName = abortGroup?.name
                     )
                 )
             }
@@ -381,10 +488,11 @@ class BuildEndInfoResolver @Autowired constructor(
         return when {
             errorInfo.errorCode == ErrorCode.USER_TASK_OUTTIME_LIMIT -> BuildEndType.TIMEOUT_STEP
             errorInfo.errorCode == ErrorCode.USER_JOB_OUTTIME_LIMIT -> BuildEndType.TIMEOUT_JOB
+            errorInfo.errorCode == ErrorCode.USER_STAGE_FASTKILL_TERMINATE -> BuildEndType.FAIL_FAST_KILL
             errorInfo.errorCode == ErrorCode.USER_QUALITY_CHECK_FAIL ||
                 errorInfo.atomCode in QUALITY_ATOM_CODES -> BuildEndType.FAIL_QUALITY
             errorInfo.atomCode == ManualReviewUserTaskElement.classType -> BuildEndType.FAIL_REVIEW
-            errorInfo.atomCode == SubPipelineCallElement.classType -> BuildEndType.FAIL_SUB_PIPELINE
+            errorInfo.atomCode in SUB_PIPELINE_ATOM_CODES -> BuildEndType.FAIL_SUB_PIPELINE
             else -> BuildEndType.FAIL_EXEC
         }
     }
@@ -408,7 +516,9 @@ class BuildEndInfoResolver @Autowired constructor(
         return SubPipelineInfo(
             projectId = subInfo.projectId,
             pipelineId = subInfo.pipelineId,
-            buildId = subInfo.buildId
+            pipelineName = subInfo.pipelineName,
+            buildId = subInfo.buildId,
+            buildNum = subInfo.buildNum
         )
     }
 
@@ -437,11 +547,11 @@ class BuildEndInfoResolver @Autowired constructor(
     }
 
     /**
-     * 组装质量红线终态信息。指标详情存放在 quality 模块，需跨服务查询，
-     * 因此仅在确认为红线失败时调用一次，结果随 BuildEndInfo 一并落库，读取详情时不再跨模块。
+     * 查询未通过的质量红线指标。指标详情存放在 quality 模块，需跨服务查询，
+     * 因此仅在确认存在红线失败位置时调用一次，结果随 BuildEndInfo 一并落库，读取详情时不再跨模块。
      */
-    private fun buildQualityEndInfo(context: BuildEndContext): BuildEndInfo {
-        val failedRecords = try {
+    private fun listFailedQualityRecords(context: BuildEndContext): List<QualityRuleInterceptRecord> {
+        return try {
             client.get(ServiceQualityInterceptResource::class).listHistory(
                 projectId = context.projectId,
                 pipelineId = context.pipelineId,
@@ -453,32 +563,6 @@ class BuildEndInfoResolver @Autowired constructor(
             // 质量服务不可用不应影响构建结束流程，退化为无指标详情
             LOG.warn("ENGINE|${context.buildId}|BUILD_END_INFO|fetch quality intercept failed", ignored)
             emptyList()
-        }
-
-        return when (failedRecords.size) {
-            0 -> BuildEndInfo.of(
-                endType = BuildEndType.FAIL_QUALITY,
-                reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_QUALITY
-            )
-            1 -> failedRecords.first().let { record ->
-                BuildEndInfo.of(
-                    endType = BuildEndType.FAIL_QUALITY,
-                    reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_QUALITY_INDICATOR,
-                    reasonParams = listOf(
-                        record.indicatorName,
-                        record.actualValue.orEmpty(),
-                        "${QualityOperation.convertToSymbol(record.operation)}${record.value.orEmpty()}"
-                    )
-                )
-            }
-            else -> BuildEndInfo.of(
-                endType = BuildEndType.FAIL_QUALITY,
-                reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_QUALITY_INDICATORS,
-                reasonParams = listOf(
-                    failedRecords.first().indicatorName,
-                    failedRecords.size.toString()
-                )
-            )
         }
     }
 }

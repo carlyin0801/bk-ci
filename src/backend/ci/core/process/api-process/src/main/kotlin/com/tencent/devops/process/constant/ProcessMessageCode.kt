@@ -840,6 +840,8 @@ object ProcessMessageCode {
 
     // 用户手动取消构建
     const val BK_BUILD_CANCEL_USER_MANUAL = "bkBuildCancelUserManual"
+    // {0} 处在途均已停止
+    const val BK_BUILD_CANCEL_USER_IN_FLIGHT_STOPPED = "bkBuildCancelUserInFlightStopped"
     // 用户强制终止构建
     const val BK_BUILD_CANCEL_USER_FORCE_TERMINATE = "bkBuildCancelUserForceTerminate"
     // 用户重启构建，原构建被取消
@@ -856,29 +858,29 @@ object ProcessMessageCode {
     const val BK_BUILD_CANCEL_SYSTEM_MODEL_NOT_FOUND = "bkBuildCancelSystemModelNotFound"
     // 流水线被删除，运行中的构建被终止
     const val BK_BUILD_CANCEL_SYSTEM_PIPELINE_DELETED = "bkBuildCancelSystemPipelineDeleted"
-    // 构建机Agent心跳超时，与节点失联
+    // 构建机 Agent 异常退出，与节点失联
     const val BK_BUILD_CANCEL_SYSTEM_HEARTBEAT_TIMEOUT = "bkBuildCancelSystemHeartbeatTimeout"
-    // Job执行超时({0}分钟)，已被系统终止
+    // 所属 Job 超过执行时限 {0}m，步骤被终止
     const val BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT = "bkBuildCancelSystemJobExecTimeout"
-    // Job排队超时，已被系统终止
+    // Job 排队超时，已被系统终止
     const val BK_BUILD_CANCEL_SYSTEM_JOB_QUEUE_TIMEOUT = "bkBuildCancelSystemJobQueueTimeout"
-    // 父流水线已取消，子流水线构建随之终止
+    // 本次构建随父流水线取消而终止
     const val BK_BUILD_CANCEL_PARENT_PIPELINE = "bkBuildCancelParentPipeline"
 
     // ---- 构建终态(失败/超时/成功)原因 ----
-    // 人工审核被驳回
-    const val BK_BUILD_END_FAIL_REVIEW = "bkBuildEndFailReview"
     // 子流水线执行失败
     const val BK_BUILD_END_FAIL_SUB_PIPELINE = "bkBuildEndFailSubPipeline"
-    // 本次构建存在多种失败原因
-    const val BK_BUILD_END_FAIL_MULTIPLE = "bkBuildEndFailMultiple"
+    // 已启用 Fastkill，因「{0}」失败被终止
+    const val BK_BUILD_END_FAIL_FAST_KILL = "bkBuildEndFailFastKill"
     // 质量红线未达标(无指标详情时的兜底文案)
     const val BK_BUILD_END_FAIL_QUALITY = "bkBuildEndFailQuality"
-    // 质量红线指标[{0}]实际值{1}，未达到阈值要求{2}
-    const val BK_BUILD_END_FAIL_QUALITY_INDICATOR = "bkBuildEndFailQualityIndicator"
-    // 质量红线指标[{0}]等{1}项未达标
+    // {0} 超过阈值 {1}（阈值为上限的指标，如代码坏味道数）
+    const val BK_BUILD_END_FAIL_QUALITY_INDICATOR_EXCEED = "bkBuildEndFailQualityIndicatorExceed"
+    // {0} 未达到阈值 {1}（阈值为下限的指标，如覆盖率）
+    const val BK_BUILD_END_FAIL_QUALITY_INDICATOR_BELOW = "bkBuildEndFailQualityIndicatorBelow"
+    // {0} 等 {1} 项质量红线指标未达标
     const val BK_BUILD_END_FAIL_QUALITY_INDICATORS = "bkBuildEndFailQualityIndicators"
-    // 本步骤超过执行时限({0}分钟)
+    // 本步骤超过执行时限 {0}m
     const val BK_BUILD_END_TIMEOUT_STEP = "bkBuildEndTimeoutStep"
     // 阶段准入审核被驳回，后续阶段不再执行
     const val BK_BUILD_END_STAGE_REVIEW_ABORT = "bkBuildEndStageReviewAbort"

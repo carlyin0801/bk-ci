@@ -37,13 +37,16 @@ import com.tencent.devops.common.pipeline.container.Container
 import com.tencent.devops.common.pipeline.container.NormalContainer
 import com.tencent.devops.common.pipeline.container.Stage
 import com.tencent.devops.common.pipeline.container.VMBuildContainer
+import com.tencent.devops.common.pipeline.enums.BuildEndType
 import com.tencent.devops.common.pipeline.enums.BuildStatus
+import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
 import com.tencent.devops.common.pipeline.pojo.EndPosition
 import com.tencent.devops.common.pipeline.pojo.DependOnJobInfo
 import com.tencent.devops.common.pipeline.utils.BuildStatusSwitcher
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.prometheus.BkTimed
 import com.tencent.devops.common.service.utils.LogUtils
+import com.tencent.devops.process.constant.ProcessMessageCode
 import com.tencent.devops.process.engine.common.BS_CANCEL_BUILD_SOURCE
 import com.tencent.devops.process.engine.common.Timeout
 import com.tencent.devops.process.engine.common.VMUtils
@@ -141,8 +144,8 @@ class BuildCancelControl @Autowired constructor(
             val endPositions = cancelAllPendingTask(event = event, model = model)
             event.buildEndInfo?.let { info ->
                 if (endPositions.isNotEmpty()) {
-                    info.positions = endPositions
-                    info.positionCount = endPositions.size
+                    info.withPositions(endPositions)
+                    refineUserCancelReason(info, endPositions.size)
                 }
             }
 
@@ -242,6 +245,19 @@ class BuildCancelControl @Autowired constructor(
                 stageId = stageId,
                 actionType = ActionType.END
             )
+        )
+    }
+
+    /**
+     * 用户手动取消的文案需带出被终止的在途位置数，而位置要等到实际终止后才收集完成，
+     * 因此在此处补齐；强制终止、重启等其他用户取消场景有各自的文案，不做替换。
+     */
+    private fun refineUserCancelReason(buildEndInfo: BuildEndInfo, positionCount: Int) {
+        if (buildEndInfo.endType != BuildEndType.CANCEL_USER) return
+        if (buildEndInfo.reasonCode != ProcessMessageCode.BK_BUILD_CANCEL_USER_MANUAL) return
+        buildEndInfo.withReason(
+            reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_USER_IN_FLIGHT_STOPPED,
+            reasonParams = listOf(positionCount.toString())
         )
     }
 

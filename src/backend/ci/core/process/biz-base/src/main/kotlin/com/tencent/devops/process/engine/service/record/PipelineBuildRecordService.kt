@@ -46,6 +46,7 @@ import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.StartType
 import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
 import com.tencent.devops.common.pipeline.pojo.BuildFormProperty
+import com.tencent.devops.common.pipeline.pojo.EndPosition
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGitWebHookTriggerElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGithubWebHookTriggerElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeGitlabWebHookTriggerElement
@@ -439,7 +440,7 @@ class PipelineBuildRecordService @Autowired constructor(
         val buildEndInfo = (
             buildRecordModel?.modelVar?.get(BuildEndInfo.MODEL_VAR_KEY)?.let {
                 JsonUtil.anyToOrNull(it, object : TypeReference<BuildEndInfo>() {})
-            } ?: synthesizeSuccessEndInfo(buildInfo.status)
+            } ?: synthesizeSuccessEndInfo(buildInfo.status, model, endTime)
             )?.apply {
             totalCostTime = buildRunCostTime
             // 按结束成因归类，与 endType 恒定一致；构建真实状态由 ModelRecord.status 单独表达
@@ -459,6 +460,13 @@ class PipelineBuildRecordService @Autowired constructor(
                     defaultMessage = pos.statusAtEnd
                 )
                 pos.endTypeDesc = pos.endType?.let { translateEndType(it) }
+                pos.reasonCode?.let { code ->
+                    pos.reason = I18nUtil.getCodeLanMessage(
+                        messageCode = code,
+                        params = pos.reasonParams?.toTypedArray(),
+                        defaultMessage = pos.reason
+                    )
+                }
             }
         }
         return ModelRecord(
@@ -518,12 +526,57 @@ class PipelineBuildRecordService @Autowired constructor(
      * 读取时按构建状态合成，保证前端对所有终态都能拿到统一结构。
      * 阶段准入被驳回等有额外信息的成功场景已在构建结束时落库，不会走到这里。
      */
-    private fun synthesizeSuccessEndInfo(status: BuildStatus): BuildEndInfo? =
-        if (status.isSuccess() || status == BuildStatus.STAGE_SUCCESS) {
-            BuildEndInfo.of(BuildEndType.SUCCESS)
-        } else {
-            null
+    private fun synthesizeSuccessEndInfo(status: BuildStatus, model: Model, buildEndTime: Long?): BuildEndInfo? =
+        when {
+            // 阶段准入等待审核时构建并未结束，只是挂起为阶段成功，需与真正的阶段成功区分开
+            status == BuildStatus.STAGE_SUCCESS -> synthesizeStageReviewingEndInfo(model)
+                ?: successEndInfo(buildEndTime)
+            status.isSuccess() -> successEndInfo(buildEndTime)
+            else -> null
         }
+
+    /**
+     * 合成而非落库，因此终态时间必须取构建自身的结束时间，
+     * 不能用工厂方法里的当前时刻——否则每次读取都会算出一个不同的「结束时间」。
+     */
+    private fun successEndInfo(buildEndTime: Long?) = BuildEndInfo(
+        endType = BuildEndType.SUCCESS,
+        endTime = buildEndTime
+    )
+
+    /**
+     * 合成「阶段准入审核中」终态详情：构建挂起在审核环节时不会走构建结束流程，
+     * 无从在写入侧落库，因此读取时按阶段的审核状态还原出审核位置与已等待时长。
+     *
+     * 详情页不展示触发器阶段（Model 中的第一个 Stage），位置编码从 1 开始，与失败位置口径一致。
+     */
+    private fun synthesizeStageReviewingEndInfo(model: Model): BuildEndInfo? {
+        model.stages.forEachIndexed { stageIndex, stage ->
+            if (stageIndex == 0) return@forEachIndexed
+            val stageId = stage.id ?: return@forEachIndexed
+            val check = listOfNotNull(stage.checkIn, stage.checkOut)
+                .firstOrNull { it.status == BuildStatus.REVIEWING.name } ?: return@forEachIndexed
+            val group = check.groupToReview() ?: return@forEachIndexed
+            val groupSeq = check.reviewGroups?.indexOf(group)?.takeIf { it >= 0 }?.plus(1)
+            val position = EndPosition(
+                position = "$stageIndex",
+                componentPath = stage.name.orEmpty(),
+                statusAtEnd = BuildStatus.REVIEWING.name,
+                endType = BuildEndType.SUCCESS_STAGE_REVIEWING,
+                stageId = stageId,
+                containerId = "",
+                reviewGroupSeq = groupSeq,
+                reviewGroupName = group.name,
+                reviewers = group.reviewers.takeIf { it.isNotEmpty() }
+            )
+            return BuildEndInfo(
+                endType = BuildEndType.SUCCESS_STAGE_REVIEWING,
+                // 构建挂起在审核环节，尚无结束时间；已等待时长自阶段暂停进入审核（stagePause 写入 startEpoch）起算
+                waitCostTime = stage.startEpoch?.let { System.currentTimeMillis() - it }
+            ).withPositions(listOf(position))
+        }
+        return null
+    }
 
     private fun translateEndType(endType: BuildEndType): String = I18nUtil.getCodeLanMessage(
         messageCode = "buildEndType.${endType.displayName}",
@@ -823,6 +876,7 @@ class PipelineBuildRecordService @Autowired constructor(
         executeCount: Int,
         buildEndInfo: BuildEndInfo
     ) {
+        var startUser: String? = null
         dslContext.transaction { configuration ->
             val context = DSL.using(configuration)
             val recordModel = recordModelDao.getRecord(
@@ -841,7 +895,9 @@ class PipelineBuildRecordService @Autowired constructor(
                 startTime = null, endTime = null, errorInfoList = null,
                 timestamps = null
             )
+            startUser = recordModel.startUser
         }
+        notifyBuildEndInfoSaved(projectId, pipelineId, buildId, executeCount, startUser)
     }
 
     /**
@@ -855,6 +911,7 @@ class PipelineBuildRecordService @Autowired constructor(
         executeCount: Int,
         buildEndInfo: BuildEndInfo
     ) {
+        var startUser: String? = null
         dslContext.transaction { configuration ->
             val context = DSL.using(configuration)
             val recordModel = recordModelDao.getRecord(
@@ -876,7 +933,31 @@ class PipelineBuildRecordService @Autowired constructor(
                 startTime = null, endTime = null, errorInfoList = null,
                 timestamps = null
             )
+            startUser = recordModel.startUser
         }
+        notifyBuildEndInfoSaved(projectId, pipelineId, buildId, executeCount, startUser)
+    }
+
+    /**
+     * 终态详情是在构建结束的记录更新之后才落库的，此时前端已收到上一次记录变更推送并拉走了
+     * 不含终态详情的数据。因此保存成功后需再推送一次，否则页面要等用户手动刷新才能看到详情。
+     * 事务提交后再派发，避免推送侧回查到旧数据。
+     */
+    private fun notifyBuildEndInfoSaved(
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        executeCount: Int,
+        startUser: String?
+    ) {
+        if (startUser == null) return
+        pipelineRecordChangeEvent(
+            projectId = projectId,
+            pipelineId = pipelineId,
+            buildId = buildId,
+            startUser = startUser,
+            executeCount = executeCount
+        )
     }
 
     fun getBuildCancelUser(

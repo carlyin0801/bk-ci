@@ -48,6 +48,7 @@ enum class BuildEndType(
 ) {
     // ---- 取消类 ----
     CANCEL_USER("cancelUser", BuildEndCategory.CANCEL),
+    // 系统自动取消，含服务重启、排队满、并发互斥、构建机失联等，具体成因见 reason
     CANCEL_SYSTEM("cancelSystem", BuildEndCategory.CANCEL),
     CANCEL_PARENT_PIPELINE("cancelParentPipeline", BuildEndCategory.CANCEL),
 
@@ -60,6 +61,8 @@ enum class BuildEndType(
     FAIL_REVIEW("failReview", BuildEndCategory.FAIL),
     // 子流水线执行失败导致父构建失败
     FAIL_SUB_PIPELINE("failSubPipeline", BuildEndCategory.FAIL),
+    // 同阶段其他Job失败且开启了FastKill，本位置被提前终止（连带影响，非独立失败原因）
+    FAIL_FAST_KILL("failFastKill", BuildEndCategory.FAIL),
     // 同一次构建中同时存在多种失败子类型
     FAIL_MULTIPLE("failMultiple", BuildEndCategory.FAIL),
 
@@ -70,13 +73,13 @@ enum class BuildEndType(
     TIMEOUT_STEP("timeoutStep", BuildEndCategory.TIMEOUT),
     // 构建排队超时
     TIMEOUT_QUEUE("timeoutQueue", BuildEndCategory.TIMEOUT),
-    // 构建机Agent心跳超时
-    TIMEOUT_HEARTBEAT("timeoutHeartbeat", BuildEndCategory.TIMEOUT),
 
     // ---- 成功类 ----
     SUCCESS("success", BuildEndCategory.SUCCESS),
     // 阶段准入被驳回，后续阶段不再执行，构建按成功结束
-    SUCCESS_STAGE_ABORT("successStageAbort", BuildEndCategory.SUCCESS);
+    SUCCESS_STAGE_ABORT("successStageAbort", BuildEndCategory.SUCCESS),
+    // 阶段准入等待人工审核中，构建暂以阶段成功挂起，审核通过后会继续运行
+    SUCCESS_STAGE_REVIEWING("successStageReviewing", BuildEndCategory.SUCCESS);
 
     companion object {
         fun parse(name: String?): BuildEndType? {
