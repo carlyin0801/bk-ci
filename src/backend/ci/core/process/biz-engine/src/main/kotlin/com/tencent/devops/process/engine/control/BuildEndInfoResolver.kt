@@ -31,6 +31,8 @@ import com.tencent.devops.common.api.pojo.ErrorCode
 import com.tencent.devops.common.api.pojo.ErrorInfo
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.pipeline.Model
+import com.tencent.devops.common.pipeline.container.NormalContainer
+import com.tencent.devops.common.pipeline.container.VMBuildContainer
 import com.tencent.devops.common.pipeline.enums.BuildEndCategory
 import com.tencent.devops.common.pipeline.enums.BuildEndType
 import com.tencent.devops.common.pipeline.enums.BuildStatus
@@ -121,7 +123,8 @@ class BuildEndInfoResolver @Autowired constructor(
         return when {
             // CANCELED 可能来自用户取消/父流水线级联，也可能来自Job超时、Agent心跳超时的
             // TERMINATE 链路（见 StartActionTaskContainerCmd 对 QUEUE_CACHE 任务的处理）。
-            // 这些入口都已在各自时点落库了更精确的成因，此处按错误信息重新归类反而会误判为执行失败
+            // 这些入口都已按取消类（与最终状态同类）落库了更精确的成因，
+            // 此处按错误信息重新归类只会把取消误判为执行失败
             status.isCancel() -> null
             status.isSuccess() || status == BuildStatus.STAGE_SUCCESS -> resolveSuccess(context)
             else -> resolveAbnormal(context)
@@ -160,20 +163,22 @@ class BuildEndInfoResolver @Autowired constructor(
         if (collected.isEmpty()) return null
 
         val positions = fillFailPositionReasons(context, index, collected)
-        val endType = aggregateEndType(positions)
-        return buildAbnormalEndInfo(context, endType, positions).withPositions(positions)
+        val endType = aggregateEndType(positions, context.buildStatus)
+        return buildAbnormalEndInfo(endType, positions).withPositions(positions)
     }
 
     /**
-     * 汇总构建级终态子类型：位置子类型唯一时直接采用；
-     * 全部为超时类时取第一个具体超时类型；否则视为多类失败。
+     * 汇总构建级终态子类型：位置子类型先按构建最终状态归类（见 [alignToBuildStatus]），
+     * 归类后唯一时直接采用，否则视为多类失败。
      *
      * FastKill 是连带影响而非独立失败原因（必然由同阶段其他位置的失败引发），
      * 参与归类只会把「一个插件失败 + 若干个被 FastKill 终止」误判为多类失败，因此先剔除。
      */
-    private fun aggregateEndType(positions: List<EndPosition>): BuildEndType {
+    private fun aggregateEndType(positions: List<EndPosition>, status: BuildStatus): BuildEndType {
         val distinct = positions.mapNotNull { it.endType }.distinct()
         val causes = distinct.filter { it != BuildEndType.FAIL_FAST_KILL }.ifEmpty { distinct }
+            .map { alignToBuildStatus(it, status) }
+            .distinct()
         return when {
             causes.isEmpty() -> BuildEndType.FAIL_EXEC
             causes.size == 1 -> causes.first()
@@ -183,27 +188,32 @@ class BuildEndInfoResolver @Autowired constructor(
     }
 
     /**
+     * 构建级子类型的大类必须与构建最终状态同类，否则页面会出现「状态：失败 / 类型：步骤超时」这类矛盾组合。
+     *
+     * Job与步骤超时都是以终止事件收尾的，构建最终状态只会是失败/终止（引擎的构建级状态集里没有
+     * EXEC_TIMEOUT），因此在构建级降级为执行失败；超时这个成因不会丢——对应位置的 statusAtEnd
+     * 本就是超时状态，位置级仍保留 TIMEOUT_JOB / TIMEOUT_STEP 及其原因文案。
+     */
+    private fun alignToBuildStatus(endType: BuildEndType, status: BuildStatus): BuildEndType =
+        if (endType.category == BuildEndCategory.TIMEOUT && !status.isTimeout()) {
+            BuildEndType.FAIL_EXEC
+        } else {
+            endType
+        }
+
+    /**
      * 组装构建级终态信息。
      *
      * 失败类不设构建级原因：同一次构建可能有多个失败位置，各自的原因（驳回意见、红线指标、
-     * 子流水线名）只能逐位置表达，构建级取其中一条会与位置列表相互矛盾
+     * 子流水线名、超时时限）只能逐位置表达，构建级取其中一条会与位置列表相互矛盾
      * （多个人工审核驳回时只展示一条驳回意见即是此问题）。
-     * 超时类与取消类的原因对整次构建唯一，仍保留在构建级。
+     * 只有构建自身以超时状态收尾（排队超时）时，原因对整次构建唯一，才保留在构建级。
      */
-    private fun buildAbnormalEndInfo(
-        context: BuildEndContext,
-        endType: BuildEndType,
-        positions: List<EndPosition>
-    ): BuildEndInfo {
-        return when {
-            endType == BuildEndType.TIMEOUT_STEP -> buildStepTimeoutEndInfo(context, positions)
-            // Job超时的时限来自 JobControlOption，构建任务上取不到，
-            // 正常路径已由 BuildMonitorControl 携带准确分钟数先行落库，此处兜底不编造数值
-            endType.category == BuildEndCategory.TIMEOUT -> BuildEndInfo.of(
-                endType = endType,
-                reason = firstErrorMsg(positions)
-            )
-            else -> BuildEndInfo.of(endType = endType)
+    private fun buildAbnormalEndInfo(endType: BuildEndType, positions: List<EndPosition>): BuildEndInfo {
+        return if (endType.category == BuildEndCategory.TIMEOUT) {
+            BuildEndInfo.of(endType = endType, reason = firstErrorMsg(positions))
+        } else {
+            BuildEndInfo.of(endType = endType)
         }
     }
 
@@ -211,7 +221,7 @@ class BuildEndInfoResolver @Autowired constructor(
         positions.firstNotNullOfOrNull { it.errorMsg?.takeIf { msg -> msg.isNotBlank() } }?.take(REASON_MAX_LENGTH)
 
     /**
-     * 逐位置补齐失败原因：驳回意见、质量红线指标、子流水线名称、FastKill 连带说明。
+     * 逐位置补齐失败原因：驳回意见、质量红线指标、子流水线名称、FastKill 连带说明、超时时限。
      * 质量红线指标需跨模块查询，仅在确实存在红线失败位置时查询一次。
      */
     private fun fillFailPositionReasons(
@@ -238,6 +248,8 @@ class BuildEndInfoResolver @Autowired constructor(
                 BuildEndType.FAIL_QUALITY -> position.withQualityReason(qualityRecords)
                 BuildEndType.FAIL_SUB_PIPELINE -> position.withSubPipelineReason()
                 BuildEndType.FAIL_FAST_KILL -> position.withFastKillReason(fastKillCauseJobs[position.stageId])
+                BuildEndType.TIMEOUT_STEP -> position.withStepTimeoutReason(context)
+                BuildEndType.TIMEOUT_JOB -> position.withJobTimeoutReason(index)
                 else -> position
             }
         }
@@ -282,6 +294,43 @@ class BuildEndInfoResolver @Autowired constructor(
         val subPipelineName = subPipelineInfo?.pipelineName?.takeIf { it.isNotBlank() }
             ?: return copy(reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_SUB_PIPELINE)
         return copy(reason = subPipelineName.take(REASON_MAX_LENGTH))
+    }
+
+    /**
+     * 步骤超时：时限取自超时插件自身的 additionalOptions.timeout（分钟）。
+     * 取不到或配置为0（表示不限制）时退化为插件错误信息，避免展示出空的时限。
+     */
+    private fun EndPosition.withStepTimeoutReason(context: BuildEndContext): EndPosition {
+        val minutes = taskId
+            ?.let { id -> context.buildTasks.firstOrNull { it.taskId == id } }
+            ?.additionalOptions?.timeout
+            ?.takeIf { it > 0 }
+            ?: return copy(reason = errorMsg?.takeIf { it.isNotBlank() }?.take(REASON_MAX_LENGTH))
+        return copy(
+            reasonCode = ProcessMessageCode.BK_BUILD_END_TIMEOUT_STEP,
+            reasonParams = listOf(minutes.toString())
+        )
+    }
+
+    /**
+     * Job超时：时限取自所属容器的 JobControlOption（分钟）。
+     * 与构建级取消原因复用同一词条——两处描述的都是「所属 Job 超时导致步骤被终止」这同一件事。
+     */
+    private fun EndPosition.withJobTimeoutReason(index: ModelPositionIndex): EndPosition {
+        val minutes = index.locateContainer(containerId)?.container
+            ?.let { container ->
+                when (container) {
+                    is VMBuildContainer -> container.jobControlOption?.timeout
+                    is NormalContainer -> container.jobControlOption?.timeout
+                    else -> null
+                }
+            }
+            ?.takeIf { it > 0 }
+            ?: return copy(reason = errorMsg?.takeIf { it.isNotBlank() }?.take(REASON_MAX_LENGTH))
+        return copy(
+            reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT,
+            reasonParams = listOf(minutes.toString())
+        )
     }
 
     private fun EndPosition.withFastKillReason(causeJobName: String?): EndPosition {
@@ -520,30 +569,6 @@ class BuildEndInfoResolver @Autowired constructor(
             buildId = subInfo.buildId,
             buildNum = subInfo.buildNum
         )
-    }
-
-    /**
-     * 步骤超时：时限取自超时插件自身的 additionalOptions.timeout（分钟）。
-     * 取不到或配置为0（表示不限制）时退化为插件错误信息，避免展示出空的时限。
-     */
-    private fun buildStepTimeoutEndInfo(context: BuildEndContext, positions: List<EndPosition>): BuildEndInfo {
-        val taskId = positions.firstOrNull { it.endType == BuildEndType.TIMEOUT_STEP }?.taskId
-        val minutes = taskId
-            ?.let { id -> context.buildTasks.firstOrNull { it.taskId == id } }
-            ?.additionalOptions?.timeout
-            ?.takeIf { it > 0 }
-        return if (minutes != null) {
-            BuildEndInfo.of(
-                endType = BuildEndType.TIMEOUT_STEP,
-                reasonCode = ProcessMessageCode.BK_BUILD_END_TIMEOUT_STEP,
-                reasonParams = listOf(minutes.toString())
-            )
-        } else {
-            BuildEndInfo.of(
-                endType = BuildEndType.TIMEOUT_STEP,
-                reason = firstErrorMsg(positions)
-            )
-        }
     }
 
     /**

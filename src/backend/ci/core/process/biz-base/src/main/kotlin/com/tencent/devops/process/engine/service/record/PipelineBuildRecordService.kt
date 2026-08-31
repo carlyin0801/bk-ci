@@ -437,13 +437,16 @@ class PipelineBuildRecordService @Autowired constructor(
         // 构建运行总时长：从构建开始到结束，未结束时按当前时刻计算；排队中未启动的构建为空
         // 需在apply块外计算，避免块内endTime被BuildEndInfo.endTime属性遮蔽
         val buildRunCostTime = startTime?.let { (endTime ?: System.currentTimeMillis()) - it }
+        // 合成终态必须与页面状态标签同源取记录表状态：详情记录先落终态、构建历史表随后才更新，
+        // 若用滞后的 buildInfo.status，构建结束瞬间推送的详情会因状态还是运行中而合成不出来（#13477）
+        val recordStatus = buildRecordModel?.status?.let { BuildStatus.parse(it) } ?: buildInfo.status
         val buildEndInfo = (
             buildRecordModel?.modelVar?.get(BuildEndInfo.MODEL_VAR_KEY)?.let {
                 JsonUtil.anyToOrNull(it, object : TypeReference<BuildEndInfo>() {})
-            } ?: synthesizeSuccessEndInfo(buildInfo.status, model, endTime)
+            } ?: synthesizeSuccessEndInfo(recordStatus, model, endTime)
             )?.apply {
             totalCostTime = buildRunCostTime
-            // 按结束成因归类，与 endType 恒定一致；构建真实状态由 ModelRecord.status 单独表达
+            // 与 endType 恒定同类；写入侧已保证 endType 的大类与构建最终状态同类
             endCategory = endType.category
             reasonCode?.let { code ->
                 reason = I18nUtil.getCodeLanMessage(
@@ -822,13 +825,6 @@ class PipelineBuildRecordService @Autowired constructor(
                 recordModel.modelVar.plus(modelVar), null, LocalDateTime.now(),
                 errorInfoList, null, null
             )
-            pipelineRecordChangeEvent(
-                projectId = projectId,
-                pipelineId = pipelineId,
-                buildId = buildId,
-                startUser = recordModel.startUser,
-                executeCount = executeCount
-            )
             val allRecordStages = recordStageDao.getLatestRecords(
                 dslContext = context,
                 projectId = projectId,
@@ -840,6 +836,14 @@ class PipelineBuildRecordService @Autowired constructor(
                 recordStages = allRecordStages, buildStatus = buildStatus, errorMsg = errorMsg
             )
         }
+        // 事务提交后再推送，否则推送侧回查可能读到尚未提交的运行中状态
+        pipelineRecordChangeEvent(
+            projectId = projectId,
+            pipelineId = pipelineId,
+            buildId = buildId,
+            startUser = recordModel.startUser,
+            executeCount = executeCount
+        )
         val model = getRecordModel(
             projectId = projectId,
             pipelineId = pipelineId,
@@ -898,6 +902,32 @@ class PipelineBuildRecordService @Autowired constructor(
             startUser = recordModel.startUser
         }
         notifyBuildEndInfoSaved(projectId, pipelineId, buildId, executeCount, startUser)
+    }
+
+    /**
+     * 清除已落库的终态详情，供运行中重试复用同一执行次数的记录行时调用。
+     * 不派发记录变更推送——调用方在重试流程中随后就会刷新记录并推送。
+     */
+    fun clearBuildEndInfo(
+        transactionContext: DSLContext?,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        executeCount: Int
+    ) {
+        val context = transactionContext ?: dslContext
+        val recordModel = recordModelDao.getRecord(
+            dslContext = context, projectId = projectId, pipelineId = pipelineId,
+            buildId = buildId, executeCount = executeCount
+        ) ?: return
+        if (!recordModel.modelVar.containsKey(BuildEndInfo.MODEL_VAR_KEY)) return
+        recordModelDao.updateRecord(
+            dslContext = context, projectId = projectId, pipelineId = pipelineId,
+            buildId = buildId, executeCount = executeCount, cancelUser = null,
+            modelVar = recordModel.modelVar.minus(BuildEndInfo.MODEL_VAR_KEY), buildStatus = null,
+            startTime = null, endTime = null, errorInfoList = null,
+            timestamps = null
+        )
     }
 
     /**

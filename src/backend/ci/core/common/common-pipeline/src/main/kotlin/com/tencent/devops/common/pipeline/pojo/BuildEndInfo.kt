@@ -162,8 +162,10 @@ data class BuildEndInfo(
          * （由 [endType] 承载），大类由 [BuildEndType.category] 直接决定，无需调用方重复指定，
          * 拆成三个方法只会让实现完全相同的重载散落各处。
          *
-         * 注意结束成因与构建最终状态是两回事：Job 执行超时派发的是 TERMINATE 事件，
-         * 构建最终可能以 CANCELED / TERMINATE / FAILED 收尾，但成因始终是 TIMEOUT_JOB。
+         * 调用方须保证 [endType] 的大类与构建最终状态同类，否则页面会出现
+         * 「状态：已取消 / 类型：Job 超时」这类矛盾组合。放不进大类的具体成因用 [reason] 表达：
+         * 例如 Job 执行超时派发的是 TERMINATE 事件，构建以取消/终止/失败收尾而非超时状态，
+         * 应写取消或失败类子类型，「超过执行时限 15m」放在 [reason] 里。
          */
         fun of(
             endType: BuildEndType,

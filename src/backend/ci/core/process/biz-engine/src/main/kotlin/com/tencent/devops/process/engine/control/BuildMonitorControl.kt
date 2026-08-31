@@ -327,8 +327,9 @@ class BuildMonitorControl @Autowired constructor(
             // 保存构建级别的终态信息（含受影响容器位置，仅在尚未存在时写入）
             try {
                 val endPositions = resolveEndPositionsFromModel(buildInfo, this)
-                val endInfo = BuildEndInfo.of(
-                    endType = BuildEndType.TIMEOUT_JOB,
+                // Job执行超时派发的是TERMINATE事件，构建最终状态只会落在取消/终止/失败上，不会是超时状态，
+                // 因此终态子类型必须归入取消类（与最终状态同类），「超时」这个成因由 reason 表达
+                val endInfo = BuildEndInfo.ofCancelSystem(
                     reasonCode = BK_BUILD_CANCEL_SYSTEM_JOB_EXEC_TIMEOUT,
                     reasonParams = listOf("$minute")
                 ).withPositions(endPositions)
