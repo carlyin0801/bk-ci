@@ -529,14 +529,19 @@ class PipelineBuildRecordService @Autowired constructor(
      * 读取时按构建状态合成，保证前端对所有终态都能拿到统一结构。
      * 阶段准入被驳回等有额外信息的成功场景已在构建结束时落库，不会走到这里。
      */
-    private fun synthesizeSuccessEndInfo(status: BuildStatus, model: Model, buildEndTime: Long?): BuildEndInfo? =
-        when {
-            // 阶段准入等待审核时构建并未结束，只是挂起为阶段成功，需与真正的阶段成功区分开
-            status == BuildStatus.STAGE_SUCCESS -> synthesizeStageReviewingEndInfo(model)
-                ?: successEndInfo(buildEndTime)
-            status.isSuccess() -> successEndInfo(buildEndTime)
-            else -> null
+    private fun synthesizeSuccessEndInfo(status: BuildStatus, model: Model, buildEndTime: Long?): BuildEndInfo? {
+        // 阶段准入等待审核时构建并未结束，只是挂起为阶段成功，需与真正的阶段成功区分开。
+        // 挂起是先写审核记录、后改构建状态（见 PipelineStageService.pauseStage），推送恰好赶在
+        // 状态改写前时状态还是运行中，因此只要构建未结束就以模型里的阶段审核态为准，不依赖状态判定
+        if (!status.isFinish()) {
+            synthesizeStageReviewingEndInfo(model)?.let { return it }
         }
+        return if (status == BuildStatus.STAGE_SUCCESS || status.isSuccess()) {
+            successEndInfo(buildEndTime)
+        } else {
+            null
+        }
+    }
 
     /**
      * 合成而非落库，因此终态时间必须取构建自身的结束时间，
@@ -675,6 +680,7 @@ class PipelineBuildRecordService @Autowired constructor(
         buildEndInfo: BuildEndInfo? = null
     ) {
         logger.info("[$buildId]|BUILD_CANCEL|cancelUser=$cancelUser|buildStatus=$buildStatus")
+        var startUser: String? = null
         dslContext.transaction { configuration ->
             val context = DSL.using(configuration)
             val recordModel = recordModelDao.getRecord(
@@ -738,11 +744,15 @@ class PipelineBuildRecordService @Autowired constructor(
                 recordModel.modelVar.plus(modelVar), null, LocalDateTime.now(),
                 null, cancelUser, null
             )
+            startUser = recordModel.startUser
+        }
+        // 事务提交后再推送，否则推送侧回查可能读到尚未提交的运行中状态
+        startUser?.let {
             pipelineRecordChangeEvent(
                 projectId = projectId,
                 pipelineId = pipelineId,
                 buildId = buildId,
-                startUser = recordModel.startUser,
+                startUser = it,
                 executeCount = executeCount
             )
         }
