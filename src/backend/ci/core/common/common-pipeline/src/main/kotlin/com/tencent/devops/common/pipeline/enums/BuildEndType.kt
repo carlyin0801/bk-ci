@@ -48,6 +48,7 @@ enum class BuildEndType(
 ) {
     // ---- 取消类 ----
     CANCEL_USER("cancelUser", BuildEndCategory.CANCEL),
+    // 系统自动取消，含服务重启、排队满、并发互斥、构建机失联等，具体成因见 reason
     CANCEL_SYSTEM("cancelSystem", BuildEndCategory.CANCEL),
     CANCEL_PARENT_PIPELINE("cancelParentPipeline", BuildEndCategory.CANCEL),
 
@@ -60,23 +61,25 @@ enum class BuildEndType(
     FAIL_REVIEW("failReview", BuildEndCategory.FAIL),
     // 子流水线执行失败导致父构建失败
     FAIL_SUB_PIPELINE("failSubPipeline", BuildEndCategory.FAIL),
+    // 同阶段其他Job失败且开启了FastKill，本位置被提前终止（连带影响，非独立失败原因）
+    FAIL_FAST_KILL("failFastKill", BuildEndCategory.FAIL),
     // 同一次构建中同时存在多种失败子类型
     FAIL_MULTIPLE("failMultiple", BuildEndCategory.FAIL),
 
     // ---- 超时类 ----
-    // Job 超过执行时限，其下步骤被终止
+    // Job 超过执行时限，其下步骤被终止。仅位置级：构建以终止链路收尾，构建级归取消/失败类
     TIMEOUT_JOB("timeoutJob", BuildEndCategory.TIMEOUT),
-    // 单个步骤超过自身执行时限
+    // 单个步骤超过自身执行时限。仅位置级：构建级归失败类
     TIMEOUT_STEP("timeoutStep", BuildEndCategory.TIMEOUT),
-    // 构建排队超时
+    // 构建排队超时。唯一的构建级超时子类型（构建状态本身即 QUEUE_TIMEOUT）
     TIMEOUT_QUEUE("timeoutQueue", BuildEndCategory.TIMEOUT),
-    // 构建机Agent心跳超时
-    TIMEOUT_HEARTBEAT("timeoutHeartbeat", BuildEndCategory.TIMEOUT),
 
     // ---- 成功类 ----
     SUCCESS("success", BuildEndCategory.SUCCESS),
     // 阶段准入被驳回，后续阶段不再执行，构建按成功结束
-    SUCCESS_STAGE_ABORT("successStageAbort", BuildEndCategory.SUCCESS);
+    SUCCESS_STAGE_ABORT("successStageAbort", BuildEndCategory.SUCCESS),
+    // 阶段准入等待人工审核中，构建暂以阶段成功挂起，审核通过后会继续运行
+    SUCCESS_STAGE_REVIEWING("successStageReviewing", BuildEndCategory.SUCCESS);
 
     companion object {
         fun parse(name: String?): BuildEndType? {
@@ -92,10 +95,9 @@ enum class BuildEndType(
 /**
  * 构建终态大类，供前端按类别渲染不同样式的详情卡片（失败卡片/超时卡片/取消卡片/成功卡片）。
  *
- * 归类依据是**结束成因**（[BuildEndType.category]），而非构建最终状态。二者并不总是一致：
- * Job执行超时、Agent心跳超时走的是 TERMINATE 事件链路，构建最终状态可能是
- * CANCELED / TERMINATE / FAILED 中的任意一种，但对用户而言它就是一次超时，
- * 应当渲染成超时卡片并展示超时时限与终止位置。构建的真实状态由 `ModelRecord.status` 单独表达。
+ * 大类必须与所在层级的状态同类：构建级跟随构建最终状态（`ModelRecord.status`），
+ * 位置级跟随该位置的 statusAtEnd。因此 Job执行超时、Agent心跳超时这类走 TERMINATE 事件链路、
+ * 以取消/终止/失败收尾的场景，构建级不能归入 TIMEOUT——具体成因由 reason 与位置级子类型表达。
  */
 enum class BuildEndCategory {
     CANCEL,

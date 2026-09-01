@@ -35,6 +35,11 @@ import io.swagger.v3.oas.annotations.media.Schema
  *
  * 位置级 endType 用于「多类失败」场景：同一次构建中不同位置的终止原因可能不同
  * （如一个位置是插件执行失败、另一个是质量红线未达标），前端需按位置分别渲染标签。
+ *
+ * 位置级 [reason]/[reasonCode] 与构建级 [BuildEndInfo.reason] 取值规则一致（reasonCode 优先），
+ * 用于同一构建存在多个同类位置、构建级无法用一句话概括的场景：
+ * 如多个人工审核驳回时，每个驳回位置各自的驳回意见只能挂在位置上，
+ * 否则构建级只能展示其中一条，与位置列表相互冲突。
  */
 @Schema(title = "终态位置详情")
 data class EndPosition(
@@ -50,6 +55,12 @@ data class EndPosition(
     val endType: BuildEndType? = null,
     @get:Schema(title = "该位置终态子类型描述(国际化)", required = false)
     var endTypeDesc: String? = null,
+    @get:Schema(title = "该位置的终态原因(兜底文案，如审核驳回意见、子流水线失败信息)", required = false)
+    var reason: String? = null,
+    @get:Schema(title = "该位置终态原因的国际化标识", required = false)
+    val reasonCode: String? = null,
+    @get:Schema(title = "该位置终态原因的国际化占位符参数", required = false)
+    val reasonParams: List<String>? = null,
     @get:Schema(title = "阶段ID(锚点定位)", required = true)
     val stageId: String,
     @get:Schema(title = "容器ID(锚点定位)", required = true)
@@ -68,6 +79,12 @@ data class EndPosition(
     val operator: String? = null,
     @get:Schema(title = "审核意见(人工审核驳回原因)", required = false)
     val reviewSuggest: String? = null,
+    @get:Schema(title = "审核组序号(阶段准入审核位置填充，从1开始)", required = false)
+    val reviewGroupSeq: Int? = null,
+    @get:Schema(title = "审核组名称(阶段准入审核位置填充)", required = false)
+    val reviewGroupName: String? = null,
+    @get:Schema(title = "待审核人列表(阶段准入审核中位置填充)", required = false)
+    val reviewers: List<String>? = null,
     @get:Schema(title = "容器HashId(日志跳转)", required = false)
     val containerHashId: String? = null,
     @get:Schema(title = "步骤ID(日志跳转)", required = false)

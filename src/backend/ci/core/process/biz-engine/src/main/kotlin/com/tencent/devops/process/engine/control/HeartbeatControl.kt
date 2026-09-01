@@ -32,7 +32,6 @@ import com.tencent.devops.common.api.pojo.ErrorType
 import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatcher
 import com.tencent.devops.common.event.enums.ActionType
 import com.tencent.devops.common.log.utils.BuildLogPrinter
-import com.tencent.devops.common.pipeline.enums.BuildEndType
 import com.tencent.devops.common.pipeline.pojo.BuildEndInfo
 import com.tencent.devops.common.pipeline.pojo.EndPosition
 import com.tencent.devops.common.pipeline.utils.HeartBeatUtils
@@ -160,8 +159,8 @@ class HeartbeatControl @Autowired constructor(
         // 保存构建级别的终态信息（含受影响容器位置），仅在尚未存在时写入
         try {
             val endPositions = resolveEndPositionsFromModel(buildInfo, container)
-            val buildEndInfo = BuildEndInfo.of(
-                endType = BuildEndType.TIMEOUT_HEARTBEAT,
+            // Agent失联对用户而言是构建被系统中断，归为系统取消；具体成因由 reason 表达
+            val buildEndInfo = BuildEndInfo.ofCancelSystem(
                 reasonCode = BK_BUILD_CANCEL_SYSTEM_HEARTBEAT_TIMEOUT
             ).withPositions(endPositions)
             pipelineBuildRecordService.saveBuildEndInfoIfAbsent(

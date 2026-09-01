@@ -1350,6 +1350,16 @@ class PipelineRuntimeService @Autowired constructor(
         taskBuildRecords: MutableList<BuildRecordTask>
     ) {
         val modelRecord = if (context.retryOnRunningBuild) {
+            // 运行中重试复用同一执行次数的记录行，需清掉本次执行中已落库的终态详情
+            // （Agent失联、Job超时这类入口在构建运行中就会写入），否则构建结束时的
+            // IfAbsent 写入会被残留值挡住，页面展示的详情与最终状态不符
+            pipelineBuildRecordService.clearBuildEndInfo(
+                transactionContext = transactionContext,
+                projectId = context.projectId,
+                pipelineId = context.pipelineId,
+                buildId = context.buildId,
+                executeCount = context.executeCount
+            )
             null
         } else {
             BuildRecordModel(
