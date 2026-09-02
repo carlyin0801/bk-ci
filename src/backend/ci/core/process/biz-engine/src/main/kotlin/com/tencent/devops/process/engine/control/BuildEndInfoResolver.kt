@@ -333,16 +333,17 @@ class BuildEndInfoResolver @Autowired constructor(
         )
     }
 
+    /**
+     * FastKill 连带终止的位置一律以「因失败即停被终止」示人，不展示插件自身的错误信息——
+     * 被强制终止时插件给不出真实原因，那里只有「Force Terminate!」这类引擎占位文案。
+     * 找不到引发终止的Job时不给原因，页面只展示类型标签。
+     */
     private fun EndPosition.withFastKillReason(causeJobName: String?): EndPosition {
-        return if (causeJobName.isNullOrBlank()) {
-            // 找不到引发终止的Job时保留插件自身的错误信息（错误码2199010已说明成因）
-            copy(reason = errorMsg?.takeIf { it.isNotBlank() }?.take(REASON_MAX_LENGTH))
-        } else {
-            copy(
-                reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_FAST_KILL,
-                reasonParams = listOf(causeJobName)
-            )
-        }
+        if (causeJobName.isNullOrBlank()) return copy(reason = null)
+        return copy(
+            reasonCode = ProcessMessageCode.BK_BUILD_END_FAIL_FAST_KILL,
+            reasonParams = listOf(causeJobName)
+        )
     }
 
     /**
