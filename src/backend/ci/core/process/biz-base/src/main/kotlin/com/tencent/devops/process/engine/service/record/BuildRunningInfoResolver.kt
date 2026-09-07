@@ -312,7 +312,7 @@ class BuildRunningInfoResolver @Autowired constructor(
         }
         return BuildRunningInfo(
             runningType = runningType,
-            currentPhase = resolveCurrentPhase(index, waitingJobs, pendingItems),
+            currentPhase = resolveCurrentPhase(context.model, waitingJobs, pendingItems),
             queueTime = context.queueTime,
             startTime = context.startTime,
             runningTime = context.startTime?.let { System.currentTimeMillis() - it },
@@ -322,21 +322,38 @@ class BuildRunningInfoResolver @Autowired constructor(
     }
 
     /**
-     * 当前阶段描述：优先展示特殊场景描述，不是特殊场景则默认展示正在运行的Stage名。
+     * 当前阶段描述：优先展示特殊场景描述，不是特殊场景则默认展示正在推进的 Stage 名。
      */
     private fun resolveCurrentPhase(
-        index: ModelPositionIndex,
+        model: Model,
         waitingJobs: List<WaitingJobInfo>,
         pendingItems: List<PendingManualItem>
     ): String? {
         return when {
             waitingJobs.isNotEmpty() -> i18n(ProcessMessageCode.BK_BUILD_RUNNING_JOB_QUEUING)
             pendingItems.isNotEmpty() -> i18n(ProcessMessageCode.BK_BUILD_RUNNING_PENDING_MANUAL)
-            else -> index.containers()
-                .firstOrNull { BuildStatus.parse(it.container.status) == BuildStatus.RUNNING }
-                ?.stagePosition?.stageName
+            else -> resolveCurrentStageName(model)
         }
     }
+
+    /**
+     * 取第一个尚未结束的 Stage 名作为当前阶段。
+     */
+    private fun resolveCurrentStageName(model: Model): String? {
+        model.stages.forEachIndexed { index, stage ->
+            if (index == 0) return@forEachIndexed
+            val stageName = stage.name?.takeIf { it.isNotBlank() } ?: return@forEachIndexed
+            if (!isStageSettled(BuildStatus.parse(stage.status))) return stageName
+        }
+        return null
+    }
+
+    /**
+     * 阶段是否已结束。[BuildStatus.isFinish] 未覆盖 [BuildStatus.STAGE_SUCCESS]
+     * （阶段审核取消运行后的最终态），需单独排除，避免把已跳过的阶段当成当前阶段。
+     */
+    private fun isStageSettled(status: BuildStatus): Boolean =
+        status.isFinish() || status == BuildStatus.STAGE_SUCCESS
 
     /**
      * 收集等待中的 Job。
