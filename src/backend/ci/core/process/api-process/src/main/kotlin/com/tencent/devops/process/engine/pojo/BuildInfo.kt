@@ -115,6 +115,12 @@ data class BuildInfo(
 
     fun isStageSuccess() = status == BuildStatus.STAGE_SUCCESS
 
+    /**
+     * 阶段准入人工审核中：流水线暂以 STAGE_SUCCESS 挂起，但尚未真正结束。
+     * 与审核驳回/超时后的 STAGE_SUCCESS 终态区分，后者 [isFinish] 为 true。
+     */
+    fun isStageReviewing() = isStageSuccess() && !isFinish()
+
     fun isTriggerReviewing() = status == BuildStatus.TRIGGER_REVIEWING
 
     fun isReadyToRun() = status.isReadyToRun()

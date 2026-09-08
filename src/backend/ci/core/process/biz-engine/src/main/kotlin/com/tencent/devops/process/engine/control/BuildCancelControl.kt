@@ -116,8 +116,8 @@ class BuildCancelControl @Autowired constructor(
     private fun execute(event: PipelineBuildCancelEvent): Boolean {
         val buildId = event.buildId
         val buildInfo = pipelineRuntimeService.getBuildInfo(projectId = event.projectId, buildId = buildId)
-        // 已经结束的构建，不再受理，抛弃消息
-        if (buildInfo == null || buildInfo.status.isFinish()) {
+        // 已经结束的构建，不再受理，抛弃消息。STAGE_SUCCESS 审核中（无 endTime）仍可取消。
+        if (buildInfo == null || buildInfo.isFinish()) {
             LOG.info("[$$buildId|${event.source}|REPEAT_CANCEL_EVENT|${event.status}| abandon!")
             return false
         }

@@ -778,6 +778,8 @@ object ProcessMessageCode {
     const val BK_UNEXECUTE_TASK = "bkUnexecuteTask" // 终止构建，跳过(UnExecute Task)
     const val BK_CONDITION_INVALID = "bkConditionInvalid" // 执行条件判断失败(Condition Invalid)
     const val BK_STAGE_REVIEW_EMPTY_REVIEWER = "bkStageReviewEmptyViewer" // 由于无审核人，被系统自动驳回
+    // {0} 取消了执行（阶段准入审核中，发起方主动取消）
+    const val BK_STAGE_REVIEW_ABORT_BY_USER_CANCEL = "bkStageReviewAbortByUserCancel"
     // 当前审核组 [IMATE] 待审核，请在 imate 会话点击锁定。taskId={0}
     const val BK_IMATE_STAGE_REVIEW_WAITING = "bkImateStageReviewWaiting"
     // imate 锁定审批已通过，继续执行 Stage。taskId={0} approver={1}

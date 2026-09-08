@@ -2631,7 +2631,9 @@ class PipelineBuildFacadeService(
                 )
             }
 
-            if (buildInfo.status.isFinish()) {
+            // STAGE_SUCCESS 审核中并非真正结束（endTime 未写入），允许取消；
+            // 审核驳回/超时后的 STAGE_SUCCESS 终态带 endTime，与普通结束一样不可再操作。
+            if (buildInfo.isFinish()) {
                 logger.warn("The build $buildId of project $projectId already finished ")
                 throw ErrorCodeException(
                     errorCode = ProcessMessageCode.PIPELINE_BUILD_HAS_ENDED_CANNOT_BE_OPERATE
@@ -2643,6 +2645,24 @@ class PipelineBuildFacadeService(
                 throw ErrorCodeException(
                     errorCode = ProcessMessageCode.ERROR_PIPLEINE_INPUT
                 )
+            }
+
+            val pipelineInfo = pipelineRepositoryService.getPipelineInfo(projectId, pipelineId)
+
+            if (pipelineInfo == null) {
+                logger.warn("The pipeline($pipelineId) of project($projectId) is not exist")
+                return
+            }
+            if (pipelineInfo.channelCode != channelCode) {
+                return
+            }
+
+            // #13391 阶段准入审核中取消：走审核驳回，不把构建记为 CANCELED。
+            // 强制终止（草稿删除、数据迁移等）要求构建立即终止，仍走原有终止链路
+            if (terminateFlag != true &&
+                cancelStageReviewingIfNeed(userId = userId, buildInfo = buildInfo)
+            ) {
+                return
             }
 
             val finalTerminateFlag = if (terminateFlag == true) {
@@ -2666,16 +2686,6 @@ class PipelineBuildFacadeService(
                     flag = true
                 }
                 flag
-            }
-
-            val pipelineInfo = pipelineRepositoryService.getPipelineInfo(projectId, pipelineId)
-
-            if (pipelineInfo == null) {
-                logger.warn("The pipeline($pipelineId) of project($projectId) is not exist")
-                return
-            }
-            if (pipelineInfo.channelCode != channelCode) {
-                return
             }
 
             val tasks = pipelineTaskService.getRunningTask(projectId, buildId)
@@ -2739,6 +2749,56 @@ class PipelineBuildFacadeService(
         } finally {
             redisLock.unlock()
         }
+    }
+
+    /**
+     * #13391 阶段准入审核中，发起方取消执行：准入从「审核中」扭转为「审核驳回」。
+     * 审核人驳回、超时驳回仍走原有链路，此处只覆盖用户主动取消。
+     *
+     * @return true 已按审核驳回受理，调用方无需再发取消事件
+     */
+    private fun cancelStageReviewingIfNeed(userId: String, buildInfo: BuildInfo): Boolean {
+        if (!buildInfo.isStageReviewing()) {
+            return false
+        }
+        val cancelled = pipelineStageService.cancelStageReviewingByUser(
+            userId = userId,
+            buildInfo = buildInfo
+        )
+        if (!cancelled) { // 没有待审核的暂停Stage，回落到普通取消
+            return false
+        }
+        logger.info(
+            "[${buildInfo.buildId}]|STAGE_REVIEWING_CANCEL|userId=$userId|" +
+                "pipelineId=${buildInfo.pipelineId}"
+        )
+        // 驳回会同步把构建状态从STAGE_SUCCESS改回RUNNING，等结束事件走完才落终态，
+        // 该窗口内的重复取消若不拦住会把构建改写为CANCELED，因此与取消事件一样打上取消标识
+        redisOperation.set(
+            key = BuildUtils.getCancelActionBuildKey(buildInfo.buildId),
+            value = System.currentTimeMillis().toString(),
+            expiredInSecond = Timeout.transMinuteTimeoutToSec(Timeout.MAX_MINUTES)
+        )
+        buildRecordService.updateBuildCancelUser(
+            projectId = buildInfo.projectId,
+            buildId = buildInfo.buildId,
+            executeCount = buildInfo.executeCount,
+            cancelUserId = userId
+        )
+        buildLogPrinter.addYellowLine(
+            buildId = buildInfo.buildId,
+            message = I18nUtil.getCodeLanMessage(
+                messageCode = ProcessMessageCode.BK_STAGE_REVIEW_ABORT_BY_USER_CANCEL,
+                params = arrayOf(userId),
+                defaultMessage = "$userId 取消了执行"
+            ),
+            tag = VMUtils.genStartVMTaskId("0"),
+            containerHashId = "0",
+            executeCount = buildInfo.executeCount,
+            jobId = null,
+            stepId = VMUtils.genStartVMTaskId("0")
+        )
+        return true
     }
 
     /**

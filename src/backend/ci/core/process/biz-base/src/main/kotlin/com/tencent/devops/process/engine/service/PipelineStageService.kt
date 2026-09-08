@@ -50,6 +50,7 @@ import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.common.websocket.enum.RefreshType
 import com.tencent.devops.process.constant.PipelineBuildParamKey.CI_IMATE_SESSION_ID
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_IMATE_STAGE_REVIEW_WAITING
+import com.tencent.devops.process.constant.ProcessMessageCode.BK_STAGE_REVIEW_ABORT_BY_USER_CANCEL
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_STAGE_REVIEW_EMPTY_REVIEWER
 import com.tencent.devops.process.engine.common.BS_MANUAL_START_STAGE
 import com.tencent.devops.process.engine.common.BS_QUALITY_ABORT_STAGE
@@ -427,11 +428,42 @@ class PipelineStageService @Autowired constructor(
         }
     }
 
+    /**
+     * 用户在阶段准入审核中主动取消执行。
+     * 复用审核人驳回的同一条准入驳回链路，不把构建记为 CANCELED，
+     * 保证阶段准入从「审核中」扭转为「审核驳回」。
+     *
+     * @return true 已受理；false 当前没有待审核的暂停 Stage（调用方可回落到普通取消）
+     */
+    fun cancelStageReviewingByUser(userId: String, buildInfo: BuildInfo): Boolean {
+        val pendingStage = getPendingStage(buildInfo.projectId, buildInfo.buildId) ?: return false
+        if (!pendingStage.status.isPause() || pendingStage.checkIn?.groupToReview() == null) {
+            return false
+        }
+        val abortSuggest = I18nUtil.getCodeLanMessage(
+            messageCode = BK_STAGE_REVIEW_ABORT_BY_USER_CANCEL,
+            params = arrayOf(userId)
+        )
+        logger.info(
+            "ENGINE|${buildInfo.buildId}|STAGE_REVIEWING_USER_CANCEL|" +
+                "userId=$userId|stageId=${pendingStage.stageId}"
+        )
+        cancelStageBySystem(
+            userId = userId,
+            buildInfo = buildInfo,
+            buildStage = pendingStage,
+            timeout = false,
+            abortSuggest = abortSuggest
+        )
+        return true
+    }
+
     fun cancelStageBySystem(
         userId: String,
         buildInfo: BuildInfo,
         buildStage: PipelineBuildStage,
-        timeout: Boolean? = false
+        timeout: Boolean? = false,
+        abortSuggest: String? = null
     ) {
 
         val checkMap: Map<Boolean, StagePauseCheck?> = mapOf(
@@ -444,6 +476,11 @@ class PipelineStageService @Autowired constructor(
             if (pauseCheck?.groupToReview() != null) {
                 val pipelineInfo =
                     pipelineRepositoryService.getPipelineInfo(buildStage.projectId, buildStage.pipelineId)
+                val suggest = when {
+                    timeout == true -> "TIMEOUT"
+                    !abortSuggest.isNullOrBlank() -> abortSuggest
+                    else -> "CANCEL"
+                }
                 cancelStage(
                     userId = userId,
                     triggerUserId = buildInfo.triggerUser,
@@ -453,7 +490,7 @@ class PipelineStageService @Autowired constructor(
                     reviewRequest = StageReviewRequest(
                         reviewParams = listOf(),
                         id = pauseCheck.groupToReview()?.id,
-                        suggest = "CANCEL"
+                        suggest = suggest
                     ),
                     timeout = timeout,
                     debug = buildInfo.debug,
