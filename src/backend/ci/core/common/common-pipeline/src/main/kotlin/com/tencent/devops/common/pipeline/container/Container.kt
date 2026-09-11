@@ -27,6 +27,7 @@
 
 package com.tencent.devops.common.pipeline.container
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.tencent.devops.common.api.util.JsonUtil
@@ -85,6 +86,25 @@ interface Container {
             it.transformCompatibility()
         }
     }
+
+    /**
+     * Job的主步骤部分：Job的运行结论完全由这部分插件决定。
+     *
+     * 收尾步骤(post-steps)与主步骤共用[elements]，靠[Element.isJobPostStep]区分、固定连续排在末尾
+     * （保存时由[com.tencent.devops.common.pipeline.utils.PostStepsNormalizer]归位保证）。
+     */
+    @JsonIgnore
+    fun fetchMainSteps(): List<Element> = elements.filterNot { it.isJobPostStep() }
+
+    /**
+     * Job的收尾步骤部分，其成败不影响Job结论。
+     *
+     * 与[fetchMainSteps]互为补集，只看[Element.isJobPostStep]。
+     * 插件 post-action 的 `elementPostInfo` 是运行时注入的，编排模型上不会出现；
+     * 运行时要排除 post-action，在调度/重试入口自己看 `elementPostInfo`。
+     */
+    @JsonIgnore
+    fun fetchPostSteps(): List<Element> = elements.filter { it.isJobPostStep() }
 
     /**
      * 只存储Container相关的配置，elements不会存储。

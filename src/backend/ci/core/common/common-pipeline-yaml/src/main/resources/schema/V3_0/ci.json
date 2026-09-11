@@ -3107,6 +3107,9 @@
             "steps" : {
               "$ref" : "#/definitions/steps"
             },
+            "post-steps" : {
+              "$ref" : "#/definitions/steps"
+            },
             "timeout-minutes" : {
               "oneOf" : [ {
                 "type" : "integer",
@@ -3179,8 +3182,11 @@
           "attach-build-url" : {
             "type" : "boolean"
           },
+          "when" : {
+            "enum" : [ "always", "success", "failure" ]
+          },
           "if" : {
-            "enum" : [ "FAILURE", "SUCCESS" ]
+            "enum" : [ "FAILURE", "SUCCESS", "ALWAYS" ]
           }
         }
       }
@@ -3601,6 +3607,9 @@
             "steps" : {
               "$ref" : "#/definitions/steps"
             },
+            "post-steps" : {
+              "$ref" : "#/definitions/steps"
+            },
             "timeout-minutes" : {
               "oneOf" : [ {
                 "type" : "integer",
@@ -3725,6 +3734,9 @@
                   }
                 }
               } ]
+            },
+            "when" : {
+              "enum" : [ "always", "success", "failure", "cancel" ]
             },
             "with" : {
               "type" : "object"

@@ -133,6 +133,7 @@ import com.tencent.devops.process.jmx.api.ProcessJmxApi
 import com.tencent.devops.process.permission.PipelinePermissionService
 import com.tencent.devops.process.permission.template.PipelineTemplatePermissionService
 import com.tencent.devops.process.pojo.BuildBasicInfo
+import com.tencent.devops.process.pojo.BuildCancelPreCheck
 import com.tencent.devops.process.pojo.BuildHistory
 import com.tencent.devops.process.pojo.BuildHistoryVariables
 import com.tencent.devops.process.pojo.BuildHistoryWithPipelineVersion
@@ -226,8 +227,12 @@ class PipelineBuildFacadeService(
     private val buildRunningInfoResolver: BuildRunningInfoResolver
 ) {
 
+    /**
+     * 两次取消之间的最小间隔，用于挡住误触的连点：窗口内的第二次取消直接报错，
+     * 窗口外才升级为强制终止。默认 60 秒，与历史行为保持一致。
+     */
     @Value("\${pipeline.build.cancel.intervalLimitTime:60}")
-    private var cancelIntervalLimitTime: Int = 60 // 取消间隔时间为60秒
+    private var cancelIntervalLimitTime: Int = 60
 
     companion object {
         private val logger = LoggerFactory.getLogger(PipelineBuildFacadeService::class.java)
@@ -846,31 +851,7 @@ class PipelineBuildFacadeService(
         terminateFlag: Boolean? = false
     ) {
         if (checkPermission) {
-            // 检查用户是否有权限取消构建
-            if (!hasPermissionToCancelBuild(userId, projectId, pipelineId, buildId)) {
-                logger.warn("[$buildId]|User $userId has no permission to cancel build.")
-                // 根据不同的策略抛出不同的错误信息
-                // #12697 按本次构建实际运行的版本读取设置,保证分支版本的取消策略生效
-                val buildInfo = pipelineRuntimeService.getBuildInfo(projectId, buildId)
-                val setting = pipelineRepositoryService.getSettingByPipelineVersion(
-                    projectId = projectId,
-                    pipelineId = pipelineId,
-                    pipelineVersion = buildInfo?.version
-                )
-                val cancelPolicy = setting?.buildCancelPolicy ?: BuildCancelPolicy.EXECUTE_PERMISSION
-
-                if (cancelPolicy == BuildCancelPolicy.RESTRICTED) {
-                    throw ErrorCodeException(
-                        errorCode = ProcessMessageCode.USER_NO_CANCEL_BUILD_PERMISSION,
-                        params = arrayOf(userId, buildId)
-                    )
-                } else {
-                    throw ErrorCodeException(
-                        errorCode = ProcessMessageCode.USER_NEED_PIPELINE_X_PERMISSION,
-                        params = arrayOf(AuthPermission.EXECUTE.getI18n(I18nUtil.getLanguage(userId)))
-                    )
-                }
-            }
+            validateCancelPermission(userId, projectId, pipelineId, buildId)
         }
         buildManualShutdown(
             projectId = projectId,
@@ -2645,24 +2626,21 @@ class PipelineBuildFacadeService(
             val finalTerminateFlag = if (terminateFlag == true) {
                 terminateFlag
             } else {
-                // 兼容post任务的场景，处于”运行中“的构建可以支持多次取消操作(第二次取消直接强制终止流水线构建)
-                val cancelActionTime = redisOperation.get(BuildUtils.getCancelActionBuildKey(buildId))?.toLong() ?: 0
-                val intervalTime = System.currentTimeMillis() - cancelActionTime
-                var flag = false // 是否强制终止
-                if (intervalTime <= cancelIntervalLimitTime * 1000) {
-                    val alreadyCancelUser = buildRecordService.getBuildCancelUser(
-                        projectId = projectId, buildId = buildId, executeCount = buildInfo.executeCount
+                val escalation = resolveCancelEscalation(projectId, buildId, buildInfo.executeCount)
+                if (escalation.retryAfterSecond > 0) {
+                    logger.warn(
+                        "The build $buildId of project $projectId already cancel " +
+                            "by user ${escalation.lastCancelUserId}"
                     )
-                    logger.warn("The build $buildId of project $projectId already cancel by user $alreadyCancelUser")
-                    val timeTip = cancelIntervalLimitTime - intervalTime / 1000
                     throw ErrorCodeException(
                         errorCode = ProcessMessageCode.CANCEL_BUILD_BY_OTHER_USER,
-                        params = arrayOf(userId, timeTip.toString())
+                        params = arrayOf(
+                            escalation.lastCancelUserId ?: userId,
+                            escalation.retryAfterSecond.toString()
+                        )
                     )
-                } else if (cancelActionTime > 0) {
-                    flag = true
                 }
-                flag
+                escalation.terminate
             }
 
             val pipelineInfo = pipelineRepositoryService.getPipelineInfo(projectId, pipelineId)
@@ -2677,36 +2655,49 @@ class PipelineBuildFacadeService(
 
             val tasks = pipelineTaskService.getRunningTask(projectId, buildId)
 
+            // #13602 强制终止会连插件post动作、Job收尾步骤一起掐掉，与普通取消的后果完全不同，日志上要能分辨出来
+            val cancelMessage = if (finalTerminateFlag) {
+                I18nUtil.getCodeLanMessage(
+                    messageCode = ProcessMessageCode.BK_BUILD_FORCE_TERMINATED_BY_USER,
+                    params = arrayOf(userId)
+                )
+            } else {
+                "Cancelled by $userId"
+            }
+
             tasks.forEach { task ->
                 val taskId = task["taskId"]?.toString() ?: ""
                 val stepId = task["stepId"]?.toString() ?: ""
                 val containerId = task["containerId"]?.toString() ?: ""
                 val status = task["status"] ?: ""
                 val executeCount = task["executeCount"] as? Int ?: 1
-                logger.info("build($buildId) shutdown by $userId, taskId: $taskId, status: $status")
+                logger.info(
+                    "build($buildId) shutdown by $userId, taskId: $taskId, " +
+                        "status: $status, terminate: $finalTerminateFlag"
+                )
                 val cancelTaskSetKey = TaskUtils.getCancelTaskIdRedisKey(buildId, containerId, false)
                 redisOperation.addSetValue(cancelTaskSetKey, taskId)
                 redisOperation.expire(cancelTaskSetKey, TimeUnit.DAYS.toSeconds(Timeout.MAX_JOB_RUN_DAYS))
-                buildLogPrinter.addYellowLine(
+                printCancelLine(
                     buildId = buildId,
-                    message = "Cancelled by $userId",
+                    message = cancelMessage,
+                    terminate = finalTerminateFlag,
                     tag = taskId,
                     containerHashId = containerId,
                     executeCount = executeCount,
-                    jobId = null,
                     stepId = stepId
                 )
             }
 
             if (tasks.isEmpty()) {
                 val jobId = "0"
-                buildLogPrinter.addYellowLine(
+                printCancelLine(
                     buildId = buildId,
-                    message = "Cancelled by $userId",
+                    message = cancelMessage,
+                    terminate = finalTerminateFlag,
                     tag = VMUtils.genStartVMTaskId(jobId),
                     containerHashId = jobId,
                     executeCount = 1,
-                    jobId = null,
                     stepId = VMUtils.genStartVMTaskId(jobId)
                 )
             }
@@ -2735,6 +2726,145 @@ class PipelineBuildFacadeService(
             }
         } finally {
             redisLock.unlock()
+        }
+    }
+
+    /**
+     * 校验取消构建权限，无权限时按流水线设置的取消策略抛出对应错误
+     */
+    private fun validateCancelPermission(userId: String, projectId: String, pipelineId: String, buildId: String) {
+        if (hasPermissionToCancelBuild(userId, projectId, pipelineId, buildId)) {
+            return
+        }
+        logger.warn("[$buildId]|User $userId has no permission to cancel build.")
+        // 根据不同的策略抛出不同的错误信息
+        // #12697 按本次构建实际运行的版本读取设置,保证分支版本的取消策略生效
+        val buildInfo = pipelineRuntimeService.getBuildInfo(projectId, buildId)
+        val setting = pipelineRepositoryService.getSettingByPipelineVersion(
+            projectId = projectId,
+            pipelineId = pipelineId,
+            pipelineVersion = buildInfo?.version
+        )
+        val cancelPolicy = setting?.buildCancelPolicy ?: BuildCancelPolicy.EXECUTE_PERMISSION
+
+        if (cancelPolicy == BuildCancelPolicy.RESTRICTED) {
+            throw ErrorCodeException(
+                errorCode = ProcessMessageCode.USER_NO_CANCEL_BUILD_PERMISSION,
+                params = arrayOf(userId, buildId)
+            )
+        } else {
+            throw ErrorCodeException(
+                errorCode = ProcessMessageCode.USER_NEED_PIPELINE_X_PERMISSION,
+                params = arrayOf(AuthPermission.EXECUTE.getI18n(I18nUtil.getLanguage(userId)))
+            )
+        }
+    }
+
+    /**
+     * 本次取消会升级为强制终止吗。
+     *
+     * 取消不等于立刻停下所有东西：插件post动作、Job收尾步骤在取消后仍会继续跑完。
+     * 只有在已经取消过一次的构建上再次取消，才升级为强制终止把这些收尾现场一并掐掉。
+     * [retryAfterSecond]大于0表示此刻还落在防误触窗口内，取消会被拒绝。
+     */
+    private fun resolveCancelEscalation(
+        projectId: String,
+        buildId: String,
+        executeCount: Int
+    ): CancelEscalation {
+        val cancelActionTime = redisOperation.get(BuildUtils.getCancelActionBuildKey(buildId))?.toLong() ?: 0
+        if (cancelActionTime <= 0) { // 从未取消过，本次是普通取消
+            return CancelEscalation(terminate = false, retryAfterSecond = 0)
+        }
+        val lastCancelUserId = buildRecordService.getBuildCancelUser(
+            projectId = projectId, buildId = buildId, executeCount = executeCount
+        )
+        val intervalSecond = (System.currentTimeMillis() - cancelActionTime) / 1000
+        return CancelEscalation(
+            terminate = intervalSecond >= cancelIntervalLimitTime,
+            retryAfterSecond = (cancelIntervalLimitTime - intervalSecond).coerceAtLeast(0),
+            lastCancelUserId = lastCancelUserId
+        )
+    }
+
+    private data class CancelEscalation(
+        val terminate: Boolean,
+        val retryAfterSecond: Long,
+        val lastCancelUserId: String? = null
+    )
+
+    /**
+     * #13602 取消构建前的预检，让前端在确认框里就把「这次点下去会发生什么」说清楚：
+     * 普通取消会保留收尾现场，而二次取消升级成的强制终止是不可逆的、会跳过尚未执行的收尾步骤。
+     */
+    fun buildCancelPreCheck(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        checkPermission: Boolean = true
+    ): BuildCancelPreCheck {
+        val buildInfo = pipelineRuntimeService.getBuildInfo(projectId, buildId)
+            ?: throw ErrorCodeException(
+                statusCode = Response.Status.NOT_FOUND.statusCode,
+                errorCode = ProcessMessageCode.ERROR_NO_BUILD_EXISTS_BY_ID,
+                params = arrayOf(buildId)
+            )
+        if (buildInfo.pipelineId != pipelineId) {
+            throw ErrorCodeException(errorCode = ProcessMessageCode.ERROR_PIPLEINE_INPUT)
+        }
+        if (checkPermission) {
+            validateCancelPermission(userId, projectId, pipelineId, buildId)
+        }
+        val escalation = resolveCancelEscalation(projectId, buildId, buildInfo.executeCount)
+        // 只有强制终止才会跳过收尾步骤，普通取消不会，故仅在升级时才去统计，避免每次弹框都扫一遍任务表
+        val pendingPostStepCount = if (escalation.terminate) {
+            pipelineTaskService.getAllBuildTask(projectId, buildId).count {
+                it.isJobPostStep() &&
+                    it.additionalOptions?.elementPostInfo == null &&
+                    it.executeCount == buildInfo.executeCount &&
+                    !it.status.isFinish()
+            }
+        } else {
+            0
+        }
+        return BuildCancelPreCheck(
+            terminate = escalation.terminate,
+            retryAfterSecond = escalation.retryAfterSecond,
+            lastCancelUserId = escalation.lastCancelUserId,
+            pendingPostStepCount = pendingPostStepCount
+        )
+    }
+
+    private fun printCancelLine(
+        buildId: String,
+        message: String,
+        terminate: Boolean,
+        tag: String,
+        containerHashId: String,
+        executeCount: Int,
+        stepId: String
+    ) {
+        if (terminate) {
+            buildLogPrinter.addRedLine(
+                buildId = buildId,
+                message = message,
+                tag = tag,
+                containerHashId = containerHashId,
+                executeCount = executeCount,
+                jobId = null,
+                stepId = stepId
+            )
+        } else {
+            buildLogPrinter.addYellowLine(
+                buildId = buildId,
+                message = message,
+                tag = tag,
+                containerHashId = containerHashId,
+                executeCount = executeCount,
+                jobId = null,
+                stepId = stepId
+            )
         }
     }
 

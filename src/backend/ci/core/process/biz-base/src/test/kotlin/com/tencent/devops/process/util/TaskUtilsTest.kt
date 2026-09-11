@@ -28,6 +28,8 @@
 package com.tencent.devops.process.util
 
 import com.tencent.devops.common.pipeline.enums.BuildStatus
+import com.tencent.devops.common.pipeline.pojo.element.ElementPostInfo
+import com.tencent.devops.common.pipeline.pojo.element.RunCondition
 import com.tencent.devops.process.TestBase
 import com.tencent.devops.process.engine.common.VMUtils
 import com.tencent.devops.process.engine.pojo.PipelineBuildContainer
@@ -65,6 +67,49 @@ class TaskUtilsTest : TestBase() {
         Assertions.assertFalse(
             TaskUtils.getPostExecuteFlag(
                 task = task, taskList = taskList, isContainerFailed = true, hasFailedTaskInInSuccessContainer = true
+            )
+        )
+    }
+
+    /**
+     * #13602 收尾步骤的post任务只与其父插件（收尾步骤）是否真正执行过有关，
+     * 不再叠加主步骤算出的Job终态与「失败继续」标识
+     */
+    @Test
+    fun `post task of job post step only depends on its parent`() {
+        val parentTaskId = "e-post-step-parent"
+        val postStepOptions = elementAdditionalOptions().copy(jobPostStepFlag = true)
+        val postTaskOptions = elementAdditionalOptions(
+            runCondition = RunCondition.PRE_TASK_SUCCESS,
+            elementPostInfo = ElementPostInfo(
+                parentElementId = parentTaskId,
+                parentElementName = "post-step",
+                parentElementJobIndex = 3,
+                postEntryParam = "post.sh",
+                postCondition = "success()"
+            )
+        ).copy(jobPostStepFlag = true)
+        val postTask = genTask(
+            taskId = "e-post-step-post", vmContainer = vmBuildContainer, elementAdditionalOptions = postTaskOptions
+        )
+
+        // 父插件执行过：即使Job已失败、且存在失败继续的插件，post任务仍要运行
+        val executedParent = genTask(
+            taskId = parentTaskId, vmContainer = vmBuildContainer, elementAdditionalOptions = postStepOptions
+        ).copy(taskSeq = 5, status = BuildStatus.FAILED)
+        Assertions.assertTrue(
+            TaskUtils.getPostExecuteFlag(
+                task = postTask, taskList = taskList.plus(executedParent),
+                isContainerFailed = true, hasFailedTaskInInSuccessContainer = true
+            )
+        )
+
+        // 父插件没有真正执行过：post任务不运行
+        val unExecParent = executedParent.copy(status = BuildStatus.UNEXEC)
+        Assertions.assertFalse(
+            TaskUtils.getPostExecuteFlag(
+                task = postTask, taskList = taskList.plus(unExecParent),
+                isContainerFailed = false, hasFailedTaskInInSuccessContainer = false
             )
         )
     }

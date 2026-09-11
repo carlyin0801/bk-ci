@@ -45,6 +45,9 @@ data class ContainerContext(
     var cmdFlowState: CmdFlowState = CmdFlowState.CONTINUE, // 当前容器引擎命令流转状态
     val stageMatrixCount: Int = 0,
     var firstQueueTaskId: String? = null, // 缓存找到的第一个待执行的任务（未必执行）
+    // #13602 主步骤区扫描完时冻结下来的Job主状态。收尾步骤的运行时机一律按它判定，
+    // 从而保证同一段收尾里每一步看到的Job状态都一致，也不会被收尾段自身的成败或取消改写
+    var jobMainStatus: BuildStatus? = null,
     val pipelineAsCodeEnabled: Boolean? = null,
     var needUpdateControlOption: PipelineBuildContainerControlOption? = null, // 是否需要更新Job设置（超时、互斥组等）
     override var cmdFlowSeq: Int = 0, // 命令序号

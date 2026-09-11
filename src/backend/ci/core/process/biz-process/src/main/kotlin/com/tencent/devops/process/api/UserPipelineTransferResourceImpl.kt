@@ -136,6 +136,7 @@ class UserPipelineTransferResourceImpl @Autowired constructor(
         userId: String,
         projectId: String,
         pipelineId: String,
+        jobPostStep: Boolean?,
         yaml: String
     ): Result<Element> {
         val permission = AuthPermission.VIEW
@@ -155,7 +156,7 @@ class UserPipelineTransferResourceImpl @Autowired constructor(
                 )
             )
         )
-        return Result(transferService.yamlTaskTransfer(userId, projectId, pipelineId, yaml))
+        return Result(transferService.yamlTaskTransfer(userId, projectId, pipelineId, jobPostStep, yaml))
     }
 
     override fun position(

@@ -444,7 +444,8 @@ class BuildEndControl @Autowired constructor(
                 }
             }
             // 将插件出错信息逐一加入构建错误信息
-            if (task.errorType != null) {
+            // #13602 Job收尾步骤的成败不参与构建结论，其报错不应污染构建级别的错误信息（前端定位图、度量等）
+            if (task.errorType != null && !task.isJobPostStep()) {
                 val (taskId, taskName) = if (task.taskId.startsWith(VMUtils.getStartVmLabel())) {
                     val container = containerBuildRecordService.getRecord(
                         transactionContext = null, projectId = task.projectId, pipelineId = task.pipelineId,

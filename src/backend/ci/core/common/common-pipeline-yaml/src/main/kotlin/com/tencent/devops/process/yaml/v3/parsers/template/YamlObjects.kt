@@ -55,6 +55,7 @@ import com.tencent.devops.process.yaml.v3.models.VariableProps
 import com.tencent.devops.process.yaml.v3.models.job.Container
 import com.tencent.devops.process.yaml.v3.models.job.Credentials
 import com.tencent.devops.process.yaml.v3.models.job.IPreJob
+import com.tencent.devops.process.yaml.v3.models.job.JOB_POST_STEPS_KEY
 import com.tencent.devops.process.yaml.v3.models.job.Mutex
 import com.tencent.devops.process.yaml.v3.models.job.PreJob
 import com.tencent.devops.process.yaml.v3.models.job.PreJobTemplate
@@ -219,6 +220,7 @@ object YamlObjects {
             name = step["name"]?.toString(),
             id = step["id"]?.toString(),
             ifField = step["if"],
+            whenField = step["when"]?.toString(),
             ifModify = if (step["if-modify"] is List<*>) {
                 val ifModifyList = step["if-modify"] as List<*>
                 ifModifyList.map { it.toString() }.toList()
@@ -372,6 +374,7 @@ object YamlObjects {
             type = notice["type"].toString(),
             title = notice["title"]?.toString(),
             ifField = notice["if"]?.toString(),
+            whenField = notice["when"]?.toString(),
             content = notice["content"]?.toString(),
             receivers = if (notice["receivers"] == null) {
                 null
@@ -393,6 +396,7 @@ object YamlObjects {
 
     fun getNoticeV3(fromPath: TemplatePath, notice: Map<String, Any?>): PacNotices {
         return PacNotices(
+            whenField = notice["when"]?.toString(),
             type = if (notice["receivers"] == null) {
                 emptyList<String>()
             } else {
@@ -647,16 +651,8 @@ fun <T> YamlTemplate<T>.getJob(fromPath: TemplatePath, job: Map<String, Any>, de
             val ifModifyList = job["if-modify"] as List<*>
             ifModifyList.map { it.toString() }.toList()
         } else null,
-        steps = if (job["steps"] == null) {
-            null
-        } else {
-            val steps = YamlObjects.transValue<List<Map<String, Any>>>(fromPath, TemplateType.STEP.text, job["steps"])
-            val list = mutableListOf<IPreStep>()
-            steps.forEach {
-                list.addAll(this.replaceStepTemplate(listOf(it), filePath, deepTree))
-            }
-            list
-        },
+        steps = this.getPreSteps(fromPath, job["steps"], deepTree),
+        postSteps = this.getPreSteps(fromPath, job[JOB_POST_STEPS_KEY], deepTree),
         timeoutMinutes = YamlObjects.getNullValue("timeout-minutes", job),
         env = if (job["env"] == null) {
             null
@@ -689,4 +685,21 @@ fun <T> YamlTemplate<T>.getJob(fromPath: TemplatePath, job: Map<String, Any>, de
     // 检测job env合法性
     StreamEnvUtils.checkEnv(preJob.env, fromPath)
     return preJob
+}
+
+/**
+ * 展开steps/post-steps下的step模板引用
+ */
+private fun <T> YamlTemplate<T>.getPreSteps(
+    fromPath: TemplatePath,
+    steps: Any?,
+    deepTree: TemplateDeepTreeNode
+): List<IPreStep>? {
+    if (steps == null) {
+        return null
+    }
+    val stepList = YamlObjects.transValue<List<Map<String, Any>>>(fromPath, TemplateType.STEP.text, steps)
+    val list = mutableListOf<IPreStep>()
+    stepList.forEach { list.addAll(replaceStepTemplate(listOf(it), filePath, deepTree)) }
+    return list
 }

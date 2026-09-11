@@ -194,6 +194,58 @@ class ModelUtilsTest {
         loopCheckElement(stage = stages[1], e = retryElement, model = model, canRetry = true, canSkip = true)
     }
 
+    /**
+     * #13602 Job 成功时收尾步骤仍可单步重试，但不点亮 Job / Stage 级重试。
+     */
+    @Test
+    fun `job post step can retry when job succeeded`() {
+        val stages = mutableListOf<Stage>()
+        val model = Model(name = "test", desc = "description", stages = stages)
+        stages.add(
+            Stage(
+                id = "1",
+                name = "trigger",
+                containers = listOf(NormalContainer(elements = listOf(ManualReviewUserTaskElement()))),
+                status = BuildStatus.SUCCEED.name
+            )
+        )
+        val mainStep = LinuxScriptElement(
+            name = "main",
+            script = "echo main",
+            scriptType = BuildScriptType.SHELL,
+            continueNoneZero = false
+        )
+        mainStep.status = BuildStatus.SUCCEED.name
+        mainStep.additionalOptions = elementAdditionalOptions()
+        val postStep = LinuxScriptElement(
+            name = "cleanup",
+            script = "echo cleanup",
+            scriptType = BuildScriptType.SHELL,
+            continueNoneZero = false
+        )
+        postStep.status = BuildStatus.FAILED.name
+        postStep.additionalOptions = elementAdditionalOptions().copy(jobPostStepFlag = true)
+        val container = VMBuildContainer(
+            baseOS = VMBaseOS.LINUX,
+            elements = mutableListOf(mainStep, postStep),
+            status = BuildStatus.SUCCEED.name
+        )
+        stages.add(
+            Stage(
+                id = "2",
+                name = "stage-2",
+                status = BuildStatus.SUCCEED.name,
+                containers = mutableListOf(container)
+            )
+        )
+
+        ModelUtils.refreshCanRetry(model)
+        assertEquals(false, stages[1].canRetry)
+        assertEquals(false, container.canRetry)
+        assertEquals(false, mainStep.canRetry ?: false)
+        assertEquals(true, postStep.canRetry)
+    }
+
     @Test
     fun `element skip`() {
         val containers = mutableListOf<Container>()

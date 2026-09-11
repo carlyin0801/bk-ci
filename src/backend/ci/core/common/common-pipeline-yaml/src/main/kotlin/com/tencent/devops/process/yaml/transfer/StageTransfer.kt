@@ -379,14 +379,20 @@ class StageTransfer @Autowired(required = false) constructor(
         val jobs = stage.containers.associateTo(LinkedHashMap()) { job ->
             aspectWrapper.setModelJob4Model(job, PipelineTransferAspectWrapper.AspectType.BEFORE)
             val steps = elementTransfer.model2YamlSteps(job, projectId, aspectWrapper)
+            val postSteps = elementTransfer.model2YamlPostSteps(job, projectId, aspectWrapper)
 
             (job.jobId?.ifBlank { null } ?: ScriptYmlUtils.randomString("job_")) to when (job.getClassType()) {
-                NormalContainer.classType -> containerTransfer.addYamlNormalContainer(job as NormalContainer, steps)
+                NormalContainer.classType -> containerTransfer.addYamlNormalContainer(
+                    job = job as NormalContainer,
+                    steps = steps,
+                    postSteps = postSteps
+                )
                 VMBuildContainer.classType -> containerTransfer.addYamlVMBuildContainer(
                     userId = userId,
                     projectId = projectId,
                     job = job as VMBuildContainer,
                     steps = steps,
+                    postSteps = postSteps,
                     channelCode = channelCode
                 )
 

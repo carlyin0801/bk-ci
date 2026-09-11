@@ -411,6 +411,30 @@ class StartBuildContextTest : TestBase() {
     }
 
     @Test
+    fun needRerunSubsequentPostStepWhenRetryPostStep() {
+        val stages = genStages(stageSize = 2, jobSize = 1, elementSize = 3, needFinally = false)
+        val stage = stages[1]
+        val container = stage.containers[0]
+        val main = container.elements[0]
+        val post1 = container.elements[1]
+        val post2 = container.elements[2]
+        post1.additionalOptions = elementAdditionalOptions().copy(jobPostStepFlag = true)
+        post2.additionalOptions = elementAdditionalOptions().copy(jobPostStepFlag = true)
+        post1.status = BuildStatus.FAILED.name
+        post2.status = BuildStatus.SKIP.name
+        params[PIPELINE_RETRY_START_TASK_ID] = post1.id!!
+        val context = initDefaultStartBuildContext()
+
+        Assertions.assertEquals(false, context.needSkipTaskWhenRetry(stage, container, post1.id))
+        Assertions.assertEquals(false, context.needSkipTaskWhenRetry(stage, container, post2.id))
+        Assertions.assertEquals(true, context.needSkipTaskWhenRetry(stage, container, main.id))
+        Assertions.assertEquals(true, context.needRerunSubsequentPostStep(stage, container, post1))
+        Assertions.assertEquals(true, context.needRerunSubsequentPostStep(stage, container, post2))
+        Assertions.assertEquals(false, context.needRerunSubsequentPostStep(stage, container, main))
+        Assertions.assertEquals(BuildStatus.QUEUE, post2.initStatus(rerun = true))
+    }
+
+    @Test
     fun needSkipTaskWhenSkipRerunDownstream() {
         // 单插件跳过（skipFailedTask=true）：与重试对称，被跳过插件之后、同Job内的后续插件需要一并重排（不跳过）
         params[PIPELINE_SKIP_FAILED_TASK] = true.toString()

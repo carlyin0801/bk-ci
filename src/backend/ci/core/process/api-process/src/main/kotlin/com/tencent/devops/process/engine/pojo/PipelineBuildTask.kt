@@ -71,4 +71,10 @@ data class PipelineBuildTask(
             ""
         }
     }
+
+    /**
+     * 是否属于Job的收尾步骤部分（含收尾步骤自身的post-action任务）。
+     * 收尾步骤的成败不参与Job结论，其运行条件只取决于主步骤部分算出的Job终态。
+     */
+    fun isJobPostStep(): Boolean = additionalOptions?.jobPostStepFlag == true
 }

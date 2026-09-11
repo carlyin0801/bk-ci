@@ -224,6 +224,11 @@ class PipelinePostElementService @Autowired constructor(
             additionalOptions.otherTask = null
             additionalOptions.customCondition = null
             additionalOptions.elementPostInfo = elementPostInfo
+            // 收尾步骤的 post-action 必须带上 jobPostStepFlag：取消门禁、Job 成败隔离都看这个自身标记。
+            // 主步骤的 post-action 没有这个标记，行为与历史完全一致。
+            additionalOptions.jobPostStepFlag = originAtomElement.isJobPostStep().takeIf { it }
+            // runWhen 是用户编排给收尾步骤的运行时机，post-action 不继承，避免被当成又一条用户收尾步骤
+            additionalOptions.runWhen = null
         }
         // 生成post操作的element
         val postElementName = getPostElementName(elementName)

@@ -23,6 +23,7 @@ import com.tencent.devops.common.pipeline.pojo.transfer.PreStep
 import com.tencent.devops.common.pipeline.pojo.transfer.TransferMark
 import com.tencent.devops.common.pipeline.pojo.transfer.YAME_META_DATA_JSON_FILTER
 import com.tencent.devops.process.yaml.v3.models.ITemplateFilter
+import com.tencent.devops.process.yaml.v3.models.job.JOB_POST_STEPS_KEY
 import com.tencent.devops.process.yaml.v3.models.job.PreJob
 import com.tencent.devops.process.yaml.v3.models.stage.PreStage
 import org.json.JSONArray
@@ -927,18 +928,20 @@ object TransferMapper {
         last: Boolean = false,
         action: (steps: ArrayList<Any>) -> NodeIndex?
     ): NodeIndex? {
+        // #13602 光标落在收尾步骤区域时要插回post-steps，否则会被插到主步骤末尾，改变Job结论语义
+        val stepsKey = if (positionResponse.jobPostStep == true) JOB_POST_STEPS_KEY else PreJob::steps.name
         if (jobs.isEmpty()) {
             val job = LinkedHashMap<String, Any>()
-            job[PreJob::steps.name] = ArrayList<Any>()
+            job[stepsKey] = ArrayList<Any>()
             jobs["job_1"] = job
         }
         val key = if (last && positionResponse.jobId == null) jobs.entries.last().key else positionResponse.jobId
             ?: return null
         val job = jobs[key] as LinkedHashMap<String, Any>
-        val steps = job[PreJob::steps.name] as ArrayList<Any>
+        val steps = job.getOrPut(stepsKey) { ArrayList<Any>() } as ArrayList<Any>
         return NodeIndex(
             key = key,
-            next = NodeIndex(key = PreJob::steps.name, next = indexInStep(steps, action))
+            next = NodeIndex(key = stepsKey, next = indexInStep(steps, action))
         )
     }
 

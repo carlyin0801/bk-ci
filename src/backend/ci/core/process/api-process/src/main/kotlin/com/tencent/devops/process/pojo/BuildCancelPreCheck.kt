@@ -25,36 +25,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.common.pipeline.pojo.transfer
+package com.tencent.devops.process.pojo
 
-import com.tencent.devops.common.pipeline.pojo.element.Element
 import io.swagger.v3.oas.annotations.media.Schema
 
-@Schema(title = "yaml定位")
-data class PositionResponse(
-    @get:Schema(title = "定位类型，非error时应当必有")
-    val type: PositionType? = null,
-    @get:Schema(title = "当定位到JOB,STEP时有效，表示当前stage的os类型")
-    var jobBaseOs: TransferVMBaseOS? = null,
-    @get:Schema(title = "当定位到STAGE,JOB,STEP时有效，表示stage下标, -1 表示finally stage")
-    var stageIndex: Int? = null,
-    @get:Schema(title = "当定位到JOB,STEP时有效，表示container下标")
-    var containerIndex: Int? = null,
-    @get:Schema(title = "当定位到JOB,STEP时有效，表示job的id")
-    var jobId: String? = null,
-    @get:Schema(title = "当定位到STEP时有效，表示step下标")
-    var stepIndex: Int? = null,
-    @get:Schema(title = "当定位到JOB,STEP时有效，表示落在Job的收尾步骤(post-steps)区域内")
-    var jobPostStep: Boolean? = null,
-    @get:Schema(title = "当定位到STEP时有效，拿到对应的element元素")
-    var element: Element? = null,
-    @get:Schema(title = "转换错误")
-    val error: String? = null
-) {
-    enum class PositionType {
-        SETTING,
-        STAGE,
-        JOB,
-        STEP
-    }
-}
+/**
+ * 取消构建的预检结果，供前端在弹出确认框前判断该给出哪一种提示。
+ *
+ * #13602 取消不再等于「立刻停下所有东西」：插件post动作、Job收尾步骤在取消后仍会继续跑完。
+ * 用户第二次点取消才会升级为强制终止，把这些收尾现场一并掐掉——这是不可逆的，
+ * 必须在点下去之前就告诉用户，而不是事后在构建日志里才看得到。
+ */
+@Schema(title = "构建模型-取消预检")
+data class BuildCancelPreCheck(
+    @get:Schema(title = "本次取消是否会升级为强制终止（强杀）", required = true)
+    val terminate: Boolean,
+    @get:Schema(title = "距离本次取消可被受理还需等待的秒数，大于0表示此刻取消会被拒绝", required = true)
+    val retryAfterSecond: Long,
+    @get:Schema(title = "上一次取消的操作人，未被取消过时为空", required = false)
+    val lastCancelUserId: String? = null,
+    @get:Schema(title = "尚未结束的Job收尾步骤数，强制终止会跳过它们", required = true)
+    val pendingPostStepCount: Int = 0
+)

@@ -39,6 +39,7 @@ import com.tencent.devops.common.pipeline.pojo.transfer.TransferVMBaseOS
 import com.tencent.devops.process.yaml.v2.models.job.PreJob
 import com.tencent.devops.process.yaml.v2.models.stage.PreStage
 import com.tencent.devops.process.yaml.v3.models.ITemplateFilter
+import com.tencent.devops.process.yaml.v3.models.job.JOB_POST_STEPS_KEY
 import com.tencent.devops.process.yaml.v3.models.job.Job
 import com.tencent.devops.process.yaml.v3.models.job.JobRunsOnType
 import com.tencent.devops.process.yaml.v3.utils.ScriptYmlUtils
@@ -177,11 +178,15 @@ class YamlIndexService @Autowired constructor(
             val (_, os) = dispatchTransfer.makeDispatchType(Job(runsOn = runsOn), null)
             os?.name?.let { TransferVMBaseOS.valueOf(it) }
         }
-        if (nodeIndex?.key == PreJob::steps.name) {
-            val steps = job[PreJob::steps.name] as List<Any>
-            val next = nodeIndex.next ?: return PositionResponse(type = PositionResponse.PositionType.JOB)
+        // #13602 光标可能落在主步骤或收尾步骤上，两者要如实回传，否则前端会把收尾步骤当主步骤编辑
+        if (nodeIndex?.key == PreJob::steps.name || nodeIndex?.key == JOB_POST_STEPS_KEY) {
+            val postStep = nodeIndex.key == JOB_POST_STEPS_KEY
+            val steps = job[nodeIndex.key] as List<Any>
+            val next = nodeIndex.next ?: return PositionResponse(
+                type = PositionResponse.PositionType.JOB, jobBaseOs = baseOs, jobPostStep = postStep
+            )
             val index = next.index ?: throw PacYamlNotValidException(nodeIndex.toString())
-            return checkStep(userId, steps[index] as Map<String, Any>, next.next).apply {
+            return checkStep(userId, steps[index] as Map<String, Any>, next.next, postStep).apply {
                 stepIndex = index
                 jobBaseOs = baseOs
             }
@@ -192,12 +197,19 @@ class YamlIndexService @Autowired constructor(
     fun checkStep(
         userId: String,
         job: Map<String, Any>,
-        nodeIndex: TransferMapper.NodeIndex?
+        nodeIndex: TransferMapper.NodeIndex?,
+        jobPostStep: Boolean = false
     ): PositionResponse {
         val preStep = JsonUtil.anyTo(job, object : TypeReference<PreStep>() {})
         return PositionResponse(
             type = PositionResponse.PositionType.STEP,
-            element = elementTransfer.yaml2element(userId, ScriptYmlUtils.preStepToStep(preStep), null)
+            jobPostStep = jobPostStep.takeIf { it },
+            element = elementTransfer.yaml2element(
+                userId = userId,
+                step = ScriptYmlUtils.preStepToStep(preStep),
+                agentSelector = null,
+                jobPostStep = jobPostStep
+            )
         )
     }
 }

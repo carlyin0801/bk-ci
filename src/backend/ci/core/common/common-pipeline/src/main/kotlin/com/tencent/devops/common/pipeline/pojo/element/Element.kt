@@ -27,6 +27,7 @@
 
 package com.tencent.devops.common.pipeline.pojo.element
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.tencent.devops.common.api.util.JsonUtil
@@ -191,6 +192,15 @@ abstract class Element(
     open fun elementEnabled(): Boolean {
         return additionalOptions?.enable ?: true
     }
+
+    /**
+     * 是否为Job的收尾步骤（YAML: post-steps）。
+     * 收尾步骤与插件自身的post-action[ElementPostInfo]是两个不同的概念：
+     * 前者是用户显式编排在Job尾部的清理/分析类步骤，其成败不影响Job结论；
+     * 后者是插件上架时声明的收尾回调，依附于父插件。
+     */
+    @JsonIgnore
+    fun isJobPostStep(): Boolean = additionalOptions?.jobPostStepFlag == true
 
     /**
      * 兼容性初始化等处理

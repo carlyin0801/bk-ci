@@ -33,7 +33,7 @@ import com.tencent.devops.common.api.util.EnvUtils
 import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.event.enums.ActionType
 import com.tencent.devops.common.pipeline.enums.BuildStatus
-import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.runEvenCancel
 import com.tencent.devops.process.engine.common.Timeout
 import com.tencent.devops.process.engine.common.VMUtils
 import com.tencent.devops.process.engine.pojo.PipelineBuildTask
@@ -104,7 +104,6 @@ interface IAtomTask<T> {
                 timeout = Timeout.DEFAULT_PREPARE_MINUTES
             }
             val timeoutMills = Timeout.transMinuteTimeoutToMills(timeout)
-            val runCondition = task.additionalOptions?.runCondition
             if (timeoutMills > 0 && System.currentTimeMillis() - startTime >= timeoutMills) {
                 logger.info(
                     "[${task.buildId}]|TIME_OUT|" +
@@ -119,7 +118,7 @@ interface IAtomTask<T> {
             } else if (actionType.isTerminate()) { // 强制终止的设置为失败
                 logger.info("[${task.buildId}]|FORCE_TERMINATE|job=${task.containerId}|task=${task.taskId}")
                 atomResponse = defaultFailAtomResponse
-            } else if (actionType == ActionType.END && runCondition != RunCondition.PRE_TASK_FAILED_EVEN_CANCEL) {
+            } else if (shouldCancelRunningTask(task, actionType)) {
                 logger.info("[${task.buildId}]|CANCEL|job=${task.containerId}|task=${task.taskId}")
                 atomResponse = AtomResponse(buildStatus = BuildStatus.CANCELED)
             }
@@ -134,7 +133,6 @@ interface IAtomTask<T> {
         actionType: ActionType
     ): AtomResponse {
         val atomResponse = tryFinish(task, param, runVariables, actionType.isTerminate())
-        val runCondition = task.additionalOptions?.runCondition
         return if (!atomResponse.buildStatus.isFinish()) {
             if (actionType.isTerminate()) { // 未结束，强制情况下则设置为失敗，此为旧内置插件才会有的问题。
                 AtomResponse(
@@ -143,7 +141,7 @@ interface IAtomTask<T> {
                     errorCode = ErrorCode.PLUGIN_DEFAULT_ERROR,
                     errorMsg = "Force Terminate!"
                 )
-            } else if (actionType == ActionType.END && runCondition != RunCondition.PRE_TASK_FAILED_EVEN_CANCEL) {
+            } else if (shouldCancelRunningTask(task, actionType)) {
                 // 将能够取消的内置插件的状态设置为CANCELED
                 AtomResponse(buildStatus = BuildStatus.CANCELED)
             } else {
@@ -179,6 +177,15 @@ interface IAtomTask<T> {
                 errorMsg = task.errorMsg
             )
         }
+    }
+
+    /**
+     * #13602 已在跑的收尾步骤接到取消，应当结束这一步（与 TaskControl 构建机路径的 cancelRunningPostStep 对齐）。
+     * 尚未开跑的收尾步骤仍靠 runEvenCancel 不被 UNEXEC，由 runWhen 继续判定。
+     */
+    private fun shouldCancelRunningTask(task: PipelineBuildTask, actionType: ActionType): Boolean {
+        return actionType == ActionType.END &&
+            (task.isJobPostStep() || !task.additionalOptions.runEvenCancel())
     }
 
     fun parseVariable(value: String?, runVariables: Map<String, String>): String {

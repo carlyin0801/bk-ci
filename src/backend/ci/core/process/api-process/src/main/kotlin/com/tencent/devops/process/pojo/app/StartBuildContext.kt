@@ -288,6 +288,7 @@ data class StartBuildContext(
             // 重试场景——被重试插件重跑后，下游按最新结果重新判定；
             // 跳过场景——被跳过插件置为SKIP（不再算失败）后，下游同样需要据此重新判定，
             // 否则仅因上游失败才执行过的下游插件（如失败通知）会保留旧的失败态，导致跳过后Job仍为失败。
+            // #13602 收尾步骤单步重试同样走这条路径：当前收尾步骤之后的收尾步骤一并重排。
             isAfterRetryTaskInSameContainer(container, taskId) -> {
                 false
             }
@@ -301,22 +302,46 @@ data class StartBuildContext(
     /**
      * 判断[taskId]对应的插件是否与被重试/跳过的插件[retryStartTaskId]处于同一个[container]，
      * 且执行顺序排在其之后。用于单插件失败重试/跳过时一并重排后续插件，从而重新评估运行条件。
-     * post-action 任务交由原有 post 重试逻辑处理，这里不纳入，避免误重跑前序插件的 post。
+     * post-action 任务交由原有 post 重试逻辑处理，这里不纳入，避免误重跑前序插件的 post
+     * （收尾步骤的 post-action 全部追加在收尾段之后，若按位置纳入会把更早收尾步骤的 post 也拖进来）。
      */
     private fun isAfterRetryTaskInSameContainer(container: Container, taskId: String?): Boolean {
         if (taskId.isNullOrBlank() || retryStartTaskId.isNullOrBlank()) {
             return false
         }
         val elements = container.elements
-        val retryIndex = elements.indexOfFirst { it.id == retryStartTaskId }
-        if (retryIndex < 0) { // 要重试的插件不在当前容器（其它并行Job），保持原有跳过逻辑
+        var retryIndex = -1
+        var currentIndex = -1
+        for (i in elements.indices) {
+            val id = elements[i].id
+            if (id == retryStartTaskId) retryIndex = i
+            if (id == taskId) currentIndex = i
+            if (retryIndex >= 0 && currentIndex >= 0) break
+        }
+        if (retryIndex < 0 || currentIndex < 0) {
             return false
         }
-        val currentElement = elements.firstOrNull { it.id == taskId } ?: return false
-        if (currentElement.additionalOptions?.elementPostInfo != null) { // post任务交由原有逻辑处理
+        val currentElement = elements[currentIndex]
+        if (currentElement.additionalOptions?.elementPostInfo != null) {
             return false
         }
-        return elements.indexOf(currentElement) > retryIndex
+        return currentIndex > retryIndex
+    }
+
+    /**
+     * #13602 收尾步骤局部重试时，当前步及其后的收尾步骤都要重新排队。
+     *
+     * [Element.initStatus] 对上次 SKIP 的步骤会保持 SKIP，导致 [needSkipTaskWhenRetry] 放行之后
+     * 仍在 [prepareBuildContainerTasks] 里被当成已完成直接跳过，后续收尾步骤就触发不了。
+     * 借 rerun=true 把 SKIP 拆成 QUEUE，再按冻结的 Job 主状态重新判定 [runWhen]。
+     * 主步骤保持原行为，避免把「失败时才运行」等被跳过的主步骤误重跑。
+     */
+    fun needRerunSubsequentPostStep(stage: Stage, container: Container, element: Element): Boolean {
+        if (retryStartTaskId.isNullOrBlank()) return false
+        if (!element.isJobPostStep() || element.additionalOptions?.elementPostInfo != null) {
+            return false
+        }
+        return !needSkipTaskWhenRetry(stage, container, element.id)
     }
 
     fun inSkipStage(stage: Stage, atom: Element): Boolean {

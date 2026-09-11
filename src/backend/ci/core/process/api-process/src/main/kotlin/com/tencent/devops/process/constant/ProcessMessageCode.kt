@@ -107,7 +107,8 @@ object ProcessMessageCode {
     const val ERROR_PIPELINE_IS_EXISTS = "2101016" // 流水线: 流水线已存在
     const val ERROR_QUALITY_TASK_NOT_FOUND = "2101017" // 流水线: 质量红线拦截的任务[{0}]不存在
     const val ERROR_QUALITY_REVIEWER_NOT_MATCH = "2101018" // 流水线: 用户({0})不在审核人员名单中
-    const val CANCEL_BUILD_BY_OTHER_USER = "2101019" // 流水线已经被{0}取消构建，请过{1}秒后再试
+    // 流水线已经被{0}取消构建，请过{1}秒后再试；后续取消操作将执行强制终止逻辑
+    const val CANCEL_BUILD_BY_OTHER_USER = "2101019"
     const val ERROR_START_BUILD_FREQUENT_LIMIT = "2101020" // 流水线: 不能太频繁启动构建
     const val DENY_START_BY_MANUAL = "2101021" // 流水线: 该流水线不能手动启动
     const val DENY_START_BY_REMOTE = "2101022" // 流水线: 该流水线不能远程触发
@@ -604,6 +605,12 @@ object ProcessMessageCode {
     const val ERROR_CREATIVE_FLOW_SHARE_TEAM_PROJECT_NOT_SUPPORT = "2101693" // 项目{0}不是个人项目，团队创作流分享暂未支持
     const val ERROR_CREATIVE_FLOW_SHARE_REVOKE_PARAM_INVALID = "2101694" // 撤销授权须提供 shareId+flowIds 或 talentCode
 
+    // Job[{0}]的收尾步骤不支持人工审核、前置暂停等挂起类插件[{1}]
+    const val ERROR_PIPELINE_JOB_POST_STEP_UNSUPPORTED_ATOM = "2101696"
+
+    // 触发器容器不支持配置收尾步骤
+    const val ERROR_PIPELINE_JOB_POST_STEP_ON_TRIGGER = "2101697"
+
     const val BK_SUCCESSFULLY_DISTRIBUTED = "bkSuccessfullyDistributed" // 跨项目构件分发成功，共分发了{0}个文件
     const val BK_SUCCESSFULLY_FAILED = "bkSuccessfullyFailed" // 跨项目构件分发失败，
     const val BK_NO_MATCH_FILE_DISTRIBUTE = "bkNoMatchFileDistribute" // 匹配不到待分发的文件: {0}
@@ -738,6 +745,9 @@ object ProcessMessageCode {
 
     // [只有前面有任务失败时才运行（不包括失败自动跳过情况）]
     const val BK_ONLY_WHEN_PREVIOUS_TASK_FAILED_EXCEPT_SKIP = "bkOnlyWhenPreviousTaskFailedExceptSkip"
+
+    // Job收尾步骤运行时机[{0}]，Job主状态[{1}](Job post step run when [{0}], job status [{1}])
+    const val BK_JOB_POST_STEP_RUN_WHEN = "bkJobPostStepRunWhen"
 
     // [即使前面有插件运行失败也运行，除非被取消才不运行] (Even if a previous task has failed, unless the build was canceled)
     const val BK_IT_DOES_NOT_RUN_UNLESS_IT_IS_CANCELED = "bkItDoesNotRunUnlessItIsCanceled"
@@ -918,6 +928,9 @@ object ProcessMessageCode {
     const val BK_BUILD_CANCEL_USER_IN_FLIGHT_STOPPED = "bkBuildCancelUserInFlightStopped"
     // 用户强制终止构建
     const val BK_BUILD_CANCEL_USER_FORCE_TERMINATE = "bkBuildCancelUserForceTerminate"
+
+    // 构建日志：已被{0}强制终止，插件post动作与Job收尾步骤不再执行
+    const val BK_BUILD_FORCE_TERMINATED_BY_USER = "bkBuildForceTerminatedByUser"
     // 用户重启构建，原构建被取消
     const val BK_BUILD_CANCEL_USER_RESTART = "bkBuildCancelUserRestart"
     // 系统服务端取消构建

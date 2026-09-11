@@ -33,7 +33,7 @@ import com.tencent.devops.common.event.dispatcher.pipeline.PipelineEventDispatch
 import com.tencent.devops.common.pipeline.enums.BuildRecordTimeStamp
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.pojo.element.Element
-import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.runEvenCancel
 import com.tencent.devops.common.pipeline.pojo.element.agent.ManualReviewUserTaskElement
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildAtomElement
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildLessAtomElement
@@ -426,7 +426,7 @@ class TaskBuildRecordService(
                 stepId = null,
                 executeCount = executeCount
             ) ?: return@let
-            val runCondition = buildTask.additionalOptions?.runCondition
+            val runEvenCancel = buildTask.additionalOptions.runEvenCancel()
             val containPostTaskFlag = buildRecordContainer.containPostTaskFlag
             val containerId = buildRecordContainer.containerId
             // 判断取消的task任务对应的container是否包含post任务
@@ -435,7 +435,7 @@ class TaskBuildRecordService(
             if (cancelTaskPostFlag) {
                 val postTaskFlag = recordTask.elementPostInfo != null
                 // 判断当前取消的任务是否是post任务
-                if (!postTaskFlag && runCondition != RunCondition.PRE_TASK_FAILED_EVEN_CANCEL) {
+                if (!postTaskFlag && !runEvenCancel) {
                     // 查询post任务列表
                     val recordPostTasks = recordTaskDao.getRecords(
                         dslContext = dslContext,
@@ -465,7 +465,7 @@ class TaskBuildRecordService(
                         pipelineTaskStatusInfos = pipelineTaskStatusInfos
                     )
                 }
-            } else if (buildStatus.isCancel() && runCondition != RunCondition.PRE_TASK_FAILED_EVEN_CANCEL) {
+            } else if (buildStatus.isCancel() && !runEvenCancel) {
                 val startTaskSeq = currentTaskSeq + 1
                 val endTaskSeq = VMUtils.genVMTaskSeq(containerId.toInt(), 0) - 1
                 addCancelTaskStatusInfo(
@@ -525,8 +525,9 @@ class TaskBuildRecordService(
         )
 
         // 筛选需要取消的任务
+        // #13602 Job收尾步骤的运行条件由引擎按主步骤部分的Job终态单独判定（如[Job取消时]），不能在此被批量置为未执行
         val tasksToCancel = buildTasks.filter { task ->
-            !task.status.isFinish() && task.additionalOptions?.elementPostInfo == null
+            !task.status.isFinish() && task.additionalOptions?.elementPostInfo == null && !task.isJobPostStep()
         }
 
         if (tasksToCancel.isEmpty()) return

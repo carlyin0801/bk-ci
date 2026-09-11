@@ -108,6 +108,9 @@ interface UserPipelineTransferResource {
         @Parameter(description = "流水线id", required = true)
         @PathParam("pipelineId")
         pipelineId: String,
+        @Parameter(description = "是否为Job的收尾步骤(post-steps)，不传按普通步骤处理")
+        @QueryParam("jobPostStep")
+        jobPostStep: Boolean? = null,
         yaml: String
     ): Result<Element>
 

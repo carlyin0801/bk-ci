@@ -63,6 +63,9 @@ data class PreJob(
     @JsonProperty("if-modify")
     val ifModify: List<String>? = null,
     val steps: List<IPreStep>?,
+    @get:Schema(title = "post-steps")
+    @JsonProperty("post-steps")
+    val postSteps: List<IPreStep>? = null,
     @get:Schema(title = "timeout-minutes")
     @JsonProperty("timeout-minutes")
     val timeoutMinutes: String? = null,

@@ -43,6 +43,7 @@ import com.tencent.devops.common.pipeline.enums.TemplateRefType
 import com.tencent.devops.common.pipeline.pojo.TemplateVariable
 import com.tencent.devops.common.pipeline.pojo.element.Element
 import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
+import com.tencent.devops.common.pipeline.pojo.element.JobPostRunWhen
 import com.tencent.devops.common.pipeline.pojo.element.RunCondition
 import com.tencent.devops.common.pipeline.pojo.element.StepTemplateElement
 import com.tencent.devops.common.pipeline.pojo.element.agent.LinuxScriptElement
@@ -84,6 +85,7 @@ import com.tencent.devops.process.yaml.v3.models.on.RemoteRule
 import com.tencent.devops.process.yaml.v3.models.on.SchedulesRule
 import com.tencent.devops.process.yaml.v3.models.on.TapdRule
 import com.tencent.devops.process.yaml.v3.models.on.TriggerOn
+import com.tencent.devops.process.yaml.v3.models.step.IStep
 import com.tencent.devops.process.yaml.v3.models.step.PreCheckoutStep
 import com.tencent.devops.process.yaml.v3.models.step.PreManualReviewUserTaskElement
 import com.tencent.devops.process.yaml.v3.models.step.Step
@@ -437,81 +439,77 @@ class ElementTransfer @Autowired(required = false) constructor(
     ): MutableList<Element> {
         // 解析service
         val elementList = makeServiceElementList(job)
-        // 解析job steps
-        job.steps!!.forEach { step ->
-            when (step) {
-                is Step -> {
-                    yamlInput.aspectWrapper.setYamlStep4Yaml(
-                        yamlStep = step,
-                        aspectType = PipelineTransferAspectWrapper.AspectType.BEFORE
-                    )
-                    val element: Element = yaml2element(
-                        userId = yamlInput.userId,
-                        step = step,
-                        agentSelector = job.runsOn.agentSelector?.first(),
-                        jobRunsOnType = JobRunsOnType.parse(job.runsOn.poolName)
-                    )
-                    yamlInput.aspectWrapper.setModelElement4Model(
-                        element,
-                        PipelineTransferAspectWrapper.AspectType.AFTER
-                    )
-                    elementList.add(element)
-                }
-
-                is StepTemplate -> {
-                    elementList.add(
-                        StepTemplateElement(
-                            template = TemplateDescriptor(
-                                templateRefType = if (step.templateId != null) {
-                                    TemplateRefType.ID
-                                } else {
-                                    TemplateRefType.PATH
-                                },
-                                templatePath = step.templatePath,
-                                templateRef = step.templateRef,
-                                templateId = step.templateId,
-                                templateVersionName = step.templateVersionName,
-                                templateVariables = step.variables?.map {
-                                    TemplateVariable(
-                                        key = it.key,
-                                        value = it.value.value,
-                                        allowModifyAtStartup = it.value.allowModifyAtStartup ?: false
-                                    )
-                                }
-                            )
-                        )
-                    )
-                }
-            }
-        }
+        // 解析job steps；#13602 收尾步骤(post-steps)固定编排在主步骤之后，引擎据此区分主步骤终态与收尾部分
+        job.steps?.forEach { step -> elementList.add2Yaml(step, job, yamlInput, jobPostStep = false) }
+        job.postSteps?.forEach { step -> elementList.add2Yaml(step, job, yamlInput, jobPostStep = true) }
 
         return elementList
+    }
+
+    private fun MutableList<Element>.add2Yaml(
+        step: IStep,
+        job: Job,
+        yamlInput: YamlTransferInput,
+        jobPostStep: Boolean
+    ) {
+        when (step) {
+            is Step -> {
+                yamlInput.aspectWrapper.setYamlStep4Yaml(
+                    yamlStep = step,
+                    aspectType = PipelineTransferAspectWrapper.AspectType.BEFORE
+                )
+                val element: Element = yaml2element(
+                    userId = yamlInput.userId,
+                    step = step,
+                    agentSelector = job.runsOn.agentSelector?.first(),
+                    jobRunsOnType = JobRunsOnType.parse(job.runsOn.poolName),
+                    jobPostStep = jobPostStep
+                )
+                yamlInput.aspectWrapper.setModelElement4Model(
+                    element,
+                    PipelineTransferAspectWrapper.AspectType.AFTER
+                )
+                add(element)
+            }
+
+            is StepTemplate -> {
+                add(
+                    StepTemplateElement(
+                        template = TemplateDescriptor(
+                            templateRefType = if (step.templateId != null) {
+                                TemplateRefType.ID
+                            } else {
+                                TemplateRefType.PATH
+                            },
+                            templatePath = step.templatePath,
+                            templateRef = step.templateRef,
+                            templateId = step.templateId,
+                            templateVersionName = step.templateVersionName,
+                            templateVariables = step.variables?.map {
+                                TemplateVariable(
+                                    key = it.key,
+                                    value = it.value.value,
+                                    allowModifyAtStartup = it.value.allowModifyAtStartup ?: false
+                                )
+                            }
+                        )
+                    )
+                )
+            }
+        }
     }
 
     fun yaml2element(
         userId: String,
         step: Step,
         agentSelector: String?,
-        jobRunsOnType: JobRunsOnType? = null
+        jobRunsOnType: JobRunsOnType? = null,
+        jobPostStep: Boolean = false
     ): Element {
-        val runCondition = when {
-            step.ifField == null -> RunCondition.PRE_TASK_SUCCESS
-            IfType.ALWAYS_UNLESS_CANCELLED.name == (step.ifField.expression) ->
-                RunCondition.PRE_TASK_FAILED_BUT_CANCEL
-
-            IfType.ALWAYS.name == (step.ifField.expression) ->
-                RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
-
-            IfType.FAILURE.name == (step.ifField.expression) ->
-                RunCondition.PRE_TASK_FAILED_ONLY
-
-            !step.ifField.expression.isNullOrBlank() -> RunCondition.CUSTOM_CONDITION_MATCH
-
-            step.ifField.mode == Mode.RUN_WHEN_ALL_PARAMS_MATCH -> RunCondition.CUSTOM_VARIABLE_MATCH
-            step.ifField.mode == Mode.NOT_RUN_WHEN_ALL_PARAMS_MATCH -> RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN
-
-            else -> RunCondition.PRE_TASK_SUCCESS
-        }
+        // #13602 收尾步骤判的是冻结的Job主状态，与主步骤那套「扫前序」的runCondition不是一回事，
+        // 两者互斥：收尾步骤只解析when、runCondition留空，主步骤只解析if、runWhen留空
+        val runWhen = if (jobPostStep) parseStepWhenField(step) else null
+        val runCondition = if (jobPostStep) null else parseStepRunCondition(step)
         val continueOnError = Step.ContinueOnErrorType.parse(step.continueOnError)
         val additionalOptions = ElementAdditionalOptions(
             enable = step.enable ?: true,
@@ -536,7 +534,9 @@ class ElementTransfer @Autowired(required = false) constructor(
             } else {
                 null
             },
-            manualRetry = step.manualRetry ?: false
+            manualRetry = step.manualRetry ?: false,
+            jobPostStepFlag = jobPostStep.takeIf { it },
+            runWhen = runWhen
         )
 
         // bash
@@ -670,9 +670,23 @@ class ElementTransfer @Autowired(required = false) constructor(
         job: Container,
         projectId: String,
         aspectWrapper: PipelineTransferAspectWrapper
+    ): List<PreStep> = job.fetchMainSteps().model2YamlSteps(projectId, aspectWrapper)
+
+    /**
+     * #13602 Job收尾步骤单独输出到YAML的post-steps下
+     */
+    fun model2YamlPostSteps(
+        job: Container,
+        projectId: String,
+        aspectWrapper: PipelineTransferAspectWrapper
+    ): List<PreStep>? = job.fetchPostSteps().takeIf { it.isNotEmpty() }?.model2YamlSteps(projectId, aspectWrapper)
+
+    private fun List<Element>.model2YamlSteps(
+        projectId: String,
+        aspectWrapper: PipelineTransferAspectWrapper
     ): List<PreStep> {
         val stepList = mutableListOf<PreStep>()
-        job.elements.forEach { element ->
+        forEach { element ->
             aspectWrapper.setModelElement4Model(element, PipelineTransferAspectWrapper.AspectType.BEFORE)
             val step = element2YamlStep(element, projectId)
             aspectWrapper.setYamlStep4Yaml(
@@ -741,7 +755,13 @@ class ElementTransfer @Autowired(required = false) constructor(
 
             else -> element.transferYaml(transferCache.getAtomDefaultValue(uses))
         }?.apply {
-            this.ifField = parseStepIfFiled(element)
+            // #13602 收尾步骤出`when`、主步骤出`if`，两者互斥
+            if (element.isJobPostStep()) {
+                this.whenField = element.additionalOptions?.runWhen
+                    ?.nullIfDefault(JobPostRunWhen.DEFAULT)?.yamlValue
+            } else {
+                this.ifField = parseStepIfFiled(element)
+            }
             this.enable = element.elementEnabled().nullIfDefault(true)
             this.timeoutMinutes =
                 (element.additionalOptions?.timeoutVar ?: element.additionalOptions?.timeout?.toString()).nullIfDefault(
@@ -767,6 +787,54 @@ class ElementTransfer @Autowired(required = false) constructor(
                 it.value
             }?.ifEmpty { null }
         }
+    }
+
+    /**
+     * #13602 解析收尾步骤的`when`标量。
+     *
+     * 收尾步骤不接`if`：它判的是冻结的Job主状态而非前序步骤，`if`的语义在这里无处安放。
+     * 与其静悄悄丢掉用户写的`if`（清理类脚本被误当成「总是运行」跑掉是要出事的），不如直接报错让用户改成`when`。
+     */
+    private fun parseStepWhenField(step: Step): JobPostRunWhen {
+        if (step.ifField != null) {
+            throw ModelCreateException(
+                "step(${step.id ?: step.name ?: step.uses}) in post-steps does not support `if`, " +
+                    "use `when` instead, one of ${JobPostRunWhen.yamlValues}"
+            )
+        }
+        return JobPostRunWhen.parseYaml(step.whenField) ?: throw ModelCreateException(
+            "invalid `when` value [${step.whenField}] of step(${step.id ?: step.name ?: step.uses}) in post-steps, " +
+                "expect one of ${JobPostRunWhen.yamlValues}"
+        )
+    }
+
+    private fun parseStepRunCondition(step: Step): RunCondition = when {
+        // #13602 `when`判的是Job主状态，只有收尾步骤才有这个概念，写在主步骤上必然是放错了位置
+        step.whenField != null -> throw ModelCreateException(
+            "step(${step.id ?: step.name ?: step.uses}) does not support `when`, " +
+                "which is only available for steps under job's post-steps, use `if` instead"
+        )
+
+        step.ifField == null -> RunCondition.PRE_TASK_SUCCESS
+        IfType.ALWAYS_UNLESS_CANCELLED.name == (step.ifField.expression) ->
+            RunCondition.PRE_TASK_FAILED_BUT_CANCEL
+
+        IfType.ALWAYS.name == (step.ifField.expression) ->
+            RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
+
+        IfType.FAILURE.name == (step.ifField.expression) ->
+            RunCondition.PRE_TASK_FAILED_ONLY
+
+        // 与不写if等价；显式写出时不能落到自定义表达式分支上去
+        IfType.SUCCESS.name == (step.ifField.expression) ->
+            RunCondition.PRE_TASK_SUCCESS
+
+        !step.ifField.expression.isNullOrBlank() -> RunCondition.CUSTOM_CONDITION_MATCH
+
+        step.ifField.mode == Mode.RUN_WHEN_ALL_PARAMS_MATCH -> RunCondition.CUSTOM_VARIABLE_MATCH
+        step.ifField.mode == Mode.NOT_RUN_WHEN_ALL_PARAMS_MATCH -> RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN
+
+        else -> RunCondition.PRE_TASK_SUCCESS
     }
 
     private fun parseStepIfFiled(

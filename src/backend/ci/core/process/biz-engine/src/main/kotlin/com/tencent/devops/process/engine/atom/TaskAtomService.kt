@@ -43,7 +43,7 @@ import com.tencent.devops.common.log.utils.BuildLogPrinter
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.EnvControlTaskType
 import com.tencent.devops.common.pipeline.pojo.element.Element
-import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.runEvenCancel
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildAtomElement
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildLessAtomElement
 import com.tencent.devops.common.pipeline.pojo.time.BuildRecordTimeCost
@@ -345,8 +345,7 @@ class TaskAtomService @Autowired(required = false) constructor(
             // 动态加载插件业务逻辑
             val iAtomTask = SpringContextUtil.getBean(IAtomTask::class.java, task.taskAtom)
             atomResponse = iAtomTask.tryFinish(task = task, runVariables = runVariables, actionType = actionType)
-            val runCondition = task.additionalOptions?.runCondition
-            val stopFlag = actionType == ActionType.END && runCondition != RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
+            val stopFlag = actionType == ActionType.END && !task.additionalOptions.runEvenCancel()
             log(atomResponse, task, stopFlag)
         } catch (t: BuildTaskException) {
             buildLogPrinter.addRedLine(

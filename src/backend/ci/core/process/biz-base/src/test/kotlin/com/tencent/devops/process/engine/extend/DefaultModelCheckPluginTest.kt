@@ -353,6 +353,106 @@ class DefaultModelCheckPluginTest : TestBase() {
         )
     }
 
+    /**
+     * #13602 引擎依赖「收尾段连续排在主步骤之后」切分主步骤区与收尾区：findTask扫到第一个收尾步骤
+     * 就认为主步骤区已结束并冻结Job主状态。顺序错乱不报错，而是在校验入口自动归位——
+     * 收尾步骤多是清理类脚本，为一个前端能自愈的编排顺序问题去拦用户保存不值得。
+     */
+    @Test
+    fun `checkJobPostStepNormalizedToTail`() {
+        stubPostStepConfig()
+        val model = genModel(stageSize = 1, jobSize = 1, elementSize = 4)
+        val container = model.stages[1].containers[0]
+        val expectedIds = container.elements.let { listOf(it[0].id, it[2].id, it[1].id, it[3].id) }
+        // 把收尾步骤夹在主步骤中间提交
+        container.elements[1].additionalOptions?.jobPostStepFlag = true
+        container.elements[3].additionalOptions?.jobPostStepFlag = true
+
+        try {
+            checkPlugin.checkModelIntegrity(model, projectId, userId)
+        } catch (ignore: ErrorCodeException) {
+            Assertions.assertEquals(ProcessMessageCode.ERROR_ATOM_RUN_BUILD_ENV_INVALID, ignore.errorCode)
+        }
+
+        // 两个收尾步骤归位到末尾，各自组内的相对顺序保持不变
+        Assertions.assertEquals(expectedIds, container.elements.map { it.id })
+        Assertions.assertEquals(listOf(false, false, true, true), container.elements.map { it.isJobPostStep() })
+    }
+
+    /**
+     * #13602 已经排对的编排不该被重排：归位是幂等的，否则会给没动过收尾步骤的流水线制造版本diff。
+     */
+    @Test
+    fun `checkJobPostStepNormalizeIdempotent`() {
+        stubPostStepConfig()
+        val model = genModel(stageSize = 1, jobSize = 1, elementSize = 3)
+        val container = model.stages[1].containers[0]
+        container.elements.drop(1).forEach { it.additionalOptions?.jobPostStepFlag = true }
+        val expectedIds = container.elements.map { it.id }
+
+        try {
+            checkPlugin.checkModelIntegrity(model, projectId, userId)
+        } catch (ignore: ErrorCodeException) {
+            Assertions.assertEquals(ProcessMessageCode.ERROR_ATOM_RUN_BUILD_ENV_INVALID, ignore.errorCode)
+        }
+
+        Assertions.assertEquals(expectedIds, container.elements.map { it.id })
+    }
+
+    /**
+     * #13602 收尾步骤运行时Job结论已定，此时再挂起会拖住已终态Job的资源释放，故禁用挂起类插件
+     */
+    @Test
+    fun `checkJobPostStepUnsupportedAtom`() {
+        stubPostStepConfig()
+        val model = genModel(stageSize = 1, jobSize = 1, elementSize = 2)
+        val elements = model.stages[1].containers[0].elements
+        elements.last().additionalOptions?.apply {
+            jobPostStepFlag = true
+            pauseBeforeExec = true
+        }
+        val actual = Assertions.assertThrows(ErrorCodeException::class.java) {
+            checkPlugin.checkModelIntegrity(model, projectId, userId)
+        }
+        Assertions.assertEquals(ProcessMessageCode.ERROR_PIPELINE_JOB_POST_STEP_UNSUPPORTED_ATOM, actual.errorCode)
+    }
+
+    /**
+     * #13602 挂起类插件也可以按atomCode配置，用于定时等待这类无法按类型识别的插件
+     */
+    @Test
+    fun `checkJobPostStepForbiddenAtom`() {
+        val model = genModel(stageSize = 1, jobSize = 1, elementSize = 2)
+        val postStep = model.stages[1].containers[0].elements.last()
+        postStep.additionalOptions?.jobPostStepFlag = true
+        stubPostStepConfig(forbiddenAtoms = " ,${postStep.getAtomCode()}, ")
+        val actual = Assertions.assertThrows(ErrorCodeException::class.java) {
+            checkPlugin.checkModelIntegrity(model, projectId, userId)
+        }
+        Assertions.assertEquals(ProcessMessageCode.ERROR_PIPELINE_JOB_POST_STEP_UNSUPPORTED_ATOM, actual.errorCode)
+    }
+
+    /**
+     * #13602 收尾步骤数量单独设限
+     */
+    @Test
+    fun `checkJobPostStepNum`() {
+        stubPostStepConfig(maxPostTaskNum = 1)
+        val model = genModel(stageSize = 1, jobSize = 1, elementSize = 3)
+        val elements = model.stages[1].containers[0].elements
+        elements[1].additionalOptions?.jobPostStepFlag = true
+        elements[2].additionalOptions?.jobPostStepFlag = true
+        val actual = Assertions.assertThrows(ErrorCodeException::class.java) {
+            checkPlugin.checkModelIntegrity(model, projectId, userId)
+        }
+        Assertions.assertEquals(ProcessMessageCode.ERROR_PIPELINE_MODEL_COMPONENT_NUM_TOO_LARGE, actual.errorCode)
+    }
+
+    private fun stubPostStepConfig(maxPostTaskNum: Int = 5, forbiddenAtoms: String = "") {
+        every { jobCommonSettingConfig.maxPostTaskNum } returns maxPostTaskNum
+        every { jobCommonSettingConfig.postStepForbiddenAtoms } returns forbiddenAtoms
+    }
+
     @Test
     fun `checkModelJob&ElementSize`() {
         val fulModel = genModel(stageSize = 3, jobSize = 2, elementSize = 2)

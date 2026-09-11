@@ -49,6 +49,25 @@ object FastKillUtils {
     fun isFastKillCode(errorCode: Int) = ErrorCode.USER_STAGE_FASTKILL_TERMINATE == errorCode
 
     /**
+     * #13602 中止发生后，Job收尾步骤是否仍要按各自的运行时机调度。
+     *
+     * 中止不都等于「现场没了」。这两类中止构建机还在，恰恰是最需要抓现场、清理环境的时刻：
+     * - [ErrorCode.USER_JOB_OUTTIME_LIMIT] Job执行超时。产品口径把超时归为失败终态，
+     *   要求「Job失败时/总是运行」的收尾照常触发；一刀切强杀会让超时Job永远没机会清理。
+     * - [ErrorCode.USER_STAGE_FASTKILL_TERMINATE] Stage/Matrix FastKill。它的目的是尽快释放资源，
+     *   而收尾清理本身就是释放的一环，先清理再关机并不违背FastKill的意图。
+     *
+     * 其余中止（用户二次取消强杀、Agent心跳超时、Worker异常退出、开机失败）要么是用户明确要求立刻停，
+     * 要么构建机现场已不可用、收尾步骤物理上也执行不了，一律不再调度。
+     */
+    private val postStepSchedulableCodeSet = setOf(
+        ErrorCode.USER_JOB_OUTTIME_LIMIT,
+        ErrorCode.USER_STAGE_FASTKILL_TERMINATE
+    )
+
+    fun isPostStepSchedulableCode(errorCode: Int) = postStepSchedulableCodeSet.contains(errorCode)
+
+    /**
      * fastKill code and Type
      */
     fun fastKillCodeType(): Pair<ErrorType, Int> = ErrorType.USER to ErrorCode.USER_STAGE_FASTKILL_TERMINATE

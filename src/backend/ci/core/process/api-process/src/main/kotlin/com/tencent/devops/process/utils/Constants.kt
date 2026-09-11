@@ -272,6 +272,8 @@ const val KEY_JOB = "job"
 
 const val KEY_TASK = "task"
 
+const val KEY_POST_TASK = "postTask"
+
 const val KEY_TASK_ATOM = "taskAtom"
 
 const val BK_EMPTY_PIPELINE = "bkEmptyPipeline"

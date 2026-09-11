@@ -31,6 +31,7 @@ import com.tencent.devops.common.pipeline.NameAndValue
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.JobRunCondition
 import com.tencent.devops.common.pipeline.enums.StageRunCondition
+import com.tencent.devops.common.pipeline.pojo.element.JobPostRunWhen
 import com.tencent.devops.common.pipeline.pojo.element.RunCondition
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.config.CommonConfig
@@ -683,5 +684,80 @@ class ControlUtilsTest : TestBase() {
                 hasFailedTaskInSuccessContainer = false
             )
         )
+    }
+
+    /**
+     * #13602 收尾步骤按[JobPostRunWhen]判冻结的Job主状态。
+     * 关键点：`hasFailedTaskInSuccessContainer`（前序有失败但被「失败时继续」放过）一律不参与判定——
+     * 产品口径要求「Job失败时」= Job判失败，被跳过的失败不使Job失败，故不触发。
+     */
+    @Test
+    fun `job post step run when`() {
+        // 冻结的Job主状态 to 各运行时机是否应当运行
+        val expectations = mapOf(
+            BuildStatus.SUCCEED to setOf(JobPostRunWhen.ALWAYS, JobPostRunWhen.ON_SUCCESS),
+            BuildStatus.FAILED to setOf(JobPostRunWhen.ALWAYS, JobPostRunWhen.ON_FAILURE),
+            BuildStatus.CANCELED to setOf(JobPostRunWhen.ALWAYS, JobPostRunWhen.ON_CANCEL)
+        )
+        expectations.forEach { (jobMainStatus, shouldRunWhens) ->
+            JobPostRunWhen.values().forEach { runWhen ->
+                Assertions.assertEquals(
+                    runWhen !in shouldRunWhens,
+                    ControlUtils.checkTaskSkip(
+                        buildId = buildId,
+                        additionalOptions = jobPostStepOptions(runWhen = runWhen),
+                        containerFinalStatus = jobMainStatus,
+                        variables = variables,
+                        // 被「失败时继续」放过的失败不使Job失败，不应影响收尾步骤的判定
+                        hasFailedTaskInSuccessContainer = true
+                    ),
+                    "skip of $runWhen when job main status is $jobMainStatus"
+                )
+            }
+        }
+    }
+
+    /** 不配运行时机的收尾步骤按ALWAYS处理；收尾步骤上误配的runCondition一律不生效 */
+    @Test
+    fun `job post step defaults to always and ignores run condition`() {
+        listOf(BuildStatus.SUCCEED, BuildStatus.FAILED, BuildStatus.CANCELED).forEach { jobMainStatus ->
+            Assertions.assertFalse(
+                ControlUtils.checkTaskSkip(
+                    buildId = buildId,
+                    additionalOptions = jobPostStepOptions(
+                        runWhen = null,
+                        // 主步骤语义下这个条件在成功时会跳过，收尾步骤不该受它影响
+                        runCondition = RunCondition.PRE_TASK_FAILED_ONLY
+                    ),
+                    containerFinalStatus = jobMainStatus,
+                    variables = variables,
+                    hasFailedTaskInSuccessContainer = false
+                ),
+                "post step without runWhen should always run, job main status is $jobMainStatus"
+            )
+        }
+    }
+
+    /** 禁用的收尾步骤照常跳过，与运行时机无关 */
+    @Test
+    fun `disabled job post step is skipped`() {
+        Assertions.assertTrue(
+            ControlUtils.checkTaskSkip(
+                buildId = buildId,
+                additionalOptions = jobPostStepOptions(runWhen = JobPostRunWhen.ALWAYS, enable = false),
+                containerFinalStatus = BuildStatus.SUCCEED,
+                variables = variables,
+                hasFailedTaskInSuccessContainer = false
+            )
+        )
+    }
+
+    private fun jobPostStepOptions(
+        runWhen: JobPostRunWhen?,
+        runCondition: RunCondition = RunCondition.PRE_TASK_SUCCESS,
+        enable: Boolean = true
+    ) = elementAdditionalOptions(enable = enable, runCondition = runCondition).apply {
+        jobPostStepFlag = true
+        this.runWhen = runWhen
     }
 }

@@ -193,7 +193,8 @@ class ContainerTransfer @Autowired(required = false) constructor(
 
     fun addYamlNormalContainer(
         job: NormalContainer,
-        steps: List<PreStep>?
+        steps: List<PreStep>?,
+        postSteps: List<PreStep>? = null
     ): IPreJob {
         return PreJob(
             enable = job.containerEnabled().nullIfDefault(true),
@@ -207,6 +208,7 @@ class ContainerTransfer @Autowired(required = false) constructor(
             container = null,
             ifField = jobIfField(job.jobControlOption),
             steps = steps,
+            postSteps = postSteps,
             timeoutMinutes = makeJobTimeout(job.jobControlOption),
             env = null,
             continueOnError = job.jobControlOption?.continueWhenFailed.nullIfDefault(DEFAULT_CONTINUE_WHEN_FAILED),
@@ -247,6 +249,7 @@ class ContainerTransfer @Autowired(required = false) constructor(
         projectId: String,
         job: VMBuildContainer,
         steps: List<PreStep>?,
+        postSteps: List<PreStep>? = null,
         channelCode: ChannelCode = ChannelCode.BS
     ): IPreJob {
         val runsOnValue = if (channelCode == ChannelCode.CREATIVE_STREAM) {
@@ -269,6 +272,7 @@ class ContainerTransfer @Autowired(required = false) constructor(
             mutex = getMutexYaml(job.mutexGroup),
             ifField = jobIfField(job.jobControlOption),
             steps = steps,
+            postSteps = postSteps,
             timeoutMinutes = makeJobTimeout(job.jobControlOption),
             env = job.customEnv?.associateBy({ it.key ?: "" }) {
                 it.value

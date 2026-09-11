@@ -42,6 +42,12 @@ data class Step(
     val id: String?,
     @JsonProperty("if")
     val ifField: IfField?,
+    /**
+     * #13602 运行时机，**仅在job的`post-steps`下有效**：判定主步骤区结束时冻结的Job主状态。
+     * 取值见[com.tencent.devops.common.pipeline.pojo.element.JobPostRunWhen.yamlValue]。
+     */
+    @JsonProperty("when")
+    val whenField: String? = null,
     @JsonProperty("if-modify")
     val ifModify: List<String>? = null,
     val uses: String?,

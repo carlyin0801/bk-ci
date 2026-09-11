@@ -573,7 +573,8 @@ class PipelineContainerService @Autowired constructor(
             }
 
             val status = atomElement.initStatus(
-                rerun = context.needRerunTask(stage = stage, container = container)
+                rerun = context.needRerunTask(stage = stage, container = container) ||
+                    context.needRerunSubsequentPostStep(stage, container, atomElement)
             )
             if (status.isFinish()) {
                 logger.info("[${context.buildId}|${atomElement.id}] status=$status")

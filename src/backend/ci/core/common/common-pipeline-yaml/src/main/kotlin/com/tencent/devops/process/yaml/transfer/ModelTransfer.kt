@@ -49,7 +49,7 @@ import com.tencent.devops.common.pipeline.pojo.setting.PipelineSettingGroupType
 import com.tencent.devops.common.pipeline.pojo.setting.Subscription
 import com.tencent.devops.common.pipeline.pojo.transfer.ExtendsRecommendedVersion
 import com.tencent.devops.common.pipeline.pojo.transfer.ExtendsTriggerConfig
-import com.tencent.devops.common.pipeline.pojo.transfer.IfType
+import com.tencent.devops.common.pipeline.pojo.transfer.NoticeRunWhen
 import com.tencent.devops.common.pipeline.pojo.transfer.PreTemplateVariable
 import com.tencent.devops.common.pipeline.utils.PIPELINE_SETTING_CONCURRENCY_GROUP_DEFAULT
 import com.tencent.devops.common.pipeline.utils.PIPELINE_SETTING_MAX_CON_QUEUE_SIZE_MAX
@@ -468,13 +468,13 @@ class ModelTransfer @Autowired constructor(
         val res = mutableListOf<PacNotices>()
         setting.successSubscriptionList?.ifEmpty { setting.successSubscription?.let { listOf(it) } }?.forEach {
             if (it.types.isNotEmpty()) {
-                val notice = PacNotices(it, IfType.SUCCESS.name)
+                val notice = PacNotices(it, NoticeRunWhen.ON_SUCCESS)
                 res.add(prepareYamlGroups(setting.projectId, notice))
             }
         }
         setting.failSubscriptionList?.ifEmpty { setting.failSubscription?.let { listOf(it) } }?.forEach {
             if (it.types.isNotEmpty()) {
-                val notice = PacNotices(it, IfType.FAILURE.name)
+                val notice = PacNotices(it, NoticeRunWhen.ON_FAILURE)
                 res.add(prepareYamlGroups(setting.projectId, notice))
             }
         }

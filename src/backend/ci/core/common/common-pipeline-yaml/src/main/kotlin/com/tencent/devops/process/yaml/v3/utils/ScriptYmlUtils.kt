@@ -458,6 +458,7 @@ object ScriptYmlUtils {
                     // 检测job env合法性
                     StreamEnvUtils.checkEnv(preJob.env)
 
+                    val stepIdSet = mutableSetOf<String>()
                     val services = mutableListOf<Service>()
                     preJob.services?.forEach { (key, value) ->
                         services.add(
@@ -480,7 +481,9 @@ object ScriptYmlUtils {
                             services = services,
                             ifField = formatIfField(preJob.ifField),
                             ifModify = preJob.ifModify,
-                            steps = preStepsToSteps(index, preJob.steps, transferData),
+                            steps = preStepsToSteps(index, preJob.steps, transferData, stepIdSet),
+                            postSteps = preStepsToSteps(index, preJob.postSteps, transferData, stepIdSet)
+                                .ifEmpty { null },
                             timeoutMinutes = preJob.timeoutMinutes,
                             env = preJob.env,
                             continueOnError = preJob.continueOnError,
@@ -554,14 +557,15 @@ object ScriptYmlUtils {
     private fun preStepsToSteps(
         jobId: String,
         oldSteps: List<IPreStep>?,
-        transferData: YamlTransferData?
+        transferData: YamlTransferData?,
+        // #13602 主步骤与收尾步骤同属一个Job，stepId需要在两部分之间共享校验唯一性
+        stepIdSet: MutableSet<String> = mutableSetOf()
     ): List<IStep> {
         if (oldSteps == null) {
             return emptyList()
         }
 
         val stepList = mutableListOf<IStep>()
-        val stepIdSet = mutableSetOf<String>()
         oldSteps.forEach { preStep ->
             when (preStep) {
                 is PreStep -> {
@@ -622,6 +626,7 @@ object ScriptYmlUtils {
             name = preStep.name,
             id = preStep.id,
             ifField = formatIfField(preStep.ifField),
+            whenField = preStep.whenField,
             ifModify = preStep.ifModify,
             uses = preStep.uses,
             namespace = preStep.namespace,

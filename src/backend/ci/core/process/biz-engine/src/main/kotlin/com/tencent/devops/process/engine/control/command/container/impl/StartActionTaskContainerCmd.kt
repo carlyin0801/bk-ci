@@ -38,7 +38,7 @@ import com.tencent.devops.common.log.utils.BuildLogPrinter
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.EnvControlTaskType
 import com.tencent.devops.common.pipeline.pojo.element.ElementPostInfo
-import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.runEvenCancel
 import com.tencent.devops.common.pipeline.utils.BuildStatusSwitcher
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.web.utils.I18nUtil
@@ -173,10 +173,12 @@ class StartActionTaskContainerCmd(
         actionType: ActionType,
         commandContext: ContainerContext
     ) {
-        // 当task的runCondition为PRE_TASK_FAILED_EVEN_CANCEL且task被用户取消时则写入标志到redis中
-        val runCondition = waitToDoTask.additionalOptions?.runCondition
-        val failedEvenCancelFlag = runCondition == RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
-        if (actionType == ActionType.END && failedEvenCancelFlag) {
+        // 当task配置了取消后仍要运行的条件且task被用户取消时则写入标志到redis中，
+        // 这类任务跑完不能把Job结论改回成功，需要靠该标志在Job收尾时回置为取消。
+        // #13602 收尾步骤除外：Job结论已在主步骤区冻结，收尾跑没跑都不该把它改写成取消
+        if (actionType == ActionType.END && !waitToDoTask.isJobPostStep() &&
+            waitToDoTask.additionalOptions.runEvenCancel()
+        ) {
             val container = commandContext.container
             val timeoutSec = Timeout.transMinuteTimeoutToSec(container.controlOption.jobControlOption.timeout)
             redisOperation.set(
@@ -205,10 +207,17 @@ class StartActionTaskContainerCmd(
         var toDoTask: PipelineBuildTask? = null
         var continueWhenFailure = false // 失败继续
         var needTerminate = isTerminate(containerContext) // 是否终止类型
+        // #13602 中止发生时，Job收尾步骤是否仍有机会调度
+        var postStepSchedulable = FastKillUtils.isPostStepSchedulableCode(containerContext.event.errorCode)
         var breakFlag = false
         val containerTasks = containerContext.containerTasks
         val actionType = containerContext.event.actionType
         for ((index, t) in containerTasks.withIndex()) {
+            // #13602 任务按taskSeq有序，收尾步骤连续排在主步骤之后（保存时归一化保证）。
+            // 走到第一个收尾步骤时，主步骤区已扫描完毕，此刻的容器状态就是要冻结下来的Job主状态。
+            if (t.isJobPostStep() && containerContext.jobMainStatus == null) {
+                containerContext.jobMainStatus = containerContext.buildStatus
+            }
             // 此处pause状态由构建机[PipelineVMBuildService.claim]认领任务遇到需要暂停任务时更新为PAUSE。
             if (t.status.isPause()) { // 若为暂停，则要确保拿到的任务为stopVM-关机或者空任务发送next stage任务
                 toDoTask = findNextTaskAfterPause(containerContext, currentTask = t)
@@ -221,8 +230,11 @@ class StartActionTaskContainerCmd(
                 breakFlag = actionType.isStartOrRefresh()
                 // 如果是要终止，则需要拿出当前任务进行终止
                 toDoTask = findRunningTask(containerContext, currentTask = t)
-            } else if (t.status.isFailure() || t.status.isCancel()) {
-                needTerminate = needTerminate || TaskUtils.isStartVMTask(t) // #4301 构建机启动失败，就需要终止[P0]
+            } else if ((t.status.isFailure() || t.status.isCancel()) && t.affectJobConclusion()) {
+                if (TaskUtils.isStartVMTask(t)) {
+                    needTerminate = true // #4301 构建机启动失败，就需要终止[P0]
+                    postStepSchedulable = false // 构建机都没起来，收尾步骤也无处可跑
+                }
                 // 当前任务已经失败or取消，并且没有设置[失败继续]的， 设置给容器最终FAILED状态
                 if (!ControlUtils.continueWhenFailure(t.additionalOptions)) {
                     containerContext.buildStatus = BuildStatusSwitcher.jobStatusMaker.forceFinish(t.status, fastKill)
@@ -240,6 +252,7 @@ class StartActionTaskContainerCmd(
                     hasFailedTaskInSuccessContainer = continueWhenFailure,
                     containerContext = containerContext,
                     needTerminate = needTerminate,
+                    postStepSchedulable = postStepSchedulable,
                     contextMap = containerContext.variables.plus(
                         pipelineContextService.buildContext(
                             projectId = containerContext.container.projectId,
@@ -284,6 +297,12 @@ class StartActionTaskContainerCmd(
         }
         return toDoTask
     }
+
+    /**
+     * #13602 Job的结论只由主步骤部分决定，在[ContainerContext.jobMainStatus]处冻结。
+     * 收尾步骤无论成功、失败还是被取消，都不参与Job结论的计算（产品REQ-PL-017 B2 状态隔离硬约束）。
+     */
+    private fun PipelineBuildTask.affectJobConclusion() = !isJobPostStep()
 
     private fun isTerminate(containerContext: ContainerContext): Boolean {
         return containerContext.event.actionType.isTerminate() ||
@@ -331,11 +350,13 @@ class StartActionTaskContainerCmd(
         hasFailedTaskInSuccessContainer: Boolean,
         containerContext: ContainerContext,
         needTerminate: Boolean,
+        postStepSchedulable: Boolean,
         contextMap: Map<String, String>
     ): PipelineBuildTask? {
         val source = containerContext.event.source
         var toDoTask: PipelineBuildTask? = null
-        if (containerContext.event.actionType == ActionType.END) {
+        // #13602 收尾段内到达的取消不改写已冻结的Job结论——它针对的是当前这一个收尾步骤，不是整个Job
+        if (containerContext.event.actionType == ActionType.END && !isJobPostStep()) {
             containerContext.buildStatus = BuildStatus.CANCELED
         }
         val containerTasks = containerContext.containerTasks
@@ -387,7 +408,10 @@ class StartActionTaskContainerCmd(
                 LOG.info("ENGINE|$buildId|$source|CONTAINER_POST_TASK|$stageId|j($containerId)|${toDoTask?.taskId}")
             }
 
-            needTerminate -> { // 构建环境启动失败或者是启动成功但后续Agent挂掉导致心跳超时
+            // #13602 中止时收尾步骤不一定要跟着停：Job超时、FastKill这类中止现场还在，
+            // 正是最需要抓现场与清理的时刻，收尾步骤仍按各自的运行时机调度
+            needTerminate && !(isJobPostStep() && postStepSchedulable) -> {
+                // 构建环境启动失败或者是启动成功但后续Agent挂掉导致心跳超时
                 LOG.warn("ENGINE|$buildId|$source|TERM_NOT_EXEC|$stageId|j($containerId)|$taskId|$status")
                 val taskStatus = if (status == BuildStatus.QUEUE_CACHE) { // 领取过程中被中断标志为取消
                     BuildStatus.CANCELED
@@ -509,7 +533,7 @@ class StartActionTaskContainerCmd(
             return ControlUtils.checkTaskSkip(
                 buildId = buildId,
                 additionalOptions = additionalOptions,
-                containerFinalStatus = containerContext.buildStatus,
+                containerFinalStatus = conditionBaseStatus(containerContext),
                 variables = contextMap,
                 hasFailedTaskInSuccessContainer = hasFailedTaskInSuccessContainer,
                 message = message
@@ -521,6 +545,8 @@ class StartActionTaskContainerCmd(
         while (++idx < containerContext.containerTasks.size) {
             val it = containerContext.containerTasks[idx]
             if (!VMUtils.isVMTask(it.taskId)) {
+                // 这里是开机前的前瞻扫描：只要后面还有可能要跑的插件就得开机。
+                // 此刻Job主状态尚未产生，按乐观的当前容器状态评估收尾步骤即可
                 skip = ControlUtils.checkTaskSkip(
                     buildId = buildId,
                     additionalOptions = it.additionalOptions,
@@ -539,6 +565,20 @@ class StartActionTaskContainerCmd(
         }
         return skip
     }
+
+    /**
+     * #13602 判运行条件时的基准状态。
+     *
+     * 收尾步骤按主步骤区冻结下来的Job主状态判定，这样同一段收尾里每一步看到的状态都一致，
+     * 也不会被收尾段自身的成败、或收尾段执行期间到达的取消改写（产品REQ-PL-017 M2/M4）。
+     * 主步骤仍用实时累计的容器状态。冻结值由[findTask]扫到第一个收尾步骤时写入，兜底用实时值。
+     */
+    private fun PipelineBuildTask.conditionBaseStatus(containerContext: ContainerContext) =
+        if (isJobPostStep()) {
+            containerContext.jobMainStatus ?: containerContext.buildStatus
+        } else {
+            containerContext.buildStatus
+        }
 
     private fun refreshTaskStatus(
         updateTaskStatusInfos: List<PipelineTaskStatusInfo>,

@@ -32,7 +32,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.tencent.devops.common.pipeline.pojo.setting.PipelineSubscriptionType
 import com.tencent.devops.common.pipeline.pojo.setting.Subscription
-import com.tencent.devops.common.pipeline.pojo.transfer.IfType
+import com.tencent.devops.common.pipeline.pojo.transfer.NoticeRunWhen
 import com.tencent.devops.process.yaml.transfer.VariableDefault.nullIfDefault
 import com.tencent.devops.process.yaml.utils.NotifyTemplateUtils
 import com.tencent.devops.process.yaml.v3.enums.ContentFormat
@@ -62,15 +62,18 @@ data class GitNotices(
     val title: String?,
     val content: String?,
     val ccs: Set<String>?,
-    @get:Schema(title = "if")
+    @get:Schema(title = "if", deprecated = true, description = "已收敛到when，仅保留读取兼容")
     @JsonProperty("if")
     val ifField: String?,
+    @get:Schema(title = "when", description = "通知时机：always/success/failure")
+    @JsonProperty("when")
+    val whenField: String? = null,
     @get:Schema(title = "chat-id")
     @JsonProperty("chat-id")
     val chatId: Set<String>?
 ) : Notices {
 
-    constructor(subscription: Subscription, ifField: String?) : this(
+    constructor(subscription: Subscription, runWhen: NoticeRunWhen) : this(
         type = subscription.types.map { PacNotices.toNotifyType(it) }.toMutableList().apply { sort() }.also {
             if (subscription.wechatGroupFlag) it.add(NotifyType.RTX_GROUP.yamlText)
         }.first(),
@@ -78,9 +81,13 @@ data class GitNotices(
         title = null,
         content = subscription.content.ifEmpty { null },
         ccs = null,
-        ifField = ifField,
+        ifField = null,
+        whenField = runWhen.yamlValue,
         chatId = subscription.wechatGroup.split(",").ifEmpty { null }?.toSet()
     )
+
+    /** #13602 `when`为收敛后的写法，存量`if`继续兜底 */
+    private fun runWhen() = NoticeRunWhen.parseYaml(whenField ?: ifField)
 
     override fun toSubscription() = Subscription(
         types = setOf(PacNotices.toPipelineSubscriptionType(type)),
@@ -93,13 +100,9 @@ data class GitNotices(
         content = content ?: ""
     )
 
-    override fun checkNotifyForSuccess(): Boolean {
-        return ifField == null || ifField == IfType.SUCCESS.name || ifField == IfType.ALWAYS.name
-    }
+    override fun checkNotifyForSuccess() = runWhen().notifyForSuccess()
 
-    override fun checkNotifyForFail(): Boolean {
-        return ifField == null || ifField == IfType.FAILURE.name || ifField == IfType.ALWAYS.name
-    }
+    override fun checkNotifyForFail() = runWhen().notifyForFail()
 }
 
 /**
@@ -108,9 +111,12 @@ data class GitNotices(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class PacNotices(
-    @get:Schema(title = "if")
+    @get:Schema(title = "if", deprecated = true, description = "已收敛到when，仅保留读取兼容")
     @JsonProperty("if")
     val ifField: String?,
+    @get:Schema(title = "when", description = "通知时机：always/success/failure")
+    @JsonProperty("when")
+    val whenField: String? = null,
     val type: Any,
     val receivers: List<String>?,
     val groups: List<String>?,
@@ -126,14 +132,15 @@ data class PacNotices(
     val notifyDetail: Boolean?
 ) : Notices {
 
-    constructor(subscription: Subscription, ifField: String?) : this(
+    constructor(subscription: Subscription, runWhen: NoticeRunWhen) : this(
         type = subscription.types.map { toNotifyType(it) }.toMutableList().apply { sort() }.also {
             if (subscription.wechatGroupFlag) it.add(NotifyType.RTX_GROUP.yamlText)
         }.toSet(),
         receivers = subscription.users.ifBlank { null }?.split(",")?.toSet()?.toList(),
         groups = subscription.groups.ifEmpty { null }?.sorted(),
         content = subscription.content.ifEmpty { null },
-        ifField = ifField,
+        ifField = null,
+        whenField = runWhen.yamlValue,
         chatId = subscription.wechatGroup.ifBlank { null }?.split(",")?.toSet()?.toList(),
         notifyMarkdown = ContentFormat.parse(subscription.wechatGroupMarkdownFlag)
             .nullIfDefault(ContentFormat.TEXT)?.text,
@@ -177,13 +184,12 @@ data class PacNotices(
         else -> NotifyTemplateUtils.getCommonShutdownFailureContent()
     }
 
-    override fun checkNotifyForSuccess(): Boolean {
-        return ifField == null || ifField == IfType.SUCCESS.name || ifField == IfType.ALWAYS.name
-    }
+    /** #13602 `when`为收敛后的写法，存量`if`继续兜底 */
+    private fun runWhen() = NoticeRunWhen.parseYaml(whenField ?: ifField)
 
-    override fun checkNotifyForFail(): Boolean {
-        return ifField == null || ifField == IfType.FAILURE.name || ifField == IfType.ALWAYS.name
-    }
+    override fun checkNotifyForSuccess() = runWhen().notifyForSuccess()
+
+    override fun checkNotifyForFail() = runWhen().notifyForFail()
 
     private fun parseType(): List<String> = when (type) {
         is String -> listOf(type)

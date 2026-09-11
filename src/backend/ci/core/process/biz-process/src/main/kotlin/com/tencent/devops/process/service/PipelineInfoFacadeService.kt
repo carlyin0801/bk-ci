@@ -1657,7 +1657,6 @@ class PipelineInfoFacadeService @Autowired constructor(
                 it.resetBuildOption()
                 it.transformCompatibility()
             }
-
             // 部分老的模板实例没有templateId，需要手动加上
             if (model.instanceFromTemplate == true) {
                 fixModelTemplate(

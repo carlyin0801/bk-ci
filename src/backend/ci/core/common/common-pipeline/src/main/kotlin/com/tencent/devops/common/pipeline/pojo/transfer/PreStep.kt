@@ -45,6 +45,9 @@ data class PreStep(
     @get:Schema(title = "if")
     @JsonProperty("if")
     var ifField: Any? = null,
+    @get:Schema(title = "when", description = "收尾步骤(post-steps)的运行时机，仅收尾步骤有效")
+    @JsonProperty("when")
+    var whenField: String? = null,
     @get:Schema(title = "if-modify")
     @JsonProperty("if-modify")
     val ifModify: List<String>? = null,

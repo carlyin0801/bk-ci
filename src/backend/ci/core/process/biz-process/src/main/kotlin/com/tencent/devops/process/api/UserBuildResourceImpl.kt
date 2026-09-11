@@ -47,6 +47,7 @@ import com.tencent.devops.process.engine.pojo.builds.BuildHistoryQueryParam
 import com.tencent.devops.process.engine.service.PipelineProgressRateService
 import com.tencent.devops.process.engine.service.PipelineTaskService
 import com.tencent.devops.process.enums.HistorySearchType
+import com.tencent.devops.process.pojo.BuildCancelPreCheck
 import com.tencent.devops.process.pojo.BuildHistory
 import com.tencent.devops.process.pojo.BuildHistoryRemark
 import com.tencent.devops.process.pojo.BuildId
@@ -173,6 +174,26 @@ class UserBuildResourceImpl @Autowired constructor(
                 taskId = taskId,
                 failedContainer = failedContainer,
                 skipFailedTask = skipFailedTask
+            )
+        )
+    }
+
+    override fun cancelPreCheck(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        buildId: String
+    ): Result<BuildCancelPreCheck> {
+        checkParam(userId, projectId, pipelineId)
+        if (buildId.isBlank()) {
+            throw ParamBlankException("Invalid buildId")
+        }
+        return Result(
+            pipelineBuildFacadeService.buildCancelPreCheck(
+                userId = userId,
+                projectId = projectId,
+                pipelineId = pipelineId,
+                buildId = buildId
             )
         )
     }

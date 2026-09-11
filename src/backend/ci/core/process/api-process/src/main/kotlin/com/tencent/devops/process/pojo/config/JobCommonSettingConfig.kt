@@ -35,4 +35,17 @@ class JobCommonSettingConfig {
 
     @Value("\${pipeline.setting.common.stage.job.maxTaskNum:20}")
     val maxTaskNum: Int = 20
+
+    @Value("\${pipeline.setting.common.stage.job.maxPostTaskNum:5}")
+    val maxPostTaskNum: Int = 5
+
+    /**
+     * #13602 Job收尾步骤禁用的挂起类插件atomCode清单，逗号分隔。
+     *
+     * 收尾步骤运行时Job结论已定，此时再挂起会把已终态的Job重新拖住，延后资源释放与构建结论落定，
+     * 与「收尾不影响主流程」的定位冲突。人工审核、质量红线卡点、前置暂停已按类型直接拦截，
+     * 这里用来补充定时等待一类无法按类型识别的市场插件，按部署环境配置。
+     */
+    @Value("\${pipeline.setting.common.stage.job.postStepForbiddenAtoms:}")
+    val postStepForbiddenAtoms: String = ""
 }

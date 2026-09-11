@@ -59,7 +59,8 @@ import com.tencent.devops.common.pipeline.enums.BuildTaskStatus
 import com.tencent.devops.common.pipeline.pojo.BuildParameters
 import com.tencent.devops.common.pipeline.pojo.JobHeartbeatRequest
 import com.tencent.devops.common.pipeline.pojo.element.Element
-import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
+import com.tencent.devops.common.pipeline.pojo.element.runEvenCancel
 import com.tencent.devops.common.pipeline.pojo.element.agent.LinuxScriptElement
 import com.tencent.devops.common.pipeline.pojo.element.agent.WindowsScriptElement
 import com.tencent.devops.common.pipeline.pojo.time.BuildRecordTimeCost
@@ -606,10 +607,8 @@ class EngineVMBuildService @Autowired(required = false) constructor(
         } else {
             val cancelTaskSetKey = TaskUtils.getCancelTaskIdRedisKey(buildId, vmSeqId, false)
             val cancelFlag = redisOperation.isMember(cancelTaskSetKey, startUpVMTask.taskId)
-            val runCondition = startUpVMTask.additionalOptions?.runCondition
-            val failedEvenCancelFlag = runCondition == RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
             // 判断开机插件是否被取消
-            if (!failedEvenCancelFlag && cancelFlag) {
+            if (!startUpVMTask.additionalOptions.runEvenCancel() && cancelFlag) {
                 BuildStatus.CANCELED
             } else {
                 buildStatus
@@ -860,7 +859,7 @@ class EngineVMBuildService @Autowired(required = false) constructor(
                 result = result,
                 buildInfo = buildInfo,
                 vmSeqId = vmSeqId,
-                runCondition = buildTask.additionalOptions?.runCondition
+                additionalOptions = buildTask.additionalOptions
             )
         } finally {
             redisOperation.delete(key = tCompleteTaskKey)
@@ -873,7 +872,7 @@ class EngineVMBuildService @Autowired(required = false) constructor(
         result: BuildTaskResult,
         buildInfo: BuildInfo,
         vmSeqId: String,
-        runCondition: RunCondition? = null
+        additionalOptions: ElementAdditionalOptions? = null
     ) {
         val projectId = buildInfo.projectId
         val buildId = buildInfo.buildId
@@ -899,7 +898,7 @@ class EngineVMBuildService @Autowired(required = false) constructor(
             result = result,
             buildInfo = buildInfo,
             vmSeqId = vmSeqId,
-            runCondition = runCondition
+            additionalOptions = additionalOptions
         )
         val endParam = TaskBuildEndParam(
             projectId = buildInfo.projectId,
@@ -1025,14 +1024,17 @@ class EngineVMBuildService @Autowired(required = false) constructor(
         result: BuildTaskResult,
         buildInfo: BuildInfo,
         vmSeqId: String,
-        runCondition: RunCondition? = null
+        additionalOptions: ElementAdditionalOptions? = null
     ): BuildStatus {
         val buildId = buildInfo.buildId
         val taskId = result.taskId
         val cancelTaskSetKey = TaskUtils.getCancelTaskIdRedisKey(buildId, vmSeqId, false)
         val cancelFlag = redisOperation.isMember(cancelTaskSetKey, taskId)
-        val failedEvenCancelFlag = runCondition == RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
-        if (cancelFlag && failedEvenCancelFlag) {
+        val runEvenCancelFlag = additionalOptions.runEvenCancel()
+        // 该标志会在Job收尾时把SUCCEED回置为CANCELED，用于表达「取消后还硬跑完了一些东西」。
+        // #13602 收尾步骤不能写它：Job结论已在主步骤区冻结，收尾段里发生的取消只针对那一个步骤，
+        // 不该把主步骤挣来的成功结论改写掉（产品REQ-PL-017 B2 状态隔离）。
+        if (cancelFlag && runEvenCancelFlag && additionalOptions?.jobPostStepFlag != true) {
             redisOperation.set(
                 key = ContainerUtils.getContainerRunEvenCancelTaskKey(
                     pipelineId = buildInfo.pipelineId,
@@ -1044,7 +1046,7 @@ class EngineVMBuildService @Autowired(required = false) constructor(
             )
         }
         return when {
-            !failedEvenCancelFlag && cancelFlag -> {
+            !runEvenCancelFlag && cancelFlag -> {
                 // 如果该任务运行时用户点击了取消则将任务的构建状态置为取消状态
                 LOG.warn("ENGINE|$buildId|BCT_CANCEL_NOT_FINISH|${buildInfo.projectId}|job#$vmSeqId|$taskId")
                 BuildStatus.CANCELED

@@ -46,14 +46,18 @@ import com.tencent.devops.common.pipeline.pojo.BuildFormProperty
 import com.tencent.devops.common.pipeline.pojo.PipelineRunEnvOsCheckParam
 import com.tencent.devops.common.pipeline.pojo.element.Element
 import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.agent.ManualReviewUserTaskElement
 import com.tencent.devops.common.pipeline.pojo.element.atom.BeforeDeleteParam
 import com.tencent.devops.common.pipeline.pojo.element.atom.ElementBatchCheckParam
 import com.tencent.devops.common.pipeline.pojo.element.atom.ElementHolder
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildAtomElement
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildLessAtomElement
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketEventAtomElement
+import com.tencent.devops.common.pipeline.pojo.element.quality.QualityGateInElement
+import com.tencent.devops.common.pipeline.pojo.element.quality.QualityGateOutElement
 import com.tencent.devops.common.pipeline.pojo.setting.PipelineSetting
 import com.tencent.devops.common.pipeline.pojo.setting.Subscription
+import com.tencent.devops.common.pipeline.utils.PostStepsNormalizer
 import com.tencent.devops.process.constant.ProcessMessageCode
 import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_INCORRECT_NOTIFICATION_MESSAGE_CONTENT
 import com.tencent.devops.process.engine.atom.AtomUtils
@@ -68,6 +72,7 @@ import com.tencent.devops.process.pojo.config.StageCommonSettingConfig
 import com.tencent.devops.process.pojo.config.TaskCommonSettingConfig
 import com.tencent.devops.process.utils.DependOnUtils
 import com.tencent.devops.process.utils.KEY_JOB
+import com.tencent.devops.process.utils.KEY_POST_TASK
 import com.tencent.devops.process.utils.KEY_STAGE
 import com.tencent.devops.process.utils.KEY_TASK
 import com.tencent.devops.process.utils.PIPELINE_CONDITION_EXPRESSION_LENGTH_MAX
@@ -99,6 +104,9 @@ open class DefaultModelCheckPlugin constructor(
         pipelineId: String,
         runEnvOsCheckParam: PipelineRunEnvOsCheckParam?
     ): Int {
+        // #13602 收尾步骤先归位到elements末尾，后续校验与落库都按「收尾段连续排在主步骤之后」进行。
+        // 放在校验最前面而不是各保存入口，是为了让模板校验等直接调用本方法的路径也一并覆盖。幂等，可重复调用。
+        PostStepsNormalizer.normalize(model)
         var metaSize = 0
         // 检查流水线名称
         PipelineUtils.checkPipelineName(
@@ -287,6 +295,7 @@ open class DefaultModelCheckPlugin constructor(
                     params = arrayOf(container.name, KEY_TASK, jobCommonSettingConfig.maxTaskNum.toString())
                 )
             }
+            checkJobPostSteps(container)
             val cCnt = containerCnt.computeIfPresent(container.getClassType()) { _, oldValue -> oldValue + 1 }
                 ?: containerCnt.computeIfAbsent(container.getClassType()) { 1 } // 第一次时出现1次
             ContainerBizRegistrar.getPlugin(container)?.check(container, cCnt)
@@ -325,6 +334,49 @@ open class DefaultModelCheckPlugin constructor(
         }
         return metaSize + containers.size
     }
+
+    /**
+     * #13602 校验Job收尾步骤(post-steps)。
+     *
+     * 顺序不在这里校验：[com.tencent.devops.common.pipeline.utils.PostStepsNormalizer]已在校验入口
+     * 把收尾步骤归位到[Container.elements]末尾，编排顺序错乱会被自愈而不是报错。
+     *
+     * 1. 触发器容器没有主步骤终态可言，不允许配置收尾步骤；
+     * 2. 收尾步骤数量单独设限，同时仍计入Job的总步数配额；
+     * 3. 收尾步骤运行时Job结论已定，此时再挂起会拖住已终态Job的资源释放，故禁用挂起类插件。
+     */
+    private fun checkJobPostSteps(container: Container) {
+        val postSteps = container.fetchPostSteps()
+        if (postSteps.isEmpty()) {
+            return
+        }
+        if (container is TriggerContainer) {
+            throw ErrorCodeException(errorCode = ProcessMessageCode.ERROR_PIPELINE_JOB_POST_STEP_ON_TRIGGER)
+        }
+        if (postSteps.size > jobCommonSettingConfig.maxPostTaskNum) {
+            throw ErrorCodeException(
+                errorCode = ProcessMessageCode.ERROR_PIPELINE_MODEL_COMPONENT_NUM_TOO_LARGE,
+                params = arrayOf(container.name, KEY_POST_TASK, jobCommonSettingConfig.maxPostTaskNum.toString())
+            )
+        }
+        val forbiddenAtoms = jobCommonSettingConfig.postStepForbiddenAtoms
+            .split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        postSteps.forEach { element ->
+            if (element.isSuspendingInPostStep(forbiddenAtoms)) {
+                throw ErrorCodeException(
+                    errorCode = ProcessMessageCode.ERROR_PIPELINE_JOB_POST_STEP_UNSUPPORTED_ATOM,
+                    params = arrayOf(container.name, element.name)
+                )
+            }
+        }
+    }
+
+    /** 会把已终态的Job重新挂起的插件与流程控制配置 */
+    private fun Element.isSuspendingInPostStep(forbiddenAtoms: Set<String>) =
+        this is ManualReviewUserTaskElement || // 人工审核
+            this is QualityGateInElement || this is QualityGateOutElement || // 质量红线卡点（审核态会挂起）
+            additionalOptions?.pauseBeforeExec == true || // 前置暂停
+            getAtomCode() in forbiddenAtoms // 定时等待等按atomCode配置的挂起类插件
 
     private fun Container.checkElement(
         stage: Stage,

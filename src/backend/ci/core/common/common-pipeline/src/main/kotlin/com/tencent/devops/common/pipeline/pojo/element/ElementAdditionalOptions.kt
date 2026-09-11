@@ -65,6 +65,10 @@ data class ElementAdditionalOptions(
     var customCondition: String? = "",
     @get:Schema(title = "插件post信息", required = false)
     var elementPostInfo: ElementPostInfo? = null,
+    @get:Schema(title = "是否为Job收尾步骤（YAML: post-steps）", required = false)
+    var jobPostStepFlag: Boolean? = null,
+    @get:Schema(title = "Job收尾步骤的运行时机（YAML: when），仅收尾步骤有效，不配按ALWAYS", required = false)
+    var runWhen: JobPostRunWhen? = null,
     @get:Schema(title = "是否设置自定义环境变量", required = false)
     @Deprecated("不需要判断是否开启env，使用新字段")
     val enableCustomEnv: Boolean? = true,
@@ -79,10 +83,32 @@ enum class RunCondition {
     PRE_TASK_FAILED_EVEN_CANCEL, // 即使前面有插件运行失败也运行，即使被取消也运行
     PRE_TASK_FAILED_ONLY, // 只有前面有插件运行失败时才运行（包括失败自动跳过的情况）
     PRE_TASK_FAILED_ONLY_EXCEPT_SKIP, // 只有前面有插件运行失败时才运行（不包括失败自动跳过的情况）
+
     OTHER_TASK_RUNNING, // 指定插件开始运行时 [未实现]
     CUSTOM_VARIABLE_MATCH, // 自定义变量全部满足时运行
     CUSTOM_VARIABLE_MATCH_NOT_RUN, // 自定义变量全部满足时不运行
     CUSTOM_CONDITION_MATCH, // 满足以下自定义条件时运行 [未实现]
     PARENT_TASK_CANCELED_OR_TIMEOUT, // 父任务取消或者超时时才运行
     PARENT_TASK_FINISH // 父任务结束就运行
+}
+
+/**
+ * 构建被用户取消后，该任务是否仍要运行。
+ *
+ * 取消是通过[com.tencent.devops.common.pipeline.enums.BuildStatus]与ActionType.END层层传播的：
+ * 引擎调度、构建机认领、内置插件收尾、执行记录回写等环节都会把「还没跑的任务」直接置为UNEXEC/CANCELED。
+ * 凡是要在取消后仍有机会执行的任务，都必须在这些环节统一放行，否则任务连启动的机会都没有。
+ * 调用方一律传[ElementAdditionalOptions]，不要自己去比对某一个枚举值。
+ *
+ * Job收尾步骤一律放行：取消门禁只负责「别让取消把还没轮到的步骤提前置为UNEXEC」，
+ * 而收尾步骤到底跑不跑，由[JobPostRunWhen]比对主步骤区冻结下来的Job主状态单独判定
+ * （见ControlUtils.checkJobPostStepSkip），判定只能有这一个出口。
+ * 若此处按运行时机放行，收尾段内取消当前卡住的步骤时，后续[JobPostRunWhen.ON_SUCCESS]、
+ * [JobPostRunWhen.ON_FAILURE]的步骤会被这道门禁直接判为UNEXEC，连条件都轮不到判。
+ * 强杀（ActionType.TERMINATE）在各调用方先行短路，不经过本函数。
+ */
+fun ElementAdditionalOptions?.runEvenCancel(): Boolean = when {
+    this == null -> false
+    jobPostStepFlag == true -> true
+    else -> runCondition == RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
 }

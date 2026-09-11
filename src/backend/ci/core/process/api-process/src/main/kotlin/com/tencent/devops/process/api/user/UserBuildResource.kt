@@ -42,6 +42,7 @@ import com.tencent.devops.common.pipeline.pojo.element.Element
 import com.tencent.devops.common.web.annotation.BkField
 import com.tencent.devops.common.web.constant.BkStyleEnum
 import com.tencent.devops.process.enums.HistorySearchType
+import com.tencent.devops.process.pojo.BuildCancelPreCheck
 import com.tencent.devops.process.pojo.BuildHistory
 import com.tencent.devops.process.pojo.BuildHistoryRemark
 import com.tencent.devops.process.pojo.BuildId
@@ -179,6 +180,27 @@ interface UserBuildResource {
         @QueryParam("skip")
         skipFailedTask: Boolean? = false
     ): Result<BuildId>
+
+    @Operation(
+        summary = "取消构建前的预检",
+        description = "第二次取消会升级为强制终止（不可逆）。前端在弹出取消确认框前调用本接口，据此提示用户本次点击的实际后果。"
+    )
+    @GET
+    @Path("/projects/{projectId}/pipelines/{pipelineId}/builds/{buildId}/cancelPreCheck")
+    fun cancelPreCheck(
+        @Parameter(description = "用户ID", required = true, example = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @Parameter(description = "项目ID", required = true)
+        @PathParam("projectId")
+        projectId: String,
+        @Parameter(description = "流水线ID", required = true)
+        @PathParam("pipelineId")
+        pipelineId: String,
+        @Parameter(description = "构建ID", required = true)
+        @PathParam("buildId")
+        buildId: String
+    ): Result<BuildCancelPreCheck>
 
     @Operation(summary = "手动停止流水线")
     @DELETE

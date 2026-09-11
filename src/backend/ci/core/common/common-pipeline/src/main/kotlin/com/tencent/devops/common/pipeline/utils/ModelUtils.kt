@@ -128,6 +128,10 @@ object ModelUtils {
                     refreshMatrixGroup(c)
                 } else if (c.canRetry == true) {
                     refreshContainer(c)
+                } else {
+                    // #13602 Job 成功时收尾步骤仍可单步重试，但不能点亮 Job 级重试按钮——
+                    // 收尾步骤不参与 Job 成败聚合，整 Job 重试会把已经成功的主步骤也拖进来
+                    refreshPostStepRetry(c)
                 }
             }
         }
@@ -136,6 +140,18 @@ object ModelUtils {
     private fun refreshContainer(container: Container) {
         container.elements.forEach { e ->
             refreshElement(element = e)
+        }
+    }
+
+    /**
+     * Job 已成功时，只刷新收尾步骤的 canRetry/canSkip。
+     * 主步骤保持不可重试，避免成功 Job 被整段重跑。
+     */
+    private fun refreshPostStepRetry(container: Container) {
+        container.elements.forEach { e ->
+            if (e.isJobPostStep() && e.additionalOptions?.elementPostInfo == null) {
+                refreshElement(element = e)
+            }
         }
     }
 
@@ -185,7 +201,9 @@ object ModelUtils {
             } else {
                 childElement.canRetry = null // 自动跳过的不能手动重试
             }
-        } else if (isFailureAwareCondition(additionalOptions.runCondition)) {
+        } else if (templateElement?.isJobPostStep() != true &&
+            isFailureAwareCondition(additionalOptions.runCondition)
+        ) {
             childElement.canRetry = null
             childElement.canSkip = null
         }
@@ -213,8 +231,9 @@ object ModelUtils {
             } else {
                 element.canRetry = null // 自动跳过的不能手动重试
             }
-        } else if (isFailureAwareCondition(additionalOptions.runCondition)) {
-            // “失败时才运行”的插件自身不放开重试/跳过；但不再影响前序失败插件的重试/跳过按钮
+        } else if (!element.isJobPostStep() && isFailureAwareCondition(additionalOptions.runCondition)) {
+            // “失败时才运行”的插件自身不放开重试/跳过；但不再影响前序失败插件的重试/跳过按钮。
+            // 收尾步骤用 runWhen 而不是 runCondition，不能被这条规则误伤。
             element.canRetry = null
             element.canSkip = null
         }

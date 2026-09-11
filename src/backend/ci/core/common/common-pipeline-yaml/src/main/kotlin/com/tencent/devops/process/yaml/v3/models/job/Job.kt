@@ -40,6 +40,12 @@ import io.swagger.v3.oas.annotations.media.Schema
 interface IJob
 
 /**
+ * #13602 Job收尾步骤在YAML中的键名。与[Job.postSteps]的属性名不同，
+ * 涉及直接按键名读写YAML节点树的地方（模板展开、PAC编辑器定位）需要用它。
+ */
+const val JOB_POST_STEPS_KEY = "post-steps"
+
+/**
  * WARN: 请谨慎修改这个类 , 不要随意添加或者删除变量 , 否则可能导致依赖yaml的功能(gitci,prebuild等)异常
  */
 data class Job(
@@ -60,6 +66,9 @@ data class Job(
     @JsonProperty("if")
     val ifField: IfField? = null,
     val steps: List<IStep>? = null,
+    @get:Schema(title = "post-steps")
+    @JsonProperty("post-steps")
+    val postSteps: List<IStep>? = null,
     @get:Schema(title = "if-modify")
     @JsonProperty("if-modify")
     val ifModify: List<String>? = null,

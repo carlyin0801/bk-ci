@@ -36,6 +36,7 @@ import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.JobRunCondition
 import com.tencent.devops.common.pipeline.enums.StageRunCondition
 import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
+import com.tencent.devops.common.pipeline.pojo.element.JobPostRunWhen
 import com.tencent.devops.common.pipeline.pojo.element.RunCondition
 import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.process.constant.ProcessMessageCode
@@ -44,6 +45,7 @@ import com.tencent.devops.process.constant.ProcessMessageCode.BK_CHECK_TASK_RUN_
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_CUSTOM_VARIABLES_ARE_ALL_SATISFIED
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_IT_DOES_NOT_RUN_UNLESS_IT_IS_CANCELED
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_JOB_FAILURE_OR_CANCEL
+import com.tencent.devops.process.constant.ProcessMessageCode.BK_JOB_POST_STEP_RUN_WHEN
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_ONLY_WHEN_PREVIOUS_TASK_FAILED_EXCEPT_SKIP
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_ONLY_WHEN_PREVIOUS_TASK_HAS_FAILED
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_RUNS_EVEN_IF_CANCELED
@@ -184,6 +186,11 @@ object ControlUtils {
             message.append(
                 I18nUtil.getCodeLanMessage(BK_TASK_DISABLED)
             )
+        } else if (additionalOptions?.jobPostStepFlag == true && additionalOptions.elementPostInfo == null) {
+            // #13602 用户编排的收尾步骤只认 runWhen。
+            // 收尾步骤的 post-action 也会带 jobPostStepFlag（取消门禁 / 成败隔离要用），
+            // 但那是插件自己的收尾回调，执行与否走 elementPostInfo 那条路，不能用 runWhen 判。
+            skip = checkJobPostStepSkip(additionalOptions.runWhen, containerFinalStatus, message)
         } else when {
             // [只有前面有任务失败时才运行]，之前存在失败的任务（包含失败自动跳过的情况）
             runCondition == RunCondition.PRE_TASK_FAILED_ONLY -> {
@@ -236,6 +243,33 @@ object ControlUtils {
             }
         }
 
+        return skip
+    }
+
+    /**
+     * Job收尾步骤的运行时机判定：拿[runWhen]与主步骤区冻结下来的Job主状态[jobFinalStatus]比对。
+     *
+     * 「Job失败时」按Job主状态判而非「是否存在失败过的步骤」——被「失败时继续」放过的失败不会让Job判失败，
+     * 因此也不触发收尾，这与主步骤「前序失败时」默认不把跳过的失败算作失败是同一口径。
+     * 超时属失败终态（[BuildStatus.isFailure]含[BuildStatus.isTimeout]），会命中「Job失败时」。
+     */
+    private fun checkJobPostStepSkip(
+        runWhen: JobPostRunWhen?,
+        jobFinalStatus: BuildStatus,
+        message: StringBuilder
+    ): Boolean {
+        val skip = when (runWhen ?: JobPostRunWhen.DEFAULT) {
+            JobPostRunWhen.ALWAYS -> false
+            JobPostRunWhen.ON_SUCCESS -> jobFinalStatus.isFailure() || jobFinalStatus.isCancel()
+            JobPostRunWhen.ON_FAILURE -> !jobFinalStatus.isFailure()
+            JobPostRunWhen.ON_CANCEL -> !jobFinalStatus.isCancel()
+        }
+        message.append(
+            I18nUtil.getCodeLanMessage(
+                messageCode = BK_JOB_POST_STEP_RUN_WHEN,
+                params = arrayOf((runWhen ?: JobPostRunWhen.DEFAULT).name, jobFinalStatus.name)
+            ) + " skip=$skip"
+        )
         return skip
     }
 

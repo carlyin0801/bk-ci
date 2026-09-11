@@ -541,6 +541,10 @@ class PipelineTaskService @Autowired constructor(
     fun createFailTaskVar(buildId: String, projectId: String, pipelineId: String, taskId: String) {
         val taskRecord = getBuildTask(projectId, buildId, taskId)
             ?: return
+        // #13602 Job收尾步骤的成败不参与构建结论，不计入构建失败插件变量
+        if (taskRecord.isJobPostStep()) {
+            return
+        }
         val buildRecordContainer = containerBuildRecordService.getRecord(
             projectId = projectId,
             pipelineId = pipelineId,

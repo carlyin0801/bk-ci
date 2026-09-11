@@ -467,11 +467,18 @@ class PipelineTransferYamlService @Autowired constructor(
         userId: String,
         projectId: String,
         pipelineId: String,
+        jobPostStep: Boolean? = null,
         yaml: String
     ): Element {
         val tYml = TransferMapper.getObjectMapper()
             .readValue(yaml, object : TypeReference<PreStep>() {})
-        return elementTransfer.yaml2element(userId, ScriptYmlUtils.preStepToStep(tYml), null)
+        // #13602 收尾步骤标识由所在的编排位置决定，YAML里的单个step看不出来，需要调用方告知
+        return elementTransfer.yaml2element(
+            userId = userId,
+            step = ScriptYmlUtils.preStepToStep(tYml),
+            agentSelector = null,
+            jobPostStep = jobPostStep == true
+        )
     }
 
     fun buildPreview(

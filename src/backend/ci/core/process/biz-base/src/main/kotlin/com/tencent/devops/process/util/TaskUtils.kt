@@ -92,6 +92,11 @@ object TaskUtils {
             parentTask?.status == BuildStatus.CANCELED || parentTask?.status == BuildStatus.EXEC_TIMEOUT
         } else if (runCondition == RunCondition.PARENT_TASK_FINISH) {
             parentTask?.status?.isFinish() ?: false
+        } else if (task.isJobPostStep()) {
+            // #13602 收尾步骤的 post-action 生成时会带上 jobPostStepFlag。
+            // 看自身标记即可：父插件是否真正执行过由下方 realExecuteBuildStatusList 兜底，
+            // 此处不再叠加主步骤/Job 级别的条件。
+            true
         } else if (runCondition == RunCondition.PRE_TASK_SUCCESS ||
             runCondition == RunCondition.PRE_TASK_FAILED_BUT_CANCEL
         ) {
