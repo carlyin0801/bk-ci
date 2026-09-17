@@ -53,7 +53,9 @@ data class ContainerLocation(
     val stagePosition: StagePosition,
     val containerSeq: Int,
     val container: Container,
-    val matrixFlag: Boolean
+    val matrixFlag: Boolean,
+    /** 容器真实ID，与索引键一致：优先 containerId，兜底 id（兼容历史数据） */
+    val containerId: String
 ) {
     val position: String get() = "${stagePosition.stageIndex}-$containerSeq"
     val componentPath: String get() = "${stagePosition.stageName}/${container.name}"
@@ -82,7 +84,10 @@ class ModelPositionIndex internal constructor(
     /** 按 Model 顺序遍历所有阶段，供需要全量扫描的场景（如收集阶段级待人工处理项）使用 */
     fun stages(): Collection<StagePosition> = stageMap.values
 
-    /** 按 Model 顺序遍历所有容器（含矩阵子容器），供需要全量扫描的场景使用 */
+    /**
+     * 按 Model 的编排顺序遍历所有容器（含矩阵子容器），
+     * 供需要全量扫描的场景使用（如待人工处理项、补齐没有任务错误信息的 Job 级失败位置）。
+     */
     fun containers(): Collection<ContainerLocation> = containerMap.values
 }
 
@@ -204,8 +209,15 @@ object EndPositionUtils {
         matrixFlag: Boolean
     ) {
         // 容器真实ID：优先 containerId，兜底 id（兼容历史数据）
-        val containerId = container.containerId ?: container.id ?: return
-        containerMap[containerId] = ContainerLocation(stagePosition, containerSeq, container, matrixFlag)
+        val containerId = container.containerId?.takeIf { it.isNotBlank() }
+            ?: container.id?.takeIf { it.isNotBlank() } ?: return
+        containerMap[containerId] = ContainerLocation(
+            stagePosition = stagePosition,
+            containerSeq = containerSeq,
+            container = container,
+            matrixFlag = matrixFlag,
+            containerId = containerId
+        )
     }
 
     /**

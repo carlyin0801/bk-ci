@@ -27,10 +27,12 @@
 
 package com.tencent.devops.process.engine.service.record
 
+import com.tencent.devops.common.api.util.timestampmilli
 import com.tencent.devops.common.pipeline.Model
 import com.tencent.devops.common.pipeline.container.MutexGroup
 import com.tencent.devops.common.pipeline.enums.BuildRunningType
 import com.tencent.devops.common.pipeline.enums.BuildStatus
+import com.tencent.devops.common.pipeline.enums.ChannelCode
 import com.tencent.devops.common.pipeline.enums.StartType
 import com.tencent.devops.common.pipeline.pojo.BuildQueueDetail
 import com.tencent.devops.common.pipeline.pojo.BuildRunningInfo
@@ -46,7 +48,9 @@ import com.tencent.devops.common.pipeline.pojo.element.agent.ManualReviewUserTas
 import com.tencent.devops.common.pipeline.pojo.element.matrix.MatrixStatusElement
 import com.tencent.devops.common.pipeline.pojo.element.quality.QualityGateInElement
 import com.tencent.devops.common.pipeline.pojo.element.quality.QualityGateOutElement
+import com.tencent.devops.common.pipeline.pojo.setting.PipelineRunLockType
 import com.tencent.devops.common.pipeline.pojo.time.BuildTimestampType
+import com.tencent.devops.common.pipeline.utils.PIPELINE_SETTING_MAX_CON_QUEUE_SIZE_MAX
 import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.process.constant.ProcessMessageCode
 import com.tencent.devops.process.dao.record.BuildRecordContainerDao
@@ -57,6 +61,7 @@ import com.tencent.devops.process.engine.control.StagePosition
 import com.tencent.devops.process.engine.dao.PipelineBuildDao
 import com.tencent.devops.process.engine.pojo.BuildInfo
 import com.tencent.devops.process.engine.pojo.PipelineBuildContainer
+import com.tencent.devops.process.engine.pojo.QueueRelatedBuild
 import com.tencent.devops.process.engine.service.PipelineBuildQualityService
 import com.tencent.devops.process.engine.service.PipelineContainerService
 import com.tencent.devops.process.engine.service.PipelineRepositoryService
@@ -79,6 +84,12 @@ data class BuildRunningContext(
     val startTime: Long?,
     /** 触发方式描述，由读取侧统一解析后传入，避免此处重复处理 webhook 触发器的解析逻辑 */
     val triggerDesc: String?
+)
+
+/** Job 等待判定结果。复用互斥等场景需要附带已翻译的等待原因。 */
+private data class WaitDecision(
+    val waitType: JobWaitType,
+    val waitReason: String? = null
 )
 
 /**
@@ -110,6 +121,19 @@ class BuildRunningInfoResolver @Autowired constructor(
         private val QUEUE_STATUS_SET = listOf(BuildStatus.QUEUE, BuildStatus.QUEUE_CACHE)
 
         /**
+         * 占用并发额度的构建状态。构建级 PREPARE_ENV/REVIEWING 等同样占着名额，
+         * 只查 RUNNING 会把它们既不算占用也不算前方排队，列表被截短。
+         */
+        private val OCCUPYING_STATUS_SET = listOf(
+            BuildStatus.RUNNING,
+            BuildStatus.PREPARE_ENV,
+            BuildStatus.REVIEWING,
+            BuildStatus.LOOP_WAITING,
+            BuildStatus.CALL_WAITING,
+            BuildStatus.PAUSE
+        )
+
+        /**
          * 互斥类排队时间戳。[BuildTimestampType.containerCheckQueue] 圈定的排队时间戳中，
          * 除这两种外均为等待构建资源，据此推导等待类型而不必枚举各调度方式。
          */
@@ -123,6 +147,12 @@ class BuildRunningInfoResolver @Autowired constructor(
 
         /** 等待中的Job与待人工处理项的展示上限，避免超大流水线撑爆响应体 */
         private const val LIST_MAX_SIZE = 50
+
+        /**
+         * 准备环境超过该时长才报资源排队。正常拉起构建机通常数秒内结束，
+         * 节点并行已满或旧调度路径未写 JOB_THIRD_PARTY_QUEUE 时会卡在 PREPARE_ENV。
+         */
+        private const val RESOURCE_QUEUE_GRACE_MS = 15_000L
     }
 
     /**
@@ -133,12 +163,18 @@ class BuildRunningInfoResolver @Autowired constructor(
     fun resolve(context: BuildRunningContext): BuildRunningInfo? {
         return try {
             val status = context.buildInfo.status
-            when {
-                status in QUEUE_STATUS_SET -> resolveQueue(context)
-                status.isRunning() -> resolveRunning(context)
-                // 已结束、从未执行、触发待审核等状态不属于运行态范畴
-                else -> null
-            }?.also { translate(it) }
+            // 已结束、阶段准入挂起、从未执行、触发待审核等都不算运行态；先判状态避免给终态详情多一次语言解析
+            if (status !in QUEUE_STATUS_SET && !status.isRunning()) {
+                return null
+            }
+            val language = requestLanguage()
+            val info = if (status in QUEUE_STATUS_SET) {
+                resolveQueue(context, language)
+            } else {
+                resolveRunning(context, language)
+            }
+            translate(info, language)
+            info
         } catch (ignored: Throwable) {
             LOG.warn("ENGINE|${context.buildInfo.buildId}|BUILD_RUNNING_INFO|resolve failed", ignored)
             null
@@ -151,21 +187,25 @@ class BuildRunningInfoResolver @Autowired constructor(
      * 运行态对象在读取时现造，因此这里就是它唯一的生命周期节点，直接按请求方语言翻译即可，
      * 无需像终态那样在落库文案与展示文案之间来回转换。
      */
-    private fun translate(info: BuildRunningInfo) {
+    private fun translate(info: BuildRunningInfo, language: String) {
         info.runningCategory = info.runningType.category
-        info.runningTypeDesc = i18n("buildRunningType.${info.runningType.displayName}")
+        info.runningTypeDesc = i18n("buildRunningType.${info.runningType.displayName}", language = language)
         info.waitingJobs?.forEach { job ->
-            job.waitTypeDesc = i18n("jobWaitType.${job.waitType.displayName}")
-            job.statusDesc = i18n("buildStatus.${BuildStatus.parse(job.status).statusName}", job.status)
+            job.waitTypeDesc = i18n("jobWaitType.${job.waitType.displayName}", language = language)
+            job.statusDesc = i18n(
+                "buildStatus.${BuildStatus.parse(job.status).statusName}",
+                defaultMessage = job.status,
+                language = language
+            )
         }
         info.pendingItems?.forEach { item ->
-            item.itemTypeDesc = i18n("pendingItemType.${item.itemType.displayName}")
-            item.handlerDesc = item.handlerDescCode?.let { i18n(it) }
+            item.itemTypeDesc = i18n("pendingItemType.${item.itemType.displayName}", language = language)
+            item.handlerDesc = item.handlerDescCode?.let { i18n(it, language = language) }
         }
     }
 
-    private fun resolveQueue(context: BuildRunningContext): BuildRunningInfo {
-        val queueDetail = resolveQueueDetail(context)
+    private fun resolveQueue(context: BuildRunningContext, language: String): BuildRunningInfo {
+        val queueDetail = resolveQueueDetail(context, language)
         // 仅当确实配置了并发组且组内有构建在占用时才算并发组排队；
         // 流水线串行(SINGLE_LOCK)导致的排队同样会有"占用中"的构建，但成因不同，不能混为一谈
         val runningType = if (queueDetail?.concurrencyGroup != null && queueDetail.occupyingCount > 0) {
@@ -178,7 +218,7 @@ class BuildRunningInfoResolver @Autowired constructor(
             queueTime = context.queueTime,
             waitingTime = System.currentTimeMillis() - context.queueTime,
             triggerUser = context.buildInfo.triggerUser,
-            triggerDesc = context.triggerDesc,
+            triggerDesc = resolveTriggerDesc(context, language),
             queueDetail = queueDetail
         )
     }
@@ -187,14 +227,14 @@ class BuildRunningInfoResolver @Autowired constructor(
      * 解析排队详情。分两种排队口径，与 `RunLockInterceptor` 的判定保持一致：
      * 配置了并发组时按并发组统计（可跨流水线），否则按当前流水线统计。
      */
-    private fun resolveQueueDetail(context: BuildRunningContext): BuildQueueDetail? {
+    private fun resolveQueueDetail(context: BuildRunningContext, language: String): BuildQueueDetail? {
         val buildInfo = context.buildInfo
         val concurrencyGroup = buildInfo.concurrencyGroup?.takeIf { it.isNotBlank() }
         val relatedBuilds = if (concurrencyGroup != null) {
             loadConcurrencyGroupBuilds(buildInfo.projectId, concurrencyGroup)
         } else {
             loadPipelineBuilds(buildInfo.projectId, buildInfo.pipelineId)
-        }
+        }.distinctBy { it.buildId }
         if (relatedBuilds.isEmpty()) return null
 
         // 出队顺序以入队时间为准（与 PipelineBuildDao.getOneConcurrencyQueueBuild 的排序口径一致），
@@ -202,60 +242,75 @@ class BuildRunningInfoResolver @Autowired constructor(
         val queued = relatedBuilds
             .filter { it.status in QUEUE_STATUS_SET }
             .sortedWith(compareBy({ it.queueTime }, { it.buildNum }))
-        val running = relatedBuilds.filter { it.status == BuildStatus.RUNNING }
+        val occupying = relatedBuilds
+            .filter { it.status in OCCUPYING_STATUS_SET }
+            .sortedWith(compareBy({ it.startTime ?: Long.MAX_VALUE }, { it.buildNum }))
 
         val selfIndex = queued.indexOfFirst { it.buildId == buildInfo.buildId }
         val ahead = if (selfIndex > 0) queued.subList(0, selfIndex) else emptyList()
         val shownAhead = ahead.take(RELATED_BUILD_MAX_SIZE)
-        val shownRunning = running.take(RELATED_BUILD_MAX_SIZE)
+        val shownOccupying = occupying.take(RELATED_BUILD_MAX_SIZE)
         // 只为真正要展示的构建补全流水线名与触发描述，超出上限的部分只参与计数
-        val pipelineNames = loadPipelineNames(buildInfo.projectId, shownAhead + shownRunning)
-        val language = requestLanguage()
+        val pipelineNames = loadPipelineNames(buildInfo.projectId, shownAhead + shownOccupying)
 
         return BuildQueueDetail(
             // 定位不到自身时（并发组配置刚变更等边界情况）不编造位置，返回0由前端隐藏该项
             queuePosition = if (selfIndex < 0) 0 else selfIndex + 1,
             concurrencyGroup = concurrencyGroup
         ).apply {
-            occupyingBuilds = shownRunning.map { toBrief(it, pipelineNames, language) }.takeIf { it.isNotEmpty() }
-            occupyingCount = running.size
+            occupyingBuilds = shownOccupying.map { toBrief(it, pipelineNames, language) }.takeIf { it.isNotEmpty() }
+            occupyingCount = occupying.size
             aheadBuilds = shownAhead.map { toBrief(it, pipelineNames, language) }.takeIf { it.isNotEmpty() }
             aheadCount = ahead.size
+            maxConcurrency = resolveMaxConcurrency(buildInfo)
         }
     }
 
     /**
-     * 加载并发组内排队中与运行中的构建。
-     *
-     * 并发组维度的查询只返回 (pipelineId, buildId)，需再回表补全展示所需字段；
-     * 一次性把排队态和运行态一起查出来，避免分两次扫描。
+     * 加载并发组/流水线内排队中与占用中的构建，只查展示列。
      */
-    private fun loadConcurrencyGroupBuilds(projectId: String, concurrencyGroup: String): List<BuildInfo> {
-        val buildIds = pipelineBuildDao.getBuildTasksByConcurrencyGroup(
+    private fun loadConcurrencyGroupBuilds(projectId: String, concurrencyGroup: String): List<QueueRelatedBuild> {
+        return pipelineBuildDao.listQueueRelatedBuilds(
             dslContext = dslContext,
             projectId = projectId,
-            concurrencyGroup = concurrencyGroup,
-            statusSet = QUEUE_STATUS_SET + BuildStatus.RUNNING
-        ).map { it.value2() }
-        if (buildIds.isEmpty()) return emptyList()
-        return pipelineBuildDao.listBuildInfoByBuildIds(
-            dslContext = dslContext,
-            buildIds = buildIds,
-            projectId = projectId
+            statusSet = QUEUE_STATUS_SET + OCCUPYING_STATUS_SET,
+            concurrencyGroup = concurrencyGroup
         )
     }
 
-    private fun loadPipelineBuilds(projectId: String, pipelineId: String): List<BuildInfo> {
-        return pipelineBuildDao.getBuildTasksByStatus(
+    private fun loadPipelineBuilds(projectId: String, pipelineId: String): List<QueueRelatedBuild> {
+        return pipelineBuildDao.listQueueRelatedBuilds(
             dslContext = dslContext,
             projectId = projectId,
-            pipelineId = pipelineId,
-            statusSet = (QUEUE_STATUS_SET + BuildStatus.RUNNING).toSet()
+            statusSet = QUEUE_STATUS_SET + OCCUPYING_STATUS_SET,
+            pipelineId = pipelineId
         )
+    }
+
+    /**
+     * 最大可并发数与引擎启动判定对齐：单锁/并发组锁为 1，可并发运行为设置值。
+     */
+    private fun resolveMaxConcurrency(buildInfo: BuildInfo): Int? {
+        return try {
+            val setting = pipelineRepositoryService.getSettingByPipelineVersion(
+                projectId = buildInfo.projectId,
+                pipelineId = buildInfo.pipelineId,
+                pipelineVersion = buildInfo.version
+            ) ?: return null
+            when (setting.runLockType) {
+                PipelineRunLockType.SINGLE, PipelineRunLockType.SINGLE_LOCK, PipelineRunLockType.GROUP_LOCK -> 1
+                PipelineRunLockType.MULTIPLE ->
+                    setting.maxConRunningQueueSize ?: PIPELINE_SETTING_MAX_CON_QUEUE_SIZE_MAX
+                else -> null
+            }
+        } catch (ignored: Throwable) {
+            LOG.warn("BUILD_RUNNING_INFO|${buildInfo.buildId}|load maxConcurrency failed", ignored)
+            null
+        }
     }
 
     /** 并发组可跨流水线，需批量补全流水线名称用于列表展示 */
-    private fun loadPipelineNames(projectId: String, builds: List<BuildInfo>): Map<String, String> {
+    private fun loadPipelineNames(projectId: String, builds: List<QueueRelatedBuild>): Map<String, String> {
         val pipelineIds = builds.map { it.pipelineId }.toSet()
         if (pipelineIds.isEmpty()) return emptyMap()
         return try {
@@ -267,27 +322,31 @@ class BuildRunningInfoResolver @Autowired constructor(
     }
 
     private fun toBrief(
-        buildInfo: BuildInfo,
+        build: QueueRelatedBuild,
         pipelineNames: Map<String, String>,
         language: String
     ): RelatedBuildBrief {
         val now = System.currentTimeMillis()
-        // 运行中的算已运行时长，排队中的算已等待时长
-        val costTime = if (buildInfo.status == BuildStatus.RUNNING) {
-            buildInfo.startTime?.let { now - it }
+        val costTime = if (build.status in OCCUPYING_STATUS_SET) {
+            build.startTime?.let { now - it }
         } else {
-            now - buildInfo.queueTime
+            now - build.queueTime
         }
         return RelatedBuildBrief(
-            projectId = buildInfo.projectId,
-            pipelineId = buildInfo.pipelineId,
-            pipelineName = pipelineNames[buildInfo.pipelineId],
-            buildId = buildInfo.buildId,
-            buildNum = buildInfo.buildNum,
-            triggerUser = buildInfo.triggerUser,
-            triggerDesc = readableStartType(buildInfo, language),
-            buildMsg = buildInfo.buildMsg,
-            status = buildInfo.status.name,
+            projectId = build.projectId,
+            pipelineId = build.pipelineId,
+            pipelineName = pipelineNames[build.pipelineId],
+            buildId = build.buildId,
+            buildNum = build.buildNum,
+            triggerUser = build.triggerUser,
+            triggerDesc = readableStartType(
+                trigger = build.trigger,
+                channelCode = build.channelCode,
+                webhookType = build.webhookType,
+                language = language
+            ),
+            buildMsg = build.buildMsg,
+            status = build.status.name,
             costTime = costTime?.takeIf { it >= 0 }
         )
     }
@@ -295,15 +354,52 @@ class BuildRunningInfoResolver @Autowired constructor(
     /** 请求方语言只需解析一次，避免为列表中的每个构建重复查询用户语言设置 */
     private fun requestLanguage(): String = I18nUtil.getLanguage(I18nUtil.getRequestUserId())
 
-    private fun readableStartType(buildInfo: BuildInfo, language: String): String? = try {
-        StartType.toReadableString(buildInfo.trigger, buildInfo.channelCode, language)
-    } catch (ignored: Throwable) {
-        buildInfo.trigger
+    /**
+     * 卡片标题旁的触发方式：手动/定时/流水线补全为「手动触发」等完整文案；
+     * Webhook 等仍用读取侧已解析的 triggerDesc，避免丢掉 Git 事件细节。
+     */
+    private fun resolveTriggerDesc(context: BuildRunningContext, language: String): String? {
+        return when (StartType.toStartType(context.buildInfo.trigger)) {
+            StartType.MANUAL, StartType.TIME_TRIGGER, StartType.PIPELINE ->
+                readableStartType(
+                    trigger = context.buildInfo.trigger,
+                    channelCode = context.buildInfo.channelCode,
+                    webhookType = context.buildInfo.webhookType,
+                    language = language
+                )
+            else -> context.triggerDesc ?: readableStartType(
+                trigger = context.buildInfo.trigger,
+                channelCode = context.buildInfo.channelCode,
+                webhookType = context.buildInfo.webhookType,
+                language = language
+            )
+        }
     }
 
-    private fun resolveRunning(context: BuildRunningContext): BuildRunningInfo {
+    private fun readableStartType(
+        trigger: String,
+        channelCode: ChannelCode?,
+        webhookType: String?,
+        language: String
+    ): String? = try {
+        when (StartType.toStartType(trigger)) {
+            StartType.MANUAL -> i18n(ProcessMessageCode.BK_BUILD_RUNNING_TRIGGER_MANUAL, language = language)
+            StartType.TIME_TRIGGER -> i18n(ProcessMessageCode.BK_BUILD_RUNNING_TRIGGER_TIMER, language = language)
+            StartType.PIPELINE -> i18n(ProcessMessageCode.BK_BUILD_RUNNING_TRIGGER_PIPELINE, language = language)
+            else -> StartType.toReadableString(
+                type = trigger,
+                channelCode = channelCode,
+                language = language,
+                webhookType = webhookType
+            )
+        }
+    } catch (ignored: Throwable) {
+        trigger
+    }
+
+    private fun resolveRunning(context: BuildRunningContext, language: String): BuildRunningInfo {
         val index = EndPositionUtils.buildPositionIndex(context.model)
-        val waitingJobs = collectWaitingJobs(context, index)
+        val waitingJobs = collectWaitingJobs(context, index, language)
         val pendingItems = collectPendingItems(context, index)
         val runningType = if (waitingJobs.isNotEmpty()) {
             BuildRunningType.RUNNING_JOB_WAITING
@@ -312,38 +408,42 @@ class BuildRunningInfoResolver @Autowired constructor(
         }
         return BuildRunningInfo(
             runningType = runningType,
-            currentPhase = resolveCurrentPhase(context.model, waitingJobs, pendingItems),
+            currentPhase = resolveCurrentPhase(context.model, waitingJobs, language),
             queueTime = context.queueTime,
             startTime = context.startTime,
             runningTime = context.startTime?.let { System.currentTimeMillis() - it },
             triggerUser = context.buildInfo.triggerUser,
-            triggerDesc = context.triggerDesc
-        ).withWaitingJobs(waitingJobs).withPendingItems(pendingItems)
+            triggerDesc = resolveTriggerDesc(context, language)
+        ).withWaitingJobs(waitingJobs.take(LIST_MAX_SIZE), waitingJobs.size)
+            .withPendingItems(pendingItems.take(LIST_MAX_SIZE), pendingItems.size)
     }
 
     /**
-     * 当前阶段描述：优先展示特殊场景描述，不是特殊场景则默认展示正在推进的 Stage 名。
+     * 当前阶段描述：有 Job 在排队时展示「Job 正在排队」；待人工处理是独立区块，
+     * 不能盖掉真正在推进的 Stage 名，否则「执行中-待处理」卡片会丢掉当前阶段。
      */
     private fun resolveCurrentPhase(
         model: Model,
         waitingJobs: List<WaitingJobInfo>,
-        pendingItems: List<PendingManualItem>
+        language: String
     ): String? {
-        return when {
-            waitingJobs.isNotEmpty() -> i18n(ProcessMessageCode.BK_BUILD_RUNNING_JOB_QUEUING)
-            pendingItems.isNotEmpty() -> i18n(ProcessMessageCode.BK_BUILD_RUNNING_PENDING_MANUAL)
-            else -> resolveCurrentStageName(model)
+        return if (waitingJobs.isNotEmpty()) {
+            i18n(ProcessMessageCode.BK_BUILD_RUNNING_JOB_QUEUING, language = language)
+        } else {
+            resolveCurrentStageName(model)
         }
     }
 
     /**
      * 取第一个尚未结束的 Stage 名作为当前阶段。
+     * 当前 Stage 没有名字时返回 null，不能跳过它去取后面的 Stage，否则会把尚未执行的阶段当成当前阶段。
      */
     private fun resolveCurrentStageName(model: Model): String? {
         model.stages.forEachIndexed { index, stage ->
             if (index == 0) return@forEachIndexed
-            val stageName = stage.name?.takeIf { it.isNotBlank() } ?: return@forEachIndexed
-            if (!isStageSettled(BuildStatus.parse(stage.status))) return stageName
+            if (!isStageSettled(BuildStatus.parse(stage.status))) {
+                return stage.name?.takeIf { it.isNotBlank() }
+            }
         }
         return null
     }
@@ -361,7 +461,11 @@ class BuildRunningInfoResolver @Autowired constructor(
      * 以引擎容器表为准而非 Model：互斥组名在运行时才解析（`runtimeMutexGroup`），只存在于引擎侧；
      * 排队时长则取自构建记录的排队时间戳。
      */
-    private fun collectWaitingJobs(context: BuildRunningContext, index: ModelPositionIndex): List<WaitingJobInfo> {
+    private fun collectWaitingJobs(
+        context: BuildRunningContext,
+        index: ModelPositionIndex,
+        language: String
+    ): List<WaitingJobInfo> {
         val buildInfo = context.buildInfo
         val containers = pipelineContainerService.listContainers(
             projectId = buildInfo.projectId,
@@ -370,47 +474,59 @@ class BuildRunningInfoResolver @Autowired constructor(
         )
         // 绝大多数运行中的构建没有等待的 Job，先做一次廉价判断，避免为其多查一次记录表
         val candidates = containers.filter {
-            it.status == BuildStatus.DEPENDENT_WAITING ||
-                it.status == BuildStatus.QUEUE ||
-                it.status == BuildStatus.PREPARE_ENV
+            // 矩阵分组容器只是子容器占位，真实排队都在子 Job 上
+            it.matrixGroupFlag != true && (
+                it.status == BuildStatus.DEPENDENT_WAITING ||
+                    it.status == BuildStatus.QUEUE ||
+                    it.status == BuildStatus.PREPARE_ENV
+                )
         }
         if (candidates.isEmpty()) return emptyList()
 
-        val queueTimestamps = loadQueueTimestamps(context)
+        val queueTimestamps = loadQueueTimestamps(context, candidates.map { it.containerId }.toSet())
         val now = System.currentTimeMillis()
+        val containersByJobId = containers.mapNotNull { container ->
+            container.jobId?.takeIf { it.isNotBlank() }?.let { it to container }
+        }.toMap()
         return candidates.mapNotNull { container ->
             buildWaitingJob(
                 context = context,
                 container = container,
                 index = index,
+                containersByJobId = containersByJobId,
                 activeQueueStamps = queueTimestamps[container.containerId],
-                now = now
+                now = now,
+                language = language
             )
-        }.take(LIST_MAX_SIZE)
+        }
     }
 
     /**
-     * 加载各容器的排队时间戳。
+     * 加载各容器的排队/准备环境时间戳。
      *
-     * 时间戳集合以 [BuildTimestampType.containerCheckQueue] 为准——这是引擎侧对
-     * 「什么情况算 Job 在排队」的权威定义，与之对齐可保证运行态展示和引擎判定始终一致。
-     *
-     * 这也是区分「资源排队」与「正常准备环境」的唯一可靠依据：二者的容器状态同为 PREPARE_ENV，
-     * 只有确实进入了构建资源队列才会写入排队时间戳。若仅按状态判定，
-     * 每个构建在正常拉起构建机的几秒内都会被误报成「资源排队」。
+     * [BuildTimestampType.containerCheckQueue] 是引擎侧对「什么情况算 Job 在排队」的权威定义。
+     * JOB_THIRD_PARTY_QUEUE 表示已进入构建资源队列；JOB_CONTAINER_STARTUP 在每次准备环境时都会写入，
+     * 只用于计算已等待时长，不能单独当成资源排队证据。
      */
-    private fun loadQueueTimestamps(context: BuildRunningContext): Map<String, Map<BuildTimestampType, Long>> {
+    private fun loadQueueTimestamps(
+        context: BuildRunningContext,
+        containerIds: Set<String>
+    ): Map<String, Map<BuildTimestampType, Long>> {
+        if (containerIds.isEmpty()) return emptyMap()
         return try {
             recordContainerDao.getRecords(
                 dslContext = dslContext,
                 projectId = context.buildInfo.projectId,
                 pipelineId = context.buildInfo.pipelineId,
                 buildId = context.buildInfo.buildId,
-                executeCount = context.executeCount
+                executeCount = context.executeCount,
+                containerIds = containerIds
             ).associate { record ->
-                // 只保留仍在进行中的排队时间戳（endTime 为空表示尚未出队）
+                // 只保留仍在进行中的时间戳（endTime 为空表示尚未结束）
                 record.containerId to record.timestamps
-                    .filterKeys { it.containerCheckQueue() }
+                    .filterKeys {
+                        it.containerCheckQueue() || it == BuildTimestampType.JOB_CONTAINER_STARTUP
+                    }
                     .mapNotNull { (type, stamp) ->
                         if (stamp.endTime == null && stamp.startTime != null) type to stamp.startTime!! else null
                     }.toMap()
@@ -425,15 +541,29 @@ class BuildRunningInfoResolver @Autowired constructor(
         context: BuildRunningContext,
         container: PipelineBuildContainer,
         index: ModelPositionIndex,
+        containersByJobId: Map<String, PipelineBuildContainer>,
         activeQueueStamps: Map<BuildTimestampType, Long>?,
-        now: Long
+        now: Long,
+        language: String
     ): WaitingJobInfo? {
         val location = index.locateContainer(container.containerId) ?: return null
         val mutexGroup = container.controlOption.mutexGroup
-        val waitType = resolveWaitType(container, mutexGroup, activeQueueStamps) ?: return null
-        val queueStartTime = activeQueueStamps?.values?.minOrNull()
+        val decision = resolveWaitType(
+            container = container,
+            mutexGroup = mutexGroup,
+            activeQueueStamps = activeQueueStamps,
+            containersByJobId = containersByJobId,
+            now = now,
+            language = language
+        ) ?: return null
+        val queueStartTime = activeQueueStamps
+            ?.filterKeys { it.containerCheckQueue() }
+            ?.values
+            ?.minOrNull()
+            ?: activeQueueStamps?.get(BuildTimestampType.JOB_CONTAINER_STARTUP)
+            ?: container.startTime?.timestampmilli()
         return WaitingJobInfo(
-            waitType = waitType,
+            waitType = decision.waitType,
             position = location.position,
             componentPath = location.componentPath,
             status = container.status.name,
@@ -442,8 +572,9 @@ class BuildRunningInfoResolver @Autowired constructor(
             containerHashId = container.containerHashId ?: location.container.containerHashId,
             matrixFlag = (container.matrixGroupFlag == true || location.matrixFlag).takeIf { it },
             mutexGroup = mutexGroup?.fetchRuntimeMutexGroup()?.takeIf { it.isNotBlank() },
+            waitReason = decision.waitReason,
             waitingTime = queueStartTime?.let { now - it },
-            dependOnJobs = if (waitType == JobWaitType.DEPENDENT) {
+            dependOnJobs = if (decision.waitType == JobWaitType.DEPENDENT) {
                 resolveDependOnJobs(context, container, index)
             } else null
         )
@@ -451,28 +582,82 @@ class BuildRunningInfoResolver @Autowired constructor(
 
     /**
      * 判定 Job 的等待类型，判定顺序由确定到模糊：
-     * 依赖等待有独立状态最明确；互斥其次（有互斥组配置且在排队）；
-     * 等待构建资源最模糊，必须有排队时间戳佐证，否则宁可不报。
+     * 依赖等待有独立状态最明确；互斥组与构建机复用互斥其次；
+     * 等待构建资源最模糊，有排队时间戳立即报，否则仅在准备环境超过宽限期后才报。
      */
     private fun resolveWaitType(
         container: PipelineBuildContainer,
         mutexGroup: MutexGroup?,
-        activeQueueStamps: Map<BuildTimestampType, Long>?
-    ): JobWaitType? {
-        if (container.status == BuildStatus.DEPENDENT_WAITING) return JobWaitType.DEPENDENT
+        activeQueueStamps: Map<BuildTimestampType, Long>?,
+        containersByJobId: Map<String, PipelineBuildContainer>,
+        now: Long,
+        language: String
+    ): WaitDecision? {
+        if (container.status == BuildStatus.DEPENDENT_WAITING) {
+            return WaitDecision(JobWaitType.DEPENDENT)
+        }
         val queueTypes = activeQueueStamps?.keys.orEmpty()
         if (queueTypes.any { it in MUTEX_QUEUE_TYPES } ||
             (container.status == BuildStatus.QUEUE && mutexGroup?.enable == true)
         ) {
-            return JobWaitType.MUTEX
+            return WaitDecision(JobWaitType.MUTEX)
         }
+        resolveAgentReuseWait(container, containersByJobId, language)?.let { return it }
         // 互斥之外的排队时间戳一律归为等待构建资源，这里刻意不枚举具体调度方式：
-        // 候选集已由 containerCheckQueue() 圈定(见 loadQueueTimestamps)，将来新增调度方式的
-        // 排队时间戳只要纳入该判定，此处即可自动识别，不必再逐个补充调度类型
-        if (queueTypes.any { it !in MUTEX_QUEUE_TYPES }) {
-            return JobWaitType.RESOURCE
+        // 候选集已由 containerCheckQueue() 圈定，将来新增调度方式的排队时间戳
+        // 只要纳入该判定，此处即可自动识别
+        if (queueTypes.any { it !in MUTEX_QUEUE_TYPES && it != BuildTimestampType.JOB_CONTAINER_STARTUP }) {
+            return WaitDecision(JobWaitType.RESOURCE)
+        }
+        // QUEUE 长时间停住且没有互斥时间戳时，按资源排队展示，避免「有排队的 Job」漏报
+        if ((container.status == BuildStatus.PREPARE_ENV || container.status == BuildStatus.QUEUE) &&
+            prepareElapsed(container, activeQueueStamps, now) >= RESOURCE_QUEUE_GRACE_MS
+        ) {
+            return WaitDecision(JobWaitType.RESOURCE)
         }
         return null
+    }
+
+    /**
+     * 构建机复用互斥：复用 Job 在 dispatch 侧等待被依赖节点选出具体 agent。
+     * 该路径不走引擎锁、不写 JOB_AGENT_REUSE_MUTEX_QUEUE，只能从复用配置与被依赖 Job 状态反推。
+     */
+    private fun resolveAgentReuseWait(
+        container: PipelineBuildContainer,
+        containersByJobId: Map<String, PipelineBuildContainer>,
+        language: String
+    ): WaitDecision? {
+        if (container.status != BuildStatus.PREPARE_ENV) return null
+        val reuseJobId = container.controlOption.agentReuseMutex
+            ?.reUseJobId?.takeIf { it.isNotBlank() } ?: return null
+        val reused = containersByJobId[reuseJobId]
+        // 被依赖 Job 尚未进入 RUNNING（仍在排队/准备环境/依赖等待）时，复用 Job 无法拿到节点
+        val waitingForDispatch = reused == null ||
+            reused.status == BuildStatus.QUEUE ||
+            reused.status == BuildStatus.PREPARE_ENV ||
+            reused.status == BuildStatus.DEPENDENT_WAITING
+        if (!waitingForDispatch) return null
+        return WaitDecision(
+            waitType = JobWaitType.MUTEX,
+            waitReason = i18n(
+                messageCode = ProcessMessageCode.BK_BUILD_RUNNING_AGENT_REUSE_WAIT,
+                defaultMessage = "构建机复用互斥，等待被依赖的节点 $reuseJobId " +
+                    "调度到具体节点后再进行复用调度",
+                params = arrayOf(reuseJobId),
+                language = language
+            )
+        )
+    }
+
+    private fun prepareElapsed(
+        container: PipelineBuildContainer,
+        activeQueueStamps: Map<BuildTimestampType, Long>?,
+        now: Long
+    ): Long {
+        val start = activeQueueStamps?.get(BuildTimestampType.JOB_CONTAINER_STARTUP)
+            ?: container.startTime?.timestampmilli()
+            ?: return 0L
+        return (now - start).coerceAtLeast(0L)
     }
 
     /**
@@ -521,7 +706,7 @@ class BuildRunningInfoResolver @Autowired constructor(
                 buildTaskPendingItem(context, element, location)?.let { items.add(it) }
             }
         }
-        return items.take(LIST_MAX_SIZE)
+        return items
     }
 
     /**
@@ -549,7 +734,7 @@ class BuildRunningInfoResolver @Autowired constructor(
     }
 
     /**
-     * 任务级待处理项：执行前暂停、人工审核、插件级质量红线拦截。
+     * 任务级待处理项：执行前暂停、人工审核、插件级质量红线审核。
      */
     private fun buildTaskPendingItem(
         context: BuildRunningContext,
@@ -598,7 +783,8 @@ class BuildRunningInfoResolver @Autowired constructor(
     ): List<String>? {
         val handlers = when (itemType) {
             PendingItemType.TASK_REVIEW -> reviewUsersOf(element)
-            PendingItemType.TASK_QUALITY_GATE -> resolveQualityAuditUsers(context, element)
+            PendingItemType.TASK_QUALITY_GATE ->
+                qualityReviewUsersOf(element) ?: resolveQualityAuditUsers(context, element)
             else -> null
         }
         return handlers?.filter { it.isNotBlank() }?.distinct()?.takeIf { it.isNotEmpty() }
@@ -611,8 +797,16 @@ class BuildRunningInfoResolver @Autowired constructor(
         else -> null
     }
 
+    /** 记录合并后的 Model / 任务变量里已经带了把关人时直接用，避免再打一次质量服务。 */
+    private fun qualityReviewUsersOf(element: Element): List<String>? = when (element) {
+        is QualityGateInElement -> element.reviewUsers?.toList()
+        is QualityGateOutElement -> element.reviewUsers?.toList()
+        is MatrixStatusElement -> element.reviewUsers
+        else -> null
+    }?.map { it.trim() }?.filter { it.isNotBlank() }?.distinct()?.takeIf { it.isNotEmpty() }
+
     /**
-     * 质量红线的把关人配置在 quality 模块的规则上，Model 中没有，需跨模块查询。
+     * 质量红线的把关人配置在 quality 模块的规则上，Model 中没有时才跨模块查询。
      * 仅对确实处于待把关状态的红线插件发起查询，正常构建不会触发。
      */
     private fun resolveQualityAuditUsers(context: BuildRunningContext, element: Element): List<String>? {
@@ -647,6 +841,15 @@ class BuildRunningInfoResolver @Autowired constructor(
         else -> false
     }
 
-    private fun i18n(messageCode: String, defaultMessage: String = messageCode): String =
-        I18nUtil.getCodeLanMessage(messageCode = messageCode, defaultMessage = defaultMessage)
+    private fun i18n(
+        messageCode: String,
+        defaultMessage: String = messageCode,
+        params: Array<String>? = null,
+        language: String? = null
+    ): String = I18nUtil.getCodeLanMessage(
+        messageCode = messageCode,
+        defaultMessage = defaultMessage,
+        params = params,
+        language = language
+    )
 }

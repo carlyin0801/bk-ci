@@ -1809,17 +1809,20 @@ class PipelineBuildFacadeService(
             )
             buildRecord.cancelBuildPerm = cancelBuildPerm
         }
-        // 运行态详情随时间实时变化，只能在读取时现算；已结束的构建由 buildEndInfo 表达，不会进入解析
-        buildRecord.buildRunningInfo = buildRunningInfoResolver.resolve(
-            BuildRunningContext(
-                buildInfo = buildInfo,
-                model = buildRecord.model,
-                executeCount = buildRecord.executeCount,
-                queueTime = buildRecord.queueTime,
-                startTime = buildRecord.startTime,
-                triggerDesc = buildRecord.trigger
+        // 运行态与终态卡片互斥。阶段准入挂起时记录表会先变成 STAGE_SUCCESS 并合成「审核中」，
+        // 历史表可能仍短暂停留在 RUNNING；此时再算运行态会把两张卡片叠在一起。
+        if (buildRecord.buildEndInfo == null) {
+            buildRecord.buildRunningInfo = buildRunningInfoResolver.resolve(
+                BuildRunningContext(
+                    buildInfo = buildInfo,
+                    model = buildRecord.model,
+                    executeCount = buildRecord.executeCount,
+                    queueTime = buildRecord.queueTime,
+                    startTime = buildRecord.startTime,
+                    triggerDesc = buildRecord.trigger
+                )
             )
-        )
+        }
         return buildRecord
     }
 

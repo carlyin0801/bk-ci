@@ -971,6 +971,14 @@ object ProcessMessageCode {
     const val BK_BUILD_END_FAIL_SUB_PIPELINE = "bkBuildEndFailSubPipeline"
     // 已启用 Fastkill，因「{0}」失败被终止
     const val BK_BUILD_END_FAIL_FAST_KILL = "bkBuildEndFailFastKill"
+    // 已启用 Fastkill，因同阶段其他 Job 失败被终止(定位不到引发终止的Job时使用)
+    const val BK_BUILD_END_FAIL_FAST_KILL_STAGE = "bkBuildEndFailFastKillStage"
+    // Job 互斥组[{0}]未开启排队，被其他构建占用后直接终止
+    const val BK_BUILD_END_FAIL_MUTEX_QUEUE_DISABLED = "bkBuildEndFailMutexQueueDisabled"
+    // Job 互斥组[{0}]排队失败(排队超时或队列已满)，已被终止
+    const val BK_BUILD_END_FAIL_MUTEX_QUEUE = "bkBuildEndFailMutexQueue"
+    // Job 异常结束，未产生插件错误信息（Job 失败但归不出具体成因时的兜底文案）
+    const val BK_BUILD_END_FAIL_JOB_ABORTED = "bkBuildEndFailJobAborted"
     // 质量红线未达标(无指标详情时的兜底文案)
     const val BK_BUILD_END_FAIL_QUALITY = "bkBuildEndFailQuality"
     // {0} 超过阈值 {1}（阈值为上限的指标，如代码坏味道数）
@@ -991,4 +999,12 @@ object ProcessMessageCode {
     const val BK_BUILD_RUNNING_JOB_QUEUING = "bkBuildRunningJobQueuing"
     // 无Job在运行且存在待人工处理项时的当前阶段提示
     const val BK_BUILD_RUNNING_PENDING_MANUAL = "bkBuildRunningPendingManual"
+    // 构建机复用互斥，等待被依赖的节点 {0} 调度到具体节点后再进行复用调度
+    const val BK_BUILD_RUNNING_AGENT_REUSE_WAIT = "bkBuildRunningAgentReuseWait"
+    // 手动触发（运行态卡片补全 START_TYPE_MANUAL 的「手动」）
+    const val BK_BUILD_RUNNING_TRIGGER_MANUAL = "bkBuildRunningTriggerManual"
+    // 定时触发
+    const val BK_BUILD_RUNNING_TRIGGER_TIMER = "bkBuildRunningTriggerTimer"
+    // 流水线触发
+    const val BK_BUILD_RUNNING_TRIGGER_PIPELINE = "bkBuildRunningTriggerPipeline"
 }

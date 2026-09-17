@@ -79,18 +79,18 @@ data class BuildRunningInfo(
      * 统一设置等待中的Job列表，保证列表与计数不会出现不一致。
      * 空列表时置空，避免前端渲染出空的区块。
      */
-    fun withWaitingJobs(jobs: List<WaitingJobInfo>): BuildRunningInfo {
+    fun withWaitingJobs(jobs: List<WaitingJobInfo>, totalCount: Int = jobs.size): BuildRunningInfo {
         waitingJobs = jobs.takeIf { it.isNotEmpty() }
-        waitingJobCount = jobs.size
+        waitingJobCount = totalCount
         return this
     }
 
     /**
      * 统一设置待人工处理项列表，保证列表与计数不会出现不一致。
      */
-    fun withPendingItems(items: List<PendingManualItem>): BuildRunningInfo {
+    fun withPendingItems(items: List<PendingManualItem>, totalCount: Int = items.size): BuildRunningInfo {
         pendingItems = items.takeIf { it.isNotEmpty() }
-        pendingItemCount = items.size
+        pendingItemCount = totalCount
         return this
     }
 }
@@ -107,6 +107,8 @@ data class BuildQueueDetail(
     val queuePosition: Int,
     @get:Schema(title = "并发组名称(未配置并发组时为空)", required = false)
     val concurrencyGroup: String? = null,
+    @get:Schema(title = "当前生效的最大可并发数(与流水线执行设置一致)", required = false)
+    var maxConcurrency: Int? = null,
     @get:Schema(title = "占用中的运行构建列表", required = false)
     var occupyingBuilds: List<RelatedBuildBrief>? = null,
     @get:Schema(title = "占用中的运行构建总数", required = false)

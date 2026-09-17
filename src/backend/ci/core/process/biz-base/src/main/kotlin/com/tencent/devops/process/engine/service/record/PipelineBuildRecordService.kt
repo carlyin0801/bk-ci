@@ -529,15 +529,17 @@ class PipelineBuildRecordService @Autowired constructor(
      * 普通成功的构建不在结束时落库终态详情，避免每次构建成功都额外写一次记录表；
      * 读取时按构建状态合成，保证前端对所有终态都能拿到统一结构。
      * 阶段准入被驳回等有额外信息的成功场景已在构建结束时落库，不会走到这里。
+     * RUNNING 期间的暂停/审核/红线归运行态 pendingItems，这里只处理 STAGE_SUCCESS。
      */
     private fun synthesizeSuccessEndInfo(status: BuildStatus, model: Model, buildEndTime: Long?): BuildEndInfo? {
-        // 阶段准入等待审核时构建并未结束，只是挂起为阶段成功，需与真正的阶段成功区分开。
-        // 挂起是先写审核记录、后改构建状态（见 PipelineStageService.pauseStage），推送恰好赶在
-        // 状态改写前时状态还是运行中，因此只要构建未结束就以模型里的阶段审核态为准，不依赖状态判定
-        if (!status.isFinish()) {
-            synthesizeStageReviewingEndInfo(model)?.let { return it }
+        if (status == BuildStatus.STAGE_SUCCESS) {
+            // 阶段准入挂起后构建状态才是 STAGE_SUCCESS，由终态「审核中」表达。
+            return synthesizeStageReviewingEndInfo(model) ?: successEndInfo(buildEndTime)
         }
-        return if (status == BuildStatus.STAGE_SUCCESS || status.isSuccess()) {
+        if (!status.isFinish()) {
+            return null
+        }
+        return if (status.isSuccess()) {
             successEndInfo(buildEndTime)
         } else {
             null

@@ -59,6 +59,8 @@ data class WaitingJobInfo(
     val matrixFlag: Boolean? = null,
     @get:Schema(title = "互斥组名称(互斥排队时填充)", required = false)
     val mutexGroup: String? = null,
+    @get:Schema(title = "等待原因(如构建机复用互斥等待被依赖节点调度)", required = false)
+    var waitReason: String? = null,
     @get:Schema(title = "已等待时长(毫秒)", required = false)
     val waitingTime: Long? = null,
     @get:Schema(title = "依赖Job导航信息(依赖等待时填充)", required = false)
@@ -71,7 +73,8 @@ data class WaitingJobInfo(
  * 三者在引擎中的表现形态完全不同，不能仅凭 Job 状态区分：
  * - [MUTEX] 与 [DEPENDENT] 的容器状态分别是 `QUEUE` 和 `DEPENDENT_WAITING`
  * - [RESOURCE] 的容器状态是 `PREPARE_ENV`，与「正常准备环境」共用同一状态，
- *   需再结合第三方构建机资源排队时间戳才能确认确实在排队
+ *   有第三方资源排队时间戳时立即确认；否则仅在准备环境持续超过宽限期后才上报，
+ *   避免把正常拉起构建机的几秒误报成资源排队
  */
 enum class JobWaitType(val displayName: String) {
     // 互斥组被占用，等待抢锁
