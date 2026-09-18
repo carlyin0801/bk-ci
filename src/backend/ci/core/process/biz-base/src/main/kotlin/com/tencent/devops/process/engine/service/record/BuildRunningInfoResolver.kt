@@ -458,8 +458,9 @@ class BuildRunningInfoResolver @Autowired constructor(
     /**
      * 收集等待中的 Job。
      *
-     * 以引擎容器表为准而非 Model：互斥组名在运行时才解析（`runtimeMutexGroup`），只存在于引擎侧；
-     * 排队时长则取自构建记录的排队时间戳。
+     * 互斥组名在运行时才解析（`runtimeMutexGroup`），只存在于引擎侧，所以仍遍历引擎容器表；
+     * 是否「还在等」则以页面状态为准。startVM 之后引擎容器会先变成 RUNNING，
+     * 记录表/Model 仍保持 PREPARE_ENV，只看引擎状态会漏掉构建机复用互斥和节点并行已满。
      */
     private fun collectWaitingJobs(
         context: BuildRunningContext,
@@ -475,31 +476,46 @@ class BuildRunningInfoResolver @Autowired constructor(
         // 绝大多数运行中的构建没有等待的 Job，先做一次廉价判断，避免为其多查一次记录表
         val candidates = containers.filter {
             // 矩阵分组容器只是子容器占位，真实排队都在子 Job 上
-            it.matrixGroupFlag != true && (
-                it.status == BuildStatus.DEPENDENT_WAITING ||
-                    it.status == BuildStatus.QUEUE ||
-                    it.status == BuildStatus.PREPARE_ENV
-                )
+            it.matrixGroupFlag != true && visibleWaitingStatus(it, index) != null
         }
         if (candidates.isEmpty()) return emptyList()
 
         val queueTimestamps = loadQueueTimestamps(context, candidates.map { it.containerId }.toSet())
         val now = System.currentTimeMillis()
-        val containersByJobId = containers.mapNotNull { container ->
-            container.jobId?.takeIf { it.isNotBlank() }?.let { it to container }
-        }.toMap()
         return candidates.mapNotNull { container ->
             buildWaitingJob(
                 context = context,
                 container = container,
                 index = index,
-                containersByJobId = containersByJobId,
                 activeQueueStamps = queueTimestamps[container.containerId],
                 now = now,
                 language = language
             )
         }
     }
+
+    /**
+     * 页面所见的 Job 等待状态。Model 已合并构建记录，优先用它识别排队/准备环境/依赖等待；
+     * Model 没有这些状态时再回退到引擎容器状态。
+     */
+    private fun visibleWaitingStatus(
+        container: PipelineBuildContainer,
+        index: ModelPositionIndex
+    ): BuildStatus? {
+        val modelStatus = index.locateContainer(container.containerId)
+            ?.container?.status
+            ?.takeIf { it.isNotBlank() }
+            ?.let { BuildStatus.parse(it) }
+        if (modelStatus != null && isWaitingJobStatus(modelStatus)) {
+            return modelStatus
+        }
+        return container.status.takeIf { isWaitingJobStatus(it) }
+    }
+
+    private fun isWaitingJobStatus(status: BuildStatus): Boolean =
+        status == BuildStatus.DEPENDENT_WAITING ||
+            status == BuildStatus.QUEUE ||
+            status == BuildStatus.PREPARE_ENV
 
     /**
      * 加载各容器的排队/准备环境时间戳。
@@ -541,18 +557,18 @@ class BuildRunningInfoResolver @Autowired constructor(
         context: BuildRunningContext,
         container: PipelineBuildContainer,
         index: ModelPositionIndex,
-        containersByJobId: Map<String, PipelineBuildContainer>,
         activeQueueStamps: Map<BuildTimestampType, Long>?,
         now: Long,
         language: String
     ): WaitingJobInfo? {
         val location = index.locateContainer(container.containerId) ?: return null
+        val waitStatus = visibleWaitingStatus(container, index) ?: return null
         val mutexGroup = container.controlOption.mutexGroup
         val decision = resolveWaitType(
             container = container,
+            waitStatus = waitStatus,
             mutexGroup = mutexGroup,
             activeQueueStamps = activeQueueStamps,
-            containersByJobId = containersByJobId,
             now = now,
             language = language
         ) ?: return null
@@ -566,7 +582,7 @@ class BuildRunningInfoResolver @Autowired constructor(
             waitType = decision.waitType,
             position = location.position,
             componentPath = location.componentPath,
-            status = container.status.name,
+            status = waitStatus.name,
             stageId = container.stageId,
             containerId = container.containerId,
             containerHashId = container.containerHashId ?: location.container.containerHashId,
@@ -587,22 +603,22 @@ class BuildRunningInfoResolver @Autowired constructor(
      */
     private fun resolveWaitType(
         container: PipelineBuildContainer,
+        waitStatus: BuildStatus,
         mutexGroup: MutexGroup?,
         activeQueueStamps: Map<BuildTimestampType, Long>?,
-        containersByJobId: Map<String, PipelineBuildContainer>,
         now: Long,
         language: String
     ): WaitDecision? {
-        if (container.status == BuildStatus.DEPENDENT_WAITING) {
+        if (waitStatus == BuildStatus.DEPENDENT_WAITING) {
             return WaitDecision(JobWaitType.DEPENDENT)
         }
         val queueTypes = activeQueueStamps?.keys.orEmpty()
         if (queueTypes.any { it in MUTEX_QUEUE_TYPES } ||
-            (container.status == BuildStatus.QUEUE && mutexGroup?.enable == true)
+            (waitStatus == BuildStatus.QUEUE && mutexGroup?.enable == true)
         ) {
             return WaitDecision(JobWaitType.MUTEX)
         }
-        resolveAgentReuseWait(container, containersByJobId, language)?.let { return it }
+        resolveAgentReuseWait(container, waitStatus, language)?.let { return it }
         // 互斥之外的排队时间戳一律归为等待构建资源，这里刻意不枚举具体调度方式：
         // 候选集已由 containerCheckQueue() 圈定，将来新增调度方式的排队时间戳
         // 只要纳入该判定，此处即可自动识别
@@ -610,7 +626,7 @@ class BuildRunningInfoResolver @Autowired constructor(
             return WaitDecision(JobWaitType.RESOURCE)
         }
         // QUEUE 长时间停住且没有互斥时间戳时，按资源排队展示，避免「有排队的 Job」漏报
-        if ((container.status == BuildStatus.PREPARE_ENV || container.status == BuildStatus.QUEUE) &&
+        if ((waitStatus == BuildStatus.PREPARE_ENV || waitStatus == BuildStatus.QUEUE) &&
             prepareElapsed(container, activeQueueStamps, now) >= RESOURCE_QUEUE_GRACE_MS
         ) {
             return WaitDecision(JobWaitType.RESOURCE)
@@ -619,24 +635,18 @@ class BuildRunningInfoResolver @Autowired constructor(
     }
 
     /**
-     * 构建机复用互斥：复用 Job 在 dispatch 侧等待被依赖节点选出具体 agent。
-     * 该路径不走引擎锁、不写 JOB_AGENT_REUSE_MUTEX_QUEUE，只能从复用配置与被依赖 Job 状态反推。
+     * 构建机复用互斥：复用 Job 在 dispatch 侧等待被依赖节点选出具体 agent，
+     * 或被依赖 Job 已占用该节点（并行 1/1、agent busy）而本 Job 仍停在准备环境。
+     * AGENT_DEP_VAR 不走引擎锁、不写 JOB_AGENT_REUSE_MUTEX_QUEUE，只能从复用配置反推。
      */
     private fun resolveAgentReuseWait(
         container: PipelineBuildContainer,
-        containersByJobId: Map<String, PipelineBuildContainer>,
+        waitStatus: BuildStatus,
         language: String
     ): WaitDecision? {
-        if (container.status != BuildStatus.PREPARE_ENV) return null
+        if (waitStatus != BuildStatus.PREPARE_ENV && waitStatus != BuildStatus.QUEUE) return null
         val reuseJobId = container.controlOption.agentReuseMutex
             ?.reUseJobId?.takeIf { it.isNotBlank() } ?: return null
-        val reused = containersByJobId[reuseJobId]
-        // 被依赖 Job 尚未进入 RUNNING（仍在排队/准备环境/依赖等待）时，复用 Job 无法拿到节点
-        val waitingForDispatch = reused == null ||
-            reused.status == BuildStatus.QUEUE ||
-            reused.status == BuildStatus.PREPARE_ENV ||
-            reused.status == BuildStatus.DEPENDENT_WAITING
-        if (!waitingForDispatch) return null
         return WaitDecision(
             waitType = JobWaitType.MUTEX,
             waitReason = i18n(
