@@ -40,6 +40,7 @@ import com.tencent.devops.common.pipeline.Model
 import com.tencent.devops.common.pipeline.container.Container
 import com.tencent.devops.common.pipeline.container.NormalContainer
 import com.tencent.devops.common.pipeline.container.VMBuildContainer
+import com.tencent.devops.common.pipeline.enums.BuildEndCategory
 import com.tencent.devops.common.pipeline.enums.BuildEndType
 import com.tencent.devops.common.pipeline.enums.BuildRecordTimeStamp
 import com.tencent.devops.common.pipeline.enums.BuildStatus
@@ -56,6 +57,7 @@ import com.tencent.devops.common.pipeline.pojo.element.trigger.CodeTGitWebHookTr
 import com.tencent.devops.common.pipeline.pojo.element.trigger.TapdWebHookTriggerElement
 import com.tencent.devops.common.pipeline.pojo.time.BuildRecordTimeCost
 import com.tencent.devops.common.pipeline.pojo.time.BuildTimestampType
+import com.tencent.devops.common.pipeline.utils.BuildEndPositionCollector
 import com.tencent.devops.common.pipeline.utils.ModelUtils
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.utils.CommonUtils
@@ -441,13 +443,24 @@ class PipelineBuildRecordService @Autowired constructor(
         // 合成终态必须与页面状态标签同源取记录表状态：详情记录先落终态、构建历史表随后才更新，
         // 若用滞后的 buildInfo.status，构建结束瞬间推送的详情会因状态还是运行中而合成不出来（#13477）
         val recordStatus = buildRecordModel?.status?.let { BuildStatus.parse(it) } ?: buildInfo.status
+        val modelFailPositions = BuildEndPositionCollector.collectFailPositions(model)
+        val storedEndInfo = parseBuildEndInfo(buildRecordModel?.modelVar)
+            ?.alignedTo(
+                status = recordStatus,
+                modelFailPositions = modelFailPositions,
+                latestStatusAtEnd = { pos -> latestStatusAtEnd(pos, model) }
+            )
+            ?.fillCancelPositionsIfEmpty(recordStatus, model)
         val buildEndInfo = (
-            buildRecordModel?.modelVar?.get(BuildEndInfo.MODEL_VAR_KEY)?.let {
-                JsonUtil.anyToOrNull(it, object : TypeReference<BuildEndInfo>() {})
-            } ?: synthesizeSuccessEndInfo(recordStatus, model, endTime)
+            storedEndInfo ?: synthesizeEndInfo(
+                status = recordStatus,
+                model = model,
+                buildEndTime = endTime,
+                cancelUser = buildRecordModel?.cancelUser
+            )
             )?.apply {
             totalCostTime = buildRunCostTime
-            // 与 endType 恒定同类；写入侧已保证 endType 的大类与构建最终状态同类
+            // 与 endType 恒定同类；读取侧会先按最终状态对齐，避免取消提前落库与失败终态错配
             endCategory = endType.category
             reasonCode?.let { code ->
                 reason = I18nUtil.getCodeLanMessage(
@@ -525,25 +538,123 @@ class PipelineBuildRecordService @Autowired constructor(
         )
     }
 
+    private fun parseBuildEndInfo(modelVar: Map<String, Any>?): BuildEndInfo? {
+        return modelVar?.get(BuildEndInfo.MODEL_VAR_KEY)?.let {
+            JsonUtil.anyToOrNull(it, object : TypeReference<BuildEndInfo>() {})
+        }
+    }
+
     /**
-     * 普通成功的构建不在结束时落库终态详情，避免每次构建成功都额外写一次记录表；
-     * 读取时按构建状态合成，保证前端对所有终态都能拿到统一结构。
-     * 阶段准入被驳回等有额外信息的成功场景已在构建结束时落库，不会走到这里。
-     * RUNNING 期间的暂停/审核/红线归运行态 pendingItems，这里只处理 STAGE_SUCCESS。
+     * 取消落库时拍下的是当时的中间态（如 PAUSE），构建真正结束后插件可能已被置为失败/终止。
+     * 读取对齐时用模型里的当前状态刷新位置，避免卡片写「暂停执行」、编排图画失败。
      */
-    private fun synthesizeSuccessEndInfo(status: BuildStatus, model: Model, buildEndTime: Long?): BuildEndInfo? {
+    private fun latestStatusAtEnd(pos: EndPosition, model: Model): String? {
+        val stage = model.stages.firstOrNull { it.id == pos.stageId } ?: return null
+        if (pos.containerId.isBlank()) return stage.status
+        val containers = stage.containers.flatMap { container ->
+            listOf(container) + (container.fetchGroupContainers() ?: emptyList())
+        }
+        val container = containers.firstOrNull {
+            it.id == pos.containerId || it.containerId == pos.containerId
+        } ?: return null
+        if (pos.taskId.isNullOrBlank()) return container.status
+        return container.elements.firstOrNull { it.id == pos.taskId }?.status
+    }
+
+    /**
+     * 落库缺失时按最终状态从模型合成终态详情。
+     * 普通成功本来就不落库；失败/取消若写入侧漏记（执行前暂停终止、互斥组抢锁失败），
+     * 读取侧也必须给出卡片，否则前端打不开详情。
+     *
+     * RUNNING 期间的暂停/审核/红线归运行态 pendingItems，终态合成只处理已结束状态，
+     * 以及阶段准入挂起后的 STAGE_SUCCESS。
+     */
+    private fun synthesizeEndInfo(
+        status: BuildStatus,
+        model: Model,
+        buildEndTime: Long?,
+        cancelUser: String?
+    ): BuildEndInfo? {
         if (status == BuildStatus.STAGE_SUCCESS) {
-            // 阶段准入挂起后构建状态才是 STAGE_SUCCESS，由终态「审核中」表达。
             return synthesizeStageReviewingEndInfo(model) ?: successEndInfo(buildEndTime)
         }
         if (!status.isFinish()) {
             return null
         }
-        return if (status.isSuccess()) {
-            successEndInfo(buildEndTime)
-        } else {
-            null
+        return when (BuildEndCategory.of(status)) {
+            BuildEndCategory.SUCCESS -> successEndInfo(buildEndTime)
+            BuildEndCategory.FAIL -> synthesizeFailEndInfo(model, buildEndTime)
+            BuildEndCategory.CANCEL -> synthesizeCancelEndInfo(model, buildEndTime, cancelUser)
+            BuildEndCategory.TIMEOUT -> BuildEndInfo(
+                endType = BuildEndType.TIMEOUT_QUEUE,
+                endTime = buildEndTime
+            )
+            else -> null
         }
+    }
+
+    private fun synthesizeFailEndInfo(model: Model, buildEndTime: Long?): BuildEndInfo {
+        val positions = BuildEndPositionCollector.collectFailPositions(model)
+        return BuildEndInfo(
+            endType = BuildEndPositionCollector.aggregateFailEndType(positions),
+            endTime = buildEndTime
+        ).withPositions(positions)
+    }
+
+    /**
+     * 取消链路漏写时的兜底：有取消人按用户取消，否则按系统取消。
+     * 位置从模型里仍停在取消/终止/暂停的用户插件还原。
+     */
+    private fun synthesizeCancelEndInfo(
+        model: Model,
+        buildEndTime: Long?,
+        cancelUser: String?
+    ): BuildEndInfo {
+        val positions = BuildEndPositionCollector.collectCancelPositions(model)
+        val hasUser = !cancelUser.isNullOrBlank()
+        val info = if (hasUser) {
+            BuildEndInfo(
+                endType = BuildEndType.CANCEL_USER,
+                operator = cancelUser,
+                reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_USER_MANUAL,
+                endTime = buildEndTime
+            )
+        } else {
+            BuildEndInfo(
+                endType = BuildEndType.CANCEL_SYSTEM,
+                endTime = buildEndTime
+            )
+        }
+        if (positions.isEmpty()) return info
+        info.withPositions(positions)
+        if (hasUser) {
+            info.withReason(
+                reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_USER_IN_FLIGHT_STOPPED,
+                reasonParams = listOf(positions.size.toString())
+            )
+        }
+        return info
+    }
+
+    /**
+     * 用户取消已落库但位置为空（执行前暂停点终止只写了操作人）时，用模型补齐在途位置。
+     */
+    private fun BuildEndInfo.fillCancelPositionsIfEmpty(status: BuildStatus, model: Model): BuildEndInfo {
+        if (endType.category != BuildEndCategory.CANCEL) return this
+        if (!status.isCancel()) return this
+        if (!positions.isNullOrEmpty()) return this
+        val cancelPositions = BuildEndPositionCollector.collectCancelPositions(model)
+        if (cancelPositions.isEmpty()) return this
+        withPositions(cancelPositions)
+        if (endType == BuildEndType.CANCEL_USER &&
+            reasonCode == ProcessMessageCode.BK_BUILD_CANCEL_USER_MANUAL
+        ) {
+            withReason(
+                reasonCode = ProcessMessageCode.BK_BUILD_CANCEL_USER_IN_FLIGHT_STOPPED,
+                reasonParams = listOf(cancelPositions.size.toString())
+            )
+        }
+        return this
     }
 
     /**
@@ -941,6 +1052,92 @@ class PipelineBuildRecordService @Autowired constructor(
             startTime = null, endTime = null, errorInfoList = null,
             timestamps = null
         )
+    }
+
+    /**
+     * 构建结束时写入终态详情：已有详情且大类与最终状态同类则保留
+     * （用户取消、Job 超时等更早更精确的成因）；大类冲突则覆盖。
+     *
+     * 典型错配：取消链路在暂停插件处提前写入 CANCEL_USER，随后 ActionType.END
+     * 把构建收成失败，IfAbsent 会让页面出现「状态：失败 / 卡片：用户取消」。
+     */
+    fun saveBuildEndInfoIfCompatible(
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        executeCount: Int,
+        buildEndInfo: BuildEndInfo,
+        buildStatus: BuildStatus
+    ) {
+        var startUser: String? = null
+        var saved = false
+        dslContext.transaction { configuration ->
+            val context = DSL.using(configuration)
+            val recordModel = recordModelDao.getRecord(
+                dslContext = context, projectId = projectId, pipelineId = pipelineId,
+                buildId = buildId, executeCount = executeCount
+            ) ?: run {
+                logger.warn("ENGINE|$buildId|saveBuildEndInfoIfCompatible| get record failed.")
+                return@transaction
+            }
+            val existing = parseBuildEndInfo(recordModel.modelVar)
+            if (existing != null && existing.matchesBuildStatus(buildStatus)) {
+                return@transaction
+            }
+            val modelVar = recordModel.modelVar.toMutableMap()
+            modelVar[BuildEndInfo.MODEL_VAR_KEY] = buildEndInfo
+            recordModelDao.updateRecord(
+                dslContext = context, projectId = projectId, pipelineId = pipelineId,
+                buildId = buildId, executeCount = executeCount, cancelUser = null,
+                modelVar = modelVar, buildStatus = null,
+                startTime = null, endTime = null, errorInfoList = null,
+                timestamps = null
+            )
+            startUser = recordModel.startUser
+            saved = true
+            if (existing != null) {
+                logger.info(
+                    "ENGINE|$buildId|saveBuildEndInfoIfCompatible| overwrite " +
+                        "${existing.endType} by ${buildEndInfo.endType} status=$buildStatus"
+                )
+            }
+        }
+        if (saved) {
+            notifyBuildEndInfoSaved(projectId, pipelineId, buildId, executeCount, startUser)
+        }
+    }
+
+    /**
+     * 解析器无需落库（取消/普通成功）时，清掉与最终状态不同类的残留详情。
+     * 例如运行中重试未清干净的系统取消、准入审核改道后仍留下的 CANCEL_USER。
+     */
+    fun clearBuildEndInfoIfIncompatible(
+        projectId: String,
+        pipelineId: String,
+        buildId: String,
+        executeCount: Int,
+        buildStatus: BuildStatus
+    ) {
+        val recordModel = recordModelDao.getRecord(
+            dslContext = dslContext,
+            projectId = projectId,
+            pipelineId = pipelineId,
+            buildId = buildId,
+            executeCount = executeCount
+        ) ?: return
+        val existing = parseBuildEndInfo(recordModel.modelVar) ?: return
+        if (existing.matchesBuildStatus(buildStatus)) return
+        logger.info(
+            "ENGINE|$buildId|clearBuildEndInfoIfIncompatible| drop ${existing.endType} status=$buildStatus"
+        )
+        clearBuildEndInfo(
+            transactionContext = null,
+            projectId = projectId,
+            pipelineId = pipelineId,
+            buildId = buildId,
+            executeCount = executeCount
+        )
+        notifyBuildEndInfoSaved(projectId, pipelineId, buildId, executeCount, recordModel.startUser)
     }
 
     /**
