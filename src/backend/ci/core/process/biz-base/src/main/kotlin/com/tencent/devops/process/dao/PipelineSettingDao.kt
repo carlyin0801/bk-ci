@@ -188,15 +188,10 @@ class PipelineSettingDao {
             setting.pipelineAsCodeSettings?.let { self ->
                 insert.set(PIPELINE_AS_CODE_SETTINGS, JsonUtil.toJson(self, false))
             }
-            setting.envHashId?.let { self ->
-                insert.set(ENV_HASH_ID, self)
-            }
-            setting.envName?.let { self ->
-                insert.set(ENV_NAME, self)
-            }
-            // 运行资源四选一，切换类型时必须整组覆盖，否则会残留上一次选择的标识
-            setting.runtimeResourceType?.let { type ->
-                insert.set(RUNTIME_RESOURCE_TYPE, type.code)
+            // 运行资源四选一，切换类型时必须整组覆盖，否则会残留上一次选择的标识。
+            // 五个字段都为空时不碰库里的值，避免通知、基础设置等入口保存时把运行资源抹掉。
+            if (setting.runtimeResource() != null) {
+                insert.set(RUNTIME_RESOURCE_TYPE, setting.runtimeResourceType?.code)
                     .set(RUNTIME_RESOURCE_ID, setting.runtimeResourceId)
                     .set(ENV_HASH_ID, setting.envHashId)
                     .set(ENV_NAME, setting.envName)

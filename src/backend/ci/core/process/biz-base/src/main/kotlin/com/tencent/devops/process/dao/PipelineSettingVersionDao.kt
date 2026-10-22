@@ -137,15 +137,9 @@ class PipelineSettingVersionDao {
                 .set(FAIL_IF_VARIABLE_INVALID, setting.failIfVariableInvalid)
                 .set(BUILD_CANCEL_POLICY, setting.buildCancelPolicy.value)
 
-            setting.envHashId?.let { envHashId ->
-                insert.set(ENV_HASH_ID, envHashId)
-            }
-            setting.envName?.let { envName ->
-                insert.set(ENV_NAME, envName)
-            }
-            // 运行资源四选一，切换类型时必须整组覆盖，否则会残留上一次选择的标识
-            setting.runtimeResourceType?.let { type ->
-                insert.set(RUNTIME_RESOURCE_TYPE, type.code)
+            // 类型为空也要整组覆盖，五个字段都空时才不动
+            if (setting.runtimeResource() != null) {
+                insert.set(RUNTIME_RESOURCE_TYPE, setting.runtimeResourceType?.code)
                     .set(RUNTIME_RESOURCE_ID, setting.runtimeResourceId)
                     .set(ENV_HASH_ID, setting.envHashId)
                     .set(ENV_NAME, setting.envName)
@@ -180,15 +174,9 @@ class PipelineSettingVersionDao {
                     JsonUtil.toJson(self, false)
                 })
                 .set(FAIL_IF_VARIABLE_INVALID, setting.failIfVariableInvalid)
-            setting.envHashId?.let { envHashId ->
-                updateStep.set(ENV_HASH_ID, envHashId)
-            }
-            setting.envName?.let { envName ->
-                updateStep.set(ENV_NAME, envName)
-            }
-            // 运行资源四选一，切换类型时必须整组覆盖，否则会残留上一次选择的标识
-            setting.runtimeResourceType?.let { type ->
-                updateStep.set(RUNTIME_RESOURCE_TYPE, type.code)
+            // 类型为空也要整组覆盖，五个字段都空时才不动
+            if (setting.runtimeResource() != null) {
+                updateStep.set(RUNTIME_RESOURCE_TYPE, setting.runtimeResourceType?.code)
                     .set(RUNTIME_RESOURCE_ID, setting.runtimeResourceId)
                     .set(ENV_HASH_ID, setting.envHashId)
                     .set(ENV_NAME, setting.envName)
