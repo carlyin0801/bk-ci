@@ -202,6 +202,7 @@ object CommonMessageCode {
     const val YAML_SCHEMA_PATTERN = "2100149" // [{0}] 值格式不符合规则 [{1}]
     const val YAML_SCHEMA_LENGTH = "2100150" // [{0}] 长度不符合要求 ({1}={2})
     const val YAML_SCHEMA_RANGE = "2100151" // [{0}] 数值不符合要求 ({1}={2})
+    const val RUNTIME_RESOURCE_NOT_UNIQUE = "2100152" // 「运行资源只能指定一个」，当前同时指定了 [{0}]
 
     const val BK_CONTAINER_TIMED_OUT = "bkContainerTimedOut" // 创建容器超时
     const val BK_CREATION_FAILED_EXCEPTION_INFORMATION = "bkCreationFailedExceptionInformation" // 创建失败，异常信息

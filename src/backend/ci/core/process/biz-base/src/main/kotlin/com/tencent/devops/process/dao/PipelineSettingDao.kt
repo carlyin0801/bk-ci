@@ -33,6 +33,7 @@ import com.tencent.devops.common.api.util.DateTimeUtil
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.db.utils.JooqUtils
 import com.tencent.devops.common.pipeline.pojo.setting.BuildCancelPolicy
+import com.tencent.devops.common.pipeline.pojo.setting.RuntimeResourceType
 import com.tencent.devops.common.pipeline.pojo.setting.PipelineRunLockType
 import com.tencent.devops.common.pipeline.pojo.setting.PipelineSetting
 import com.tencent.devops.common.pipeline.pojo.setting.PipelineSubscriptionType
@@ -100,7 +101,10 @@ class PipelineSettingDao {
                 FAIL_IF_VARIABLE_INVALID,
                 BUILD_CANCEL_POLICY,
                 ENV_HASH_ID,
-                ENV_NAME
+                ENV_NAME,
+                RUNTIME_RESOURCE_TYPE,
+                RUNTIME_RESOURCE_ID,
+                RUNTIME_RESOURCE_WORKSPACE
             ).values(
                 setting.projectId,
                 setting.pipelineName,
@@ -140,7 +144,10 @@ class PipelineSettingDao {
                 setting.failIfVariableInvalid,
                 setting.buildCancelPolicy.value,
                 setting.envHashId,
-                setting.envName
+                setting.envName,
+                setting.runtimeResourceType?.code,
+                setting.runtimeResourceId,
+                setting.runtimeResourceWorkspace
             ).onDuplicateKeyUpdate()
                 .set(NAME, setting.pipelineName)
                 .set(DESC, setting.desc)
@@ -186,6 +193,14 @@ class PipelineSettingDao {
             }
             setting.envName?.let { self ->
                 insert.set(ENV_NAME, self)
+            }
+            // 运行资源四选一，切换类型时必须整组覆盖，否则会残留上一次选择的标识
+            setting.runtimeResourceType?.let { type ->
+                insert.set(RUNTIME_RESOURCE_TYPE, type.code)
+                    .set(RUNTIME_RESOURCE_ID, setting.runtimeResourceId)
+                    .set(ENV_HASH_ID, setting.envHashId)
+                    .set(ENV_NAME, setting.envName)
+                    .set(RUNTIME_RESOURCE_WORKSPACE, setting.runtimeResourceWorkspace)
             }
             return insert.execute()
         }
@@ -496,7 +511,10 @@ class PipelineSettingDao {
                     buildCancelPolicy = BuildCancelPolicy.parse(t.buildCancelPolicy),
                     version = t.version ?: 1,
                     envHashId = t.envHashId,
-                    envName = t.envName
+                    envName = t.envName,
+                    runtimeResourceType = RuntimeResourceType.parse(t.runtimeResourceType),
+                    runtimeResourceId = t.runtimeResourceId,
+                    runtimeResourceWorkspace = t.runtimeResourceWorkspace
                 )
             }
         }

@@ -937,6 +937,9 @@ object ProcessMessageCode {
     // [{0}]创作环境下的创作节点为空
     const val BK_CREATIVE_STREAM_ENV_NODE_IS_EMPTY = "bkCreativeStreamEnvNodeIsEmpty"
 
+    // 运行资源为环境[{0}]，启动时必须指定运行节点
+    const val BK_RUNTIME_RESOURCE_NODE_REQUIRED = "bkRuntimeResourceNodeRequired"
+
     // 运行环境操作系统不适配插件的明细项：{0} 需要 {1}（所选环境：{2}）
     const val BK_ATOM_RUN_ENV_OS_INCOMPATIBLE_ITEM = "bkAtomRunEnvOsIncompatibleItem"
 
