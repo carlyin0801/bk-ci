@@ -526,7 +526,7 @@ object ProcessMessageCode {
     // 公共变量ID重复[{0}]，请检查引用的变量组
     const val ERROR_PIPELINE_COMMON_VAR_ID_DUPLICATE = "2101394"
 
-    // 构建执行相关错误码（2101400-2101499）
+    // 流水线基础相关错误码（2101400-2101499）
     // 运行环境操作系统已由{0}变更为{1}，编排中存在不适用于新系统的插件，暂不能保存，不适配插件明细：{2}
     const val ERROR_ATOM_RUN_ENV_OS_INCOMPATIBLE = "2101400"
     // 运行环境操作系统为{0}，编排中存在不适用该系统的插件，暂不能保存，不适配插件明细：{1}
@@ -545,11 +545,16 @@ object ProcessMessageCode {
     const val ERROR_IMATE_STAGE_REVIEW_NOT_CONFIGURED = "2101407"
     // 无效的创作流 Stage 审核 taskId：{0}
     const val ERROR_IMATE_STAGE_REVIEW_TASK_INVALID = "2101408"
+    // 运行环境操作系统不适配插件的明细项：{0} 需要 {1}（所选环境：{2}）
+    const val ERROR_ATOM_RUN_ENV_OS_INCOMPATIBLE_ITEM = "2101409"
+    // Job构建环境操作系统不适配插件的明细项：Job[{0}]（{1}）中的 {2} 需要 {3}
+    const val ERROR_ATOM_JOB_OS_INCOMPATIBLE_ITEM = "2101410"
 
     // 构建执行相关错误码（2101500-2101599）
     const val ERROR_PIPELINE_START_NODE_NO_PERMISSION = "2101500" // 用户[{0}]没有节点[{1}]的操作权限，无法启动流水线
     const val ERROR_PIPELINE_VERSION_RECYCLED = "2101501" // 流水线版本[{0}]已被回收，无法启动构建，请使用最新版本重试
     const val ERROR_PIPELINE_VERSION_HAS_DELETED = "2101502" // 流水线版本[{0}]已删除
+    const val ERROR_RUNTIME_RESOURCE_NODE_REQUIRED = "2101503" // 运行资源为环境[{0}]，启动时必须指定运行节点
 
     // 批量任务
     const val ERROR_PIPELINE_BATCH_TASK_NOT_EXISTS = "2101650" // 流水线批量任务{0}不存在
@@ -936,15 +941,6 @@ object ProcessMessageCode {
 
     // [{0}]创作环境下的创作节点为空
     const val BK_CREATIVE_STREAM_ENV_NODE_IS_EMPTY = "bkCreativeStreamEnvNodeIsEmpty"
-
-    // 运行资源为环境[{0}]，启动时必须指定运行节点
-    const val BK_RUNTIME_RESOURCE_NODE_REQUIRED = "bkRuntimeResourceNodeRequired"
-
-    // 运行环境操作系统不适配插件的明细项：{0} 需要 {1}（所选环境：{2}）
-    const val BK_ATOM_RUN_ENV_OS_INCOMPATIBLE_ITEM = "bkAtomRunEnvOsIncompatibleItem"
-
-    // Job构建环境操作系统不适配插件的明细项：Job[{0}]（{1}）中的 {2} 需要 {3}
-    const val BK_ATOM_JOB_OS_INCOMPATIBLE_ITEM = "bkAtomJobOsIncompatibleItem"
 
     // 构建机容器发生重启，构建进程已中断
     const val BK_BUILD_CONTAINER_RESTARTED = "bkBuildContainerRestarted"

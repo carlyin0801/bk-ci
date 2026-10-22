@@ -503,7 +503,7 @@ class PipelineBuildService(
             // 绑定环境只圈定了范围，到底在哪台机器上执行由触发方选定；触发方没传就是接入方的问题，直接拒绝启动，
             // 否则会在环境内落到一台与触发语义无关的机器上
             resource.group -> startedAgentId ?: throw ErrorCodeException(
-                errorCode = ProcessMessageCode.BK_RUNTIME_RESOURCE_NODE_REQUIRED,
+                errorCode = ProcessMessageCode.ERROR_RUNTIME_RESOURCE_NODE_REQUIRED,
                 params = arrayOf(resource.resourceName ?: resource.resourceId ?: "")
             )
             // 绑定单台机器：执行对象固定，不接受启动方改派，所以这里不取 startedAgentId
