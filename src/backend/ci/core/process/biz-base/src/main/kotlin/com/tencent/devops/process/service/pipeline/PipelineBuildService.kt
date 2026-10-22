@@ -497,20 +497,25 @@ class PipelineBuildService(
         val startedAgentId = (
             ctx.startValues?.get(NODE_AGENT_ID) ?: ctx.pipelineParamMap[NODE_AGENT_ID]?.value?.toString()
             )?.takeIf(String::isNotBlank)
-        // 绑定环境时只圈定了范围，到底在哪台机器上执行由触发方选定；触发方没传就是接入方的问题，直接拒绝启动，
-        // 否则会在环境内随机落到一台与触发语义无关的机器上。单体资源绑定的就是一台机器，平台自行换出 agentHashId
-        val agentIdValue = startedAgentId ?: resource?.let {
-            if (it.group) {
-                throw ErrorCodeException(
-                    errorCode = ProcessMessageCode.BK_RUNTIME_RESOURCE_NODE_REQUIRED,
-                    params = arrayOf(it.resourceName ?: it.resourceId ?: "")
-                )
-            }
-            runtimeResourceResolver.resolveAgentHashId(
+        val agentIdValue = when {
+            // 没有绑定运行资源：沿用启动方传入的节点
+            resource == null -> startedAgentId
+            // 绑定环境只圈定了范围，到底在哪台机器上执行由触发方选定；触发方没传就是接入方的问题，直接拒绝启动，
+            // 否则会在环境内落到一台与触发语义无关的机器上
+            resource.group -> startedAgentId ?: throw ErrorCodeException(
+                errorCode = ProcessMessageCode.BK_RUNTIME_RESOURCE_NODE_REQUIRED,
+                params = arrayOf(resource.resourceName ?: resource.resourceId ?: "")
+            )
+            // 绑定单台机器：执行对象固定，不接受启动方改派，所以这里不取 startedAgentId
+            else -> runtimeResourceResolver.resolveAgentHashId(
                 projectId = ctx.pipeline.projectId,
                 userId = ctx.pipelineAuthorizer ?: ctx.userId,
-                resource = it
+                resource = resource
             )
+        }
+        // 解析不出绑定的那台机器时宁可不派发，也要清掉启动方传入的节点，否则「不能改派」的约束会被绕过
+        if (agentIdValue == null && resource?.group == false) {
+            ctx.pipelineParamMap.remove(NODE_AGENT_ID)
         }
         agentIdValue?.takeIf(String::isNotBlank)?.let { agentId ->
             val agentInfo = client.get(ServiceThirdPartyAgentResource::class)
