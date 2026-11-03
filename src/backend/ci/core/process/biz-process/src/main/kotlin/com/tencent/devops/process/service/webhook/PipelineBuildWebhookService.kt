@@ -28,7 +28,6 @@
 package com.tencent.devops.process.service.webhook
 
 import com.tencent.devops.common.api.context.ChannelContext
-import com.tencent.devops.common.api.enums.RepositoryType
 import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.exception.PermissionForbiddenException
 import com.tencent.devops.common.api.util.JsonUtil
@@ -45,10 +44,8 @@ import com.tencent.devops.common.log.pojo.message.LogMessage
 import com.tencent.devops.common.log.utils.BuildLogPrinter
 import com.tencent.devops.common.pipeline.enums.StartType
 import com.tencent.devops.common.pipeline.enums.VersionStatus
-import com.tencent.devops.common.pipeline.pojo.BuildFormProperty
 import com.tencent.devops.common.pipeline.pojo.BuildParameters
 import com.tencent.devops.common.pipeline.pojo.element.trigger.WebHookTriggerElement
-import com.tencent.devops.common.pipeline.utils.CascadePropertyUtils
 import com.tencent.devops.common.pipeline.utils.PIPELINE_PAC_REPO_HASH_ID
 import com.tencent.devops.common.service.prometheus.BkTimed
 import com.tencent.devops.common.service.trace.TraceTag
@@ -72,7 +69,6 @@ import com.tencent.devops.process.engine.service.WebhookBuildParameterService
 import com.tencent.devops.process.engine.service.code.GitWebhookUnlockDispatcher
 import com.tencent.devops.process.permission.PipelinePermissionService
 import com.tencent.devops.process.pojo.BuildId
-import com.tencent.devops.process.pojo.code.WebhookBuildResult
 import com.tencent.devops.process.pojo.code.WebhookCommit
 import com.tencent.devops.process.pojo.trigger.PipelineTriggerDetailBuilder
 import com.tencent.devops.process.pojo.trigger.PipelineTriggerEvent
@@ -353,8 +349,8 @@ class PipelineBuildWebhookService @Autowired constructor(
         val userId = pipelineRepositoryService.getPipelineOauthUser(projectId, pipelineId)
             ?: pipelineInfo.lastModifyUser
         val container = model.getTriggerContainer()
-        // 解析变量
-        val variables = getDefaultParam(container.params)
+        // 解析变量，兼容代码库分支等级联参数
+        val variables = pipelineRepositoryService.getTriggerParams(container).toMutableMap()
         // 补充yaml流水线代码库信息
         pipelineYamlService.getPipelineYamlInfo(projectId = projectId, pipelineId = pipelineId)?.let {
             variables[PIPELINE_PAC_REPO_HASH_ID] = it.repoHashId
@@ -368,7 +364,7 @@ class PipelineBuildWebhookService @Autowired constructor(
                 return@elements
             }
             val webHookParams = WebhookElementParamsRegistrar.getService(element)
-                .getWebhookElementParams(element, PipelineVarUtil.fillVariableMap(variables)) ?: return@elements
+                .getWebhookElementParams(element, variables) ?: return@elements
             val repositoryConfig = webHookParams.repositoryConfig
             if (repositoryConfig.getRepositoryId().isBlank()) {
                 logger.info("repositoryHashId is blank for code trigger pipeline $pipelineId ")
@@ -426,7 +422,7 @@ class PipelineBuildWebhookService @Autowired constructor(
                         commitId = matcher.getRevision(),
                         block = webHookParams.block,
                         eventType = matcher.getEventType(),
-                        codeType = matcher.getCodeType()
+                        codeType = webHookParams.codeType
                     )
                     val buildId =
                         client.getGateway(ServiceScmWebhookResource::class).webhookCommit(projectId, webhookCommit).data
@@ -499,141 +495,6 @@ class PipelineBuildWebhookService @Autowired constructor(
                 .reasonDetail(PipelineTriggerFailedMatch(failedMatchElements))
         }
         return false
-    }
-
-    /**
-     * 精确匹配webhook触发
-     *
-     * @param projectId 项目ID
-     * @param pipelineId 流水线ID
-     * @param version 流水线版本
-     * @param taskIds 触发器插件,同一代码库同一事件可能配置多个触发器插件
-     * @param repoHashId 触发仓库
-     * @param matcher 匹配器
-     * @param eventId 事件ID
-     */
-    fun exactMatchPipelineWebhookBuild(
-        projectId: String,
-        pipelineId: String,
-        version: Int?,
-        taskIds: List<String>,
-        repoHashId: String,
-        matcher: ScmWebhookMatcher,
-        eventId: Long
-    ): WebhookBuildResult {
-        val pipelineInfo = pipelineRepositoryService.getPipelineInfo(projectId = projectId, pipelineId = pipelineId)
-            ?: return WebhookBuildResult(
-                result = false,
-                reasonDetail = PipelineTriggerFailedMsg("pipeline is not found")
-            )
-
-        val model = pipelineRepositoryService.getPipelineResourceVersion(
-            projectId = projectId, pipelineId = pipelineId, version = version
-        )?.model
-        if (model == null) {
-            logger.warn("[$pipelineId]| Fail to get the model")
-            return WebhookBuildResult(
-                result = false,
-                reasonDetail = PipelineTriggerFailedMsg("pipeline model is not found")
-            )
-        }
-        val repository = try {
-            client.get(ServiceRepositoryResource::class).get(
-                projectId = projectId,
-                repositoryId = repoHashId,
-                repositoryType = RepositoryType.ID
-            ).data
-        } catch (e: Exception) {
-            null
-        }
-        if (repository == null) {
-            logger.warn("repository does not exist|$projectId|$repoHashId")
-            return WebhookBuildResult(
-                result = false,
-                reasonDetail = PipelineTriggerFailedMsg("repository is not found")
-            )
-        }
-        val userId = pipelineInfo.lastModifyUser
-        val container = model.getTriggerContainer()
-        // 解析变量
-        val variables = getDefaultParam(container.params)
-        // 补充yaml流水线代码库信息
-        pipelineYamlService.getPipelineYamlInfo(projectId = projectId, pipelineId = pipelineId)?.let {
-            variables[PIPELINE_PAC_REPO_HASH_ID] = it.repoHashId
-        }
-        val triggerElementMap =
-            container.elements.filterIsInstance<WebHookTriggerElement>()
-                .filter { it.elementEnabled() }
-                .associateBy { it.id }
-        val failedMatchElements = mutableListOf<PipelineTriggerFailedMatchElement>()
-        taskIds.forEach { taskId ->
-            val triggerElement = triggerElementMap[taskId] ?: return@forEach
-            val webHookParams = WebhookElementParamsRegistrar.getService(triggerElement)
-                .getWebhookElementParams(triggerElement, PipelineVarUtil.fillVariableMap(variables)) ?: return@forEach
-            val repositoryConfig = webHookParams.repositoryConfig
-            if (repositoryConfig.repositoryHashId.isNullOrBlank() && repositoryConfig.repositoryName.isNullOrBlank()) {
-                logger.info("repositoryHashId is blank for code trigger pipeline $pipelineId ")
-                return@forEach
-            }
-            val matchResult = matcher.isMatch(projectId, pipelineId, repository, webHookParams)
-            if (matchResult.isMatch) {
-                try {
-                    val params = WebhookStartParamsRegistrar.getService(triggerElement).getStartParams(
-                        projectId = projectId,
-                        element = triggerElement,
-                        repo = repository,
-                        matcher = matcher,
-                        variables = variables,
-                        params = webHookParams,
-                        matchResult = matchResult
-                    )
-                    val webhookCommit = WebhookCommit(
-                        userId = userId,
-                        pipelineId = pipelineId,
-                        version = version,
-                        params = params,
-                        repositoryConfig = repositoryConfig,
-                        repoName = matcher.getRepoName(),
-                        commitId = matcher.getRevision(),
-                        block = webHookParams.block,
-                        eventType = matcher.getEventType(),
-                        codeType = matcher.getCodeType()
-                    )
-                    val buildId = client.getGateway(ServiceScmWebhookResource::class)
-                        .webhookCommitNew(projectId, webhookCommit).data
-                    logger.info(
-                        "$pipelineId|${buildId?.id}|webhook trigger|(${triggerElement.name}|" +
-                            "repo(${matcher.getRepoName()})"
-                    )
-                    return WebhookBuildResult(result = true, pipelineInfo = pipelineInfo, buildId = buildId)
-                } catch (ignore: Exception) {
-                    logger.warn(
-                        "$pipelineId|webhook trigger|(${triggerElement.name})|repo(${matcher.getRepoName()})",
-                        ignore
-                    )
-                    return WebhookBuildResult(
-                        result = false,
-                        pipelineInfo = pipelineInfo,
-                        reasonDetail = PipelineTriggerFailedMsg(ignore.message ?: "trigger failed")
-                    )
-                }
-            } else {
-                logger.info("webhook trigger match unSuccess|$projectId|$pipelineId|$taskId)")
-                failedMatchElements.add(
-                    PipelineTriggerFailedMatchElement(
-                        elementId = triggerElement.id,
-                        elementName = triggerElement.name,
-                        elementAtomCode = triggerElement.getAtomCode(),
-                        reasonMsg = matchResult.reason ?: "match failed"
-                    )
-                )
-            }
-        }
-        return WebhookBuildResult(
-            result = false,
-            pipelineInfo = pipelineInfo,
-            reasonDetail = PipelineTriggerFailedMatch(elements = failedMatchElements)
-        )
     }
 
     /**
@@ -796,19 +657,5 @@ class PipelineBuildWebhookService @Autowired constructor(
         } catch (ignored: Exception) {
             logger.error("save auth user metrics", ignored)
         }
-    }
-
-    private fun getDefaultParam(params: List<BuildFormProperty>): MutableMap<String, String> {
-        val variables = mutableMapOf<String, String>()
-        params.forEach { param ->
-            variables[param.id] = if (CascadePropertyUtils.supportCascadeParam(param.type) &&
-                param.defaultValue is Map<*, *>
-            ) {
-                JsonUtil.toJson(param.defaultValue, false)
-            } else {
-                param.defaultValue.toString()
-            }
-        }
-        return variables
     }
 }

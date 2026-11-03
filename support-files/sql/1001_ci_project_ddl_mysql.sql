@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS `T_USER` (
   `USER_TYPE` bit(1) NOT NULL DEFAULT b'0' COMMENT '用户类型0普通用户 1公共账号',
   `BUSINESS_LINE_ID` bigint(20) DEFAULT NULL COMMENT '业务线ID',
   `BUSINESS_LINE_NAME` varchar(255) DEFAULT NULL COMMENT '业务线名称',
+  `FULL_DEPARTMENTS` text DEFAULT NULL COMMENT '完整部门链路，JSON数组，按祖先到当前组织排列',
   PRIMARY KEY (`USER_ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户表';
 
@@ -97,6 +98,19 @@ CREATE TABLE IF NOT EXISTS `T_FAVORITE` (
   UNIQUE KEY `service_name` (`service_id`,`username`),
   KEY `idx_username` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8 COMMENT='关注收藏表';
+
+-- ----------------------------
+-- Table structure for T_PROJECT_FAVOR
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `T_PROJECT_FAVOR` (
+  `ID` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `PROJECT_ID` varchar(64) NOT NULL COMMENT '项目英文名',
+  `CREATE_USER` varchar(64) NOT NULL COMMENT '收藏用户',
+  `CREATE_TIME` datetime NOT NULL COMMENT '创建时间',
+  PRIMARY KEY (`ID`),
+  UNIQUE KEY `UNI_PROJECT_USER` (`PROJECT_ID`, `CREATE_USER`),
+  KEY `IDX_CREATE_USER` (`CREATE_USER`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目收藏表';
 
 -- ----------------------------
 -- Table structure for T_PROJECTS
@@ -247,6 +261,7 @@ CREATE TABLE IF NOT EXISTS `T_PROJECT_LABEL_REL`
     `CREATE_TIME` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `UPDATE_TIME` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '修改时间',
     PRIMARY KEY (`ID`),
+    UNIQUE KEY `UNI_LABEL_ID_PROJECT_ID` (`LABEL_ID`, `PROJECT_ID`),
     KEY `inx_tmplr_label_id` (`LABEL_ID`),
     KEY `inx_tmplr_project_id` (`PROJECT_ID`)
 ) ENGINE = InnoDB

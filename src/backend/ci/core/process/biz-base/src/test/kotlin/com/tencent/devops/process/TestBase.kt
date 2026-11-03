@@ -363,7 +363,8 @@ open class TestBase : BkCiAbstractTest() {
         runCondition: RunCondition = RunCondition.PRE_TASK_SUCCESS,
         customVariables: MutableList<NameAndValue>? = null,
         elementPostInfo: ElementPostInfo? = null,
-        retryCount: Int = 0
+        retryCount: Int = 0,
+        jobPostStepFlag: Boolean? = null
     ): ElementAdditionalOptions {
         return ElementAdditionalOptions(
             enable = enable,
@@ -371,6 +372,7 @@ open class TestBase : BkCiAbstractTest() {
             customVariables = customVariables,
             retryCount = retryCount,
             elementPostInfo = elementPostInfo,
+            jobPostStepFlag = jobPostStepFlag,
             otherTask = nullObject,
             customCondition = nullObject,
             subscriptionPauseUser = null

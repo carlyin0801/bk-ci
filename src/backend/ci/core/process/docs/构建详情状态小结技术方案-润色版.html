@@ -1,0 +1,1258 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>构建详情状态小结技术方案</title>
+<style>
+  :root{
+    --blue:#2468f2; --blue-soft:#edf4ff; --blue-line:#bdd3ff; --blue-dark:#1d4ed8;
+    --orange:#ff9c01; --orange-soft:#fff4df; --orange-line:#ffd690; --orange-dark:#b35b00;
+    --green:#21a675; --green-soft:#eaf8f1; --green-line:#bde7d2; --green-dark:#147d55;
+    --red:#e34d59; --red-soft:#fff0f1; --red-line:#ffd0d4; --red-dark:#c93542;
+    --purple:#7b61ff; --purple-soft:#f3f0ff; --purple-line:#ded6ff; --purple-dark:#6651d8;
+    --ink:#172033; --muted:#5f6b7a; --line:#d8e0eb; --panel:#f7f9fc;
+  }
+  *{ box-sizing:border-box; }
+  html{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  body{
+    margin:0; color:var(--ink); font-size:15px; line-height:1.6;
+    font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",Arial,sans-serif;
+    background:#eef3f9;
+  }
+  .page{
+    width:210mm; min-height:297mm; padding:15mm 16mm 14mm;
+    margin:0 auto 8mm; background:#fff; position:relative;
+    box-shadow:0 6px 24px rgba(24,39,75,.13);
+  }
+  @page{ size:A4; margin:0; }
+  @media print{
+    body{ background:#fff; }
+    .page{ width:auto; margin:0; box-shadow:none; break-after:page; }
+    .page:last-child{ break-after:auto; }
+  }
+
+  /* ---------- 封面 ---------- */
+  .cover{
+    background:linear-gradient(150deg,#0e2456 0%,#1f47b8 48%,#3a9bf5 100%);
+    color:#fff; padding:0; overflow:hidden;
+  }
+  .cover .inner{ padding:34mm 18mm 20mm; position:relative; z-index:2; }
+  .cover .deco{ position:absolute; border-radius:50%; z-index:1; }
+  .cover .d1{ right:-120px; bottom:-150px; width:470px; height:470px; background:rgba(255,255,255,.10); }
+  .cover .d2{ right:60px; top:-130px; width:300px; height:300px; background:rgba(255,255,255,.07); }
+  .cover .badge{
+    display:inline-block; padding:7px 16px; border:1px solid rgba(255,255,255,.45);
+    border-radius:999px; font-size:15px; letter-spacing:.06em;
+  }
+  .cover h1{ font-size:52px; line-height:1.16; margin:26mm 0 14px; letter-spacing:-.02em; font-weight:800; }
+  .cover .sub-en{ font-size:17px; letter-spacing:.08em; color:rgba(255,255,255,.72); text-transform:uppercase; }
+  .cover .lead{ font-size:19px; line-height:1.8; color:rgba(255,255,255,.92); max-width:140mm; margin:22px 0 0; }
+  .coverfoot{ position:relative; z-index:2; padding:24mm 18mm 16mm; font-size:14.5px; }
+  .coverfoot .facts{
+    display:grid; grid-template-columns:1fr 1fr; gap:11px 26px;
+  }
+  .coverfoot .facts div{ padding:11px 15px; background:rgba(255,255,255,.13); border-radius:11px;
+    border:1px solid rgba(255,255,255,.20); }
+  .coverfoot .facts span{ color:rgba(255,255,255,.68); }
+  .coverfoot .facts b{ font-weight:700; }
+  .coverfoot .foot-line{ margin-top:20mm; font-size:14px; color:rgba(255,255,255,.75);
+    line-height:1.5; }
+
+  /* ---------- 通用排版 ---------- */
+  .kicker{ color:var(--blue); font-weight:700; font-size:13.5px; letter-spacing:.12em;
+    text-transform:uppercase; margin-bottom:7px; }
+  h2{ font-size:29px; margin:0 0 6px; letter-spacing:-.01em; font-weight:800; }
+  h2 .num{ color:var(--blue); }
+  .h2sub{ color:var(--muted); font-size:14px; margin-bottom:18px; }
+  h3{ font-size:19px; margin:22px 0 10px; font-weight:700; }
+  h3:first-child{ margin-top:0; }
+  h4{ font-size:16px; margin:16px 0 8px; font-weight:700; color:#2b3a52; }
+  p{ margin:0 0 12px; }
+  .lead{ font-size:17px; line-height:1.75; color:#31415c; margin-bottom:16px; }
+  ul,ol{ margin:8px 0 14px; padding-left:22px; }
+  li{ margin:6px 0; }
+  .code{
+    font-family:Consolas,Menlo,monospace; font-size:13px; color:var(--blue-dark);
+    background:#eef4ff; border-radius:5px; padding:1.5px 6px; overflow-wrap:anywhere;
+  }
+  .en{ font-family:Consolas,Menlo,monospace; font-size:13px; color:#1f3a63;
+    word-break:break-all; overflow-wrap:anywhere; }
+
+  /* ---------- 卡片 / 提示框 ---------- */
+  .grid{ display:grid; gap:14px; }
+  .g2{ grid-template-columns:1fr 1fr; }
+  .g3{ grid-template-columns:repeat(3,1fr); }
+  .card{ padding:17px 19px; border:1px solid var(--line); border-radius:15px; background:#fff; }
+  .card h4{ margin:0 0 8px; font-size:17px; }
+  .card p{ margin:0 0 8px; font-size:14.5px; color:#3b4960; }
+  .card p:last-child{ margin-bottom:0; }
+  .card.b{ background:var(--blue-soft); border-color:var(--blue-line); }
+  .card.o{ background:var(--orange-soft); border-color:var(--orange-line); }
+  .card.gr{ background:var(--green-soft); border-color:var(--green-line); }
+  .card.r{ background:var(--red-soft); border-color:var(--red-line); }
+  .card.p{ background:var(--purple-soft); border-color:var(--purple-line); }
+  .tag{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:12.5px;
+    font-weight:700; background:#fff; color:var(--blue); border:1px solid var(--blue-line);
+    margin-bottom:9px; }
+  .tag.o{ color:var(--orange-dark); border-color:var(--orange-line); }
+  .tag.gr{ color:var(--green-dark); border-color:var(--green-line); }
+  .tag.r{ color:var(--red-dark); border-color:var(--red-line); }
+  .tag.p{ color:var(--purple-dark); border-color:var(--purple-line); }
+
+  .box{ padding:14px 18px; border-radius:12px; background:var(--panel);
+    border-left:4px solid var(--blue); color:#33415a; font-size:14.5px; margin:14px 0; }
+  .box.warn{ border-left-color:var(--orange); background:var(--orange-soft); }
+  .box.danger{ border-left-color:var(--red); background:var(--red-soft); }
+  .box.tip{ border-left-color:var(--green); background:var(--green-soft); }
+  .box b{ color:var(--ink); }
+  .box p{ margin:0 0 8px; }
+  .box p:last-child{ margin:0; }
+
+  /* ---------- 表格 ---------- */
+  table{ width:100%; border-collapse:collapse; font-size:13px; margin:10px 0 13px; }
+  th,td{ border:1px solid var(--line); padding:7px 10px; vertical-align:top; text-align:left;
+    overflow-wrap:anywhere; }
+  th{ background:#eaf0f9; color:#22334d; font-weight:700; }
+  tbody tr:nth-child(even) td{ background:#fafcfe; }
+  td .code{ font-size:12.5px; }
+  .tc{ text-align:center; }
+  .nowrap{ white-space:nowrap; }
+
+  /* ---------- 图表 ---------- */
+  .svg-wrap{ padding:12px 14px 6px; border:1px solid var(--line); border-radius:16px;
+    background:linear-gradient(180deg,#fbfdff 0%,#f5f9fd 100%); margin:14px 0 0; }
+  .svg-wrap svg{ display:block; }
+  .figcap{ text-align:center; font-size:12.5px; color:var(--muted); margin:8px 0 16px; }
+
+  /* ---------- 目录 ---------- */
+  .toc{ margin-top:6px; }
+  .toc .l1{ display:flex; justify-content:space-between; align-items:baseline;
+    font-size:15.5px; font-weight:700; padding:9px 0 6px; border-bottom:1px solid var(--line); }
+  .toc .l2{ display:flex; justify-content:space-between; align-items:baseline;
+    font-size:14px; color:#4a5a72; padding:4px 0; }
+  .toc .l2 span:first-child{ padding-left:18px; }
+  .toc .pg{ color:var(--blue); font-weight:700; font-size:13.5px; font-family:Consolas,monospace; }
+  .toc .l2 .pg{ color:var(--muted); font-weight:400; }
+  .toc-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 34px; }
+
+  /* ---------- 页码 ---------- */
+  .pno{ position:absolute; right:16mm; bottom:7mm; font-size:12px; color:#a8b4c4;
+    font-family:Consolas,monospace; }
+  .pmark{ position:absolute; left:16mm; bottom:7mm; font-size:12px; color:#a8b4c4; }
+</style>
+</head>
+<body>
+
+<!-- ==================== 封面 ==================== -->
+<section class="page cover">
+  <div class="deco d1"></div>
+  <div class="deco d2"></div>
+  <div class="inner">
+    <div class="badge">TECHNICAL DESIGN DOCUMENT</div>
+    <h1>构建详情状态小结<br>技术方案</h1>
+    <div class="sub-en">Build Detail Status Summary — Design &amp; Implementation</div>
+    <p class="lead">在同一条构建详情接口上，额外返回一张小结卡片，<br>用一句话说清「现在怎么样、为什么、影响了谁」。</p>
+  </div>
+  <div class="coverfoot">
+    <div class="facts">
+      <div><span>需求编号</span><br><b>#13477</b></div>
+      <div><span>实现 PR</span><br><b>#13705</b> · issue_13477_detail_reason_ing</div>
+      <div><span>适用接口</span><br><b>getBuildRecordByExecuteCount</b>（ModelRecord，不新增接口）</div>
+      <div><span>文档版本</span><br><b>v1.3</b>（图表校正 · 内容对齐版）</div>
+    </div>
+    <div class="foot-line">蓝盾团队 · CI/CD 技术中台 &nbsp;|&nbsp; 蓝盾 DevOps 平台 bk-ci</div>
+  </div>
+</section>
+
+<!-- ==================== 目录 ==================== -->
+<section class="page">
+  <div class="kicker">Contents</div>
+  <h2>目录</h2>
+  <div class="h2sub">全文 13 章 + 1 附录，共 10 张原理图、25 张对照表</div>
+  <div class="toc toc-grid">
+    <div>
+      <div class="l1"><span>一、背景与目标</span><span class="pg">03</span></div>
+      <div class="l1"><span>二、核心设计思路</span><span class="pg">04</span></div>
+      <div class="l2"><span>2.1 四条设计原则</span><span class="pg">04</span></div>
+      <div class="l2"><span>2.2 整体数据流转架构</span><span class="pg">05</span></div>
+      <div class="l1"><span>三、卡片决策逻辑</span><span class="pg">06</span></div>
+      <div class="l2"><span>3.1 页面状态与返回卡片对照表</span><span class="pg">07</span></div>
+      <div class="l1"><span>四、模块分工与协作</span><span class="pg">08</span></div>
+      <div class="l2"><span>4.1 各模块职责</span><span class="pg">09</span></div>
+      <div class="l1"><span>五、终态写入机制</span><span class="pg">10</span></div>
+      <div class="l2"><span>5.1 写入时序</span><span class="pg">10</span></div>
+      <div class="l2"><span>5.2 全场景写入对照表</span><span class="pg">11</span></div>
+      <div class="l2"><span>5.3 几个容易踩坑的细节</span><span class="pg">13</span></div>
+      <div class="l1"><span>六、失败类型判定规则</span><span class="pg">14</span></div>
+      <div class="l2"><span>6.1 判定举例</span><span class="pg">15</span></div>
+    </div>
+    <div>
+      <div class="l1"><span>七、读取与动态合成</span><span class="pg">16</span></div>
+      <div class="l2"><span>7.1 读取时的关键规则</span><span class="pg">17</span></div>
+      <div class="l1"><span>八、阶段准入特殊处理</span><span class="pg">18</span></div>
+      <div class="l2"><span>8.1 关键规则</span><span class="pg">19</span></div>
+      <div class="l1"><span>九、运行态实时计算</span><span class="pg">20</span></div>
+      <div class="l2"><span>9.1 排队计算规则</span><span class="pg">21</span></div>
+      <div class="l2"><span>9.2 执行中计算规则</span><span class="pg">21</span></div>
+      <div class="l1"><span>十、推送机制与空窗说明</span><span class="pg">22</span></div>
+      <div class="l2"><span>10.1 推送时机</span><span class="pg">22</span></div>
+      <div class="l2"><span>10.2 三段已知空窗</span><span class="pg">23</span></div>
+      <div class="l1"><span>十一、数据结构与前端对接</span><span class="pg">24</span></div>
+      <div class="l2"><span>11.1 终态详情 buildEndInfo</span><span class="pg">24</span></div>
+      <div class="l2"><span>11.2 endType 枚举全集</span><span class="pg">25</span></div>
+      <div class="l2"><span>11.3 运行态详情 buildRunningInfo</span><span class="pg">26</span></div>
+      <div class="l1"><span>十二、明确不改的行为</span><span class="pg">27</span></div>
+      <div class="l1"><span>十三、上线与验证</span><span class="pg">28</span></div>
+      <div class="l1"><span>附录 A　代码与常量索引</span><span class="pg">29</span></div>
+      <div class="l2"><span>附录 A（续）读取侧与单测索引</span><span class="pg">30</span></div>
+    </div>
+  </div>
+  <div class="box tip" style="margin-top:22px">
+    <p><b>怎么读这份文档。</b>第 2～3 章是「为什么这么设计」，先看它就能看懂后面所有细节；
+    第 5～9 章是写入与读取的实现规则，按链路顺序排列；第 11 章是给前端的字段契约；
+    第 12 章是「不要动」的边界，最容易被后人误改，建议重点看。</p>
+  </div>
+
+  <h3 style="margin-top:20px">图表清单</h3>
+  <p style="font-size:13px;color:#4a5a72;line-height:1.9;margin:0">
+    图 1 状态小结卡片的三张典型形态（p03）· 图 2 整体数据流转架构（p05）· 图 3 卡片决策流程（p06）·
+    图 4 模块分工架构（p08）· 图 5 终态写入时序（p10）· 图 6 失败类型判定流程（p14）·
+    图 7 读取决策流程（p16）· 图 8 阶段准入时序（p18）· 图 9 运行态计算流程（p20）· 图 10 三次推送时机（p22）
+  </p>
+  <div class="pmark">构建详情状态小结技术方案 v1.3</div>
+  <div class="pno">02</div>
+</section>
+
+<!-- ==================== 一、背景与目标 ==================== -->
+<section class="page">
+  <div class="kicker">01 &nbsp;Background</div>
+  <h2><span class="num">一、</span>背景与目标</h2>
+  <div class="h2sub">为什么要做这件事 · 要解决什么问题</div>
+
+  <h3>1.1 现状痛点：只给结论、不给原因</h3>
+  <p>构建详情页原来只有一个孤零零的状态词 —— 「失败」「已取消」「运行中」。用户看到这个词之后，
+  还得自己去翻编排图、逐个点开 Job 和插件，才能搞清楚三件事：</p>
+
+  <table>
+    <tr><th style="width:24%">用户的疑问</th><th>现状</th><th style="width:30%">代价</th></tr>
+    <tr><td><b>是谁取消的？</b></td><td>状态一律显示「已取消」，分不清用户手动取消、系统取消，还是父流水线连带取消</td><td>翻取消人、翻父流水线，跨页面跳转</td></tr>
+    <tr><td><b>哪一个插件失败了？</b></td><td>只知道构建失败，不知道是执行失败、质量红线、人工审核驳回，还是子流水线挂了</td><td>逐个 Job 展开，找红色图标</td></tr>
+    <tr><td><b>现在卡在哪？</b></td><td>「运行中」背后可能是排队、等构建机、等人工审核，页面完全不区分</td><td>只能干等，或去别处查队列</td></tr>
+  </table>
+
+  <h3>1.2 方案目标：多给一张会说话的卡片</h3>
+  <p>在同一条详情接口 <span class="code">getBuildRecordByExecuteCount</span> 上，额外返回一张状态小结卡片：
+  <b>还没结束时</b>说清现在卡在哪一步、前面有谁在排队、有没有需要人介入的环节；<b>已经结束时</b>说清为什么结束
+  （取消 / 失败 / 超时 / 成功）、原因是什么、影响了哪些 Stage / Job / 插件。前端完全按后端给出的大类
+  （<span class="code">endCategory</span> / <span class="code">runningCategory</span>）和已翻译文案渲染，
+  <b>不自己猜成因</b>。</p>
+
+  <div class="svg-wrap" style="margin-top:16px">
+    <div class="svg-wrap"><svg viewBox="0 0 1000 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="状态小结卡片最终效果示意" style="width:100%;height:auto"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#5f6b7a"/></marker></defs><rect x="25" y="14" width="300" height="160" rx="20" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="175" y="69" font-size="15" fill="#334155" text-anchor="middle" font-weight="400">第 3 位 · 已等待 12 秒</text><text x="175" y="96" font-size="15" fill="#334155" text-anchor="middle" font-weight="400">占用中 1 · 前方排队 2</text><text x="175" y="123" font-size="15" fill="#334155" text-anchor="middle" font-weight="400">并发组 release-train</text><text x="175" y="52" font-size="21" fill="#1d4ed8" text-anchor="middle" font-weight="700">排队中</text><rect x="350" y="14" width="300" height="160" rx="20" fill="#fff0f1" stroke="#ffd0d4" stroke-width="1.6"/><text x="500" y="69" font-size="15" fill="#334155" text-anchor="middle" font-weight="400">大类：执行失败 · 多类失败</text><text x="500" y="96" font-size="15" fill="#334155" text-anchor="middle" font-weight="400">质量红线 + 失败即停终止</text><text x="500" y="123" font-size="15" fill="#334155" text-anchor="middle" font-weight="400">点位置直达 Stage / Job / 日志</text><text x="500" y="52" font-size="21" fill="#c93542" text-anchor="middle" font-weight="700">多类失败</text><rect x="675" y="14" width="300" height="160" rx="20" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><text x="825" y="69" font-size="15" fill="#334155" text-anchor="middle" font-weight="400">阶段准入 · 运维审核组</text><text x="825" y="96" font-size="15" fill="#334155" text-anchor="middle" font-weight="400">待审核人 fayewang</text><text x="825" y="123" font-size="15" fill="#334155" text-anchor="middle" font-weight="400">已等待 3 分 38 秒</text><text x="825" y="52" font-size="21" fill="#b35b00" text-anchor="middle" font-weight="700">审核中</text></svg></div>
+<div class="figcap">图 1  状态小结卡片的三张典型形态：排队等位 / 失败溯源 / 等待人工，都用同一张卡片承载</div>
+  </div>
+
+  <h3>1.3 上线结论</h3>
+  <div class="box tip">
+    <p><b>可以上线。</b>终态大类与页面状态对齐，FastKill、阶段准入和取消人的口径与实现一致。第 10 节的三段展示窗口是
+    <b>推送时序导致的正常空窗</b>，不是状态写错。注意 <span class="code">biz-base</span> 依赖 jOOQ 连库生成，需在 CI 再编一次。</p>
+  </div>
+  <div class="pmark">一、背景与目标</div>
+  <div class="pno">03</div>
+</section>
+
+<!-- ==================== 二、核心设计思路 ==================== -->
+<section class="page">
+  <div class="kicker">02 &nbsp;Principle</div>
+  <h2><span class="num">二、</span>核心设计思路</h2>
+  <div class="h2sub">四条原则 · 后面所有的流程图和模块分工，都从这四条推导出来</div>
+
+  <h3>2.1 四条设计原则</h3>
+  <div class="grid g2">
+    <div class="card b">
+      <div class="tag">原则 1</div>
+      <h4>一张卡片，两种寿命</h4>
+      <p>结束原因确定后<b>不再变</b>，写入记录的 <span class="code">modelVar["buildEndInfo"]</span>；
+      排队和执行中的等待<b>每秒都在变</b>，不落库，打开详情时现算 <span class="code">buildRunningInfo</span>。</p>
+      <p>同一时刻只返回其中一张，避免两张卡片叠在一起。</p>
+    </div>
+    <div class="card o">
+      <div class="tag o">原则 2</div>
+      <h4>构建级大类跟着页面状态走</h4>
+      <p>卡片大类必须和页面左上角状态是同一类：取消对取消、失败对失败、排队超时对超时、成功对成功。</p>
+      <p>Job 超时、步骤超时、构建机失联发生在<b>某个位置上</b>，构建本身往往以失败或取消收尾，
+      所以构建级卡片<b>不叫「超时」</b>，超时分钟数写在原因和那一行位置上。</p>
+    </div>
+    <div class="card gr">
+      <div class="tag gr">原则 3</div>
+      <h4>能提前记的成因提前记，但运行中不展示</h4>
+      <p>用户一点取消，取消人、在途插件就固定了；Job 超时、构建机失联也是在当时才知道影响了哪个容器。这些先写入记录。</p>
+      <p>构建还在跑时，<b>读取直接不返回这张卡片</b>；等构建真正结束后，再按最终状态决定保留、覆盖或清掉。</p>
+    </div>
+    <div class="card p">
+      <div class="tag p">原则 4</div>
+      <h4>阶段准入把「记录」和「历史」拆开看</h4>
+      <p>审核挂起时，记录和历史都是 <span class="code">STAGE_SUCCESS</span>，卡片是「审核中」。最后一组点同意后，
+      记录先变运行，历史表要等事务提交才变运行。</p>
+      <p>运行态看的是历史表，所以要等历史提交后再推一次详情。驳回时记录<b>必须保持 CANCELED</b>，
+      <span class="code">finally</span> 才能在「已取消」前提下跑完收尾阶段。</p>
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:16px">
+    <p><b>一句话记住这四条。</b>终态是「一次写、永不变」的结论，运行态是「每次读、现算」的快照；
+    构建级只说大类、位置级才说细节；成因要在现场记下来、但别提前给用户看；
+    阶段准入期间两张表短暂不一致是正常的。</p>
+  </div>
+  <div class="pmark">二、核心设计思路</div>
+  <div class="pno">04</div>
+</section>
+
+<!-- ==================== 2.2 整体数据流转架构 ==================== -->
+<section class="page">
+  <div class="kicker">02 &nbsp;Principle</div>
+  <h2><span class="num">2.2 </span>整体数据流转架构</h2>
+  <div class="h2sub">写入 → 存储 → 读取：成因在何时写入，读取时又按什么决定返回哪张卡片</div>
+
+  <p class="lead">整个方案围绕「写入 → 存储 → 读取」三条链路展开。成因在事件发生时写入、或在构建结束时解析；
+  存储分为终态详情（落库）和运行状态（历史表）；读取时按记录状态决定返回哪张卡片。</p>
+
+  <div class="svg-wrap">
+    <div class="svg-wrap"><svg viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="写入到存储到读取的整体数据流转架构" style="width:100%;height:auto"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#5f6b7a"/></marker></defs><rect x="0" y="20" width="300" height="340" rx="20" fill="#f7f9fc" stroke="#d8e0eb" stroke-width="1.6"/><rect x="0" y="20" width="300" height="50" rx="20" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="150" y="52" font-size="18" fill="#1d4ed8" text-anchor="middle" font-weight="700">写入层</text><rect x="18" y="90" width="264" height="72" rx="14" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.6"/><text x="150" y="133.5" font-size="14" fill="#334155" text-anchor="middle" font-weight="400">取消 / 超时 / 心跳 / 暂停终止</text><rect x="18" y="180" width="264" height="76" rx="14" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.6"/><text x="150" y="225.5" font-size="14" fill="#334155" text-anchor="middle" font-weight="400">构建结束 BuildEndControl</text><rect x="18" y="274" width="264" height="88" rx="14" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.6"/><text x="150" y="312.5" font-size="14" fill="#334155" text-anchor="middle" font-weight="400">成因已确定时</text><text x="150" y="338.5" font-size="14" fill="#334155" text-anchor="middle" font-weight="400">提前写入</text><rect x="350" y="20" width="300" height="340" rx="20" fill="#f7f9fc" stroke="#d8e0eb" stroke-width="1.6"/><rect x="350" y="20" width="300" height="50" rx="20" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><text x="500" y="52" font-size="18" fill="#b35b00" text-anchor="middle" font-weight="700">存储层</text><rect x="368" y="90" width="264" height="104" rx="14" fill="#ffffff" stroke="#ffd690" stroke-width="1.6"/><text x="500" y="136.5" font-size="14" fill="#334155" text-anchor="middle" font-weight="700">构建记录 modelVar</text><text x="500" y="162.5" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">buildEndInfo（终态，落库）</text><rect x="368" y="212" width="264" height="100" rx="14" fill="#ffffff" stroke="#ffd690" stroke-width="1.6"/><text x="500" y="256.5" font-size="14" fill="#334155" text-anchor="middle" font-weight="700">构建历史 status</text><text x="500" y="282.5" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">排队还是运行（实时）</text><rect x="700" y="20" width="300" height="340" rx="20" fill="#f7f9fc" stroke="#d8e0eb" stroke-width="1.6"/><rect x="700" y="20" width="300" height="50" rx="20" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="850" y="52" font-size="18" fill="#147d55" text-anchor="middle" font-weight="700">读取层</text><rect x="718" y="90" width="264" height="104" rx="14" fill="#ffffff" stroke="#bde7d2" stroke-width="1.6"/><text x="850" y="136.5" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="700" font-family="Consolas,Menlo,monospace">getBuildRecordByExecuteCount</text><text x="850" y="162.5" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">详情接口，不新增接口</text><rect x="718" y="212" width="264" height="100" rx="14" fill="#ffffff" stroke="#bde7d2" stroke-width="1.6"/><text x="850" y="256.5" font-size="14" fill="#334155" text-anchor="middle" font-weight="700">详情页：一张卡片</text><text x="850" y="282.5" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">按哪个非空渲染哪个</text><path d="M300 330 L350 330" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M650 330 L700 330" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="325" y="320" font-size="12.5" fill="#5f6b7a" text-anchor="middle" font-weight="400">写入</text><text x="675" y="320" font-size="12.5" fill="#5f6b7a" text-anchor="middle" font-weight="400">读取</text><rect x="120" y="372" width="760" height="0" rx="16" fill="#fff"/><rect x="150" y="366" width="700" height="2" fill="#e6ecf4"/></svg></div>
+<div class="figcap">图 2  整体数据流转架构：成因在「发生时」或「结束时」写入，读取时按状态决定返回哪种卡片</div>
+  </div>
+
+  <table>
+    <tr><th style="width:16%">层次</th><th style="width:34%">承载什么</th><th>关键点</th></tr>
+    <tr>
+      <td><b>写入层</b></td>
+      <td>取消 / 超时 / 心跳失联 / 暂停终止；构建结束时的统一解析</td>
+      <td>成因「当场可知」就当场写（取消人、在途插件、失联容器）；「要等结果」的留给构建结束统一对齐</td>
+    </tr>
+    <tr>
+      <td><b>存储层</b></td>
+      <td><span class="code">构建记录 modelVar</span>：终态详情 <span class="code">buildEndInfo</span>（落库）<br>
+          <span class="code">构建历史 status</span>：排队还是运行（实时）</td>
+      <td>终态落库、运行态不落库。运行态若落库读到的必然是过期快照，还会造成严重写放大</td>
+    </tr>
+    <tr>
+      <td><b>读取层</b></td>
+      <td>接口 <span class="code">getBuildRecordByExecuteCount</span> → 详情页一张卡片</td>
+      <td>终态为空才算运行态，保证两张卡片<b>互斥</b>；前端「哪个非空渲染哪个」，不要两张叠着画</td>
+    </tr>
+  </table>
+
+  <div class="box">
+    <p><b>两套卡片互斥、字段语义不同。</b>终态 <span class="code">buildEndInfo</span> 描述「为什么结束、跳到哪」，
+    覆盖成功 / 失败 / 取消 / 排队超时 / 阶段准入审核中；运行态 <span class="code">buildRunningInfo</span> 描述
+    「此刻卡在哪、在等谁」，覆盖排队中与执行中。两者<b>不共用</b>同一套位置结构。</p>
+  </div>
+  <div class="pmark">二、核心设计思路</div>
+  <div class="pno">05</div>
+</section>
+
+<!-- ==================== 三、卡片决策逻辑 ==================== -->
+<section class="page">
+  <div class="kicker">03 &nbsp;Decision Flow</div>
+  <h2><span class="num">三、</span>卡片决策逻辑</h2>
+  <div class="h2sub">打开详情时到底出哪张卡片</div>
+
+  <p class="lead">用户打开构建详情的那一刻，后端需要根据记录表状态决定返回哪张卡片。
+  核心先判「运行态」，再判「终态是否需要校正」——记录表状态是唯一判断依据。</p>
+
+  <div class="svg-wrap">
+    <div class="svg-wrap"><svg viewBox="0 0 1000 920" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="打开构建详情时返回哪种卡片的决策流程" style="width:100%;height:auto"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#5f6b7a"/></marker></defs><rect x="40" y="24" width="272" height="54" rx="27" fill="#172033"/><text x="176" y="58" font-size="17" fill="#ffffff" text-anchor="middle" font-weight="700">用户打开构建详情</text><path d="M176 78 L176 120" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><polygon points="176,120 322,196 176,272 30,196" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.8"/><text x="176" y="190" font-size="17" fill="#1d4ed8" text-anchor="middle" font-weight="700">记录表状态？</text><text x="176" y="213" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">ModelRecord.status</text><path d="M322 196 L356 196" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M356 130 L356 578" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M356 130 L401 130" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><rect x="401" y="76" width="589" height="108" rx="16" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="695.5" y="110.5" font-size="16" fill="#1d4ed8" text-anchor="middle" font-weight="700">排队 / 执行中</text><text x="695.5" y="137.5" font-size="13" fill="#334155" text-anchor="middle" font-weight="400">现算 buildRunningInfo</text><text x="695.5" y="164.5" font-size="13" fill="#2468f2" text-anchor="middle" font-weight="700">→ 只返回运行态</text><path d="M356 276 L401 276" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><rect x="401" y="222" width="589" height="108" rx="16" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><text x="695.5" y="256.5" font-size="16" fill="#b35b00" text-anchor="middle" font-weight="700">阶段准入 · 审核中</text><text x="695.5" y="283.5" font-size="12.5" fill="#334155" text-anchor="middle" font-weight="400">STAGE_SUCCESS 且审核组仍 REVIEWING</text><text x="695.5" y="310.5" font-size="12.5" fill="#334155" text-anchor="middle" font-weight="400">合成 SUCCESS_STAGE_REVIEWING，只返回终态</text><path d="M356 422 L401 422" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><rect x="401" y="368" width="589" height="108" rx="16" fill="#f2f4f7" stroke="#dae0e8" stroke-width="1.6"/><text x="695.5" y="402.5" font-size="16" fill="#5b6675" text-anchor="middle" font-weight="700">阶段准入 · 两张卡片都空（空窗 ①）</text><text x="695.5" y="429.5" font-size="12.5" fill="#334155" text-anchor="middle" font-weight="400">STAGE_SUCCESS 但审核已处理完</text><text x="695.5" y="456.5" font-size="12.5" fill="#334155" text-anchor="middle" font-weight="400">这一帧既不是审核中、也不合成成功，等下一次推送</text><path d="M356 578 L430 578" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="393" y="566" font-size="12.5" fill="#5f6b7a" text-anchor="middle" font-weight="400">已结束</text><polygon points="600,502 770,578 600,654 430,578" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.8"/><text x="600" y="572" font-size="16" fill="#147d55" text-anchor="middle" font-weight="700">库里已有终态详情？</text><text x="600" y="595" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">modelVar.buildEndInfo</text><path d="M600 654 L600 682" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M173 682 L827 682" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M173 682 L173 730" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M500 682 L500 730" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M827 682 L827 730" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="161" y="714" font-size="12.5" fill="#5f6b7a" text-anchor="end" font-weight="400">没有</text><text x="488" y="714" font-size="12.5" fill="#5f6b7a" text-anchor="end" font-weight="400">有 · 一致</text><text x="815" y="714" font-size="12.5" fill="#5f6b7a" text-anchor="end" font-weight="400">有 · 不一致</text><rect x="20" y="730" width="306" height="146" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="173" y="770" font-size="15.5" fill="#147d55" text-anchor="middle" font-weight="700">没有</text><text x="173" y="797" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">按状态从模型合成</text><text x="173" y="824" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">普通成功 / 漏记终态</text><text x="173" y="851" font-size="13" fill="#21a675" text-anchor="middle" font-weight="700">→ 只返回终态</text><rect x="347" y="730" width="306" height="146" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="500" y="770" font-size="14.5" fill="#147d55" text-anchor="middle" font-weight="700">有，大类与状态一致</text><text x="500" y="797" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">刷新每行位置后返回</text><text x="500" y="824" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">取消卡补在途插件</text><text x="500" y="851" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">失败卡补暂停终止 / 审核驳回</text><rect x="674" y="730" width="306" height="146" rx="16" fill="#fff0f1" stroke="#ffd0d4" stroke-width="1.6"/><text x="827" y="770" font-size="14.5" fill="#c93542" text-anchor="middle" font-weight="700">有，大类与状态不一致</text><text x="827" y="797" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">失败对不上 → 用模型失败位置重写</text><text x="827" y="824" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">超时对不上 → 改成排队超时</text><text x="827" y="851" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">成功 / 取消对不上 → 丢掉重算</text><text x="500" y="902" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">同一帧只返回一张卡片：要么 buildRunningInfo（运行态），要么 buildEndInfo（终态 / 审核中）</text></svg></div>
+<div class="figcap">图 3  卡片决策流程：以记录表状态为唯一判断依据，先判运行态，再判终态是否需要校正</div>
+  </div>
+  <div class="pmark">三、卡片决策逻辑</div>
+  <div class="pno">06</div>
+</section>
+
+<!-- ==================== 3.1 对照表 ==================== -->
+<section class="page">
+  <div class="kicker">03 &nbsp;Decision Flow</div>
+  <h2><span class="num">3.1 </span>页面状态与返回卡片对照表</h2>
+  <div class="h2sub">四种页面形态，对应四种判定路径</div>
+
+  <table>
+    <tr><th style="width:24%">用户看到的页面</th><th style="width:36%">记录状态</th><th>返回卡片</th></tr>
+    <tr>
+      <td>在排队、在执行</td>
+      <td><span class="code">QUEUE</span> / <span class="code">QUEUE_CACHE</span> / 运行中</td>
+      <td><span class="code">buildRunningInfo</span></td>
+    </tr>
+    <tr>
+      <td>阶段准入等人审核</td>
+      <td><span class="code">STAGE_SUCCESS</span>，且审核组仍是 <span class="code">REVIEWING</span></td>
+      <td><span class="code">buildEndInfo</span>，类型 <span class="code">SUCCESS_STAGE_REVIEWING</span></td>
+    </tr>
+    <tr>
+      <td>成功、失败、取消、排队超时</td>
+      <td>对应终态</td>
+      <td><span class="code">buildEndInfo</span></td>
+    </tr>
+    <tr>
+      <td>最后一组刚点同意、历史还没提交</td>
+      <td>记录已是运行，或仍是阶段挂起；<br><b>历史仍是阶段挂起</b></td>
+      <td>这一帧<b>可能两张都空</b>，见第十章空窗①</td>
+    </tr>
+  </table>
+
+  <h3>三个容易忽略的点</h3>
+  <div class="grid g3">
+    <div class="card b">
+      <h4>记录表是锚点</h4>
+      <p>不用历史表判终态。构建结束的瞬间，记录已经是终态，历史表可能还显示运行中——若用历史表，这一下推送会算不出终态卡片。</p>
+    </div>
+    <div class="card o">
+      <h4>「有」不等于直接用</h4>
+      <p>库里已有终态详情时，还要校验<b>大类是否与记录状态同类</b>。一致才刷新位置后返回，不一致要覆盖、重写或丢弃后重算。</p>
+    </div>
+    <div class="card gr">
+      <h4>两张卡片互斥</h4>
+      <p>组装详情时先看终态是否非空：<b>终态非空才算终态</b>，否则才去现算运行态。前端也按「哪个非空渲染哪个」。</p>
+    </div>
+  </div>
+
+  <div class="box tip" style="margin-top:16px">
+    <p><b>实现落点：</b><span class="code">PipelineBuildFacadeService</span> 组装详情时，
+    仅当 <span class="code">buildRecord.buildEndInfo == null</span> 才会调用
+    <span class="code">buildRunningInfoResolver.resolve(...)</span> 现算运行态——这就是互斥的唯一开关。</p>
+  </div>
+  <div class="pmark">三、卡片决策逻辑</div>
+  <div class="pno">07</div>
+</section>
+
+<!-- ==================== 四、模块分工与协作 ==================== -->
+<section class="page">
+  <div class="kicker">04 &nbsp;Architecture</div>
+  <h2><span class="num">四、</span>模块分工与协作</h2>
+  <div class="h2sub">五个模块各司其职 · 入口事件驱动写入</div>
+
+  <p class="lead">方案涉及五个模块的协作。事件从各个入口触发，经由 engine 层决定写什么，
+  由 base 层负责落库和读取，process 层做最终组装，前端只负责渲染。</p>
+
+  <div class="svg-wrap">
+    <div class="svg-wrap"><svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="构建详情状态小结的模块分工架构" style="width:100%;height:auto"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#5f6b7a"/></marker></defs><rect x="0" y="20" width="1000" height="118" rx="16" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><rect x="0" y="20" width="210" height="118" rx="16" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><rect x="192" y="21" width="18" height="116" fill="#edf4ff"/><text x="105" y="85" font-size="16" fill="#172033" text-anchor="middle" font-weight="700">事件入口</text><rect x="192" y="22" width="2" height="114" rx="0" fill="#bdd3ff"/><rect x="228" y="36" width="123.2" height="36" rx="9" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.2"/><text x="289.6" y="59" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">用户取消 / 重启</text><rect x="361.2" y="36" width="150.2" height="36" rx="9" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.2"/><text x="436.3" y="59" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">排队满 / 并发组挤掉</text><rect x="521.4" y="36" width="151.55" height="36" rx="9" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.2"/><text x="597.175" y="59" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">Job 超时 / 排队超时</text><rect x="682.95" y="36" width="93.5" height="36" rx="9" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.2"/><text x="729.7" y="59" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">构建机失联</text><rect x="228" y="82" width="134" height="36" rx="9" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.2"/><text x="295" y="105" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">执行前暂停被终止</text><rect x="372" y="82" width="134" height="36" rx="9" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.2"/><text x="439" y="105" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">父流水线级联取消</text><rect x="516" y="82" width="147.5" height="36" rx="9" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.2"/><text x="589.75" y="105" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">阶段准入同意或驳回</text><rect x="673.5" y="82" width="80" height="36" rx="9" fill="#ffffff" stroke="#bdd3ff" stroke-width="1.2"/><text x="713.5" y="105" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">构建结束</text><path d="M105 141 L105 159" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><rect x="0" y="162" width="1000" height="118" rx="16" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><rect x="0" y="162" width="210" height="118" rx="16" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><rect x="192" y="163" width="18" height="116" fill="#fff4df"/><text x="105" y="227" font-size="16" fill="#172033" text-anchor="middle" font-weight="700">biz-engine</text><rect x="192" y="164" width="2" height="114" rx="0" fill="#ffd690"/><rect x="228" y="178" width="171.8" height="36" rx="9" fill="#ffffff" stroke="#ffd690" stroke-width="1.2"/><text x="313.9" y="201" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">BuildCancelControl</text><rect x="409.8" y="178" width="147.5" height="36" rx="9" fill="#ffffff" stroke="#ffd690" stroke-width="1.2"/><text x="483.55" y="201" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">BuildEndControl</text><rect x="567.3" y="178" width="155.6" height="36" rx="9" fill="#ffffff" stroke="#ffd690" stroke-width="1.2"/><text x="645.1" y="201" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">HeartbeatControl</text><rect x="228" y="224" width="188" height="36" rx="9" fill="#ffffff" stroke="#ffd690" stroke-width="1.2"/><text x="322" y="247" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">BuildEndInfoResolver</text><rect x="426" y="224" width="179.9" height="36" rx="9" fill="#ffffff" stroke="#ffd690" stroke-width="1.2"/><text x="515.95" y="247" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">BuildMonitorControl</text><path d="M105 283 L105 301" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><rect x="0" y="304" width="1000" height="118" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><rect x="0" y="304" width="210" height="118" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><rect x="192" y="305" width="18" height="116" fill="#eaf8f1"/><text x="105" y="369" font-size="16" fill="#172033" text-anchor="middle" font-weight="700">biz-base</text><rect x="192" y="306" width="2" height="114" rx="0" fill="#bde7d2"/><rect x="228" y="320" width="236.6" height="36" rx="9" fill="#ffffff" stroke="#bde7d2" stroke-width="1.2"/><text x="346.3" y="343" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">PipelineBuildRecordService</text><rect x="474.6" y="320" width="220.4" height="36" rx="9" fill="#ffffff" stroke="#bde7d2" stroke-width="1.2"/><text x="584.8" y="343" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">BuildRunningInfoResolver</text><rect x="228" y="366" width="188" height="36" rx="9" fill="#ffffff" stroke="#bde7d2" stroke-width="1.2"/><text x="322" y="389" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">PipelineStageService</text><rect x="426" y="366" width="155.6" height="36" rx="9" fill="#ffffff" stroke="#bde7d2" stroke-width="1.2"/><text x="503.8" y="389" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">QueueInterceptor</text><path d="M105 425 L105 443" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><rect x="0" y="446" width="1000" height="118" rx="16" fill="#f3f0ff" stroke="#ded6ff" stroke-width="1.6"/><rect x="0" y="446" width="210" height="118" rx="16" fill="#f3f0ff" stroke="#ded6ff" stroke-width="1.6"/><rect x="192" y="447" width="18" height="116" fill="#f3f0ff"/><text x="105" y="511" font-size="16" fill="#172033" text-anchor="middle" font-weight="700">common-pipeline</text><rect x="192" y="448" width="2" height="114" rx="0" fill="#ded6ff"/><rect x="228" y="462" width="328.4" height="36" rx="9" fill="#ffffff" stroke="#ded6ff" stroke-width="1.2"/><text x="392.2" y="485" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">BuildEndInfo / BuildRunningInfo（POJO）</text><rect x="566.4" y="462" width="228.5" height="36" rx="9" fill="#ffffff" stroke="#ded6ff" stroke-width="1.2"/><text x="680.65" y="485" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">BuildEndPositionCollector</text><rect x="228" y="508" width="269" height="36" rx="9" fill="#ffffff" stroke="#ded6ff" stroke-width="1.2"/><text x="362.5" y="531" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">BuildEndType / BuildRunningType</text><rect x="507" y="508" width="244.7" height="36" rx="9" fill="#ffffff" stroke="#ded6ff" stroke-width="1.2"/><text x="629.35" y="531" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">EndPosition / WaitingJobInfo</text><path d="M105 567 L105 585" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><rect x="0" y="588" width="1000" height="118" rx="16" fill="#fff0f1" stroke="#ffd0d4" stroke-width="1.6"/><rect x="0" y="588" width="210" height="118" rx="16" fill="#fff0f1" stroke="#ffd0d4" stroke-width="1.6"/><rect x="192" y="589" width="18" height="116" fill="#fff0f1"/><text x="105" y="653" font-size="16" fill="#172033" text-anchor="middle" font-weight="700">biz-process</text><rect x="192" y="590" width="2" height="114" rx="0" fill="#ffd0d4"/><rect x="228" y="604" width="378.35" height="36" rx="9" fill="#ffffff" stroke="#ffd0d4" stroke-width="1.2"/><text x="417.175" y="627" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">PipelineBuildFacadeService — 组装 ModelRecord</text><rect x="228" y="650" width="363.5" height="36" rx="9" fill="#ffffff" stroke="#ffd0d4" stroke-width="1.2"/><text x="409.75" y="673" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">终态非空才算终态，否则现算运行态，保证两张卡片互斥</text></svg></div>
+<div class="figcap">图 4  模块分工架构：事件入口 → engine 决策 → base 读写 → 公共模型 → process 组装</div>
+  </div>
+  <div class="pmark">四、模块分工与协作</div>
+  <div class="pno">08</div>
+</section>
+
+<!-- ==================== 4.1 各模块职责 ==================== -->
+<section class="page">
+  <div class="kicker">04 &nbsp;Architecture</div>
+  <h2><span class="num">4.1 </span>各模块职责</h2>
+  <div class="h2sub">谁负责写、谁负责读、谁负责组装</div>
+
+  <table>
+    <tr><th style="width:22%">模块</th><th>负责内容</th></tr>
+    <tr><td><span class="code">common-pipeline</span></td>
+        <td>卡片数据结构定义；从编排模型采集失败 / 取消位置；读取时重算失败类型</td></tr>
+    <tr><td><span class="code">biz-engine</span></td>
+        <td>取消、超时、心跳、构建结束时决定写什么内容</td></tr>
+    <tr><td><span class="code">biz-base</span></td>
+        <td>把卡片写入记录、按状态读出来；现算运行态；阶段准入改记录并推送</td></tr>
+    <tr><td><span class="code">biz-process</span></td>
+        <td>组装详情。终态为空才算运行态，保证两张卡片互斥</td></tr>
+    <tr><td><span class="code">support-files/i18n</span></td>
+        <td><span class="code">buildEndType.*</span>、<span class="code">buildRunningType.*</span>
+            和各条 <span class="code">reasonCode</span> 的多语言文案（zh_CN / en_US / ja_JP）</td></tr>
+  </table>
+
+  <h3>4.2 核心类索引（写入侧 → 读取侧）</h3>
+  <table>
+    <tr><th style="width:30%">类 / 对象</th><th style="width:20%">所属模块</th><th>职责</th></tr>
+    <tr><td><span class="code">BuildCancelControl</span></td><td>biz-engine</td>
+        <td>处理取消事件：收集在途位置、精炼用户取消原因、区分「普通取消」与「强制终止」</td></tr>
+    <tr><td><span class="code">BuildEndControl</span></td><td>biz-engine</td>
+        <td>构建结束入口：调用 Resolver 解析终态，再按兼容性写入或清理</td></tr>
+    <tr><td><span class="code">BuildEndInfoResolver</span></td><td>biz-engine</td>
+        <td>终态解析核心：成功 / 异常 / 聚合失败类型 / 与构建状态对齐，以及各原因的回填</td></tr>
+    <tr><td><span class="code">PipelineBuildRecordService</span></td><td>biz-base</td>
+        <td>记录读写总入口：解析 / 保存 / 清理终态详情，取消落库，阶段准入审核中合成</td></tr>
+    <tr><td><span class="code">BuildRunningInfoResolver</span></td><td>biz-base</td>
+        <td>运行态实时计算：排队位次与并发组、等待 Job、待人工处理项、时长快照</td></tr>
+    <tr><td><span class="code">BuildEndPositionCollector</span></td><td>common-pipeline</td>
+        <td>从编排模型采集失败 / 取消位置，聚合构建级失败类型，压缩与截断展示原因</td></tr>
+    <tr><td><span class="code">PipelineBuildFacadeService</span></td><td>biz-process</td>
+        <td>组装 <span class="code">ModelRecord</span>；终态与运行态互斥的判定点就在这里</td></tr>
+  </table>
+  <p class="small" style="color:var(--muted);font-size:12.5px">其余入口类（心跳失联、Job / 排队超时、排队挤掉）见附录 A 的完整索引。</p>
+  <div class="pmark">四、模块分工与协作</div>
+  <div class="pno">09</div>
+</section>
+
+<!-- ==================== 五、终态写入机制 ==================== -->
+<section class="page">
+  <div class="kicker">05 &nbsp;Write Path</div>
+  <h2><span class="num">五、</span>终态写入机制</h2>
+  <div class="h2sub">什么时候写 · 谁来写 · 构建结束后如何对齐</div>
+
+  <h3>5.1 写入时序</h3>
+  <p>终态详情的写入分两个时机：</p>
+  <ul>
+    <li><b>成因已明确时提前写入</b>：如用户取消、Job 超时、构建机失联。</li>
+    <li><b>构建结束时统一对齐</b>：失败、阶段驳回、排队超时。普通成功<b>不写库</b>，打开详情时合成。</li>
+  </ul>
+
+  <div class="svg-wrap">
+    <div class="svg-wrap"><svg viewBox="0 0 1000 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="终态写入时序图" style="width:100%;height:auto"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#5f6b7a"/></marker></defs><rect x="86.72" y="24" width="106.56" height="44" rx="22" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="140" y="52" font-size="16" fill="#1d4ed8" text-anchor="middle" font-weight="700">触发入口</text><line x1="140" y1="72" x2="140" y2="432" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 5"/><rect x="331.72" y="24" width="106.56" height="44" rx="22" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><text x="385" y="52" font-size="16" fill="#b35b00" text-anchor="middle" font-weight="700">记录服务</text><line x1="385" y1="72" x2="385" y2="432" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 5"/><rect x="535.12" y="24" width="189.76" height="44" rx="22" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="630" y="52" font-size="16" fill="#147d55" text-anchor="middle" font-weight="700">BuildEndControl</text><line x1="630" y1="72" x2="630" y2="432" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 5"/><rect x="811.72" y="24" width="106.56" height="44" rx="22" fill="#f3f0ff" stroke="#ded6ff" stroke-width="1.6"/><text x="865" y="52" font-size="16" fill="#6651d8" text-anchor="middle" font-weight="700">详情页面</text><line x1="865" y1="72" x2="865" y2="432" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 5"/><path d="M140 122 L385 122" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="262" y="112" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400">成因已明确 → 先写成因</text><rect x="300" y="140" width="170" height="52" rx="12" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><text x="385" y="173.5" font-size="12.5" fill="#334155" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">落 modelVar.buildEndInfo</text><path d="M385 232 L865 232" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="625" y="222" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400">构建仍在跑 → 读取不返回这张卡片</text><path d="M630 300 L385 300" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="507" y="290" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400">构建结束，解析终态</text><rect x="268" y="318" width="234" height="60" rx="12" fill="#fff0f1" stroke="#ffd0d4" stroke-width="1.6"/><text x="385" y="355.5" font-size="13" fill="#334155" text-anchor="middle" font-weight="400">同类保留 / 不同类覆盖或清除</text><path d="M385 412 L865 412" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="625" y="402" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400">终态落库后再推一次，卡片与最终状态一致</text><text x="500" y="456" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">关键：取消人在取消事件发出「之前」就写入记录，父流水线级联才能读到真实操作人</text></svg></div>
+<div class="figcap">图 5  终态写入时序：提前写成因 → 构建结束时对齐 → 再推一次保证卡片一致</div>
+  </div>
+
+  <div class="box warn">
+    <p><b>关键设计：取消人在发出取消事件「之前」就写入记录。</b>
+    因此父流水线级联能读到真实操作人。没有真实操作人时，记录更新会写入字面量
+    <span class="code">System</span>，读取时当成系统取消，<b>不会展示成某个用户取消的</b>。</p>
+  </div>
+  <div class="pmark">五、终态写入机制</div>
+  <div class="pno">10</div>
+</section>
+
+<!-- ==================== 5.2 全场景写入对照表（上） ==================== -->
+<section class="page">
+  <div class="kicker">05 &nbsp;Write Path</div>
+  <h2><span class="num">5.2 </span>全场景写入对照表</h2>
+  <div class="h2sub">谁写入 · 当时写下什么 · 构建结束后页面看到什么</div>
+
+  <table>
+    <tr><th style="width:19%">场景</th><th style="width:22%">谁写入</th><th style="width:23%">当时写下的类型</th><th>构建结束后页面看到</th></tr>
+    <tr>
+      <td>用户点取消</td>
+      <td>详情取消入口 → <span class="code">BuildCancelControl</span></td>
+      <td><span class="code">CANCEL_USER</span> · 手动取消</td>
+      <td>取消。收集到在途插件后，文案改成「N 处在途被终止」</td>
+    </tr>
+    <tr>
+      <td>60 秒后再点一次，强制停掉</td>
+      <td>同上，<span class="code">terminateFlag = true</span></td>
+      <td><span class="code">CANCEL_USER</span> · 强制终止</td>
+      <td>仍是强制终止，不改成在途计数</td>
+    </tr>
+    <tr>
+      <td>重启前先取消旧的那次</td>
+      <td>重启入口</td>
+      <td><span class="code">CANCEL_USER</span> · 因重启取消</td>
+      <td>取消</td>
+    </tr>
+    <tr>
+      <td>执行前暂停点被终止</td>
+      <td><span class="code">PipelineTaskPauseListener</span>，已有卡片则不覆盖</td>
+      <td><span class="code">CANCEL_USER</span></td>
+      <td>构建以取消结束就保留；后来变成失败或成功，则按最终状态改掉</td>
+    </tr>
+    <tr>
+      <td>排队满、并发组挤掉、并发优先级挤掉</td>
+      <td><span class="code">QueueInterceptor</span>、运行时服务</td>
+      <td><span class="code">CANCEL_SYSTEM</span></td>
+      <td>系统取消，原因写明是哪一种</td>
+    </tr>
+    <tr>
+      <td>父流水线取消，连带取消子构建</td>
+      <td>任务服务</td>
+      <td><span class="code">CANCEL_PARENT_PIPELINE</span></td>
+      <td>父流水线取消。父构建先同步写下取消人，子构建再读，卡片上有父流水线名、构建号和操作人</td>
+    </tr>
+    <tr>
+      <td>某个 Job 执行超时</td>
+      <td>监控，并入已有取消卡片</td>
+      <td><span class="code">CANCEL_SYSTEM</span> + 超时分钟数</td>
+      <td>跑时不展示；结束后若失败则改失败卡，超时原因保留，位置仍标 Job 超时</td>
+    </tr>
+  </table>
+
+  <div class="box">
+    <p><b>怎么读这张表。</b>「当时写下的类型」是写入侧的快照，未必等于用户最终看到的。
+    用户看到的结果由<b>构建结束时的那次对齐</b>决定——所以两列要分开看。</p>
+  </div>
+  <div class="pmark">五、终态写入机制</div>
+  <div class="pno">11</div>
+</section>
+
+<!-- ==================== 5.2 续表 ==================== -->
+<section class="page">
+  <div class="kicker">05 &nbsp;Write Path</div>
+  <h2><span class="num">5.2 </span>全场景写入对照表（续）</h2>
+  <div class="h2sub">超时、失败、成功与「不改状态只补原因」的入口</div>
+
+  <table>
+    <tr><th style="width:19%">场景</th><th style="width:22%">谁写入</th><th style="width:23%">当时写下的类型</th><th>构建结束后页面看到</th></tr>
+    <tr>
+      <td>构建机失联</td>
+      <td>心跳，已有卡片则不覆盖</td>
+      <td><span class="code">CANCEL_SYSTEM</span>（失联）</td>
+      <td>与 Job 超时相同：跑的时候不展示，结束后按最终状态对齐</td>
+    </tr>
+    <tr>
+      <td>在排队队列里等超时</td>
+      <td>监控</td>
+      <td><span class="code">TIMEOUT_QUEUE</span></td>
+      <td>超时卡片，这是<b>唯一的构建级超时</b></td>
+    </tr>
+    <tr>
+      <td>插件失败 / 质量红线 / 人工审核驳回 / 子流水线失败 / 步骤超时</td>
+      <td>构建结束时解析</td>
+      <td>按第六章汇总</td>
+      <td>失败卡片，原因在每一行位置上</td>
+    </tr>
+    <tr>
+      <td>阶段准入被驳回，finally 跑完且整体算成功</td>
+      <td>构建结束时解析</td>
+      <td><span class="code">SUCCESS_STAGE_ABORT</span></td>
+      <td>成功卡片，原因是驳回意见。只有一条意见时直接展示，多条用兜底文案</td>
+    </tr>
+    <tr>
+      <td>普通成功</td>
+      <td><b>不写</b></td>
+      <td>无</td>
+      <td>读取时合成「执行成功」，没有位置列表</td>
+    </tr>
+    <tr>
+      <td>服务关闭、删除流水线、编排不存在</td>
+      <td>各入口先写系统取消</td>
+      <td><span class="code">CANCEL_SYSTEM</span></td>
+      <td>不改这些入口原来的构建状态。最终状态若不是取消，结束时改成与状态同类，关机或删除的原因留在 <span class="code">reason</span></td>
+    </tr>
+  </table>
+
+  <div class="box warn">
+    <p><b>后三行是同一条规则。</b>凡「状态不是这次要改的」入口，都只<b>补原因</b>、不改状态；
+    而 <span class="code">buildEnd</span> 写最终状态时不受「已取消之后不能再 update」限制。</p>
+  </div>
+  <div class="pmark">五、终态写入机制</div>
+  <div class="pno">12</div>
+</section>
+
+<!-- ==================== 5.3 踩坑细节 ==================== -->
+<section class="page">
+  <div class="kicker">05 &nbsp;Write Path</div>
+  <h2><span class="num">5.3 </span>几个容易踩坑的细节</h2>
+  <div class="h2sub">这几条都是「不这么写就会出错」的地方</div>
+
+  <div class="grid g2">
+    <div class="card b">
+      <h4>① 运行中重试要清掉上一轮</h4>
+      <p>重试一开始就清掉本轮已写下的终态，避免上一轮的失联或 Job 超时挡住这次结束时的写入。</p>
+      <p><b>否则：</b>重试后的构建会带着上一轮的失败卡片。</p>
+    </div>
+    <div class="card o">
+      <h4>② Job 超时连续打到多个 Job</h4>
+      <p>后一次把模型里仍处于取消 / 暂停的插件<b>并进已有卡片</b>，不把已失败的改回取消，也不覆盖用户取消。</p>
+      <p><b>否则：</b>第二个 Job 超时会把用户取消刷成系统取消。</p>
+    </div>
+    <div class="card gr">
+      <h4>③ 插件被强制终止但自己没有错误码</h4>
+      <p>用事件里的终止原因替换引擎的占位错误码；插件已经报了自己的错误码就保留插件的。</p>
+      <p><b>否则：</b>被失败即停连带停掉的人工审核，会被说成「审核驳回」。</p>
+    </div>
+    <div class="card p">
+      <h4>④ 子流水线启动时先记名字</h4>
+      <p>子流水线启动时把名称和构建号一并记下。旧数据没有名称时，失败行用兜底文案。
+      构建号<b>不写进原因句子</b>，前端用子流水线信息做跳转。</p>
+      <p><b>否则：</b>跨项目跳转会 404。</p>
+    </div>
+  </div>
+
+  <div class="box danger" style="margin-top:14px">
+    <p><b>这三条的共同模式。</b>写入侧面对的是「成因可能被多次追加」的现实，所以每条写入都必须是
+    <b>幂等且不降级</b>的：可以补细节，不能把更准确的信息覆盖成更模糊的。</p>
+  </div>
+  <div class="pmark">五、终态写入机制</div>
+  <div class="pno">13</div>
+</section>
+
+<!-- ==================== 六、失败类型判定规则 ==================== -->
+<section class="page">
+  <div class="kicker">06 &nbsp;Failure Rule</div>
+  <h2><span class="num">六、</span>失败类型判定规则</h2>
+  <div class="h2sub">构建级失败类型怎么定 · FastKill 与多类失败</div>
+
+  <p class="lead">每一行位置先按插件自己的终态归类：执行失败、质量红线、人工审核驳回、子流水线、步骤超时、Job 超时。
+  失败即停（FastKill，错误码 <span class="code">2199010</span>）只在写入时能看到终止原因的那些行上标出来，
+  从编排模型现扫时<b>标不出这一类</b>。</p>
+
+  <div class="svg-wrap">
+    <div class="svg-wrap"><svg viewBox="0 0 1000 880" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="构建级失败类型的判定流程" style="width:100%;height:auto"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#5f6b7a"/></marker></defs><rect x="330" y="20" width="340" height="76" rx="16" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="500" y="52.5" font-size="16" fill="#1d4ed8" text-anchor="middle" font-weight="700">① 收集所有位置的类型</text><text x="500" y="78.5" font-size="12.5" fill="#5f6b7a" text-anchor="middle" font-weight="400">插件 / Job / Step / 子流水线</text><path d="M500 96 L500 122" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><rect x="330" y="122" width="340" height="76" rx="16" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><text x="500" y="154.5" font-size="16" fill="#b35b00" text-anchor="middle" font-weight="700">② 先拿掉 FastKill 行</text><text x="500" y="180.5" font-size="12.5" fill="#5f6b7a" text-anchor="middle" font-weight="400">避免它污染构建级主失败类型</text><path d="M500 198 L500 232" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><polygon points="500,231 670,305 500,379 330,305" fill="#f7f9fc" stroke="#d8e0eb" stroke-width="1.8"/><text x="500" y="300" font-size="16.5" fill="#172033" text-anchor="middle" font-weight="700">构建状态是排队超时？</text><path d="M670 305 L700 305" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="684" y="296" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">是</text><rect x="700" y="245" width="290" height="120" rx="16" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><text x="845" y="285.5" font-size="15.5" fill="#b35b00" text-anchor="middle" font-weight="700">构建级：排队超时</text><text x="845" y="312.5" font-size="13.5" fill="#40506a" text-anchor="middle" font-weight="400">唯一的构建级超时</text><text x="845" y="339.5" font-size="13.5" fill="#40506a" text-anchor="middle" font-weight="400">不走下面的失败汇总</text><path d="M500 379 L500 422" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="516" y="402" font-size="13" fill="#5f6b7a" text-anchor="start" font-weight="400">否</text><rect x="280" y="422" width="440" height="80" rx="16" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.6"/><text x="500" y="456" font-size="14.5" fill="#334155" text-anchor="middle" font-weight="400">③ Job / 步骤超时在构建级改记为「执行失败」</text><text x="500" y="483" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">但位置行自己仍保留「超时」类型与分钟数</text><path d="M500 502 L500 542" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><polygon points="500,542 680,618 500,694 320,618" fill="#f7f9fc" stroke="#d8e0eb" stroke-width="1.8"/><text x="500" y="612" font-size="16.5" fill="#172033" text-anchor="middle" font-weight="700">剩余失败类型有几种？</text><rect x="20" y="736" width="300" height="112" rx="16" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="170" y="783.5" font-size="14" fill="#40506a" text-anchor="middle" font-weight="400">0 种（仅 FastKill 或无）</text><text x="170" y="815.5" font-size="16" fill="#1d4ed8" text-anchor="middle" font-weight="700">构建级：执行失败</text><rect x="350" y="736" width="300" height="112" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="500" y="783.5" font-size="14" fill="#40506a" text-anchor="middle" font-weight="400">1 种，且没有 FastKill</text><text x="500" y="815.5" font-size="16" fill="#147d55" text-anchor="middle" font-weight="700">构建级：就用这一种</text><rect x="680" y="736" width="300" height="112" rx="16" fill="#fff0f1" stroke="#ffd0d4" stroke-width="1.6"/><text x="830" y="783.5" font-size="14" fill="#40506a" text-anchor="middle" font-weight="400">有 FastKill，或剩余多种</text><text x="830" y="815.5" font-size="16" fill="#c93542" text-anchor="middle" font-weight="700">构建级：多类失败</text><path d="M500 694 L500 712 L170 712 L170 736" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M500 694 L500 736" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M500 694 L500 712 L830 712 L830 736" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/></svg></div>
+<div class="figcap">图 6  失败类型判定：FastKill 是触发「多类失败」的关键开关，而不是根因数量统计</div>
+  </div>
+  <div class="pmark">六、失败类型判定规则</div>
+  <div class="pno">14</div>
+</section>
+
+<!-- ==================== 6.1 判定举例 ==================== -->
+<section class="page">
+  <div class="kicker">06 &nbsp;Failure Rule</div>
+  <h2><span class="num">6.1 </span>判定举例</h2>
+  <div class="h2sub">为什么需要「多类失败」这个大类</div>
+
+  <div class="box warn">
+    <p><b>为什么需要「多类失败」？</b>如果 FastKill 那一行跟构建级用同一种单一失败，
+    页面会把整行画成错误码 <span class="code">2199010</span>，设计稿里的「因失败即停被终止」就出不来。</p>
+    <p>所以只要 <b>FastKill 和别的失败同时存在，构建级就写成「多类失败」</b>——
+    这是<b>页面开关</b>，不是说有很多个互不相关的根因。</p>
+  </div>
+
+  <table>
+    <tr><th style="width:55%">位置上有什么</th><th>构建级类型</th></tr>
+    <tr><td>只有一个插件执行失败</td><td><b>执行失败</b></td></tr>
+    <tr><td>只有步骤超时，构建状态是失败</td><td><b>执行失败</b>（该行仍写「步骤超时」+ 分钟数）</td></tr>
+    <tr><td>步骤超时 + Job 超时</td><td><b>执行失败</b>（两行位置各自保留超时类型）</td></tr>
+    <tr><td>一个插件失败，同阶段其它 Job 被失败即停终止</td><td><b>多类失败</b>（被终止行写「因失败即停被终止」）</td></tr>
+    <tr><td>只有失败即停、没有别的失败行</td><td><b>执行失败</b></td></tr>
+    <tr><td>红线未达标 + 插件失败</td><td><b>多类失败</b></td></tr>
+    <tr><td>一个位置都收集不到（如互斥锁没抢到）</td><td><b>执行失败</b>（仍给一张卡，否则详情打不开）</td></tr>
+    <tr><td>构建状态本身是排队超时</td><td><b>排队超时</b>（不走上面的失败汇总）</td></tr>
+  </table>
+
+  <h3>6.2 原因归谁：构建级 vs 位置级</h3>
+  <div class="grid g2">
+    <div class="card b">
+      <h4>失败卡片的构建级原因<b>留空</b></h4>
+      <p>因为同一次构建可能有多处失败，取其中一条会和位置列表打架。</p>
+      <p><b>例外：</b>排队超时的原因对整次构建只有一份，留在构建级。</p>
+    </div>
+    <div class="card gr">
+      <h4>细节都写在该行位置上</h4>
+      <p>每行自己的驳回意见、红线指标、子流水线名、超时分钟数，都写在该行上。</p>
+      <p>展示时卡片原因压缩空白后截到 <b>200 字</b>，插件原始错误只放 tooltip。</p>
+    </div>
+  </div>
+
+  <div class="box">
+    <p><b>容量边界：</b>位置最多 <b>50 条</b>，单条原因最长 <b>512 字</b>，
+    展示截断到 <b>200 字</b>（超长补「...」），插件原始错误上限 <b>512 字</b>。</p>
+  </div>
+  <div class="pmark">六、失败类型判定规则</div>
+  <div class="pno">15</div>
+</section>
+
+<!-- ==================== 七、读取与动态合成 ==================== -->
+<section class="page">
+  <div class="kicker">07 &nbsp;Read Path</div>
+  <h2><span class="num">七、</span>读取与动态合成</h2>
+  <div class="h2sub">打开详情时怎么读 · 落库与现算如何对齐</div>
+
+  <p class="lead">状态以记录表为准。构建结束的瞬间，记录已经是终态，历史表可能还显示运行中——
+  若用历史表，这一下推送会算不出终态卡片。读取时的完整决策流程如下：</p>
+
+  <div class="svg-wrap">
+    <div class="svg-wrap"><svg viewBox="0 0 1000 820" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="读取详情时的动态合成流程" style="width:100%;height:auto"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#5f6b7a"/></marker></defs><rect x="370" y="20" width="260" height="54" rx="27" fill="#172033"/><text x="500" y="54" font-size="17" fill="#ffffff" text-anchor="middle" font-weight="700">读取构建详情</text><path d="M500 74 L500 100" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><polygon points="500,100 680,182 500,264 320,182" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.8"/><text x="500" y="176" font-size="16" fill="#1d4ed8" text-anchor="middle" font-weight="700">记录已结束，或是阶段挂起？</text><path d="M680 182 L700 182" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="690" y="173" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">否</text><rect x="700" y="116" width="290" height="132" rx="16" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="845" y="161.5" font-size="14" fill="#40506a" text-anchor="middle" font-weight="400">不读库里提前写下的终态</text><text x="845" y="189.5" font-size="15" fill="#1d4ed8" text-anchor="middle" font-weight="700">改走运行态</text><text x="845" y="217.5" font-size="13.5" fill="#40506a" text-anchor="middle" font-weight="400" font-family="Consolas,Menlo,monospace">buildRunningInfo</text><path d="M500 264 L500 300" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="516" y="286" font-size="13" fill="#5f6b7a" text-anchor="start" font-weight="400">是</text><polygon points="500,300 660,380 500,460 340,380" fill="#fff4df" stroke="#ffd690" stroke-width="1.8"/><text x="500" y="374" font-size="16.5" fill="#b35b00" text-anchor="middle" font-weight="700">库里已有卡片？</text><path d="M340 380 L170 380 L170 440" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="252" y="370" font-size="13" fill="#5f6b7a" text-anchor="end" font-weight="400">没有</text><rect x="20" y="440" width="300" height="135" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="170" y="487" font-size="15.5" fill="#147d55" text-anchor="middle" font-weight="700">按状态从模型合成</text><text x="170" y="515" font-size="13.5" fill="#40506a" text-anchor="middle" font-weight="400">普通成功 / 漏记终态</text><text x="170" y="543" font-size="13" fill="#21a675" text-anchor="middle" font-weight="700">→ 直接作为终态返回</text><path d="M500 460 L500 500" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="516" y="486" font-size="13" fill="#5f6b7a" text-anchor="start" font-weight="400">有</text><polygon points="500,500 690,585 500,670 310,585" fill="#fff0f1" stroke="#ffd0d4" stroke-width="1.8"/><text x="500" y="579" font-size="16.5" fill="#c93542" text-anchor="middle" font-weight="700">大类和记录状态同类？</text><rect x="10" y="660" width="320" height="140" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="170" y="709.5" font-size="14.5" fill="#147d55" text-anchor="middle" font-weight="700">一致 → 刷新每行状态后返回</text><text x="170" y="737.5" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">取消卡补仍在途的插件</text><text x="170" y="765.5" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">失败卡补暂停终止与审核驳回</text><path d="M310 585 L170 585 L170 660" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="244" y="575" font-size="13" fill="#5f6b7a" text-anchor="end" font-weight="400">一致</text><rect x="660" y="660" width="330" height="140" rx="16" fill="#fff0f1" stroke="#ffd0d4" stroke-width="1.6"/><text x="825" y="698.5" font-size="14.5" fill="#c93542" text-anchor="middle" font-weight="700">不一致 → 按状态校正</text><text x="825" y="724.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">失败对不上：用模型失败位置重写</text><text x="825" y="750.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">排队超时对不上：改成排队超时</text><text x="825" y="776.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">成功 / 取消对不上：丢掉后重算</text><path d="M690 585 L825 585 L825 660" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="760" y="575" font-size="13" fill="#5f6b7a" text-anchor="start" font-weight="400">不一致</text><text x="500" y="814" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">状态永远以记录表为准：历史表在构建结束瞬间可能还显示运行中</text></svg></div>
+<div class="figcap">图 7  读取决策流程：记录表状态是锚点，落库卡片必须与状态大类对齐，否则就地校正</div>
+  </div>
+  <div class="pmark">七、读取与动态合成</div>
+  <div class="pno">16</div>
+</section>
+
+<!-- ==================== 7.1 读取关键规则 ==================== -->
+<section class="page">
+  <div class="kicker">07 &nbsp;Read Path</div>
+  <h2><span class="num">7.1 </span>读取时的关键规则</h2>
+  <div class="h2sub">三类校正 · 国际化 · 重算规则的一致性</div>
+
+  <div class="grid g2">
+    <div class="card o">
+      <h4>取消合成：看取消人是谁</h4>
+      <p>取消人有值且不是 <span class="code">System</span>，就是<b>用户取消</b>；否则是<b>系统取消</b>。</p>
+      <p>用户取消文案里的「N 处」要与卡片上的位置条数对齐。</p>
+      <p>执行前暂停被终止的那一行，状态文案用「暂停 / 终止」，<b>不用笼统的「取消」</b>。</p>
+    </div>
+    <div class="card b">
+      <h4>国际化：库里存码，不存句子</h4>
+      <p><span class="code">reasonCode</span> 在读的时候按请求语言翻译。</p>
+      <p>库里存的是<b>码和参数</b>，不是某一门语言的句子——这样切语言不需要重写数据。</p>
+    </div>
+  </div>
+
+  <h3>三类「大类对不上」分别怎么处理</h3>
+  <table>
+    <tr><th style="width:26%">对不上的情况</th><th>处理方式</th><th style="width:30%">为什么</th></tr>
+    <tr><td>失败对不上</td><td>用模型里的失败位置<b>重写</b>失败卡片；系统取消和父流水线的原因可以留下</td><td>失败位置只有编排模型最全，落库的可能不全</td></tr>
+    <tr><td>排队超时对不上</td><td>改成<b>排队超时</b></td><td>构建状态本身是 QUEUE_TIMEOUT，卡片必须同类</td></tr>
+    <tr><td>成功或取消对不上</td><td><b>丢掉</b>这份落库，按状态重新合成</td><td>这两类没有位置细节可捞，重算最干净</td></tr>
+  </table>
+
+  <div class="box warn">
+    <p><b>读取重算和写入用同一套规则</b>，出现在三个地方：老构建没有落库、取消卡片被按失败重写、
+    失败卡片又补上了暂停或审核位置。</p>
+    <p>模型现扫<b>补不进 FastKill</b>；已落库的位置里如果带着它，重算时仍然会得到「多类失败」。</p>
+  </div>
+  <div class="pmark">七、读取与动态合成</div>
+  <div class="pno">17</div>
+</section>
+
+<!-- ==================== 八、阶段准入特殊处理 ==================== -->
+<section class="page">
+  <div class="kicker">08 &nbsp;Stage Review</div>
+  <h2><span class="num">八、</span>阶段准入特殊处理</h2>
+  <div class="h2sub">最容易看错的一段 · 记录与历史短暂不一致</div>
+
+  <p class="lead">阶段准入是这张卡片里最容易看错的一段，因为记录表和历史表会短暂不一致。
+  审核挂起时两边都是 <span class="code">STAGE_SUCCESS</span>，卡片是「审核中」；
+  最后一组点同意后，记录先变运行，历史表要等事务提交才变运行。</p>
+
+  <div class="svg-wrap">
+    <div class="svg-wrap"><svg viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="阶段准入的记录与历史表时序" style="width:100%;height:auto"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#5f6b7a"/></marker></defs><rect x="100" y="20" width="800" height="76" rx="18" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><text x="500" y="51.5" font-size="15.5" fill="#b35b00" text-anchor="middle" font-weight="700">审核挂起：记录表 = 历史表 = STAGE_SUCCESS，审核组仍是 REVIEWING</text><text x="500" y="79.5" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">页面此刻展示「审核中」（SUCCESS_STAGE_REVIEWING），不走运行态</text><rect x="20" y="150" width="300" height="220" rx="18" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="170" y="183" font-size="16" fill="#147d55" text-anchor="middle" font-weight="700">同意 · 还有下一组</text><text x="170" y="212" font-size="13.5" fill="#40506a" text-anchor="middle" font-weight="400">先落下本组审核结果</text><text x="170" y="241" font-size="13.5" fill="#40506a" text-anchor="middle" font-weight="400">下一组仍是 REVIEWING</text><text x="170" y="270" font-size="14" fill="#147d55" text-anchor="middle" font-weight="700">卡片继续「审核中」</text><rect x="350" y="150" width="300" height="220" rx="18" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="500" y="183" font-size="16" fill="#1d4ed8" text-anchor="middle" font-weight="700">同意 · 最后一组</text><text x="500" y="212" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">① 先落下审核结果 → 空窗①</text><text x="500" y="241" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">② 记录改为运行</text><text x="500" y="270" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">③ 事务里历史改回运行</text><text x="500" y="299" font-size="14" fill="#1d4ed8" text-anchor="middle" font-weight="700">④ 提交后再推 → 执行中</text><rect x="680" y="150" width="300" height="220" rx="18" fill="#fff0f1" stroke="#ffd0d4" stroke-width="1.6"/><text x="830" y="183" font-size="16" fill="#c93542" text-anchor="middle" font-weight="700">驳回</text><text x="830" y="212" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">① 记录写成已取消（System）</text><text x="830" y="241" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">② 卡片显示「系统取消」</text><text x="830" y="270" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">③ 历史改回运行（调度 finally）</text><text x="830" y="299" font-size="14" fill="#c93542" text-anchor="middle" font-weight="700">④ 结束后 → 阶段准入驳回</text><path d="M500 96 L500 112" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M170 112 L830 112" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M170 112 L170 150" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M500 112 L500 150" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M830 112 L830 150" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><rect x="60" y="400" width="880" height="96" rx="16" fill="#f7f9fc" stroke="#d8e0eb" stroke-width="1.6"/><text x="500" y="441.5" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400">驳回时记录必须停在「已取消」，否则 finally 期间详情会来回抖动；</text><text x="500" y="469.5" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400">历史表改回运行只是为了让调度把 finally 跑起来，和详情卡片用的不是同一张表。</text></svg></div>
+<div class="figcap">图 8  阶段准入时序：同意与驳回三条分支，记录表与历史表会短暂不一致</div>
+  </div>
+  <div class="pmark">八、阶段准入特殊处理</div>
+  <div class="pno">18</div>
+</section>
+
+<!-- ==================== 8.1 关键规则 ==================== -->
+<section class="page">
+  <div class="kicker">08 &nbsp;Stage Review</div>
+  <h2><span class="num">8.1 </span>关键规则</h2>
+  <div class="h2sub">挂起 · 驳回 · 真正结束三种情形的不同处理</div>
+
+  <h3>挂起时：不走运行态</h3>
+  <ul>
+    <li>位置<b>从 1 开始编</b>，触发器阶段不算。</li>
+    <li>卡片上有审核组序号、组名、待审核人和已等待时长（<span class="code">waitCostTime</span>）。</li>
+    <li>合成入口：<span class="code">PipelineBuildRecordService</span> 中按
+        <span class="code">stage.checkIn / checkOut</span> 里 <span class="code">status == REVIEWING</span> 定位审核阶段。</li>
+  </ul>
+
+  <h3>驳回时：不能把记录改成运行</h3>
+  <div class="box danger">
+    <p>记录一旦进入已取消，后续<b>普通更新改不动这个状态</b>，finally 期间详情才能稳定停在已取消。</p>
+    <p>历史表改回运行是<b>原有调度需要</b>（为了把 finally 跑起来），和详情卡片用的<b>不是同一张表</b>。</p>
+  </div>
+
+  <h3>真正结束时：buildEnd 直接写最终状态</h3>
+  <ul>
+    <li><span class="code">buildEnd</span> 不受「已取消之后不能再 update」这条限制。</li>
+    <li>若阶段上有驳回记录且整体成功，写入 <span class="code">SUCCESS_STAGE_ABORT</span>。</li>
+  </ul>
+
+  <table>
+    <tr><th style="width:22%">阶段</th><th>记录表</th><th>历史表</th><th style="width:22%">页面卡片</th></tr>
+    <tr><td>审核挂起</td><td><span class="code">STAGE_SUCCESS</span></td><td><span class="code">STAGE_SUCCESS</span></td><td>审核中</td></tr>
+    <tr><td>同意 · 还有下一组</td><td>仍挂起，下一组 <span class="code">REVIEWING</span></td><td>仍 <span class="code">STAGE_SUCCESS</span></td><td>继续审核中</td></tr>
+    <tr><td>同意 · 最后一组</td><td>先阶段成功 → 改为运行</td><td>事务提交后改回运行</td><td>空一帧 → 执行中</td></tr>
+    <tr><td>驳回</td><td><b>保持已取消（System）</b></td><td>改回运行（调度 finally）</td><td>系统取消 → 阶段准入驳回</td></tr>
+  </table>
+  <div class="pmark">八、阶段准入特殊处理</div>
+  <div class="pno">19</div>
+</section>
+
+<!-- ==================== 九、运行态实时计算 ==================== -->
+<section class="page">
+  <div class="kicker">09 &nbsp;Running State</div>
+  <h2><span class="num">九、</span>运行态实时计算</h2>
+  <div class="h2sub">排队和执行中现算什么 · 不落库的原因</div>
+
+  <p class="lead">运行态只看历史表。排队是 <span class="code">QUEUE</span> / <span class="code">QUEUE_CACHE</span>，
+  执行中是运行中的那些状态。阶段挂起、触发待审核、已经结束，这里直接返回空。
+  <b>计算抛错也返回空</b>——详情页仍然打得开。</p>
+
+  <div class="svg-wrap">
+    <div class="svg-wrap"><svg viewBox="0 0 1000 740" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="运行态实时计算流程" style="width:100%;height:auto"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#5f6b7a"/></marker></defs><polygon points="500,20 660,95 500,170 340,95" fill="#f7f9fc" stroke="#d8e0eb" stroke-width="1.8"/><text x="500" y="90" font-size="17" fill="#172033" text-anchor="middle" font-weight="700">历史表状态？</text><text x="500" y="114" font-size="12.5" fill="#5f6b7a" text-anchor="middle" font-weight="400">BuildHistory.status</text><path d="M660 95 L700 95" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="680" y="86" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">其它</text><rect x="700" y="34" width="290" height="122" rx="16" fill="#f3f0ff" stroke="#ded6ff" stroke-width="1.6"/><text x="845" y="75.5" font-size="13" fill="#40506a" text-anchor="middle" font-weight="400">阶段挂起 / 触发待审核 / 已结束</text><text x="845" y="102.5" font-size="15" fill="#6651d8" text-anchor="middle" font-weight="700">不返回运行态</text><text x="845" y="129.5" font-size="12" fill="#5f6b7a" text-anchor="middle" font-weight="400">计算抛错也返回空，详情页照常打开</text><path d="M500 170 L500 180" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M255 180 L745 180" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M255 180 L255 194" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M745 180 L745 194" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="310" y="172" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">排队</text><text x="690" y="172" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">执行中</text><rect x="60" y="194" width="390" height="76" rx="16" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="255" y="239.5" font-size="15" fill="#1d4ed8" text-anchor="middle" font-weight="700">QUEUE / QUEUE_CACHE</text><rect x="550" y="194" width="390" height="76" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="745" y="239.5" font-size="15" fill="#147d55" text-anchor="middle" font-weight="700">运行中的那些状态</text><path d="M255 270 L255 306" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M745 270 L745 306" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><polygon points="255,306 440,382 255,458 70,382" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.8"/><text x="255" y="377" font-size="15.5" fill="#1d4ed8" text-anchor="middle" font-weight="700">有并发组且组内有人占用？</text><polygon points="745,306 945,382 745,458 545,382" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.8"/><text x="745" y="377" font-size="15.5" fill="#147d55" text-anchor="middle" font-weight="700">有 Job 在等依赖 / 互斥 /</text><text x="745" y="404" font-size="15.5" fill="#147d55" text-anchor="middle" font-weight="700">构建机？</text><path d="M255 458 L255 472" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M120 472 L385 472" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M120 472 L120 500" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M385 472 L385 500" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="187" y="464" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">是</text><text x="320" y="464" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">否</text><rect x="20" y="500" width="200" height="124" rx="16" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="120" y="543.5" font-size="14.5" fill="#1d4ed8" text-anchor="middle" font-weight="700">并发组排队</text><text x="120" y="569.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">组名 · 位次</text><text x="120" y="595.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">占用者 · 前方排队</text><rect x="280" y="500" width="210" height="124" rx="16" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="385" y="543.5" font-size="14.5" fill="#1d4ed8" text-anchor="middle" font-weight="700">普通排队</text><text x="385" y="569.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">位次</text><text x="385" y="595.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">前方排队列表</text><path d="M745 458 L745 472" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M615 472 L865 472" stroke="#5f6b7a" stroke-width="2.2" fill="none"/><path d="M615 472 L615 500" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><path d="M865 472 L865 500" stroke="#5f6b7a" stroke-width="2.2" fill="none" marker-end="url(#ar)"/><text x="680" y="464" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">有</text><text x="800" y="464" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">没有</text><rect x="520" y="500" width="190" height="124" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="615" y="543.5" font-size="14.5" fill="#147d55" text-anchor="middle" font-weight="700">执行中</text><text x="615" y="569.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">有 Job 等待</text><text x="615" y="595.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">列出等待 Job</text><rect x="740" y="500" width="240" height="124" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="860" y="543.5" font-size="14.5" fill="#147d55" text-anchor="middle" font-weight="700">执行中</text><text x="860" y="569.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">正常推进</text><text x="860" y="595.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">当前阶段 · 已运行时长</text><rect x="20" y="656" width="460" height="68" rx="16" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="250" y="684.5" font-size="14" fill="#1d4ed8" text-anchor="middle" font-weight="700">排队态：返回 buildRunningInfo</text><text x="250" y="710.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">位次 / 并发组 / 前方排队，明细最多 10 条</text><rect x="520" y="656" width="460" height="68" rx="16" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="750" y="684.5" font-size="13.5" fill="#147d55" text-anchor="middle" font-weight="700">执行态：返回 buildRunningInfo + 待人工处理项</text><text x="750" y="710.5" font-size="12.5" fill="#40506a" text-anchor="middle" font-weight="400">暂停 / 插件审核 / 红线 / 阶段审核，Job 与待办各最多 50 条</text></svg></div>
+<div class="figcap">图 9  运行态计算流程：排队分「并发组 / 普通」，执行中分「有 Job 等待 / 正常推进」</div>
+  </div>
+
+  <div class="box warn">
+    <p><b>为什么运行态不落库？</b>排队位置、前方排队列表、已等待时长每秒都在变，
+    落库读到的必然是<b>过期快照</b>，还会造成严重写放大。</p>
+    <p>所以只在「读取详情且构建未结束」时现算——<b>对已结束的构建零额外开销</b>。</p>
+  </div>
+  <div class="pmark">九、运行态实时计算</div>
+  <div class="pno">20</div>
+</section>
+
+<!-- ==================== 9.1 / 9.2 计算规则 ==================== -->
+<section class="page">
+  <div class="kicker">09 &nbsp;Running State</div>
+  <h2><span class="num">9.1 / 9.2 </span>排队与执行中的计算规则</h2>
+  <div class="h2sub">位次怎么算 · 什么时候算「在等资源」· 时长谁来加</div>
+
+  <h3>9.1 排队计算规则</h3>
+  <table>
+    <tr><th style="width:26%">项目</th><th>规则</th></tr>
+    <tr><td>查询范围</td><td>按并发组或当前流水线查，只取展示用的列；正式构建和<b>未删除的调试构建</b>合在一起</td></tr>
+    <tr><td>排序与位次</td><td>用入队时间排序，同一毫秒再看构建号；位次从 <b>1</b> 开始</td></tr>
+    <tr><td>找不到自己</td><td>如并发组配置刚改过，位次给 <b>0</b>，前端不显示「第几位」</td></tr>
+    <tr><td>明细与上限</td><td>明细最多 <b>10</b> 条，多出来的只计数；并发上限与流水线设置一致，单条流水线锁和并发组锁都是 <b>1</b></td></tr>
+  </table>
+
+  <h3>9.2 执行中计算规则</h3>
+  <table>
+    <tr><th style="width:26%">项目</th><th>规则</th></tr>
+    <tr><td>资源排队宽限</td><td>准备环境的前 <b>15 秒</b>视为构建机正常拉起，不报「在等资源」；构建机复用互斥按复用配置<b>直接</b>给出等待原因，不必等满 15 秒</td></tr>
+    <tr><td>标题不变</td><td>等人处理的项目<b>不改卡片标题</b>，也不改当前阶段名</td></tr>
+    <tr><td>列表上限</td><td>等待的 Job 和待处理项最多各 <b>50</b> 条</td></tr>
+    <tr><td>时长口径</td><td>时长是服务端算出快照的那一刻。前端用详情上的 <span class="code">currentTimestamp</span> 自己每秒加</td></tr>
+  </table>
+
+  <div class="box tip">
+    <p><b>不要为刷新秒数高频轮询。</b>服务端只给一次时长快照 + 一个时间基准，前端本地自增即可。</p>
+  </div>
+
+  <h3>9.3 运行态子类型全集</h3>
+  <table>
+    <tr><th style="width:22%">大类</th><th style="width:30%">枚举值</th><th>中文标签 / 含义</th></tr>
+    <tr><td rowspan="2"><b>QUEUE</b></td><td><span class="code">QUEUE_WAITING</span></td><td>排队中（流水线自身串行 / 并发额度未释放）</td></tr>
+    <tr><td><span class="code">QUEUE_CONCURRENCY</span></td><td>并发组排队中（被其它构建占用）</td></tr>
+    <tr><td rowspan="2"><b>RUNNING</b></td><td><span class="code">RUNNING_NORMAL</span></td><td>执行中（正常推进）</td></tr>
+    <tr><td><span class="code">RUNNING_JOB_WAITING</span></td><td>执行中（有 Job 因互斥 / 资源 / 依赖在等待）</td></tr>
+  </table>
+  <div class="pmark">九、运行态实时计算</div>
+  <div class="pno">21</div>
+</section>
+
+<!-- ==================== 十、推送机制与空窗说明 ==================== -->
+<section class="page">
+  <div class="kicker">10 &nbsp;Push</div>
+  <h2><span class="num">十、</span>推送机制与空窗说明</h2>
+  <div class="h2sub">什么时候推给页面 · 为什么会有空窗</div>
+
+  <h3>10.1 推送时机</h3>
+  <p>记录变更<b>等事务提交后再推</b>，避免推送读到还没提交的状态。终态详情若在记录状态更新之后才写入，
+  <b>会再推一次</b>——否则用户要手动刷新才看得到卡片。</p>
+
+  <div class="svg-wrap">
+    <div class="svg-wrap"><svg viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="详情卡片的推送时机" style="width:100%;height:auto"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#5f6b7a"/></marker></defs><rect x="96.72" y="24" width="106.56" height="44" rx="22" fill="#edf4ff" stroke="#bdd3ff" stroke-width="1.6"/><text x="150" y="52" font-size="16" fill="#1d4ed8" text-anchor="middle" font-weight="700">记录更新</text><line x1="150" y1="72" x2="150" y2="330" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 5"/><rect x="346.72" y="24" width="106.56" height="44" rx="22" fill="#fff4df" stroke="#ffd690" stroke-width="1.6"/><text x="400" y="52" font-size="16" fill="#b35b00" text-anchor="middle" font-weight="700">历史事务</text><line x1="400" y1="72" x2="400" y2="330" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 5"/><rect x="586.72" y="24" width="106.56" height="44" rx="22" fill="#eaf8f1" stroke="#bde7d2" stroke-width="1.6"/><text x="640" y="52" font-size="16" fill="#147d55" text-anchor="middle" font-weight="700">终态写入</text><line x1="640" y1="72" x2="640" y2="330" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 5"/><rect x="808.72" y="24" width="106.56" height="44" rx="22" fill="#f3f0ff" stroke="#ded6ff" stroke-width="1.6"/><text x="862" y="52" font-size="16" fill="#6651d8" text-anchor="middle" font-weight="700">详情页面</text><line x1="862" y1="72" x2="862" y2="330" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 5"/><path d="M150 140 L862 140" stroke="#5f6b7a" stroke-width="2.4" fill="none" marker-end="url(#ar)"/><text x="506" y="130" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400">① 记录一变就推：事务提交后再推，避免读到未提交状态</text><path d="M400 222 L862 222" stroke="#5f6b7a" stroke-width="2.4" fill="none" marker-end="url(#ar)"/><text x="631" y="212" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400">② 历史提交后再推：阶段准入最后一组同意时补推一次</text><path d="M640 304 L862 304" stroke="#5f6b7a" stroke-width="2.4" fill="none" marker-end="url(#ar)"/><text x="751" y="294" font-size="13.5" fill="#334155" text-anchor="middle" font-weight="400">③ 终态落库后再推：否则用户要手动刷新才看得到卡片</text><text x="500" y="372" font-size="13" fill="#5f6b7a" text-anchor="middle" font-weight="400">推送按详情页会话广播，不按用户名挑选接收人；第二次推送回查历史表上的启动人</text></svg></div>
+<div class="figcap">图 10  三次推送时机：记录变更 → 历史提交 → 终态落库，保证卡片不会晚一帧</div>
+  </div>
+
+  <div class="box">
+    <p><b>推给谁。</b>推送按<b>详情页的会话广播</b>，不按某一个人的用户名挑选接收人。事件上带的是构建启动人。</p>
+    <p>阶段准入最后一组同意时，调用方手里的是<b>点同意的审核人</b>（不是启动人），
+    所以第二次推送不拿审核人去填，而是<b>回查历史表上的启动人</b>。</p>
+  </div>
+  <div class="pmark">十、推送机制与空窗说明</div>
+  <div class="pno">22</div>
+</section>
+
+<!-- ==================== 10.2 三段已知空窗 ==================== -->
+<section class="page">
+  <div class="kicker">10 &nbsp;Push</div>
+  <h2><span class="num">10.2 </span>三段已知空窗</h2>
+  <div class="h2sub">只影响中间某一帧 · QA 按这个预期看，不是 bug</div>
+
+  <div class="box tip">
+    <p><b>结论先行：最终落库是对的。</b>这三段只影响中间某一帧的展示，都属于推送时序导致的正常空窗。</p>
+  </div>
+
+  <div class="grid g3">
+    <div class="card o">
+      <div class="tag o">空窗 ①</div>
+      <h4>最后一组点同意后</h4>
+      <p>审核结果刚落库的那一次推送会<b>空一帧</b>。</p>
+      <p>记录还是阶段挂起，历史还没改回运行，模型里已经没有「审核中」——
+      既不是审核中，也不是执行成功。</p>
+      <p><b>随后：</b>历史提交后的推送变成「执行中」。</p>
+    </div>
+    <div class="card r">
+      <div class="tag r">空窗 ②</div>
+      <h4>驳回之后、finally 跑完之前</h4>
+      <p>详情是「已取消 / 系统取消」，历史列表可能已经显示运行中。</p>
+      <p><b>随后：</b>构建结束后才变成「阶段准入驳回」。</p>
+    </div>
+    <div class="card p">
+      <div class="tag p">空窗 ③</div>
+      <h4>驳回并以阶段成功收尾</h4>
+      <p>构建结束会先推一次。这时终态还没写入，历史仍是运行中，可能先闪一张运行中卡片。</p>
+      <p><b>随后：</b>同一次结束流程里的下一次推送才是阶段准入驳回。</p>
+    </div>
+  </div>
+
+  <h3>空窗对照：一帧之后会变成什么</h3>
+  <table>
+    <tr><th style="width:14%">空窗</th><th style="width:30%">这一帧用户可能看到</th><th>下一帧</th></tr>
+    <tr><td><b>①</b></td><td>两张卡片都空</td><td>执行中（<span class="code">RUNNING_NORMAL</span>）</td></tr>
+    <tr><td><b>②</b></td><td>已取消 / 系统取消（历史列表可能显示运行中）</td><td>阶段准入驳回（<span class="code">SUCCESS_STAGE_ABORT</span>）</td></tr>
+    <tr><td><b>③</b></td><td>先闪一张运行中卡片</td><td>阶段准入驳回</td></tr>
+  </table>
+
+  <div class="box warn">
+    <p><b>给 QA 的提醒：</b>这三段不要报「状态写错」。判断标准是
+    <b>最终落库的大类与页面左上角状态一致</b>，而不是中间某一帧是否出现过渡态。</p>
+  </div>
+  <div class="pmark">十、推送机制与空窗说明</div>
+  <div class="pno">23</div>
+</section>
+
+<!-- ==================== 十一、数据结构与前端对接 ==================== -->
+<section class="page">
+  <div class="kicker">11 &nbsp;Data Contract</div>
+  <h2><span class="num">十一、</span>数据结构与前端对接</h2>
+  <div class="h2sub">buildEndInfo 与 buildRunningInfo 核心字段</div>
+
+  <p class="lead">两套卡片结构<b>不共用</b>同一套位置 / 关联构建结构。终态的位置描述「为什么结束、跳到哪」；
+  运行态描述「此刻卡在哪、在等谁」，字段语义不同，不要互相复用。</p>
+
+  <h3>11.1 终态详情 buildEndInfo</h3>
+  <table>
+    <tr><th style="width:22%">字段</th><th style="width:16%">类型</th><th>含义 / 前端用法</th></tr>
+    <tr><td><span class="code">endCategory</span></td><td>String</td>
+        <td>结束大类：<span class="code">CANCEL</span> / <span class="code">FAIL</span> / <span class="code">TIMEOUT</span> / <span class="code">SUCCESS</span>。决定卡片样式与配色</td></tr>
+    <tr><td><span class="code">endType</span></td><td>枚举</td>
+        <td>结束子类型全集，见下表。前端按 category 归类，不硬编码每个子类型</td></tr>
+    <tr><td><span class="code">endTypeDesc</span></td><td>String</td>
+        <td>已翻译成因标签，如「系统取消」。卡片内原因标签直接展示</td></tr>
+    <tr><td><span class="code">reasonCode</span> / <span class="code">reasonParams</span></td><td>String / List</td>
+        <td>国际化码与参数。<b>库里存码不存句子</b>，读时按请求语言翻译</td></tr>
+    <tr><td><span class="code">reason</span></td><td>String?</td>
+        <td>构建级原因（失败类恒为 null）。卡片头部原因详情，空则不渲染</td></tr>
+    <tr><td><span class="code">operator</span></td><td>String?</td>
+        <td>操作人（仅用户主动取消有值）。展示「由 xxx 取消」</td></tr>
+    <tr><td><span class="code">positions</span></td><td>List?</td>
+        <td>被影响的组件位置列表（最多 50 条）。渲染受影响位置，支持跳转定位</td></tr>
+    <tr><td><span class="code">parentPipelineInfo</span></td><td>Object?</td>
+        <td>父流水线信息（仅级联取消有值）。含项目 ID、流水线名、构建号、操作人，可跳转</td></tr>
+    <tr><td><span class="code">totalCostTime</span></td><td>Long?</td>
+        <td>构建总耗时（毫秒）。展示「已运行 N 分钟」</td></tr>
+    <tr><td><span class="code">waitCostTime</span></td><td>Long?</td>
+        <td>已等待时长，仅 <span class="code">SUCCESS_STAGE_REVIEWING</span> 有值</td></tr>
+    <tr><td><span class="code">endTime</span></td><td>Long?</td>
+        <td>终态时间戳（毫秒）。按需格式化展示结束时间</td></tr>
+    <tr><td><span class="code">positionCount</span></td><td>Int</td>
+        <td>被影响位置总数。展示「N 个位置受影响」用它，不用 <span class="code">positions.length</span></td></tr>
+  </table>
+  <div class="pmark">十一、数据结构与前端对接</div>
+  <div class="pno">24</div>
+</section>
+
+<!-- ==================== endType 枚举全集 ==================== -->
+<section class="page">
+  <div class="kicker">11 &nbsp;Data Contract</div>
+  <h2><span class="num">11.2 </span>endType 枚举全集</h2>
+  <div class="h2sub">15 个子类型，按大类分组（构建级 / 位置级已标注）</div>
+
+  <table>
+    <tr><th style="width:14%">大类</th><th style="width:30%">枚举值</th><th>中文标签 / 说明</th></tr>
+    <tr><td rowspan="3"><b>CANCEL</b></td><td><span class="code">CANCEL_USER</span></td><td>用户取消</td></tr>
+    <tr><td><span class="code">CANCEL_SYSTEM</span></td><td>系统取消（含服务重启、排队满、并发互斥、构建机失联等）</td></tr>
+    <tr><td><span class="code">CANCEL_PARENT_PIPELINE</span></td><td>父流水线取消</td></tr>
+    <tr><td rowspan="5"><b>FAIL</b></td><td><span class="code">FAIL_EXEC</span></td><td>执行失败（插件执行失败等常规失败）</td></tr>
+    <tr><td><span class="code">FAIL_QUALITY</span></td><td>质量红线未达标</td></tr>
+    <tr><td><span class="code">FAIL_REVIEW</span></td><td>人工审核驳回</td></tr>
+    <tr><td><span class="code">FAIL_SUB_PIPELINE</span></td><td>子流水线执行失败导致父构建失败</td></tr>
+    <tr><td><span class="code">FAIL_FAST_KILL</span></td><td>因失败即停被终止<br><b>仅位置级</b>：连带影响，非独立根因</td></tr>
+    <tr><td>&nbsp;</td><td><span class="code">FAIL_MULTIPLE</span></td><td>多类失败（同时存在多种失败子类型）</td></tr>
+    <tr><td rowspan="3"><b>TIMEOUT</b></td><td><span class="code">TIMEOUT_QUEUE</span></td><td><b>排队超时</b> —— 唯一的构建级超时（构建状态本身即 QUEUE_TIMEOUT）</td></tr>
+    <tr><td><span class="code">TIMEOUT_JOB</span></td><td>Job 超时<br><b>仅位置级</b>：构建级归取消 / 失败类</td></tr>
+    <tr><td><span class="code">TIMEOUT_STEP</span></td><td>步骤超时<br><b>仅位置级</b>：构建级归失败类</td></tr>
+    <tr><td rowspan="3"><b>SUCCESS</b></td><td><span class="code">SUCCESS</span></td><td>执行成功</td></tr>
+    <tr><td><span class="code">SUCCESS_STAGE_ABORT</span></td><td>已驳回（阶段准入驳回，按阶段成功结束）</td></tr>
+    <tr><td><span class="code">SUCCESS_STAGE_REVIEWING</span></td><td>审核中（阶段准入挂起，通过后继续运行）</td></tr>
+  </table>
+
+  <div class="box warn">
+    <p><b>三条容易搞混的边界。</b></p>
+    <p>① <b>构建级只有 TIMEOUT_QUEUE 一个超时</b>；Job / 步骤超时是位置级类型，构建级会归到取消或失败。</p>
+    <p>② <b>FAIL_FAST_KILL 只是位置级</b>，表示「被别的失败连带终止」，不是独立根因。</p>
+    <p>③ <b>SUCCESS_STAGE_ABORT 归 SUCCESS 大类</b>：驳回后构建按成功结束，所以是成功卡片 + 驳回原因。</p>
+  </div>
+  <div class="pmark">十一、数据结构与前端对接</div>
+  <div class="pno">25</div>
+</section>
+
+<!-- ==================== 11.2 运行态 ==================== -->
+<section class="page">
+  <div class="kicker">11 &nbsp;Data Contract</div>
+  <h2><span class="num">11.3 </span>运行态详情 buildRunningInfo</h2>
+  <div class="h2sub">字段语义与前端用法</div>
+
+  <table>
+    <tr><th style="width:22%">字段</th><th style="width:16%">类型</th><th>含义 / 前端用法</th></tr>
+    <tr><td><span class="code">runningCategory</span></td><td>String</td>
+        <td>运行大类：<span class="code">QUEUE</span> / <span class="code">RUNNING</span>。决定卡片样式（排队 / 执行配色）</td></tr>
+    <tr><td><span class="code">runningTypeDesc</span></td><td>String</td>
+        <td>已翻译状态标签。用作卡片标题（排队中 / 执行中）</td></tr>
+    <tr><td><span class="code">currentPhase</span></td><td>String?</td>
+        <td>当前阶段名（有 Job 排队时为「Job 正在排队」）。执行中卡片的当前阶段</td></tr>
+    <tr><td><span class="code">queueDetail</span></td><td>Object?</td>
+        <td>排队详情：位次、并发组、并发上限、占用中构建、前方排队。排队态填充</td></tr>
+    <tr><td><span class="code">waitingJobs</span></td><td>List?</td>
+        <td>等待中的 Job 列表（最多 50 条），含等待类型（互斥 / 资源 / 依赖）。执行态填充</td></tr>
+    <tr><td><span class="code">pendingItems</span></td><td>List?</td>
+        <td>待人工处理项（暂停 / 插件审核 / 红线 / 阶段审核，最多 50 条）。执行态附加展示</td></tr>
+    <tr><td><span class="code">waitingTime</span> / <span class="code">runningTime</span></td><td>Long?</td>
+        <td>已等待 / 已运行时长（毫秒快照）。结合 <span class="code">currentTimestamp</span> 自增展示</td></tr>
+    <tr><td><span class="code">queueDetail.queuePosition</span></td><td>Int</td>
+        <td>位次。为 <b>0</b> 时不显示「第几位」</td></tr>
+    <tr><td><span class="code">queueTime</span> / <span class="code">startTime</span></td><td>Long?</td>
+        <td>入队时间 / 开始执行时间（毫秒）。展示「20:01:00 入队」「20:01:00 开始执行」</td></tr>
+    <tr><td><span class="code">triggerUser</span> / <span class="code">triggerDesc</span></td><td>String?</td>
+        <td>触发人 / 已翻译的触发方式（手动触发、Git 事件触发）。展示「fayeqiang 手动触发」</td></tr>
+    <tr><td><span class="code">*Count</span> 系列</td><td>Int</td>
+        <td>列表真实长度（含 <span class="code">waitingJobCount</span> / <span class="code">pendingItemCount</span>）。
+            <b>列表本身有截断</b>，计数用它而不是 <span class="code">list.length</span></td></tr>
+  </table>
+
+  <div class="box danger">
+    <p><b>前端对接三条避坑（必看）。</b></p>
+    <p>① <b>跨流水线跳转一律用对应对象自己的 projectId</b>（父 / 子 / 依赖 Job），
+    不能用当前页面项目 ID，否则跨项目时 <b>404</b>。</p>
+    <p>② <b>列表长度用 <span class="code">xxxCount</span> 字段</b>，不要用 <span class="code">list.length</span>——后端有截断。</p>
+    <p>③ <b>不要为刷新秒数高频轮询</b>，用 <span class="code">currentTimestamp</span> 本地自增。</p>
+  </div>
+  <div class="pmark">十一、数据结构与前端对接</div>
+  <div class="pno">26</div>
+</section>
+
+<!-- ==================== 十二、明确不改的行为 ==================== -->
+<section class="page">
+  <div class="kicker">12 &nbsp;Boundary</div>
+  <h2><span class="num">十二、</span>明确不改的行为</h2>
+  <div class="h2sub">这些边界刻意保留 · 不要在后续迭代中误改</div>
+
+  <table>
+    <tr><th style="width:44%">不改的行为</th><th>原因</th></tr>
+    <tr>
+      <td>不在构建结束时扫仍停在 <span class="code">QUEUE</span> / <span class="code">QUEUE_CACHE</span> 的任务并改引擎状态</td>
+      <td>那次扫描赶不上取消后已经卡住的 Job，也会和还在认领任务的构建机不一致</td>
+    </tr>
+    <tr>
+      <td>单个插件变成取消时，<b>不删</b> <span class="code">CANCEL_ACTION_TIME</span> 标记</td>
+      <td>60 秒后第二次取消会不会升级成强制终止，靠这个标记判断</td>
+    </tr>
+    <tr>
+      <td>服务关闭、删除流水线、编排不存在，<b>维持原来的构建状态</b>，只补原因</td>
+      <td>这些入口原来的构建状态有其语义，不应被详情卡片改写</td>
+    </tr>
+    <tr>
+      <td><span class="code">stageCancel</span> 继续把记录写成已取消</td>
+      <td>这是取消动作，记录需要停在终态上，finally 才能稳定跑完</td>
+    </tr>
+  </table>
+
+  <div class="box danger">
+    <p><b>为什么单列一章。</b>这四条看起来像「实现得不彻底」或「可以顺手优化」的地方，
+    但实际上每一条都有明确的时序或一致性问题作为理由。改动它们会引入更难查的 Bug。</p>
+  </div>
+
+  <h3>相关常量速查</h3>
+  <table>
+    <tr><th style="width:34%">常量</th><th style="width:20%">值</th><th>用途</th></tr>
+    <tr><td><span class="code">CANCEL_ACTION_TIME_{buildId}</span></td><td>Redis Key</td><td>判断 60 秒内是否二次取消，决定是否升级为强制终止</td></tr>
+    <tr><td><span class="code">USER_STAGE_FASTKILL_TERMINATE</span></td><td>2199010</td><td>失败即停（FastKill）终止的错误码</td></tr>
+    <tr><td><span class="code">POSITION_MAX_SIZE</span></td><td>50</td><td>终态位置列表上限</td></tr>
+    <tr><td><span class="code">REASON_DISPLAY_MAX</span></td><td>200</td><td>卡片展示原因截断长度</td></tr>
+    <tr><td><span class="code">RELATED_BUILD_MAX_SIZE</span></td><td>10</td><td>排队关联构建明细上限</td></tr>
+    <tr><td><span class="code">LIST_MAX_SIZE</span></td><td>50</td><td>等待 Job / 待处理项上限</td></tr>
+    <tr><td><span class="code">RESOURCE_QUEUE_GRACE_MS</span></td><td>15_000</td><td>准备环境的资源排队宽限期</td></tr>
+  </table>
+  <div class="pmark">十二、明确不改的行为</div>
+  <div class="pno">27</div>
+</section>
+
+<!-- ==================== 十三、上线与验证 ==================== -->
+<section class="page">
+  <div class="kicker">13 &nbsp;Release</div>
+  <h2><span class="num">十三、</span>上线与验证</h2>
+  <div class="h2sub">发布范围 · 单测覆盖 · QA 验证清单</div>
+
+  <h3>13.1 发布范围</h3>
+  <table>
+    <tr><th style="width:26%">模块</th><th>内容</th></tr>
+    <tr><td><span class="code">common-pipeline</span></td><td>数据结构与位置采集</td></tr>
+    <tr><td><span class="code">biz-base</span></td><td>记录读写、运行态现算、阶段准入</td></tr>
+    <tr><td><span class="code">biz-engine</span></td><td>取消 / 结束时的写入决策</td></tr>
+    <tr><td><span class="code">biz-process</span></td><td>详情组装</td></tr>
+    <tr><td><span class="code">support-files/i18n</span></td><td>新增的多语言词条（zh_CN / en_US / ja_JP 三语种）</td></tr>
+  </table>
+
+  <h3>13.2 单测覆盖</h3>
+  <div class="box tip">
+    <p><b>已通过（无数据库单测）：</b><span class="code">BuildEndPositionCollectorTest</span>、
+    <span class="code">BuildEndInfoAlignTest</span>、<span class="code">BuildEndInfoResolverTest</span>。</p>
+    <p><b>待 CI：</b><span class="code">biz-base</span> / <span class="code">biz-engine</span> 的 jOOQ 生成需要
+    MySQL，本机未编，<b>以 CI 编译为准</b>。</p>
+  </div>
+
+  <h3>13.3 QA 验证清单</h3>
+  <table>
+    <tr><th style="width:8%">#</th><th>验证场景</th></tr>
+    <tr><td class="tc">1</td><td>用户取消、60 秒后强制终止、重启前取消、父流水线连带取消、排队超时——卡片大类和左上角状态一致，父流水线卡片可跳转</td></tr>
+    <tr><td class="tc">2</td><td>失败构建里只有步骤超时或 Job 超时——构建级是执行失败，该行仍是超时；跑时不出现取消卡片</td></tr>
+    <tr><td class="tc">3</td><td>一个插件失败 + 同阶段开启失败即停——卡片是多类失败，被终止行是「因失败即停被终止」，不是 2199010</td></tr>
+    <tr><td class="tc">4</td><td>两个 Job 先后超时——位置补齐且不盖掉用户取消；暂停被终止的文案是「暂停 / 终止」</td></tr>
+    <tr><td class="tc">5</td><td>阶段准入——等人时「审核中」；最后一组同意不出现「执行成功」，空一帧后变执行中；驳回后保持已取消，成功结束后是阶段准入驳回</td></tr>
+    <tr><td class="tc">6</td><td>排队能看到第几位、谁占用、前面有谁；找不到自己不显示位次；等待 Job 不改卡片标题；准备环境 15 秒内不报资源排队</td></tr>
+    <tr><td class="tc">7</td><td>运行中重试之后，上一轮的失联或 Job 超时卡片不再出现</td></tr>
+  </table>
+  <div class="pmark">十三、上线与验证</div>
+  <div class="pno">28</div>
+</section>
+
+<!-- ==================== 附录 A ==================== -->
+<section class="page">
+  <div class="kicker">Appendix A</div>
+  <h2>附录 A　代码与常量索引</h2>
+  <div class="h2sub">模块根目录：<span class="code">src/backend/ci</span> · 便于按图索骥</div>
+
+  <h3>A.1 数据结构（common-pipeline）</h3>
+  <table>
+    <tr><th style="width:44%">文件</th><th>说明</th></tr>
+    <tr><td class="en">…/pojo/BuildEndInfo.kt<br>…/pojo/BuildRunningInfo.kt</td>
+        <td>终态主对象（<span class="code">MODEL_VAR_KEY = "buildEndInfo"</span> 落库 key）；
+            运行态主对象（含 <span class="code">BuildQueueDetail</span>）</td></tr>
+    <tr><td class="en">…/pojo/EndPosition.kt<br>…/pojo/WaitingJobInfo.kt<br>…/pojo/PendingManualItem.kt</td>
+        <td>三类位置与关联结构：子流水线、依赖 Job、等待 Job、待人工处理项</td></tr>
+    <tr><td class="en">…/enums/BuildEndType.kt</td><td>15 个终态子类型 + <span class="code">BuildEndCategory</span></td></tr>
+    <tr><td class="en">…/enums/BuildRunningType.kt</td><td>4 个运行态子类型 + <span class="code">BuildRunningCategory</span></td></tr>
+    <tr><td class="en">…/utils/BuildEndPositionCollector.kt</td>
+        <td>位置采集、失败类型聚合、原因压缩与截断</td></tr>
+  </table>
+
+  <h3>A.2 写入侧（biz-engine）</h3>
+  <table>
+    <tr><th style="width:44%">文件</th><th>说明</th></tr>
+    <tr><td class="en">core/process/biz-engine/src/main/kotlin/com/tencent/devops/process/engine/control/BuildEndControl.kt</td>
+        <td>构建结束入口：<span class="code">saveBuildEndInfo() → resolve → saveIfCompatible / clearIfIncompatible</span>，整体 try/catch 兜底</td></tr>
+    <tr><td class="en">…/control/BuildCancelControl.kt</td><td>取消事件：收集位置、精炼用户取消原因、按 <span class="code">TERMINATE</span> 分流</td></tr>
+    <tr><td class="en">…/control/BuildEndInfoResolver.kt</td><td>终态解析：成功 / 异常 / 聚合类型 / 与状态对齐，及各原因回填</td></tr>
+    <tr><td class="en">…/control/HeartbeatControl.kt<br>…/control/BuildMonitorControl.kt</td>
+        <td>构建机心跳失联；Job 执行超时、排队队列超时</td></tr>
+    <tr><td class="en">core/process/biz-base/…/engine/interceptor/QueueInterceptor.kt</td>
+        <td>排队满 / 并发组挤掉 → <span class="code">ofCancelSystem</span></td></tr>
+  </table>
+
+  <div class="pmark">附录 A　代码与常量索引</div>
+  <div class="pno">29</div>
+</section>
+
+<!-- ==================== 附录 A（续） ==================== -->
+<section class="page">
+  <div class="kicker">Appendix A</div>
+  <h2><span class="num">附录 A（续）</span>读取侧与单测索引</h2>
+  <div class="h2sub">模块根目录：<span class="code">src/backend/ci</span> · 便于按图索骥</div>
+
+  <h3>A.3 读取侧（biz-base / biz-process）</h3>
+  <table>
+    <tr><th style="width:44%">文件</th><th>说明</th></tr>
+    <tr><td class="en">core/process/biz-base/…/engine/service/record/PipelineBuildRecordService.kt</td>
+        <td>终态解析 / 保存 / 清理，取消落库，阶段准入「审核中」合成</td></tr>
+    <tr><td class="en">core/process/biz-base/…/engine/service/record/BuildRunningInfoResolver.kt</td>
+        <td>运行态现算：排队位次与并发组、等待 Job、待人工处理项、时长快照</td></tr>
+    <tr><td class="en">core/process/biz-process/…/service/builds/PipelineBuildFacadeService.kt</td>
+        <td>详情组装；<span class="code">buildEndInfo == null</span> 时才现算运行态（互斥开关）</td></tr>
+    <tr><td class="en">core/process/api-process/…/api/user/UserBuildResource.kt</td>
+        <td>接口 <span class="code">getBuildRecordByExecuteCount</span> 声明</td></tr>
+    <tr><td class="en">core/process/biz-process/…/api/UserBuildResourceImpl.kt</td><td>接口实现</td></tr>
+  </table>
+
+  <h3>A.4 单测</h3>
+  <table>
+    <tr><th style="width:44%">文件</th><th>说明</th></tr>
+    <tr><td class="en">core/common/common-pipeline/src/test/kotlin/…/utils/BuildEndPositionCollectorTest.kt</td><td>位置采集与失败聚合</td></tr>
+    <tr><td class="en">core/common/common-pipeline/src/test/kotlin/…/pojo/BuildEndInfoAlignTest.kt</td><td>终态与状态对齐</td></tr>
+    <tr><td class="en">core/process/biz-engine/src/test/kotlin/…/control/BuildEndInfoResolverTest.kt</td><td>终态解析</td></tr>
+  </table>
+
+  <div class="box" style="margin-top:22px">
+    <p style="text-align:center;color:#5f6b7a">— 文档结束 —</p>
+    <p style="text-align:center;font-size:13px;color:#a8b4c4;margin-top:6px">
+      蓝盾团队 · CI/CD 技术中台 · 构建详情状态小结方案 v1.3</p>
+  </div>
+  <div class="pmark">附录 A　代码与常量索引</div>
+  <div class="pno">30</div>
+</section>
+
+</body>
+</html>

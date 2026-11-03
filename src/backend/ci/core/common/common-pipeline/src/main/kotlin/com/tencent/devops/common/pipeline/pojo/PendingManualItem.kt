@@ -80,7 +80,7 @@ enum class PendingItemType(val displayName: String) {
     TASK_PAUSE("taskPause"),
     // 人工审核插件等待审核
     TASK_REVIEW("taskReview"),
-    // 插件级质量红线拦截，等待把关人处理
+    // 插件级质量红线审核，等待把关人处理
     TASK_QUALITY_GATE("taskQualityGate"),
     // 阶段准入/准出人工审核
     STAGE_REVIEW("stageReview"),

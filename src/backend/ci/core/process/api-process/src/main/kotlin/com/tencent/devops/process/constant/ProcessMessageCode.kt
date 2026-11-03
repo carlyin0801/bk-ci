@@ -361,6 +361,14 @@ object ProcessMessageCode {
     const val ERROR_PIPELINE_JOB_ID_FORMAT = "2101250" // 流水线Job:{0}的jobId为空或长度超过{1}位
     const val ERROR_PIPELINE_JOB_CONTROL_NODECURR = "2101251" // 流水线Job:{0}的单节点或总结点并发配置需要为小于1000的正整数
     const val ERROR_PIPELINE_TIMER_BRANCH_UNKNOWN = "2101252" // 定时触发分支{0}未知错误
+    const val BK_YAML_BRANCH_TIMER_EMPTY = "bkYamlBranchTimerEmpty" // yaml-branch 为空，未登记定时
+    const val BK_YAML_BRANCH_TIMER_WILDCARD = "bkYamlBranchTimerWildcard" // yaml-branch 不支持通配，未登记定时：{0}
+    const val BK_YAML_BRANCH_TIMER_DEFAULT_BRANCH = "bkYamlBranchTimerDefaultBranch" // yaml-branch 写在默认分支上，未登记定时
+    // yaml-branch（{0}）与当前分支（{1}）不一致，未登记定时
+    const val BK_YAML_BRANCH_TIMER_MISMATCH = "bkYamlBranchTimerMismatch"
+    const val BUILD_MSG_YAML_BRANCH_TIME = "bkBuildMsgYamlBranchTime" // {0} 分支上的定时触发
+    // 分支 {0} 或该分支上的流水线文件不存在，本次不执行
+    const val BK_PIPELINE_TIMER_YAML_FILE_MISSING = "bkPipelineTimerYamlFileMissing"
     const val ERROR_PIPELINE_CONDITION_EXPRESSION_TOO_LONG = "2101253" // 自定义条件表达式{0}的长度超过{1}位
     const val ERROR_PIPELINE_BUILD_START_PARAM_NO_EMPTY = "2101254" // 构建启动参数如果必填，不能为空
     const val ERROR_REPEATEDLY_START_VM = "2101255" // 重复启动构建机，当前构建机的状态为：{0}
@@ -395,7 +403,8 @@ object ProcessMessageCode {
 
     // 分支版本不存在异常标题
     const val ERROR_NO_PIPELINE_VERSION_EXISTS_BY_BRANCH_TITLE = "2101283"
-
+    // 分支定时触发未找到可执行的分支版本，本次不执行
+    const val ERROR_PIPELINE_TIMER_YAML_BRANCH_VERSION = "2101284"
     const val SCM_REPO_INVALID = "2101285" // 无效的通用仓库
 
     // URL[{0}]中存在高危端口号
@@ -496,11 +505,15 @@ object ProcessMessageCode {
     // 模型变量引用表达式不合规：单花括号不得以 context 前缀开头；双花括号须以前缀开头或为合法表达式函数。不合规项：{0}
     const val ERROR_PIPELINE_MODEL_VAR_REF_INVALID = "2101371"
     const val ERROR_TEMPLATE_RESOURCE_DRAFT_VERSION_NOT_EXISTS = "2101372" // 模板草稿版本编排[{0}]记录不存在
-    // 分支版本[{0}]不存在, 目标分支不存在或流水线引用的Yaml文件[{1}]在分支[{0}]不存在或已被删除
-    const val ERROR_PIPELINE_REF_YAML_FILE_NOT_FOUND = "2101374"
     const val ERROR_PIPELINE_IS_NOT_PAC = "2101373" // [{0}]不是PAC流水线
-    const val ERROR_TEMPLATE_SETTING_DRAFT_VERSION_NOT_EXISTS = "2101378" // 模板草稿版本设置[{0}]不存在
+    const val ERROR_TEMPLATE_SETTING_DRAFT_VERSION_NOT_EXISTS = "2101374" // 模板草稿版本设置[{0}]不存在
+    // 获取Fork仓库YAML失败：PR触发人[{0}]尚未完成OAUTH授权或没有仓库[{1}]读取权限
+    const val ERROR_PAC_FORK_YAML_OAUTH = "2101375"
+    // 分支版本[{0}]不存在, 目标分支不存在或流水线引用的Yaml文件[{1}]在分支[{0}]不存在或已被删除
+    // 注意: 前端执行预览页(preview.vue)依赖该错误码值展示错误页, 不要修改
+    const val ERROR_PIPELINE_REF_YAML_FILE_NOT_FOUND = "2101378"
     // 分支版本[{0}]不存在, 请检查分支版本是否被成功创建
+    // 注意: 前端执行预览页(preview.vue)依赖该错误码值展示错误页, 不要修改
     const val ERROR_NOT_FOUND_PIPELINE_VERSION_EXISTS_BY_BRANCH = "2101379"
     const val ERROR_TEMPLATE_VERSION_HAS_DELETED = "2101380" // 模板版本[{0}]已删除
 
@@ -532,6 +545,18 @@ object ProcessMessageCode {
     const val ERROR_ATOM_RUN_ENV_OS_UNSUPPORTED = "2101401"
     // 编排中存在不适用于所在Job构建环境操作系统的插件，暂不能保存，不适配插件明细：{0}
     const val ERROR_ATOM_JOB_OS_INCOMPATIBLE = "2101402"
+    // 当前 IMATE 审核组须在 imate 会话点击锁定完成审核。taskId={0}
+    const val ERROR_IMATE_STAGE_REVIEW_NOT_LOCKED = "2101403"
+    // imate 会话已驳回该 Stage 审核。taskId={0}
+    const val ERROR_IMATE_STAGE_REVIEW_REJECTED = "2101404"
+    // CDS 审批会话与本次构建绑定的 imate 会话不一致。taskId={0}
+    const val ERROR_IMATE_STAGE_REVIEW_SESSION_MISMATCH = "2101405"
+    // 查询 imate 审批状态失败。taskId={0}
+    const val ERROR_IMATE_STAGE_REVIEW_QUERY_FAILED = "2101406"
+    // 未配置 CDS 审批凭证。taskId={0}
+    const val ERROR_IMATE_STAGE_REVIEW_NOT_CONFIGURED = "2101407"
+    // 无效的创作流 Stage 审核 taskId：{0}
+    const val ERROR_IMATE_STAGE_REVIEW_TASK_INVALID = "2101408"
 
     // 构建执行相关错误码（2101500-2101599）
     const val ERROR_PIPELINE_START_NODE_NO_PERMISSION = "2101500" // 用户[{0}]没有节点[{1}]的操作权限，无法启动流水线
@@ -776,6 +801,16 @@ object ProcessMessageCode {
     const val BK_UNEXECUTE_TASK = "bkUnexecuteTask" // 终止构建，跳过(UnExecute Task)
     const val BK_CONDITION_INVALID = "bkConditionInvalid" // 执行条件判断失败(Condition Invalid)
     const val BK_STAGE_REVIEW_EMPTY_REVIEWER = "bkStageReviewEmptyViewer" // 由于无审核人，被系统自动驳回
+    // 当前审核组 [IMATE] 待审核，请在 imate 会话点击锁定。taskId={0}
+    const val BK_IMATE_STAGE_REVIEW_WAITING = "bkImateStageReviewWaiting"
+    // imate 锁定审批已通过，继续执行 Stage。taskId={0} approver={1}
+    const val BK_IMATE_STAGE_REVIEW_PASSED = "bkImateStageReviewPassed"
+    // 拒绝执行 Stage 审核：{0}
+    const val BK_IMATE_STAGE_REVIEW_DENIED = "bkImateStageReviewDenied"
+    // 创作流审核：{0} #{1} / {2}
+    const val BK_IMATE_STAGE_REVIEW_CARD_TITLE = "bkImateStageReviewCardTitle"
+    // CDS 锁定卡片 Markdown 正文
+    const val BK_IMATE_STAGE_REVIEW_CARD_CONTENT = "bkImateStageReviewCardContent"
 
     // [SystemLog]收到终止指令(UnExecute PostAction Task)
     const val BK_UNEXECUTE_POSTACTION_TASK = "bkUnexecutePostactionTask"
@@ -803,6 +838,13 @@ object ProcessMessageCode {
     const val BK_MERGE_TEMPLATE_YAML_UPDATE_TITLE = "bkMergeTemplateYamlUpdateTitle" // 修改模版发布mr标题
     const val BK_MERGE_TEMPLATE_INSTANCE_YAML_TITLE = "bkMergeTemplateInstanceYamlTitle" // 模版实例化标题
     const val BK_BUILD_QUEUE_WAIT_FOR_CONCURRENCY = "bkBuildQueueWaitingForConcurrency" // 并发组配置的排队
+    const val BK_CONCURRENCY_SUB_GROUP_EMPTY = "bkConcurrencySubGroupEmpty" // 同一批标识启动时为空
+    // {0} 是触发取代的构建链接。拦截器提前取消和启动时的权威去重都会传入。
+    const val BK_CONCURRENCY_SUB_GROUP_REPLACED = "bkConcurrencySubGroupReplaced"
+    // 启动时的队列对账没有单一触发构建，文案不能带占位符。
+    const val BK_CONCURRENCY_QUEUE_SIZE_CANCEL = "bkConcurrencyQueueSizeCancel"
+    // 拦截器满员挤出能指向当前构建。与上面拆开，避免对账日志打出未替换的 {0}。
+    const val BK_CONCURRENCY_QUEUE_SIZE_CANCEL_BY_BUILD = "bkConcurrencyQueueSizeCancelByBuild"
     const val BK_BUILD_QUEUE_WAIT = "bkBuildQueueWaiting" // 并发配置的排队
     const val BK_BUILD_CANCEL_BY_CONCURRENCY = "bkBuildCancelByConcurrency" // 并发组配置的取消
     const val BK_BUILD_TASK_RETRY_NOTICE = "bkBuildTaskRetryNotice" // 插件[{0}]执行失败，即将进行第[{1}]次自动重试。失败原因:{2}
@@ -922,6 +964,9 @@ object ProcessMessageCode {
     // Job构建环境操作系统不适配插件的明细项：Job[{0}]（{1}）中的 {2} 需要 {3}
     const val BK_ATOM_JOB_OS_INCOMPATIBLE_ITEM = "bkAtomJobOsIncompatibleItem"
 
+    // 构建机容器发生重启，构建进程已中断
+    const val BK_BUILD_CONTAINER_RESTARTED = "bkBuildContainerRestarted"
+
     // 用户手动取消构建
     const val BK_BUILD_CANCEL_USER_MANUAL = "bkBuildCancelUserManual"
     // {0} 处在途均已停止
@@ -959,6 +1004,20 @@ object ProcessMessageCode {
     const val BK_BUILD_END_FAIL_SUB_PIPELINE = "bkBuildEndFailSubPipeline"
     // 已启用 Fastkill，因「{0}」失败被终止
     const val BK_BUILD_END_FAIL_FAST_KILL = "bkBuildEndFailFastKill"
+    // 已启用 Fastkill，因同阶段其他 Job 失败被终止(定位不到引发终止的Job时使用)
+    const val BK_BUILD_END_FAIL_FAST_KILL_STAGE = "bkBuildEndFailFastKillStage"
+    // Job 互斥组[{0}]未开启排队，被其他构建占用后直接终止
+    const val BK_BUILD_END_FAIL_MUTEX_QUEUE_DISABLED = "bkBuildEndFailMutexQueueDisabled"
+    // Job 互斥组[{0}]排队失败(排队超时或队列已满)，已被终止
+    const val BK_BUILD_END_FAIL_MUTEX_QUEUE = "bkBuildEndFailMutexQueue"
+    // Job 异常结束，未产生插件错误信息（Job 失败但归不出具体成因时的兜底文案）
+    const val BK_BUILD_END_FAIL_JOB_ABORTED = "bkBuildEndFailJobAborted"
+    // 暂停执行期间被终止（执行前暂停后选择终止，插件常无 errorMsg）
+    const val BK_BUILD_END_FAIL_PAUSE_TERMINATED = "bkBuildEndFailPauseTerminated"
+    // 执行前暂停被终止后的位置状态文案，对齐编排图「暂停/终止」
+    const val BK_BUILD_END_STATUS_PAUSE_TERMINATED = "bkBuildEndStatusPauseTerminated"
+    // 步骤执行失败（插件失败但未留下错误信息时的兜底文案）
+    const val BK_BUILD_END_FAIL_PLUGIN = "bkBuildEndFailPlugin"
     // 质量红线未达标(无指标详情时的兜底文案)
     const val BK_BUILD_END_FAIL_QUALITY = "bkBuildEndFailQuality"
     // {0} 超过阈值 {1}（阈值为上限的指标，如代码坏味道数）
@@ -979,4 +1038,12 @@ object ProcessMessageCode {
     const val BK_BUILD_RUNNING_JOB_QUEUING = "bkBuildRunningJobQueuing"
     // 无Job在运行且存在待人工处理项时的当前阶段提示
     const val BK_BUILD_RUNNING_PENDING_MANUAL = "bkBuildRunningPendingManual"
+    // 构建机复用互斥，等待被依赖的节点 {0} 调度到具体节点后再进行复用调度
+    const val BK_BUILD_RUNNING_AGENT_REUSE_WAIT = "bkBuildRunningAgentReuseWait"
+    // 手动触发（运行态卡片补全 START_TYPE_MANUAL 的「手动」）
+    const val BK_BUILD_RUNNING_TRIGGER_MANUAL = "bkBuildRunningTriggerManual"
+    // 定时触发
+    const val BK_BUILD_RUNNING_TRIGGER_TIMER = "bkBuildRunningTriggerTimer"
+    // 流水线触发
+    const val BK_BUILD_RUNNING_TRIGGER_PIPELINE = "bkBuildRunningTriggerPipeline"
 }

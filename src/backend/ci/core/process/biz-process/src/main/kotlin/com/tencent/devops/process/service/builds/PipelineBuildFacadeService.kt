@@ -79,7 +79,6 @@ import com.tencent.devops.common.pipeline.pojo.element.trigger.RemoteTriggerElem
 import com.tencent.devops.common.pipeline.pojo.setting.BuildCancelPolicy
 import com.tencent.devops.common.pipeline.utils.BuildStatusSwitcher
 import com.tencent.devops.common.pipeline.utils.CascadePropertyUtils
-import com.tencent.devops.common.pipeline.utils.PIPELINE_SETTING_MAX_CON_QUEUE_SIZE_MAX
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.utils.CommonUtils
 import com.tencent.devops.common.service.utils.HomeHostUtil
@@ -98,7 +97,6 @@ import com.tencent.devops.process.constant.ProcessMessageCode.BUILD_AGENT_DETAIL
 import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_TRIGGER_EVENT_EXPIRED
 import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_USER_NO_PERMISSION_GET_PIPELINE_INFO
 import com.tencent.devops.process.constant.ProcessMessageCode.USER_NO_PIPELINE_PERMISSION_UNDER_PROJECT
-import com.tencent.devops.process.engine.common.Timeout
 import com.tencent.devops.process.engine.common.VMUtils
 import com.tencent.devops.process.engine.compatibility.BuildParametersCompatibilityTransformer
 import com.tencent.devops.process.engine.compatibility.BuildPropertyCompatibilityTools
@@ -159,6 +157,7 @@ import com.tencent.devops.process.pojo.pipeline.toBuildDetailSimple
 import com.tencent.devops.process.service.BuildVariableService
 import com.tencent.devops.process.service.CreateStreamTriggerSupportService
 import com.tencent.devops.process.service.ParamFacadeService
+import com.tencent.devops.process.service.creative.CreativeStreamImateStageReviewService
 import com.tencent.devops.process.service.pipeline.PipelineBuildService
 import com.tencent.devops.process.service.record.PipelineRecordModelService
 import com.tencent.devops.process.service.template.v2.PipelineTemplateResourceService
@@ -186,7 +185,6 @@ import jakarta.ws.rs.core.UriBuilder
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.util.concurrent.TimeUnit
 
 /**
  *
@@ -224,6 +222,7 @@ class PipelineBuildFacadeService(
     private val pipelineRecordModelService: PipelineRecordModelService,
     private val historyConditionQueryStrategyFactory: HistoryConditionQueryStrategyFactory,
     private val createStreamService: CreateStreamTriggerSupportService,
+    private val creativeStreamImateStageReviewService: CreativeStreamImateStageReviewService,
     private val buildRunningInfoResolver: BuildRunningInfoResolver
 ) {
 
@@ -660,7 +659,8 @@ class PipelineBuildFacadeService(
         projectId: String,
         pipelineId: String,
         parameters: Map<String, String> = emptyMap(),
-        checkPermission: Boolean = true
+        checkPermission: Boolean = true,
+        version: Int? = null
     ): String? {
 
         if (checkPermission) {
@@ -687,14 +687,20 @@ class PipelineBuildFacadeService(
         try {
             // 定时触发不存在调试的情况
             val (pipeline, resource, _) = pipelineRepositoryService.getBuildTriggerInfo(
-                projectId, pipelineId, null
+                projectId, pipelineId, version
             )
             if (pipeline.locked == true) {
                 throw ErrorCodeException(errorCode = ProcessMessageCode.ERROR_PIPELINE_LOCK)
             }
-            if (pipeline.latestVersionStatus?.isNotReleased() == true) throw ErrorCodeException(
-                errorCode = ProcessMessageCode.ERROR_NO_RELEASE_PIPELINE_VERSION
-            )
+            if (version == null && pipeline.latestVersionStatus?.isNotReleased() == true) {
+                throw ErrorCodeException(errorCode = ProcessMessageCode.ERROR_NO_RELEASE_PIPELINE_VERSION)
+            }
+            if (version != null && resource.status != VersionStatus.BRANCH) {
+                throw ErrorCodeException(
+                    errorCode = ProcessMessageCode.ERROR_PIPELINE_TIMER_YAML_BRANCH_VERSION,
+                    params = arrayOf(version.toString())
+                )
+            }
 
             /**
              * 验证流水线参数构建启动参数
@@ -718,7 +724,7 @@ class PipelineBuildFacadeService(
                 channelCode = pipeline.channelCode,
                 isMobile = false,
                 resource = resource,
-                signPipelineVersion = null,
+                signPipelineVersion = version,
                 frequencyLimit = false
             ).id
         } finally {
@@ -1117,6 +1123,16 @@ class PipelineBuildFacadeService(
                 params = arrayOf(stageId)
             )
         }
+        creativeStreamImateStageReviewService.assertLock(
+            userId = userId,
+            projectId = projectId,
+            pipelineId = pipelineId,
+            buildId = buildId,
+            stageId = stageId,
+            isCancel = isCancel,
+            buildStage = buildStage,
+            channelCode = buildInfo.channelCode
+        )
         PipelineUtils.checkStageReviewParam(reviewRequest?.reviewParams)
         if (!reviewRequest?.reviewParams.isNullOrEmpty()) {
             reviewParamsCheck(
@@ -1141,6 +1157,8 @@ class PipelineBuildFacadeService(
             )
         val runLock = PipelineBuildRunLock(redisOperation, pipelineId)
         try {
+            setting.correctAndPadding()
+            val maxConRunningQueueSize = setting.maxConRunningQueueSize!!
             runLock.lock()
             val interceptResult = pipelineInterceptorChain.filter(
                 InterceptData(
@@ -1153,7 +1171,8 @@ class PipelineBuildFacadeService(
                     maxQueueSize = setting.maxQueueSize,
                     concurrencyGroup = buildInfo.concurrencyGroup,
                     concurrencyCancelInProgress = setting.concurrencyCancelInProgress,
-                    maxConRunningQueueSize = setting.maxConRunningQueueSize ?: PIPELINE_SETTING_MAX_CON_QUEUE_SIZE_MAX,
+                    concurrencySubGroup = buildInfo.concurrencySubGroup,
+                    maxConRunningQueueSize = maxConRunningQueueSize,
                     // stage审核时暂不执行流水线并发组取消逻辑
                     cancelAllowed = false
                 )
@@ -1780,17 +1799,20 @@ class PipelineBuildFacadeService(
             )
             buildRecord.cancelBuildPerm = cancelBuildPerm
         }
-        // 运行态详情随时间实时变化，只能在读取时现算；已结束的构建由 buildEndInfo 表达，不会进入解析
-        buildRecord.buildRunningInfo = buildRunningInfoResolver.resolve(
-            BuildRunningContext(
-                buildInfo = buildInfo,
-                model = buildRecord.model,
-                executeCount = buildRecord.executeCount,
-                queueTime = buildRecord.queueTime,
-                startTime = buildRecord.startTime,
-                triggerDesc = buildRecord.trigger
+        // 运行态与终态卡片互斥。阶段准入挂起时记录表会先变成 STAGE_SUCCESS 并合成「审核中」，
+        // 历史表可能仍短暂停留在 RUNNING；此时再算运行态会把两张卡片叠在一起。
+        if (buildRecord.buildEndInfo == null) {
+            buildRecord.buildRunningInfo = buildRunningInfoResolver.resolve(
+                BuildRunningContext(
+                    buildInfo = buildInfo,
+                    model = buildRecord.model,
+                    executeCount = buildRecord.executeCount,
+                    queueTime = buildRecord.queueTime,
+                    startTime = buildRecord.startTime,
+                    triggerDesc = buildRecord.trigger
+                )
             )
-        )
+        }
         return buildRecord
     }
 
@@ -1978,7 +2000,12 @@ class PipelineBuildFacadeService(
             retry = buildHistory.retry,
             errorInfoList = buildHistory.errorInfoList,
             buildNumAlias = buildHistory.buildNumAlias,
-            webhookInfo = buildHistory.webhookInfo
+            webhookInfo = buildHistory.webhookInfo,
+            imateStageReview = if (buildHistory.status == BuildStatus.STAGE_SUCCESS.name) {
+                creativeStreamImateStageReviewService.hint(projectId, pipelineId, buildId)
+            } else {
+                null
+            }
         )
     }
 
@@ -1994,7 +2021,7 @@ class PipelineBuildFacadeService(
             projectId = projectId,
             concurrencyGroup = buildHistory.concurrencyGroup!!,
             status = listOf(BuildStatus.QUEUE, BuildStatus.QUEUE_CACHE)
-        ).indexOfFirst { it.second == buildHistory.id } + 1
+        ).indexOfFirst { it.buildId == buildHistory.id } + 1
     } else {
         pipelineRuntimeService.getTotalBuildHistoryCount(
             projectId = projectId,
@@ -2675,9 +2702,12 @@ class PipelineBuildFacadeService(
                     "build($buildId) shutdown by $userId, taskId: $taskId, " +
                         "status: $status, terminate: $finalTerminateFlag"
                 )
-                val cancelTaskSetKey = TaskUtils.getCancelTaskIdRedisKey(buildId, containerId, false)
-                redisOperation.addSetValue(cancelTaskSetKey, taskId)
-                redisOperation.expire(cancelTaskSetKey, TimeUnit.DAYS.toSeconds(Timeout.MAX_JOB_RUN_DAYS))
+                TaskUtils.recordCancelTaskId(
+                    redisOperation = redisOperation,
+                    buildId = buildId,
+                    containerId = containerId,
+                    taskId = taskId
+                )
                 printCancelLine(
                     buildId = buildId,
                     message = cancelMessage,
@@ -2929,17 +2959,21 @@ class PipelineBuildFacadeService(
         vmSeqId: String,
         nodeHashId: String?,
         executeCount: Int?,
+        createMode: Boolean?,
         simpleResult: SimpleResult
     ): Pair<String?, Boolean> {
         var msg = simpleResult.message
 
         if (!nodeHashId.isNullOrBlank()) {
-            msg = "${
-                I18nUtil.getCodeLanMessage(
-                    messageCode = BUILD_AGENT_DETAIL_LINK_ERROR,
-                    params = arrayOf(projectCode, nodeHashId)
-                )
-            } $msg"
+            val link = if (createMode == true) {
+                "/console/environment/$projectCode/creative-stream/node/allNode?nodeHashId=$nodeHashId"
+            } else {
+                "/console/environment/$projectCode/pipeline/node/allNode?nodeHashId=$nodeHashId"
+            }
+            val linkTag = "<a target='_blank' href='$link'>${I18nUtil.getCodeLanMessage(
+                messageCode = BUILD_AGENT_DETAIL_LINK_ERROR
+            )}</a>"
+            msg = "$linkTag $msg"
         }
         // #5046 worker-agent.jar进程意外退出，经由devopsAgent转达
         if (simpleResult.success) {

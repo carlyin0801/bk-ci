@@ -597,13 +597,11 @@ object ScriptYmlUtils {
     }
 
     fun formatRepoHookTriggerOn(preTriggerOn: PreTriggerOn?, name: String?): TriggerOn? {
-        if (preTriggerOn?.repoHook == null) {
-            return null
-        }
+        val repoHook = preTriggerOn?.repoHook ?: return null
 
         val repositoryHookList = try {
             YamlUtil.getObjectMapper().readValue(
-                JsonUtil.toJson(preTriggerOn.repoHook),
+                JsonUtil.toJson(repoHook),
                 object : TypeReference<List<PreRepositoryHook>>() {}
             )
         } catch (e: MismatchedInputException) {

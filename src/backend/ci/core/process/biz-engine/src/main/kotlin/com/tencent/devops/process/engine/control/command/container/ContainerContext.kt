@@ -45,6 +45,7 @@ data class ContainerContext(
     var cmdFlowState: CmdFlowState = CmdFlowState.CONTINUE, // 当前容器引擎命令流转状态
     val stageMatrixCount: Int = 0,
     var firstQueueTaskId: String? = null, // 缓存找到的第一个待执行的任务（未必执行）
+    var canceledTaskId: String? = null, // 缓存Job下第一个已处于取消态的任务，它已能作为Container取消状态的抓手
     // #13602 主步骤区扫描完时冻结下来的Job主状态。收尾步骤的运行时机一律按它判定，
     // 从而保证同一段收尾里每一步看到的Job状态都一致，也不会被收尾段自身的成败或取消改写
     var jobMainStatus: BuildStatus? = null,
