@@ -305,7 +305,7 @@ class StartActionTaskContainerCmd(
 
     /**
      * #13602 Job的结论只由主步骤部分决定，在[ContainerContext.jobMainStatus]处冻结。
-     * 收尾步骤无论成功、失败还是被取消，都不参与Job结论的计算（产品REQ-PL-017 B2 状态隔离硬约束）。
+     * 收尾步骤无论成功、失败还是被取消，都不参与Job结论的计算。
      */
     private fun PipelineBuildTask.affectJobConclusion() = !isJobPostStep()
 
@@ -408,7 +408,8 @@ class StartActionTaskContainerCmd(
                     currentTask = this,
                     isTerminate = needTerminate,
                     isContainerFailed = containerContext.buildStatus.isFailure(),
-                    hasFailedTaskInSuccessContainer = hasFailedTaskInSuccessContainer
+                    hasFailedTaskInSuccessContainer = hasFailedTaskInSuccessContainer,
+                    postStepSchedulable = postStepSchedulable
                 )
                 LOG.info("ENGINE|$buildId|$source|CONTAINER_POST_TASK|$stageId|j($containerId)|${toDoTask?.taskId}")
             }
@@ -674,13 +675,17 @@ class StartActionTaskContainerCmd(
         currentTask: PipelineBuildTask,
         isTerminate: Boolean, // 是否终止
         isContainerFailed: Boolean,
-        hasFailedTaskInSuccessContainer: Boolean
+        hasFailedTaskInSuccessContainer: Boolean,
+        postStepSchedulable: Boolean
     ): PipelineBuildTask? {
         // 添加Post action标识打印
         addPostTipLog(currentTask)
+        // #13602 收尾步骤在Job超时、FastKill下仍会被调度，它自带的post-action必须跟着走完，
+        // 否则详情页会出现「收尾步骤跑了、它的POST却是未执行」的割裂，清理也只做了一半
+        val postStepExempt = currentTask.isJobPostStep() && postStepSchedulable
         // 终止情况下，[post action]只适用于stopVM-关机任务, 其他的设置为未执行,并打印日志
         // #5806 解决构建worker进程异常结束退出时，可能PostAction还会被startVM-xxxx任务捡起来，因此需要对其状态进行设置
-        if (isTerminate && currentTask.taskId != VMUtils.genStopVMTaskId(currentTask.taskSeq)) {
+        if (isTerminate && !postStepExempt && currentTask.taskId != VMUtils.genStopVMTaskId(currentTask.taskSeq)) {
             pipelineTaskService.updateTaskStatus(currentTask, currentTask.starter, BuildStatus.UNEXEC)
             buildLogPrinter.addYellowLine(
                 buildId = currentTask.buildId,
