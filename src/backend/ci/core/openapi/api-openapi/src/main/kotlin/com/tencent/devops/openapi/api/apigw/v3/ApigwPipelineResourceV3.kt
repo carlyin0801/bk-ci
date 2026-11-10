@@ -234,7 +234,6 @@ interface ApigwPipelineResourceV3 {
                                             "runCondition": "PRE_TASK_SUCCESS",
                                             "pauseBeforeExec": false,
                                             "subscriptionPauseUser": "devops",
-                                            "otherTask": "",
                                             "customVariables": [{
                                                 "key": "param1",
                                                 "value": ""

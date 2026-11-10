@@ -43,7 +43,12 @@ import com.tencent.devops.common.pipeline.enums.TemplateRefType
 import com.tencent.devops.common.pipeline.pojo.TemplateVariable
 import com.tencent.devops.common.pipeline.pojo.element.Element
 import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
+import com.tencent.devops.common.api.constant.CommonMessageCode.YAML_NOT_VALID
+import com.tencent.devops.common.pipeline.pojo.element.OnCancel
 import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.RunConditionNormalizer
+import com.tencent.devops.common.pipeline.pojo.element.PreFailureSkippedAs
+import com.tencent.devops.common.pipeline.pojo.element.StepRunIntent
 import com.tencent.devops.common.pipeline.pojo.element.StepTemplateElement
 import com.tencent.devops.common.pipeline.pojo.element.agent.LinuxScriptElement
 import com.tencent.devops.common.pipeline.pojo.element.agent.ManualReviewUserTaskElement
@@ -75,6 +80,7 @@ import com.tencent.devops.process.yaml.transfer.pojo.YamlTransferInput
 import com.tencent.devops.process.yaml.utils.ModelCreateUtil
 import com.tencent.devops.process.yaml.v3.models.IfField
 import com.tencent.devops.process.yaml.v3.models.IfField.Mode
+import com.tencent.devops.process.yaml.v3.models.WhenField
 import com.tencent.devops.process.yaml.v3.models.TriggerType
 import com.tencent.devops.process.yaml.v3.models.job.Job
 import com.tencent.devops.process.yaml.v3.models.job.JobRunsOnType
@@ -495,7 +501,44 @@ class ElementTransfer @Autowired(required = false) constructor(
         agentSelector: String?,
         jobRunsOnType: JobRunsOnType? = null
     ): Element {
+        val preFailureSkippedAs = step.whenField?.preFailureSkippedAs?.let {
+            if (it == WhenField.PreFailureSkippedAsValue.FAILURE) {
+                PreFailureSkippedAs.FAILURE
+            } else {
+                PreFailureSkippedAs.SUCCESS
+            }
+        }
+        val onCancel = step.whenField?.onCancel?.let {
+            if (it == WhenField.OnCancelValue.CONTINUE) OnCancel.CONTINUE else OnCancel.SKIP
+        }
+        // `if` 里写的是不是一个真表达式（排除三个旧魔术串，它们表达的是意图而不是条件）
+        val plainExpression = step.ifField?.expression?.takeIf {
+            it.isNotBlank() && it != IfType.ALWAYS.name &&
+                it != IfType.ALWAYS_UNLESS_CANCELLED.name && it != IfType.FAILURE.name
+        }
+        // when 是运行意图的新入口；没写 when 时才去读旧的 if 魔术串（ALWAYS / FAILURE / ALWAYS_UNLESS_CANCELLED）
         val runCondition = when {
+            // `when: success` + `if: 表达式` 取 AND，而这个组合正好能等价落到「自定义条件」：
+            // 表达式里还读不到前序状态，自定义条件本就隐含「前序成功」这道门，两者判定逐格相同
+            step.whenField?.status == WhenField.Status.SUCCESS ->
+                if (plainExpression != null) RunCondition.CUSTOM_CONDITION_MATCH else RunCondition.PRE_TASK_SUCCESS
+
+            step.whenField?.status == WhenField.Status.FAILURE ->
+                if (preFailureSkippedAs == PreFailureSkippedAs.FAILURE) {
+                    RunCondition.PRE_TASK_FAILED_ONLY
+                } else {
+                    RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP
+                }
+
+            // always 的 on-cancel 默认是 continue（取消也跑），只有显式写 skip 才不跑。
+            // 这与旧写法 `if: ALWAYS` 的语义一致，两条读入路径必须给出同一个结果
+            step.whenField?.status == WhenField.Status.ALWAYS ->
+                if (onCancel == OnCancel.SKIP) {
+                    RunCondition.PRE_TASK_FAILED_BUT_CANCEL
+                } else {
+                    RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
+                }
+
             step.ifField == null -> RunCondition.PRE_TASK_SUCCESS
             IfType.ALWAYS_UNLESS_CANCELLED.name == (step.ifField.expression) ->
                 RunCondition.PRE_TASK_FAILED_BUT_CANCEL
@@ -513,6 +556,16 @@ class ElementTransfer @Autowired(required = false) constructor(
 
             else -> RunCondition.PRE_TASK_SUCCESS
         }
+        // failure / always 意图与表达式的 AND 组合，落库模型目前承载不了（runCondition 是单值枚举）。
+        // 与其把表达式悄悄丢掉、让步骤比用户预期跑得更频繁，不如在这里明确报错
+        val whenStatus = step.whenField?.status
+        if (plainExpression != null && whenStatus != null && runCondition != RunCondition.CUSTOM_CONDITION_MATCH) {
+            throw PipelineTransferException(
+                YAML_NOT_VALID,
+                arrayOf("step(${step.name ?: step.id}): `when: ${whenStatus.alias}` and `if` cannot be used " +
+                    "together, please merge the condition into `if` or remove one of them")
+            )
+        }
         val continueOnError = Step.ContinueOnErrorType.parse(step.continueOnError)
         val additionalOptions = ElementAdditionalOptions(
             enable = step.enable ?: true,
@@ -523,6 +576,9 @@ class ElementTransfer @Autowired(required = false) constructor(
             retryWhenFailed = step.retryTimes != null && step.retryTimes > 0,
             retryCount = step.retryTimes ?: VariableDefault.DEFAULT_RETRY_COUNT,
             runCondition = runCondition,
+            fromStepIds = step.whenField?.from?.filter { it.isNotBlank() }?.ifEmpty { null },
+            preFailureSkippedAs = preFailureSkippedAs,
+            onCancel = onCancel,
             pauseBeforeExec = step.canPauseBeforeRun,
             subscriptionPauseUser = step.pauseNoticeReceivers?.joinToString(","),
             customCondition = if (runCondition == RunCondition.CUSTOM_CONDITION_MATCH) {
@@ -743,6 +799,7 @@ class ElementTransfer @Autowired(required = false) constructor(
             else -> element.transferYaml(transferCache.getAtomDefaultValue(uses))
         }?.apply {
             this.ifField = parseStepIfFiled(element)
+            this.whenField = parseStepWhenFiled(element)
             this.enable = element.elementEnabled().nullIfDefault(true)
             this.timeoutMinutes =
                 (element.additionalOptions?.timeoutVar ?: element.additionalOptions?.timeout?.toString()).nullIfDefault(
@@ -785,17 +842,43 @@ class ElementTransfer @Autowired(required = false) constructor(
                 params = step.additionalOptions?.customVariables?.associateBy({ it.key ?: "" }, { it.value ?: "" })
             )
 
-            RunCondition.PRE_TASK_FAILED_BUT_CANCEL ->
-                IfType.ALWAYS_UNLESS_CANCELLED.name
-
-            RunCondition.PRE_TASK_FAILED_EVEN_CANCEL ->
-                IfType.ALWAYS.name
-
-            RunCondition.PRE_TASK_FAILED_ONLY ->
-                IfType.FAILURE.name
-
+            // 意图轴统一由 when 导出，这里不再写 if 的魔术串
             else -> null
         }
+    }
+
+    /**
+     * 把运行意图导出成 `when`。只有 status 需要表达时写成标量，否则写成对象。
+     * 表达式意图走 `if`，不产出 `when`。
+     */
+    private fun parseStepWhenFiled(
+        step: Element
+    ): Any? {
+        val resolved = RunConditionNormalizer.resolve(step.additionalOptions)
+        val status = when (resolved.intent) {
+            StepRunIntent.SUCCESS -> WhenField.Status.SUCCESS
+            StepRunIntent.FAILURE -> WhenField.Status.FAILURE
+            StepRunIntent.ALWAYS -> WhenField.Status.ALWAYS
+            StepRunIntent.EXPRESSION, StepRunIntent.POST_ACTION -> return null
+        }
+        // 只写与默认值不同的维度，避免把一堆默认键打印进 YAML
+        val from = resolved.fromStepIds.ifEmpty { null }
+        val preFailureSkippedAs = if (resolved.preFailureSkippedAs == PreFailureSkippedAs.FAILURE) {
+            WhenField.PreFailureSkippedAsValue.FAILURE
+        } else {
+            null
+        }
+        // on-cancel 的默认值随 status：always 默认 continue、其余默认 skip，所以两边要导出的「非默认值」正好相反
+        val defaultOnCancel = if (status == WhenField.Status.ALWAYS) OnCancel.CONTINUE else OnCancel.SKIP
+        val onCancel = when {
+            resolved.onCancel == defaultOnCancel -> null
+            resolved.onCancel == OnCancel.CONTINUE -> WhenField.OnCancelValue.CONTINUE
+            else -> WhenField.OnCancelValue.SKIP
+        }
+        if (from == null && preFailureSkippedAs == null && onCancel == null) {
+            return if (status == WhenField.Status.SUCCESS) null else status.alias
+        }
+        return WhenField(status = status, from = from, preFailureSkippedAs = preFailureSkippedAs, onCancel = onCancel)
     }
 
     protected fun makeServiceElementList(job: Job): MutableList<Element> {

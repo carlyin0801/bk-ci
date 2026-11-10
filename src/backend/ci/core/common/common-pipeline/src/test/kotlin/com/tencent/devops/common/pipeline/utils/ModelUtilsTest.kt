@@ -356,7 +356,6 @@ class ModelUtilsTest {
             manualSkip = manualSkip,
             retryCount = 1,
             timeout = 100,
-            otherTask = null,
             customCondition = null,
             pauseBeforeExec = false,
             subscriptionPauseUser = ""

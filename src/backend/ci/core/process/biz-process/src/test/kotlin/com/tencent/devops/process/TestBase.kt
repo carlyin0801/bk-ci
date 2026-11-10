@@ -270,7 +270,6 @@ open class TestBase {
             customVariables = customVariables,
             retryCount = retryCount,
             elementPostInfo = elementPostInfo,
-            otherTask = nullObject,
             customCondition = nullObject,
             subscriptionPauseUser = null
         )

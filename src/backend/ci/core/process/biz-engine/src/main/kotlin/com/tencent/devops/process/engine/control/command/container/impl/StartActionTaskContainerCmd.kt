@@ -38,7 +38,7 @@ import com.tencent.devops.common.log.utils.BuildLogPrinter
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.EnvControlTaskType
 import com.tencent.devops.common.pipeline.pojo.element.ElementPostInfo
-import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.RunConditionNormalizer
 import com.tencent.devops.common.pipeline.utils.BuildStatusSwitcher
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.web.utils.I18nUtil
@@ -50,6 +50,7 @@ import com.tencent.devops.process.engine.common.Timeout
 import com.tencent.devops.process.engine.common.VMUtils
 import com.tencent.devops.process.engine.control.ControlUtils
 import com.tencent.devops.process.engine.control.FastKillUtils
+import com.tencent.devops.process.engine.control.PreTaskStatus
 import com.tencent.devops.process.engine.control.command.CmdFlowState
 import com.tencent.devops.process.engine.control.command.container.ContainerCmd
 import com.tencent.devops.process.engine.control.command.container.ContainerContext
@@ -158,8 +159,7 @@ class StartActionTaskContainerCmd(
         )
         if (redisOperation.get(runEvenCancelTaskIdKey) != null) {
             /**
-             * 当前的job如果包含runCondition为PRE_TASK_FAILED_EVEN_CANCEL的task，运行到最后如果状态为SUCCEED，
-             * 则需要置为CANCELED
+             * 当前的job如果包含声明了「取消后仍运行」的task，运行到最后如果状态为SUCCEED，则需要置为CANCELED
              */
             if (commandContext.buildStatus == BuildStatus.SUCCEED) {
                 commandContext.buildStatus = BuildStatus.CANCELED
@@ -173,10 +173,9 @@ class StartActionTaskContainerCmd(
         actionType: ActionType,
         commandContext: ContainerContext
     ) {
-        // 当task的runCondition为PRE_TASK_FAILED_EVEN_CANCEL且task被用户取消时则写入标志到redis中
-        val runCondition = waitToDoTask.additionalOptions?.runCondition
-        val failedEvenCancelFlag = runCondition == RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
-        if (actionType == ActionType.END && failedEvenCancelFlag) {
+        // 当task声明了「取消后仍运行」且task被用户取消时则写入标志到redis中
+        val runEvenCancel = RunConditionNormalizer.resolve(waitToDoTask.additionalOptions).runOnCancel()
+        if (actionType == ActionType.END && runEvenCancel) {
             val container = commandContext.container
             val timeoutSec = Timeout.transMinuteTimeoutToSec(container.controlOption.jobControlOption.timeout)
             redisOperation.set(
@@ -390,6 +389,9 @@ class StartActionTaskContainerCmd(
                 LOG.info("ENGINE|$buildId|$source|CONTAINER_POST_TASK|$stageId|j($containerId)|${toDoTask?.taskId}")
             }
 
+            // Job 超时（USER_JOB_OUTTIME_LIMIT）同样走这条分支：超时的目的就是让 Job 停下来，
+            // 此时构建机可能已被回收，放行任何步骤都会让它停在 QUEUE_CACHE 把 Job 拖住。
+            // 「超时后按 when.status 调度」需等 Agent 存活性确认后再单独评估，见需求 O-7 / S-3。
             needTerminate -> { // 构建环境启动失败或者是启动成功但后续Agent挂掉导致心跳超时
                 LOG.warn("ENGINE|$buildId|$source|TERM_NOT_EXEC|$stageId|j($containerId)|$taskId|$status")
                 val taskStatus = if (status == BuildStatus.QUEUE_CACHE) { // 领取过程中被中断标志为取消
@@ -519,12 +521,16 @@ class StartActionTaskContainerCmd(
                 containerFinalStatus = containerContext.buildStatus,
                 variables = contextMap,
                 hasFailedTaskInSuccessContainer = hasFailedTaskInSuccessContainer,
+                preTasks = PreTaskStatus.snapshotOf(containerContext.containerTasks, startPos),
                 message = message
             )
         }
 
         var skip = false
         var idx = startPos
+        // 前序快照随 idx 递进增量累加。每轮重建一次前缀会让这段预检退化成 O(步骤数²)，
+        // 而它在每个 Job 开机前都要跑一遍
+        val preTasks = PreTaskStatus.snapshotOf(containerContext.containerTasks, startPos + 1).toMutableList()
         while (++idx < containerContext.containerTasks.size) {
             val it = containerContext.containerTasks[idx]
             if (!VMUtils.isVMTask(it.taskId)) {
@@ -534,6 +540,7 @@ class StartActionTaskContainerCmd(
                     containerFinalStatus = containerContext.buildStatus,
                     variables = contextMap,
                     hasFailedTaskInSuccessContainer = hasFailedTaskInSuccessContainer,
+                    preTasks = preTasks,
                     message = message
                 )
                 if (LOG.isDebugEnabled) {
@@ -543,6 +550,8 @@ class StartActionTaskContainerCmd(
                     break
                 }
             }
+            // 本轮判完，当前任务成为下一轮的前序
+            PreTaskStatus.of(it)?.let(preTasks::add)
         }
         return skip
     }

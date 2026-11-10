@@ -44,7 +44,9 @@ import com.tencent.devops.common.pipeline.pojo.BuildFormProperty
 import com.tencent.devops.common.pipeline.pojo.element.Element
 import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
 import com.tencent.devops.common.pipeline.pojo.element.ElementPostInfo
+import com.tencent.devops.common.pipeline.pojo.element.OnCancel
 import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.PreFailureSkippedAs
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildAtomElement
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildLessAtomElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.ManualTriggerElement
@@ -363,15 +365,20 @@ open class TestBase : BkCiAbstractTest() {
         runCondition: RunCondition = RunCondition.PRE_TASK_SUCCESS,
         customVariables: MutableList<NameAndValue>? = null,
         elementPostInfo: ElementPostInfo? = null,
-        retryCount: Int = 0
+        retryCount: Int = 0,
+        fromStepIds: List<String>? = null,
+        preFailureSkippedAs: PreFailureSkippedAs? = null,
+        onCancel: OnCancel? = null
     ): ElementAdditionalOptions {
         return ElementAdditionalOptions(
             enable = enable,
             runCondition = runCondition,
+            fromStepIds = fromStepIds,
+            preFailureSkippedAs = preFailureSkippedAs,
+            onCancel = onCancel,
             customVariables = customVariables,
             retryCount = retryCount,
             elementPostInfo = elementPostInfo,
-            otherTask = nullObject,
             customCondition = nullObject,
             subscriptionPauseUser = null
         )

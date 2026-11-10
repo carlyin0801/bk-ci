@@ -218,10 +218,14 @@ class PipelinePostElementService @Autowired constructor(
             additionalOptions.continueWhenFailed = true
             additionalOptions.retryWhenFailed = false
             additionalOptions.runCondition = postAtomRunCondition
+            // post 的运行时机只由 postCondition 决定，父插件上的运行意图一概不继承：
+            // 前序范围/被跳过的失败口径/取消开关都是针对主流程前序步骤的，post 判的是父插件自身状态
+            additionalOptions.fromStepIds = null
+            additionalOptions.preFailureSkippedAs = null
+            additionalOptions.onCancel = null
             additionalOptions.pauseBeforeExec = null
             additionalOptions.subscriptionPauseUser = null
             additionalOptions.retryCount = 0
-            additionalOptions.otherTask = null
             additionalOptions.customCondition = null
             additionalOptions.elementPostInfo = elementPostInfo
         }

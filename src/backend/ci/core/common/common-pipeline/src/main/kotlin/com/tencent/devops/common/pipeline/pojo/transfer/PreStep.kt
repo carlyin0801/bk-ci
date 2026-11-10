@@ -45,6 +45,9 @@ data class PreStep(
     @get:Schema(title = "if")
     @JsonProperty("if")
     var ifField: Any? = null,
+    @get:Schema(title = "when")
+    @JsonProperty("when")
+    var whenField: Any? = null,
     @get:Schema(title = "if-modify")
     @JsonProperty("if-modify")
     val ifModify: List<String>? = null,

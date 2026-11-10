@@ -536,6 +536,10 @@ object ProcessMessageCode {
     const val ERROR_PIPELINE_COMMON_VAR_GROUP_REFER_QUERY_FAILED = "2101393"
     // 公共变量ID重复[{0}]，请检查引用的变量组
     const val ERROR_PIPELINE_COMMON_VAR_ID_DUPLICATE = "2101394"
+    // 步骤[{0}]的 when.from 引用了不存在的前序步骤 ID：{1}
+    const val ERROR_STEP_WHEN_FROM_NOT_FOUND = "2101395"
+    // 步骤[{0}]的运行条件[{1}]不被支持，请改用：{2}
+    const val ERROR_STEP_CONDITION_UNSUPPORTED_SYNTAX = "2101396"
 
     // 构建执行相关错误码（2101400-2101499）
     // 运行环境操作系统已由{0}变更为{1}，编排中存在不适用于新系统的插件，暂不能保存，不适配插件明细：{2}

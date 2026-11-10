@@ -58,6 +58,7 @@ import com.tencent.devops.process.constant.ProcessMessageCode.BK_START_USER
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_TRIGGER_USER
 import com.tencent.devops.process.engine.common.VMUtils
 import com.tencent.devops.process.engine.context.MatrixBuildContext
+import com.tencent.devops.process.engine.control.PreTaskStatus
 import com.tencent.devops.process.engine.control.VmOperateTaskGenerator
 import com.tencent.devops.process.engine.control.lock.PipelineBuildNoLock
 import com.tencent.devops.process.engine.dao.PipelineBuildContainerDao
@@ -1039,6 +1040,11 @@ class PipelineContainerService @Autowired constructor(
                 atomElement.version = originVersion
             }
             target.taskParams = atomElement.genTaskParams() // 更新参数
+        }
+        if (target.status == BuildStatus.SKIP) {
+            // 手动跳过与「失败自动跳过」共用 SKIP 态，这里打上标记让后续步骤的 skipped-as 判定能区分二者。
+            // 必须放在 genTaskParams 之后，否则会被整体覆盖掉。
+            target.taskParams[PreTaskStatus.TASK_PARAM_MANUALLY_SKIPPED] = true
         }
     }
 

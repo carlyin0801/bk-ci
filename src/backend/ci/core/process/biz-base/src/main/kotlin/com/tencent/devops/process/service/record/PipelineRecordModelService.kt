@@ -428,7 +428,6 @@ class PipelineRecordModelService @Autowired constructor(
             runCondition = pipelinePostElementService.getPostAtomRunCondition(elementPostInfo.postCondition),
             pauseBeforeExec = null,
             subscriptionPauseUser = null,
-            otherTask = null,
             customCondition = null,
             elementPostInfo = elementPostInfo
         )

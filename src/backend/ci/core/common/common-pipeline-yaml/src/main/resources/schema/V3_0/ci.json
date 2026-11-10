@@ -3807,6 +3807,32 @@
                 }
               } ]
             },
+            "when" : {
+              "oneOf" : [ {
+                "enum" : [ "success", "failure", "always" ]
+              }, {
+                "type" : "object",
+                "additionalProperties" : false,
+                "required" : [ "status" ],
+                "properties" : {
+                  "status" : {
+                    "enum" : [ "success", "failure", "always" ]
+                  },
+                  "from" : {
+                    "type" : "array",
+                    "items" : {
+                      "type" : "string"
+                    }
+                  },
+                  "skipped-as" : {
+                    "enum" : [ "success", "failure" ]
+                  },
+                  "on-cancel" : {
+                    "enum" : [ "continue", "skip" ]
+                  }
+                }
+              } ]
+            },
             "with" : {
               "type" : "object"
             },

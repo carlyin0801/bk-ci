@@ -54,6 +54,7 @@ import com.tencent.devops.common.pipeline.pojo.element.market.MarketBuildLessAto
 import com.tencent.devops.common.pipeline.pojo.element.market.MarketEventAtomElement
 import com.tencent.devops.common.pipeline.pojo.setting.PipelineSetting
 import com.tencent.devops.common.pipeline.pojo.setting.Subscription
+import com.tencent.devops.common.pipeline.utils.StepConditionSyntaxChecker
 import com.tencent.devops.process.constant.ProcessMessageCode
 import com.tencent.devops.process.constant.ProcessMessageCode.ERROR_INCORRECT_NOTIFICATION_MESSAGE_CONTENT
 import com.tencent.devops.process.engine.atom.AtomUtils
@@ -393,7 +394,40 @@ open class DefaultModelCheckPlugin constructor(
                 errorCode = ProcessMessageCode.ERROR_PIPELINE_CONDITION_EXPRESSION_TOO_LONG,
                 params = arrayOf(element.name, PIPELINE_CONDITION_EXPRESSION_LENGTH_MAX.toString())
             )
+            checkStepConditionSyntax(element, elementControlOption.customCondition)
         }
+        checkRunIntentFrom(container = this, element = element, elementIndex = elementIndex)
+    }
+
+    /**
+     * `when.from` 只能引用同一个 Job 内、排在本步骤之前、且声明了 ID 的步骤。
+     * 引用不存在的 ID 在运行期会静默退化成「没有一个前序失败」，必须在保存期挡住。
+     */
+    private fun checkRunIntentFrom(container: Container, element: Element, elementIndex: Int) {
+        val from = element.additionalOptions?.fromStepIds?.filter { it.isNotBlank() } ?: return
+        if (from.isEmpty()) {
+            return
+        }
+        val reachable = container.elements.take(elementIndex).mapNotNull { it.stepId }.toSet()
+        val missing = from.filterNot { it in reachable }
+        if (missing.isNotEmpty()) throw ErrorCodeException(
+            errorCode = ProcessMessageCode.ERROR_STEP_WHEN_FROM_NOT_FOUND,
+            params = arrayOf(element.name, missing.joinToString(", "))
+        )
+    }
+
+    /**
+     * 拦下在运行期必然求值失败、而失败又会被 ControlUtils 静默吞成「跳过」的条件写法，
+     * 好过让用户的条件静悄悄永不成立。判定口径见 [StepConditionSyntaxChecker]。
+     *
+     * 只作用于步骤级：Stage 条件走的是 EvalExpress，它会主动剥掉 `${{ }}`，口径与这里不同。
+     */
+    private fun checkStepConditionSyntax(element: Element, expression: String?) {
+        val violation = StepConditionSyntaxChecker.check(expression) ?: return
+        throw ErrorCodeException(
+            errorCode = ProcessMessageCode.ERROR_STEP_CONDITION_UNSUPPORTED_SYNTAX,
+            params = arrayOf(element.name, violation.origin, violation.suggestion)
+        )
     }
 
     /**
@@ -545,6 +579,7 @@ open class DefaultModelCheckPlugin constructor(
 
     companion object {
         private val logger = LoggerFactory.getLogger(DefaultModelCheckPlugin::class.java)
+
     }
 
     /**

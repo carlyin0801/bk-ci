@@ -32,6 +32,7 @@ import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.pojo.element.Element
 import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
 import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.RunConditionNormalizer
 import com.tencent.devops.common.pipeline.pojo.element.agent.ManualReviewUserTaskElement
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.utils.SpringContextUtil
@@ -52,12 +53,6 @@ object TaskUtils {
         BuildStatus.REVIEW_ABORT,
         BuildStatus.QUALITY_CHECK_FAIL,
         BuildStatus.EXEC_TIMEOUT
-    )
-
-    val customConditionList = listOf(
-        RunCondition.CUSTOM_VARIABLE_MATCH,
-        RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN,
-        RunCondition.CUSTOM_CONDITION_MATCH
     )
 
     private val failToRunBuildStatusList = listOf(
@@ -236,7 +231,7 @@ object TaskUtils {
             return false
         }
         val options = task.additionalOptions
-        if (options?.runCondition == RunCondition.PRE_TASK_FAILED_EVEN_CANCEL) {
+        if (RunConditionNormalizer.resolve(options).runOnCancel()) {
             return false
         }
         if (options?.elementPostInfo != null && !task.status.isRunning()) {

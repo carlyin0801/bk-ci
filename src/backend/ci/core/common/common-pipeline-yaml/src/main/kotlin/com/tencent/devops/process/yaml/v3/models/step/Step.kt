@@ -32,6 +32,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.tencent.devops.common.pipeline.pojo.transfer.CodeTemplate
 import com.tencent.devops.common.pipeline.pojo.transfer.PreTemplateVariable
 import com.tencent.devops.process.yaml.v3.models.IfField
+import com.tencent.devops.process.yaml.v3.models.WhenField
 import io.swagger.v3.oas.annotations.media.Schema
 
 interface IStep
@@ -42,6 +43,8 @@ data class Step(
     val id: String?,
     @JsonProperty("if")
     val ifField: IfField?,
+    @JsonProperty("when")
+    val whenField: WhenField? = null,
     @JsonProperty("if-modify")
     val ifModify: List<String>? = null,
     val uses: String?,

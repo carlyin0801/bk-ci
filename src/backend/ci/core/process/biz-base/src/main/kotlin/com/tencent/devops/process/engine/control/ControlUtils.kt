@@ -36,7 +36,11 @@ import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.JobRunCondition
 import com.tencent.devops.common.pipeline.enums.StageRunCondition
 import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
+import com.tencent.devops.common.pipeline.pojo.element.ResolvedRunIntent
 import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.RunConditionNormalizer
+import com.tencent.devops.common.pipeline.pojo.element.PreFailureSkippedAs
+import com.tencent.devops.common.pipeline.pojo.element.StepRunIntent
 import com.tencent.devops.common.web.utils.I18nUtil
 import com.tencent.devops.process.constant.ProcessMessageCode
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_CHECK_JOB_RUN_CONDITION
@@ -50,7 +54,6 @@ import com.tencent.devops.process.constant.ProcessMessageCode.BK_RUNS_EVEN_IF_CA
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_TASK_DISABLED
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_WHEN_THE_CUSTOM_VARIABLES_ARE_ALL_SATISFIED
 import com.tencent.devops.process.engine.pojo.PipelineBuildContainer
-import com.tencent.devops.process.util.TaskUtils
 import com.tencent.devops.process.utils.PipelineVarUtil
 import com.tencent.devops.process.utils.TASK_FAIL_RETRY_MAX_COUNT
 import com.tencent.devops.process.utils.TASK_FAIL_RETRY_MIN_COUNT
@@ -165,6 +168,18 @@ object ControlUtils {
      * 对构建[buildId]的任务的流程控制条件[additionalOptions]进行排查，结合当前容器状态[containerFinalStatus]
      * 以及是否当前容器存在失败任务[hasFailedTaskInSuccessContainer]等条件，排查[RunCondition]下各个条件
      * 是否满足跳过条件，如果满足返回true,表示跳过。
+     *
+     * 判定按「运行意图」组织，每个意图各自声明它对前序状态的要求，不再有一条拦在中间的
+     * 「容器失败或取消就跳过」兜底分支——条件判定一律以构建环境已正常启动为前提，
+     * 要不要跑只取决于本意图对前序成败的要求。
+     *
+     * 意图轴与各取值的对应：
+     * - 前序成功时：[RunCondition.PRE_TASK_SUCCESS]（及未配置）
+     * - 前序失败时：[RunCondition.PRE_TASK_FAILED_ONLY]（含失败自动跳过）、
+     *   [RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP]（不含失败自动跳过）
+     * - 总是运行：[RunCondition.PRE_TASK_FAILED_BUT_CANCEL]（取消时不跑）、
+     *   [RunCondition.PRE_TASK_FAILED_EVEN_CANCEL]（取消时也跑）
+     * - 自定义条件：[RunCondition.CUSTOM_CONDITION_MATCH]，存量的变量匹配在此归一为等价表达式
      */
     fun checkTaskSkip(
         buildId: String,
@@ -172,89 +187,115 @@ object ControlUtils {
         containerFinalStatus: BuildStatus,
         variables: Map<String, String>,
         hasFailedTaskInSuccessContainer: Boolean,
+        preTasks: List<PreTaskStatus> = emptyList(),
         message: StringBuilder = StringBuilder()
     ): Boolean {
         message.append(
             I18nUtil.getCodeLanMessage(BK_CHECK_TASK_RUN_CONDITION)
         )
-        var skip = false
-        val runCondition = additionalOptions?.runCondition
         if (!isEnable(additionalOptions)) {
-            skip = true
             message.append(
                 I18nUtil.getCodeLanMessage(BK_TASK_DISABLED)
             )
-        } else when {
-            // [只有前面有任务失败时才运行]，之前存在失败的任务（包含失败自动跳过的情况）
-            // 用户取消不是失败。失败继续会让 hasFailedTaskInSuccessContainer 为真，
-            // 若不看取消态，取消后仍会领取这类插件；构建机却已关机，插件停在 QUEUE_CACHE，Job 无法结束。
-            runCondition == RunCondition.PRE_TASK_FAILED_ONLY -> {
-                skip = containerFinalStatus.isCancel() ||
-                    !(containerFinalStatus.isFailure() || hasFailedTaskInSuccessContainer)
-                message.append("${I18nUtil.getCodeLanMessage(BK_ONLY_WHEN_PREVIOUS_TASK_HAS_FAILED)} skip=$skip")
-            }
-            // [只有前面有任务失败时才运行（不包括失败自动跳过）]，仅当容器真正失败时才运行
-            runCondition == RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP -> {
-                skip = containerFinalStatus.isCancel() || !containerFinalStatus.isFailure()
-                message.append(
-                    "${I18nUtil.getCodeLanMessage(BK_ONLY_WHEN_PREVIOUS_TASK_FAILED_EXCEPT_SKIP)} skip=$skip"
-                )
-            }
-            // [即使前面有插件运行失败也运行，除非被取消才不运行]，不会跳过
-            runCondition == RunCondition.PRE_TASK_FAILED_BUT_CANCEL -> {
-                skip = containerFinalStatus.isCancel()
-                message.append(
-                    I18nUtil.getCodeLanMessage(BK_IT_DOES_NOT_RUN_UNLESS_IT_IS_CANCELED) + " skip=$skip"
-                )
-            }
-            //  即使前面有插件运行失败也运行，即使被取消也运行， 永远不跳过
-            runCondition == RunCondition.PRE_TASK_FAILED_EVEN_CANCEL -> {
-                skip = false
-                message.append(
-                    I18nUtil.getCodeLanMessage(BK_RUNS_EVEN_IF_CANCELED)
-                )
-            }
-            // 如果容器是失败或者取消状态，[其他条件] 都要跳过不执行
-            containerFinalStatus.isFailure() || containerFinalStatus.isCancel() -> {
-                skip = true
-                message.append(
-                    I18nUtil.getCodeLanMessage(BK_JOB_FAILURE_OR_CANCEL)
-                )
-            }
+            return true
+        }
+        // 把落库枚举拆回正交的几维，存量的「自定义变量全部满足时(不)运行」在此归一为 if 表达式
+        val intent = RunConditionNormalizer.resolve(additionalOptions)
+        val canceled = containerFinalStatus.isCancel()
+        val preFailed = preTaskFailed(
+            intent = intent,
+            preTasks = preTasks,
+            containerFinalStatus = containerFinalStatus,
+            hasFailedTaskInSuccessContainer = hasFailedTaskInSuccessContainer
+        )
 
-            runCondition in TaskUtils.customConditionList -> {
-                skip = checkCustomVariableSkip(
-                    buildId = buildId,
-                    additionalOptions = additionalOptions,
-                    variables = variables,
-                    message = message
-                ) || checkCustomConditionSkip(
-                    buildId = buildId,
-                    additionalOptions = additionalOptions,
-                    variables = variables,
-                    message = message
+        val skip = when (intent.intent) {
+            // [前序失败时]。取消不是失败：除非显式开了「取消时也运行」，否则取消一律不跑——
+            // 构建机此时已关机，若仍领取这类插件会停在 QUEUE_CACHE，Job 无法结束。
+            StepRunIntent.FAILURE -> {
+                val result = if (canceled) !intent.runOnCancel() else !preFailed
+                message.append(
+                    "${I18nUtil.getCodeLanMessage(
+                        if (intent.preFailureSkippedAs == PreFailureSkippedAs.FAILURE) {
+                            BK_ONLY_WHEN_PREVIOUS_TASK_HAS_FAILED
+                        } else {
+                            BK_ONLY_WHEN_PREVIOUS_TASK_FAILED_EXCEPT_SKIP
+                        }
+                    )} skip=$result"
                 )
-            } else -> {
-                message.clear()
+                result
+            }
+            // [总是运行]。超时属失败终态，由意图本身覆盖，只有取消才看开关
+            StepRunIntent.ALWAYS -> {
+                val result = canceled && !intent.runOnCancel()
+                message.append(
+                    I18nUtil.getCodeLanMessage(
+                        if (intent.runOnCancel()) BK_RUNS_EVEN_IF_CANCELED else BK_IT_DOES_NOT_RUN_UNLESS_IT_IS_CANCELED
+                    ) + " skip=$result"
+                )
+                result
+            }
+            // [自定义条件]。表达式里还读不到前序状态（没有 success()/failure()/cancelled() 这类状态函数），
+            // 所以仍隐含「前序成功」这道门：前序已失败或已取消时直接跳过，不对表达式求值。
+            // 这与存量行为一致；待状态函数落地后，含状态函数的表达式才免掉这道门。
+            StepRunIntent.EXPRESSION -> {
+                when {
+                    preFailed || canceled -> {
+                        message.append(I18nUtil.getCodeLanMessage(BK_JOB_FAILURE_OR_CANCEL))
+                        true
+                    }
+                    // 未能等价归一为表达式的存量变量匹配，沿用原有的逐个变量比较
+                    intent.legacyVariables != null -> checkCustomVariableSkip(
+                        buildId = buildId,
+                        additionalOptions = additionalOptions,
+                        variables = variables,
+                        message = message
+                    )
+                    else -> !evalExpressionAsCode(intent.expression, buildId, variables, message)
+                }
+            }
+            // [前序成功时]（含未配置），以及内置插件 post-action 专用的 PARENT_TASK_* ——
+            // 后者真正的调度与否由 TaskUtils.getPostTaskAndExecuteFlag 按父插件状态决定，
+            // 此处与「前序成功时」同判，维持其在快速跳过预检里的既有行为
+            StepRunIntent.SUCCESS, StepRunIntent.POST_ACTION -> {
+                val result = preFailed || canceled
+                if (result) {
+                    message.append(I18nUtil.getCodeLanMessage(BK_JOB_FAILURE_OR_CANCEL))
+                } else {
+                    message.clear()
+                }
+                result
             }
         }
 
         return skip
     }
 
-    private fun checkCustomConditionSkip(
-        buildId: String,
-        additionalOptions: ElementAdditionalOptions?,
-        variables: Map<String, String>,
-        message: StringBuilder
+    /**
+     * 判断前序范围内是否已出现「算失败」的步骤。
+     *
+     * 指定了前序范围（`from`）时只看名单内步骤的终态；未指定时沿用容器聚合状态，
+     * 再按本步骤的 [PreFailureSkippedAs] 口径补上「被跳过的失败」——聚合状态读不出这一维。
+     *
+     * 未指定范围时之所以不改为纯逐步骤扫描：容器可能因构建机启动失败等非用户步骤的原因置为失败，
+     * 这类失败不在用户步骤列表里，纯扫描会把它漏掉，导致「前序失败时」的步骤在环境故障时反而不跑。
+     */
+    private fun preTaskFailed(
+        intent: ResolvedRunIntent,
+        preTasks: List<PreTaskStatus>,
+        containerFinalStatus: BuildStatus,
+        hasFailedTaskInSuccessContainer: Boolean
     ): Boolean {
-        if (additionalOptions?.runCondition == RunCondition.CUSTOM_CONDITION_MATCH &&
-            !additionalOptions.customCondition.isNullOrBlank()
-        ) {
-            return !evalExpressionAsCode(additionalOptions.customCondition, buildId, variables, message)
+        if (intent.fromStepIds.isNotEmpty()) {
+            return preTasks.any {
+                it.stepId != null && it.stepId in intent.fromStepIds && it.countsAsFailure(intent.preFailureSkippedAs)
+            }
         }
-
-        return false
+        if (containerFinalStatus.isFailure()) {
+            return true
+        }
+        return intent.preFailureSkippedAs == PreFailureSkippedAs.FAILURE &&
+            (hasFailedTaskInSuccessContainer || preTasks.any { it.failureSkipped })
     }
 
     // Job是否跳过判断

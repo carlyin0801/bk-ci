@@ -89,7 +89,6 @@ class TaskUtilTest {
             runCondition = RunCondition.PRE_TASK_SUCCESS, customVariables = mutableListOf(),
             retryCount = 0,
             timeout = timeout,
-            otherTask = null,
             customCondition = null,
             pauseBeforeExec = null,
             subscriptionPauseUser = null

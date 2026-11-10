@@ -31,7 +31,10 @@ import com.tencent.devops.common.pipeline.NameAndValue
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.enums.JobRunCondition
 import com.tencent.devops.common.pipeline.enums.StageRunCondition
+import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
+import com.tencent.devops.common.pipeline.pojo.element.OnCancel
 import com.tencent.devops.common.pipeline.pojo.element.RunCondition
+import com.tencent.devops.common.pipeline.pojo.element.PreFailureSkippedAs
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.common.service.config.CommonConfig
 import com.tencent.devops.common.service.utils.SpringContextUtil
@@ -479,10 +482,11 @@ class ControlUtilsTest : TestBase() {
                 containerFinalStatus = fail, variables = variables, hasFailedTaskInSuccessContainer = failed
             )
         )
+        // 已下线的取值由 RunCondition.parse 兜底为默认意图，行为与[前序成功时]一致
         Assertions.assertTrue(
             ControlUtils.checkTaskSkip(
                 buildId = buildId,
-                additionalOptions = elementAdditionalOptions(runCondition = RunCondition.OTHER_TASK_RUNNING),
+                additionalOptions = elementAdditionalOptions(runCondition = RunCondition.parse("OTHER_TASK_RUNNING")!!),
                 containerFinalStatus = fail, variables = variables, hasFailedTaskInSuccessContainer = failed
             )
         )
@@ -730,4 +734,123 @@ class ControlUtilsTest : TestBase() {
             )
         )
     }
+
+    @Test
+    fun `前序范围 from 只看名单内步骤的成败`() {
+        val preTasks = listOf(
+            preTask(stepId = "build", status = BuildStatus.SUCCEED),
+            preTask(stepId = "lint", status = BuildStatus.FAILED)
+        )
+        // 名单内有失败：不跳过
+        Assertions.assertFalse(
+            skip(
+                elementAdditionalOptions(
+                    runCondition = RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP,
+                    fromStepIds = listOf("lint")
+                ),
+                preTasks
+            )
+        )
+        // 名单内全成功：跳过，哪怕 Job 里别处有失败
+        Assertions.assertTrue(
+            skip(
+                elementAdditionalOptions(
+                    runCondition = RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP,
+                    fromStepIds = listOf("build")
+                ),
+                preTasks
+            )
+        )
+        // 「前序成功时」+ 指定前序：名单内有失败就跳过
+        Assertions.assertTrue(
+            skip(
+                elementAdditionalOptions(
+                    runCondition = RunCondition.PRE_TASK_SUCCESS,
+                    fromStepIds = listOf("lint")
+                ),
+                preTasks
+            )
+        )
+        Assertions.assertFalse(
+            skip(
+                elementAdditionalOptions(
+                    runCondition = RunCondition.PRE_TASK_SUCCESS,
+                    fromStepIds = listOf("build")
+                ),
+                preTasks
+            )
+        )
+    }
+
+    @Test
+    fun `skipped-as 决定被放过的失败算成功还是算失败`() {
+        val skipped = listOf(preTask(stepId = "flaky", status = BuildStatus.FAILED, failureSkipped = true))
+        // 默认算成功：「前序失败时」判定为没有失败，跳过
+        Assertions.assertTrue(
+            skip(
+                elementAdditionalOptions(
+                    runCondition = RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP,
+                    fromStepIds = listOf("flaky")
+                ),
+                skipped
+            )
+        )
+        // 显式算失败：不跳过
+        Assertions.assertFalse(
+            skip(
+                elementAdditionalOptions(
+                    runCondition = RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP,
+                    fromStepIds = listOf("flaky"),
+                    preFailureSkippedAs = PreFailureSkippedAs.FAILURE
+                ),
+                skipped
+            )
+        )
+    }
+
+    @Test
+    fun `on-cancel 独立于意图轴，前序失败时也能在取消后继续`() {
+        // 旧枚举表达不了的新组合：status=failure + on-cancel=continue
+        Assertions.assertFalse(
+            ControlUtils.checkTaskSkip(
+                buildId = buildId,
+                additionalOptions = elementAdditionalOptions(
+                    runCondition = RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP,
+                    onCancel = OnCancel.CONTINUE
+                ),
+                containerFinalStatus = BuildStatus.CANCELED,
+                variables = variables,
+                hasFailedTaskInSuccessContainer = true
+            )
+        )
+        // 不开 on-cancel 时取消就跳过
+        Assertions.assertTrue(
+            ControlUtils.checkTaskSkip(
+                buildId = buildId,
+                additionalOptions = elementAdditionalOptions(
+                    runCondition = RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP
+                ),
+                containerFinalStatus = BuildStatus.CANCELED,
+                variables = variables,
+                hasFailedTaskInSuccessContainer = true
+            )
+        )
+    }
+
+    private fun skip(options: ElementAdditionalOptions, preTasks: List<PreTaskStatus>) = ControlUtils.checkTaskSkip(
+        buildId = buildId,
+        additionalOptions = options,
+        containerFinalStatus = BuildStatus.RUNNING,
+        variables = variables,
+        hasFailedTaskInSuccessContainer = preTasks.any { it.status.isFailure() },
+        preTasks = preTasks
+    )
+
+    private fun preTask(stepId: String, status: BuildStatus, failureSkipped: Boolean = false) = PreTaskStatus(
+        taskId = "t-$stepId",
+        stepId = stepId,
+        taskName = stepId,
+        status = status,
+        failureSkipped = failureSkipped
+    )
 }

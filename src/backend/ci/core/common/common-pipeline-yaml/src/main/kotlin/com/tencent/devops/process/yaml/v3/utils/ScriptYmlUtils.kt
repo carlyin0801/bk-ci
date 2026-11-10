@@ -72,6 +72,7 @@ import com.tencent.devops.process.yaml.v3.models.PreExtends
 import com.tencent.devops.process.yaml.v3.models.PreRepositoryHook
 import com.tencent.devops.process.yaml.v3.models.PreScriptBuildYamlIParser
 import com.tencent.devops.process.yaml.v3.models.RepositoryHook
+import com.tencent.devops.process.yaml.v3.models.WhenField
 import com.tencent.devops.process.yaml.v3.models.YamlTransferData
 import com.tencent.devops.process.yaml.v3.models.YmlName
 import com.tencent.devops.process.yaml.v3.models.YmlVersion
@@ -622,6 +623,7 @@ object ScriptYmlUtils {
             name = preStep.name,
             id = preStep.id,
             ifField = formatIfField(preStep.ifField),
+            whenField = formatWhenField(preStep.whenField),
             ifModify = preStep.ifModify,
             uses = preStep.uses,
             namespace = preStep.namespace,
@@ -703,6 +705,27 @@ object ScriptYmlUtils {
             is Map<*, *> -> IfField(
                 mode = IfField.Mode.parse(ifField["mode"].toString()),
                 params = JsonUtil.anyTo(ifField["params"], object : TypeReference<Map<String, String>>() {})
+            )
+
+            else -> null
+        }
+    }
+
+    /**
+     * `when` 支持标量与对象两种形态：`when: always` 等价于 `when: {status: always}`。
+     * 非法取值在这里解析为 null，由保存期校验统一报错，避免解析阶段抛出难以定位的异常。
+     */
+    private fun formatWhenField(
+        whenField: Any?
+    ): WhenField? {
+        return when (whenField) {
+            null -> null
+            is String -> WhenField(status = WhenField.Status.parse(whenField))
+            is Map<*, *> -> WhenField(
+                status = WhenField.Status.parse(whenField["status"]?.toString()),
+                from = JsonUtil.anyTo(whenField["from"], object : TypeReference<List<String>?>() {}),
+                preFailureSkippedAs = WhenField.PreFailureSkippedAsValue.parse(whenField["skipped-as"]?.toString()),
+                onCancel = WhenField.OnCancelValue.parse(whenField["on-cancel"]?.toString())
             )
 
             else -> null

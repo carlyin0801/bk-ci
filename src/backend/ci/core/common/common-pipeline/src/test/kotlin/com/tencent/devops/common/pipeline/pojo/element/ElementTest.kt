@@ -220,7 +220,6 @@ class ElementTest {
             customVariables = null,
             retryCount = 0,
             timeout = 100,
-            otherTask = null,
             customCondition = null,
             pauseBeforeExec = false,
             subscriptionPauseUser = ""
