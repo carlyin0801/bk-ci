@@ -43,7 +43,6 @@ import com.tencent.devops.common.pipeline.enums.TemplateRefType
 import com.tencent.devops.common.pipeline.pojo.TemplateVariable
 import com.tencent.devops.common.pipeline.pojo.element.Element
 import com.tencent.devops.common.pipeline.pojo.element.ElementAdditionalOptions
-import com.tencent.devops.common.api.constant.CommonMessageCode.YAML_NOT_VALID
 import com.tencent.devops.common.pipeline.pojo.element.OnCancel
 import com.tencent.devops.common.pipeline.pojo.element.RunCondition
 import com.tencent.devops.common.pipeline.pojo.element.RunConditionNormalizer
@@ -66,7 +65,6 @@ import com.tencent.devops.common.pipeline.pojo.element.trigger.ManualTriggerElem
 import com.tencent.devops.common.pipeline.pojo.element.trigger.RemoteTriggerElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.TapdWebHookTriggerElement
 import com.tencent.devops.common.pipeline.pojo.element.trigger.TimerTriggerElement
-import com.tencent.devops.common.pipeline.pojo.transfer.IfType
 import com.tencent.devops.common.pipeline.pojo.transfer.PreStep
 import com.tencent.devops.common.pipeline.pojo.transfer.RunAtomParam
 import com.tencent.devops.common.pipeline.utils.TransferUtil
@@ -79,7 +77,6 @@ import com.tencent.devops.process.yaml.transfer.pojo.WebHookTriggerElementChange
 import com.tencent.devops.process.yaml.transfer.pojo.YamlTransferInput
 import com.tencent.devops.process.yaml.utils.ModelCreateUtil
 import com.tencent.devops.process.yaml.v3.models.IfField
-import com.tencent.devops.process.yaml.v3.models.IfField.Mode
 import com.tencent.devops.process.yaml.v3.models.WhenField
 import com.tencent.devops.process.yaml.v3.models.TriggerType
 import com.tencent.devops.process.yaml.v3.models.job.Job
@@ -511,61 +508,11 @@ class ElementTransfer @Autowired(required = false) constructor(
         val onCancel = step.whenField?.onCancel?.let {
             if (it == WhenField.OnCancelValue.CONTINUE) OnCancel.CONTINUE else OnCancel.SKIP
         }
-        // `if` 里写的是不是一个真表达式（排除三个旧魔术串，它们表达的是意图而不是条件）
-        val plainExpression = step.ifField?.expression?.takeIf {
-            it.isNotBlank() && it != IfType.ALWAYS.name &&
-                it != IfType.ALWAYS_UNLESS_CANCELLED.name && it != IfType.FAILURE.name
-        }
-        // when 是运行意图的新入口；没写 when 时才去读旧的 if 魔术串（ALWAYS / FAILURE / ALWAYS_UNLESS_CANCELLED）
-        val runCondition = when {
-            // `when: success` + `if: 表达式` 取 AND，而这个组合正好能等价落到「自定义条件」：
-            // 表达式里还读不到前序状态，自定义条件本就隐含「前序成功」这道门，两者判定逐格相同
-            step.whenField?.status == WhenField.Status.SUCCESS ->
-                if (plainExpression != null) RunCondition.CUSTOM_CONDITION_MATCH else RunCondition.PRE_TASK_SUCCESS
-
-            step.whenField?.status == WhenField.Status.FAILURE ->
-                if (preFailureSkippedAs == PreFailureSkippedAs.FAILURE) {
-                    RunCondition.PRE_TASK_FAILED_ONLY
-                } else {
-                    RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP
-                }
-
-            // always 的 on-cancel 默认是 continue（取消也跑），只有显式写 skip 才不跑。
-            // 这与旧写法 `if: ALWAYS` 的语义一致，两条读入路径必须给出同一个结果
-            step.whenField?.status == WhenField.Status.ALWAYS ->
-                if (onCancel == OnCancel.SKIP) {
-                    RunCondition.PRE_TASK_FAILED_BUT_CANCEL
-                } else {
-                    RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
-                }
-
-            step.ifField == null -> RunCondition.PRE_TASK_SUCCESS
-            IfType.ALWAYS_UNLESS_CANCELLED.name == (step.ifField.expression) ->
-                RunCondition.PRE_TASK_FAILED_BUT_CANCEL
-
-            IfType.ALWAYS.name == (step.ifField.expression) ->
-                RunCondition.PRE_TASK_FAILED_EVEN_CANCEL
-
-            IfType.FAILURE.name == (step.ifField.expression) ->
-                RunCondition.PRE_TASK_FAILED_ONLY
-
-            !step.ifField.expression.isNullOrBlank() -> RunCondition.CUSTOM_CONDITION_MATCH
-
-            step.ifField.mode == Mode.RUN_WHEN_ALL_PARAMS_MATCH -> RunCondition.CUSTOM_VARIABLE_MATCH
-            step.ifField.mode == Mode.NOT_RUN_WHEN_ALL_PARAMS_MATCH -> RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN
-
-            else -> RunCondition.PRE_TASK_SUCCESS
-        }
-        // failure / always 意图与表达式的 AND 组合，落库模型目前承载不了（runCondition 是单值枚举）。
-        // 与其把表达式悄悄丢掉、让步骤比用户预期跑得更频繁，不如在这里明确报错
-        val whenStatus = step.whenField?.status
-        if (plainExpression != null && whenStatus != null && runCondition != RunCondition.CUSTOM_CONDITION_MATCH) {
-            throw PipelineTransferException(
-                YAML_NOT_VALID,
-                arrayOf("step(${step.name ?: step.id}): `when: ${whenStatus.alias}` and `if` cannot be used " +
-                    "together, please merge the condition into `if` or remove one of them")
-            )
-        }
+        val runCondition = StepRunConditionResolver.resolve(
+            step = step,
+            preFailureSkippedAs = preFailureSkippedAs,
+            onCancel = onCancel
+        )
         val continueOnError = Step.ContinueOnErrorType.parse(step.continueOnError)
         val additionalOptions = ElementAdditionalOptions(
             enable = step.enable ?: true,
@@ -856,7 +803,9 @@ class ElementTransfer @Autowired(required = false) constructor(
     ): Any? {
         val resolved = RunConditionNormalizer.resolve(step.additionalOptions)
         val status = when (resolved.intent) {
-            StepRunIntent.SUCCESS -> WhenField.Status.SUCCESS
+            // 变量匹配的隐含门槛就是「前序成功」。维度都是默认值时下面会返回 null，
+            // 纯变量匹配的步骤不会多导出一个 when: success，YAML 仍只有 if 的对象形态
+            StepRunIntent.SUCCESS, StepRunIntent.VARIABLE_MATCH -> WhenField.Status.SUCCESS
             StepRunIntent.FAILURE -> WhenField.Status.FAILURE
             StepRunIntent.ALWAYS -> WhenField.Status.ALWAYS
             StepRunIntent.EXPRESSION, StepRunIntent.POST_ACTION -> return null

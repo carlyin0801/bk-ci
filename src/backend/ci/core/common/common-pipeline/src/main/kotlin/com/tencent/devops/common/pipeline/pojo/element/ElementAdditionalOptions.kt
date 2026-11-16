@@ -106,17 +106,24 @@ enum class StepRunIntent {
     FAILURE, // 前序失败时
     ALWAYS, // 总是运行
     EXPRESSION, // 自定义条件（if 表达式）
+    /**
+     * 自定义变量全部满足时运行 / 不运行。
+     * 保持现网的逐项字符串比较，不并入 [EXPRESSION]：比较的是变量表里的原始 key，
+     * 期望值还会先做 `${}` 替换，译成表达式这两处都会变。
+     */
+    VARIABLE_MATCH,
     POST_ACTION // 内置插件 post-action 专用，由父插件状态决定，不参与前序判定
 }
 
 /**
  * 插件（步骤）的运行意图。
  *
- * 取值分三类：
- * 1. 意图轴——页面可配的四种「何时运行本步骤」，前三项为状态意图，[CUSTOM_CONDITION_MATCH] 为自定义条件；
+ * 取值分两类：
+ * 1. 意图轴——页面可配的「何时运行本步骤」：三种状态意图、[CUSTOM_CONDITION_MATCH] 自定义条件，
+ *    以及 [CUSTOM_VARIABLE_MATCH] / [CUSTOM_VARIABLE_MATCH_NOT_RUN] 两个变量匹配。
+ *    变量匹配继续作为独立选项保留，不并入自定义条件；
  * 2. 内置 post-action 专用——[PARENT_TASK_CANCELED_OR_TIMEOUT] 与 [PARENT_TASK_FINISH]，
- *    由插件 post 脚本声明，不参与主流程步骤的状态判定；
- * 3. 只读兼容值——存量数据里还在用，读入时由 RunConditionNormalizer 归一到意图轴，不再作为新配置写入。
+ *    由插件 post 脚本声明，不参与主流程步骤的状态判定。
  */
 enum class RunCondition {
     // ---- 意图轴：前序成功时（默认）----
@@ -137,11 +144,8 @@ enum class RunCondition {
     PARENT_TASK_CANCELED_OR_TIMEOUT, // 父任务取消或者超时时才运行
     PARENT_TASK_FINISH, // 父任务结束就运行
 
-    // ---- 只读兼容值：读入即归一为 CUSTOM_CONDITION_MATCH + 等价表达式 ----
-    @Deprecated("已迁移到 if 表达式，读入时由 RunConditionNormalizer 归一，不要用于新配置")
+    // ---- 意图轴：自定义变量匹配。独立于自定义条件，沿用逐项字符串比较 ----
     CUSTOM_VARIABLE_MATCH, // 自定义变量全部满足时运行
-
-    @Deprecated("已迁移到 if 表达式，读入时由 RunConditionNormalizer 归一，不要用于新配置")
     CUSTOM_VARIABLE_MATCH_NOT_RUN; // 自定义变量全部满足时不运行
 
     companion object {

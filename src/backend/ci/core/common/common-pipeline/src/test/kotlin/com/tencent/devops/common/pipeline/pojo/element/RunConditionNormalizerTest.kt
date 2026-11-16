@@ -32,7 +32,6 @@ import com.tencent.devops.common.pipeline.NameAndValue
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-@Suppress("DEPRECATION")
 class RunConditionNormalizerTest {
 
     @Test
@@ -50,40 +49,25 @@ class RunConditionNormalizerTest {
     }
 
     @Test
-    fun `变量匹配归一为等价表达式`() {
-        val match = RunConditionNormalizer.resolve(
-            options(RunCondition.CUSTOM_VARIABLE_MATCH, listOf(NameAndValue("a", "b"), NameAndValue("c", "d")))
-        )
-        Assertions.assertEquals(StepRunIntent.EXPRESSION, match.intent)
-        Assertions.assertEquals("a == 'b' && c == 'd'", match.expression)
-        Assertions.assertNull(match.legacyVariables)
-
-        val notRun = RunConditionNormalizer.resolve(
-            options(RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN, listOf(NameAndValue("a", "b")))
-        )
-        Assertions.assertEquals(StepRunIntent.EXPRESSION, notRun.intent)
-        Assertions.assertEquals("!(a == 'b')", notRun.expression)
-    }
-
-    @Test
-    fun `值里的单引号按表达式语法连写两个转义`() {
-        val resolved = RunConditionNormalizer.resolve(
-            options(RunCondition.CUSTOM_VARIABLE_MATCH, listOf(NameAndValue("a", "it's")))
-        )
-        Assertions.assertEquals("a == 'it''s'", resolved.expression)
-    }
-
-    @Test
-    fun `无法保证等价的配置不归一，带出原始变量走旧比较`() {
-        // key 不是合法标识符
-        assertNotNormalized(listOf(NameAndValue("my-key", "b")))
-        assertNotNormalized(listOf(NameAndValue("1key", "b")))
-        // 期望值为空：变量缺失时旧逻辑判不相等，表达式引擎会判相等
-        assertNotNormalized(listOf(NameAndValue("a", "")))
-        // 期望值含老式变量占位：求值前的整串替换可能破坏字面量
-        assertNotNormalized(listOf(NameAndValue("a", "\${BK_CI_BUILD_ID}")))
-        // 一组里只要有一项不可转，整组都不转，避免半条表达式半条比较
-        assertNotNormalized(listOf(NameAndValue("a", "b"), NameAndValue("my-key", "d")))
+    fun `变量匹配保持独立意图，不译成表达式`() {
+        // 带点的 key、空串、${} 占位、单引号若译成 key == 'value'，比较结果都会和现网逐项比较不一致
+        listOf(
+            listOf(NameAndValue("a", "b"), NameAndValue("c", "d")),
+            listOf(NameAndValue("variables.DEPLOY", "true")),
+            listOf(NameAndValue("my-key", "b")),
+            listOf(NameAndValue("a", "")),
+            listOf(NameAndValue("a", "\${BK_CI_BUILD_ID}")),
+            listOf(NameAndValue("a", "it's"))
+        ).forEach { variables ->
+            listOf(
+                RunCondition.CUSTOM_VARIABLE_MATCH,
+                RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN
+            ).forEach { condition ->
+                val resolved = RunConditionNormalizer.resolve(options(condition, variables))
+                Assertions.assertEquals(StepRunIntent.VARIABLE_MATCH, resolved.intent)
+                Assertions.assertNull(resolved.expression)
+            }
+        }
     }
 
     @Test
@@ -145,24 +129,22 @@ class RunConditionNormalizerTest {
         RunConditionNormalizer.resolve(ElementAdditionalOptions(runCondition = runCondition))
 
     @Test
-    fun `变量列表为空的变量匹配也要走旧比较，不能落到空表达式`() {
-        // 空表达式在 evalExpressionAsCode 里恒为 false 即「跳过」，而旧逻辑是「不跳过」，
-        // legacyVariables 必须非 null，调用方才会走旧比较分支
+    fun `变量列表为空的变量匹配仍是变量匹配，不会落到空表达式`() {
+        // 空表达式在 evalExpressionAsCode 里恒为 false 即「跳过」，而变量列表为空时现网是「不跳过」
         listOf(RunCondition.CUSTOM_VARIABLE_MATCH, RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN).forEach { condition ->
             listOf(
                 ElementAdditionalOptions(runCondition = condition, customVariables = null),
                 ElementAdditionalOptions(runCondition = condition, customVariables = emptyList())
             ).forEach { origin ->
                 val resolved = RunConditionNormalizer.resolve(origin)
-                Assertions.assertEquals(StepRunIntent.EXPRESSION, resolved.intent)
-                Assertions.assertNotNull(resolved.legacyVariables)
-                Assertions.assertTrue(resolved.legacyVariables!!.isEmpty())
+                Assertions.assertEquals(StepRunIntent.VARIABLE_MATCH, resolved.intent)
+                Assertions.assertNull(resolved.expression)
             }
         }
     }
 
     @Test
-    fun `自定义条件表达式原样带出，不被变量匹配的归一逻辑覆盖`() {
+    fun `自定义条件表达式原样带出，不被变量匹配覆盖`() {
         val resolved = RunConditionNormalizer.resolve(
             ElementAdditionalOptions(
                 runCondition = RunCondition.CUSTOM_CONDITION_MATCH,
@@ -172,15 +154,7 @@ class RunConditionNormalizerTest {
             )
         )
         Assertions.assertEquals("a == 'b'", resolved.expression)
-        Assertions.assertNull(resolved.legacyVariables)
-    }
-
-    private fun assertNotNormalized(customVariables: List<NameAndValue>) {
-        listOf(RunCondition.CUSTOM_VARIABLE_MATCH, RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN).forEach { condition ->
-            val resolved = RunConditionNormalizer.resolve(options(condition, customVariables))
-            Assertions.assertEquals(StepRunIntent.EXPRESSION, resolved.intent)
-            Assertions.assertEquals(customVariables, resolved.legacyVariables)
-        }
+        Assertions.assertEquals(StepRunIntent.EXPRESSION, resolved.intent)
     }
 
     private fun options(runCondition: RunCondition, customVariables: List<NameAndValue>) =

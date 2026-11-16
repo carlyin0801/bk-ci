@@ -27,8 +27,6 @@
 
 package com.tencent.devops.common.pipeline.pojo.element
 
-import com.tencent.devops.common.pipeline.NameAndValue
-
 /**
  * 一个步骤的运行意图在判定时的归一形态。
  *
@@ -45,21 +43,18 @@ data class ResolvedRunIntent(
     /** 本 Job 被取消时是否仍调度 */
     val onCancel: OnCancel,
     /** 自定义条件表达式，仅 [StepRunIntent.EXPRESSION] 有值 */
-    val expression: String?,
-    /**
-     * 存量变量匹配配置未能等价归一为表达式时，这里带出原始变量列表，
-     * 引擎按旧的逐个比较逻辑判定。正常情况下为 null。
-     */
-    val legacyVariables: List<NameAndValue>?,
-    /** 变量匹配语义：true=全部满足时运行，false=全部满足时不运行。仅 [legacyVariables] 非空时有意义 */
-    val legacyMatchToRun: Boolean = true
+    val expression: String?
 ) {
     /** 取消时是否仍调度 */
     fun runOnCancel() = onCancel == OnCancel.CONTINUE
 }
 
 /**
- * 把 [ElementAdditionalOptions] 解析为 [ResolvedRunIntent]，并把存量的「自定义变量匹配」归一到 if 表达式。
+ * 把 [ElementAdditionalOptions] 解析为 [ResolvedRunIntent]。
+ *
+ * 自定义变量匹配保持为 [StepRunIntent.VARIABLE_MATCH]，不译成表达式。
+ * 它比对的是变量表里的原始 key，期望值还会先做 `${}` 替换；
+ * 译成 `key == 'value'` 后，带点的 key、空串期望值、`${}` 占位都会和现网比较结果不一致。
  *
  * 落库枚举与意图的对应（显式字段优先于枚举推导出的默认值）：
  *
@@ -71,7 +66,7 @@ data class ResolvedRunIntent(
  * | PRE_TASK_FAILED_BUT_CANCEL | ALWAYS | SUCCESS | SKIP |
  * | PRE_TASK_FAILED_EVEN_CANCEL | ALWAYS | SUCCESS | CONTINUE |
  * | CUSTOM_CONDITION_MATCH | EXPRESSION | SUCCESS | SKIP |
- * | CUSTOM_VARIABLE_MATCH(_NOT_RUN) | EXPRESSION（归一为表达式） | SUCCESS | SKIP |
+ * | CUSTOM_VARIABLE_MATCH(_NOT_RUN) | VARIABLE_MATCH | SUCCESS | SKIP |
  * | PARENT_TASK_* | POST_ACTION | —— | —— |
  *
  * `PRE_TASK_FAILED_ONLY` 的 preFailureSkippedAs 默认值与新建步骤相反，这是存量行为：
@@ -79,9 +74,7 @@ data class ResolvedRunIntent(
  */
 object RunConditionNormalizer {
 
-    private val IDENTIFIER_PATH = Regex("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*")
-
-    @Suppress("DEPRECATION", "ComplexMethod")
+    @Suppress("ComplexMethod")
     fun resolve(additionalOptions: ElementAdditionalOptions?): ResolvedRunIntent {
         val runCondition = additionalOptions?.runCondition
         val intent = when (runCondition) {
@@ -91,9 +84,10 @@ object RunConditionNormalizer {
             RunCondition.PRE_TASK_FAILED_BUT_CANCEL,
             RunCondition.PRE_TASK_FAILED_EVEN_CANCEL -> StepRunIntent.ALWAYS
 
-            RunCondition.CUSTOM_CONDITION_MATCH,
+            RunCondition.CUSTOM_CONDITION_MATCH -> StepRunIntent.EXPRESSION
+
             RunCondition.CUSTOM_VARIABLE_MATCH,
-            RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN -> StepRunIntent.EXPRESSION
+            RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN -> StepRunIntent.VARIABLE_MATCH
 
             RunCondition.PARENT_TASK_CANCELED_OR_TIMEOUT,
             RunCondition.PARENT_TASK_FINISH -> StepRunIntent.POST_ACTION
@@ -109,69 +103,12 @@ object RunConditionNormalizer {
             RunCondition.PRE_TASK_FAILED_EVEN_CANCEL -> OnCancel.CONTINUE
             else -> OnCancel.SKIP
         }
-        val normalized = toExpression(runCondition, additionalOptions?.customVariables)
-        // 变量匹配未能等价归一时，带出原始变量让引擎走旧比较。
-        // 这里必须给到非 null 的空列表而不是直接取 customVariables——变量列表为空时
-        // 旧逻辑是「不跳过」，而空表达式在 evalExpressionAsCode 里恒为 false 即「跳过」，两者相反。
-        val legacyVariables = if (isVariableMatch(runCondition) && normalized == null) {
-            additionalOptions?.customVariables ?: emptyList()
-        } else {
-            null
-        }
         return ResolvedRunIntent(
             intent = intent,
             fromStepIds = additionalOptions?.fromStepIds?.filter { it.isNotBlank() } ?: emptyList(),
             preFailureSkippedAs = preFailureSkippedAs,
             onCancel = onCancel,
-            expression = if (intent == StepRunIntent.EXPRESSION) {
-                normalized ?: additionalOptions?.customCondition
-            } else {
-                null
-            },
-            legacyVariables = legacyVariables,
-            legacyMatchToRun = runCondition == RunCondition.CUSTOM_VARIABLE_MATCH
+            expression = if (intent == StepRunIntent.EXPRESSION) additionalOptions?.customCondition else null
         )
-    }
-
-    @Suppress("DEPRECATION")
-    private fun isVariableMatch(runCondition: RunCondition?) =
-        runCondition == RunCondition.CUSTOM_VARIABLE_MATCH ||
-            runCondition == RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN
-
-    /**
-     * 把变量匹配配置翻译成等价表达式；非变量匹配或无法保证等价时返回 null。
-     *
-     * 变量匹配比对的是构建变量表里的原始 key，而表达式求值用的就是同一张表、同一个 key 作为上下文名，
-     * 所以 `KEY == 'value'` 与原判定逐格等价。
-     *
-     * 以下三种情形转换后行为会变，宁可不转，由调用方继续走旧的逐个比较：
-     * - key 不是合法的表达式标识符（含中划线、以数字开头等），表达式引擎解析不了；
-     * - 期望值为空串——变量缺失时旧逻辑判「不相等」，而表达式引擎把缺失上下文视为空串判「相等」；
-     * - 期望值里含 `${...}` 老式变量占位——求值前会对整串做一次替换，
-     *   替换结果若带单引号会破坏字面量，而旧逻辑的字符串比较不存在这个风险。
-     */
-    @Suppress("DEPRECATION")
-    fun toExpression(runCondition: RunCondition?, customVariables: List<NameAndValue>?): String? {
-        val matchToRun = when (runCondition) {
-            RunCondition.CUSTOM_VARIABLE_MATCH -> true
-            RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN -> false
-            else -> return null
-        }
-        if (customVariables.isNullOrEmpty()) {
-            return null
-        }
-        val clauses = customVariables.map { pair ->
-            val key = pair.key
-            val value = pair.value
-            if (key.isNullOrBlank() || !IDENTIFIER_PATH.matches(key)) {
-                return null
-            }
-            if (value.isNullOrBlank() || value.contains("\${")) {
-                return null
-            }
-            "$key == '${value.replace("'", "''")}'"
-        }
-        val allMatch = clauses.joinToString(" && ")
-        return if (matchToRun) allMatch else "!($allMatch)"
     }
 }

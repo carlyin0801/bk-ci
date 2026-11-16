@@ -179,7 +179,9 @@ object ControlUtils {
      *   [RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP]（不含失败自动跳过）
      * - 总是运行：[RunCondition.PRE_TASK_FAILED_BUT_CANCEL]（取消时不跑）、
      *   [RunCondition.PRE_TASK_FAILED_EVEN_CANCEL]（取消时也跑）
-     * - 自定义条件：[RunCondition.CUSTOM_CONDITION_MATCH]，存量的变量匹配在此归一为等价表达式
+     * - 自定义条件：[RunCondition.CUSTOM_CONDITION_MATCH]
+     * - 自定义变量匹配：[RunCondition.CUSTOM_VARIABLE_MATCH] 与
+     *   [RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN]，保持逐项字符串比较，不译成表达式
      */
     fun checkTaskSkip(
         buildId: String,
@@ -199,7 +201,7 @@ object ControlUtils {
             )
             return true
         }
-        // 把落库枚举拆回正交的几维，存量的「自定义变量全部满足时(不)运行」在此归一为 if 表达式
+        // 把落库枚举拆回正交的几维。变量匹配保持原比较，不在这里译成表达式
         val intent = RunConditionNormalizer.resolve(additionalOptions)
         val canceled = containerFinalStatus.isCancel()
         val preFailed = preTaskFailed(
@@ -244,14 +246,22 @@ object ControlUtils {
                         message.append(I18nUtil.getCodeLanMessage(BK_JOB_FAILURE_OR_CANCEL))
                         true
                     }
-                    // 未能等价归一为表达式的存量变量匹配，沿用原有的逐个变量比较
-                    intent.legacyVariables != null -> checkCustomVariableSkip(
+                    else -> !evalExpressionAsCode(intent.expression, buildId, variables, message)
+                }
+            }
+            // [自定义变量全部满足时运行 / 不运行]。比较口径与现网一致：原始 key 逐项相等，
+            // 期望值先做 ${} 替换。容器已失败或已取消时直接跳过，不对变量求值。
+            StepRunIntent.VARIABLE_MATCH -> {
+                if (preFailed || canceled) {
+                    message.append(I18nUtil.getCodeLanMessage(BK_JOB_FAILURE_OR_CANCEL))
+                    true
+                } else {
+                    checkCustomVariableSkip(
                         buildId = buildId,
                         additionalOptions = additionalOptions,
                         variables = variables,
                         message = message
                     )
-                    else -> !evalExpressionAsCode(intent.expression, buildId, variables, message)
                 }
             }
             // [前序成功时]（含未配置），以及内置插件 post-action 专用的 PARENT_TASK_* ——

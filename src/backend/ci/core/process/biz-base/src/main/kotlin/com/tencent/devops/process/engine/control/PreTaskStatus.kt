@@ -29,6 +29,7 @@ package com.tencent.devops.process.engine.control
 
 import com.tencent.devops.common.pipeline.enums.BuildStatus
 import com.tencent.devops.common.pipeline.pojo.element.PreFailureSkippedAs
+import com.tencent.devops.process.engine.common.VMUtils
 import com.tencent.devops.process.engine.pojo.PipelineBuildTask
 
 /**
@@ -81,9 +82,13 @@ data class PreTaskStatus(
         /**
          * 单个任务的快照。post-action 任务与引擎内置任务（开关机、结束节点）不是用户编排里的
          * 「前序步骤」，不参与成败判定，对它们返回 null。
+         *
+         * 内置任务只能按 taskId 前缀识别，不能用 `taskAtom.isNotBlank()`：人工审核、子流水线调用、
+         * 发送通知这些都是实打实的用户步骤，它们同样重写了 getTaskAtom()，按 taskAtom 过滤会把它们
+         * 一并漏掉，导致 `from` 点名这类步骤时永远判不出失败。
          */
         fun of(task: PipelineBuildTask): PreTaskStatus? {
-            if (task.additionalOptions?.elementPostInfo != null || task.taskAtom.isNotBlank()) {
+            if (task.additionalOptions?.elementPostInfo != null || VMUtils.isVMTask(task.taskId)) {
                 return null
             }
             return PreTaskStatus(
