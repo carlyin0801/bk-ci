@@ -27,6 +27,8 @@
 
 package com.tencent.devops.common.pipeline.pojo.element
 
+import com.tencent.devops.common.expression.expression.functions.StatusFunctions
+
 /**
  * 一个步骤的运行意图在判定时的归一形态。
  *
@@ -43,10 +45,25 @@ data class ResolvedRunIntent(
     /** 本 Job 被取消时是否仍调度 */
     val onCancel: OnCancel,
     /** 自定义条件表达式，仅 [StepRunIntent.EXPRESSION] 有值 */
-    val expression: String?
+    val expression: String?,
+    /** 与意图轴取 AND 的附加表达式（YAML 里 `when` 与 `if` 同现），意图轴为表达式时恒为空 */
+    val andExpression: String?
 ) {
-    /** 取消时是否仍调度 */
-    fun runOnCancel() = onCancel == OnCancel.CONTINUE
+    /**
+     * 取消时是否仍调度。
+     *
+     * 自定义条件走表达式自述：`cancelled()` / `always()` 要在取消后拿到求值机会，
+     * 否则函数给了也白给。其余写法取消时恒求出 false，不必多给一次调度机会。
+     * 这同时覆盖认领豁免（TaskUtils）与容器终态修正（taskEvenCancel 标志）两处，
+     * 两处都读本方法，不会只改一边。
+     *
+     * [andExpression] 不参与：它是 AND 上去的收窄项，只会让步骤跑得更少，
+     * 给不出意图轴之外的调度机会。
+     */
+    fun runOnCancel() = when (intent) {
+        StepRunIntent.EXPRESSION -> StatusFunctions.mayRunOnCancel(expression)
+        else -> onCancel == OnCancel.CONTINUE
+    }
 }
 
 /**
@@ -108,7 +125,13 @@ object RunConditionNormalizer {
             fromStepIds = additionalOptions?.fromStepIds?.filter { it.isNotBlank() } ?: emptyList(),
             preFailureSkippedAs = preFailureSkippedAs,
             onCancel = onCancel,
-            expression = if (intent == StepRunIntent.EXPRESSION) additionalOptions?.customCondition else null
+            expression = if (intent == StepRunIntent.EXPRESSION) additionalOptions?.customCondition else null,
+            // 意图轴本身就是表达式时不存在「再 AND 一个表达式」，两者会合并在 customCondition 里
+            andExpression = if (intent == StepRunIntent.EXPRESSION) {
+                null
+            } else {
+                additionalOptions?.ifExpression?.takeIf { it.isNotBlank() }
+            }
         )
     }
 }

@@ -30,6 +30,7 @@ package com.tencent.devops.process.engine.control
 import com.tencent.devops.common.api.util.EnvUtils
 import com.tencent.devops.common.expression.ExpressionParser
 import com.tencent.devops.common.expression.expression.EvaluationResult
+import com.tencent.devops.common.expression.expression.functions.StatusFunctions
 import com.tencent.devops.common.pipeline.EnvReplacementParser
 import com.tencent.devops.common.pipeline.NameAndValue
 import com.tencent.devops.common.pipeline.enums.BuildStatus
@@ -47,7 +48,10 @@ import com.tencent.devops.process.constant.ProcessMessageCode.BK_CHECK_JOB_RUN_C
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_CHECK_TASK_RUN_CONDITION
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_CUSTOM_VARIABLES_ARE_ALL_SATISFIED
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_IT_DOES_NOT_RUN_UNLESS_IT_IS_CANCELED
-import com.tencent.devops.process.constant.ProcessMessageCode.BK_JOB_FAILURE_OR_CANCEL
+import com.tencent.devops.process.constant.ProcessMessageCode.BK_PRE_STATE_BUILD_CANCELED
+import com.tencent.devops.process.constant.ProcessMessageCode.BK_PRE_STATE_JOB_TERMINATED
+import com.tencent.devops.process.constant.ProcessMessageCode.BK_PRE_STATE_PRE_TASK_FAILED
+import com.tencent.devops.process.constant.ProcessMessageCode.BK_PRE_STATE_PRE_TASK_TIMEOUT
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_ONLY_WHEN_PREVIOUS_TASK_FAILED_EXCEPT_SKIP
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_ONLY_WHEN_PREVIOUS_TASK_HAS_FAILED
 import com.tencent.devops.process.constant.ProcessMessageCode.BK_RUNS_EVEN_IF_CANCELED
@@ -237,23 +241,32 @@ object ControlUtils {
                 )
                 result
             }
-            // [自定义条件]。表达式里还读不到前序状态（没有 success()/failure()/cancelled() 这类状态函数），
-            // 所以仍隐含「前序成功」这道门：前序已失败或已取消时直接跳过，不对表达式求值。
-            // 这与存量行为一致；待状态函数落地后，含状态函数的表达式才免掉这道门。
+            // [自定义条件]。是否隐含「前序成功」这道门，取决于表达式自己写没写状态函数：
+            //  - 不含：维持存量行为，前序已失败或已取消时直接跳过，连求值都不做。这一支占存量的全部，
+            //    等价于自动 AND 上 success()，所以对存量是零变更；
+            //  - 含：免掉这道门，把判定权整个交给表达式，否则 cancelled() 永远等不到成立的机会。
+            // 口径与 GitHub Actions 的绑定规则相同。
             StepRunIntent.EXPRESSION -> {
                 when {
-                    preFailed || canceled -> {
-                        message.append(I18nUtil.getCodeLanMessage(BK_JOB_FAILURE_OR_CANCEL))
+                    !StatusFunctions.referencedIn(intent.expression) && (preFailed || canceled) -> {
+                        message.append(preStateMessage(containerFinalStatus))
                         true
                     }
-                    else -> !evalExpressionAsCode(intent.expression, buildId, variables, message)
+                    else -> !evalExpressionAsCode(
+                        customCondition = intent.expression,
+                        buildId = buildId,
+                        variables = variables,
+                        message = message,
+                        preFailed = preFailed,
+                        canceled = canceled
+                    )
                 }
             }
             // [自定义变量全部满足时运行 / 不运行]。比较口径与现网一致：原始 key 逐项相等，
             // 期望值先做 ${} 替换。容器已失败或已取消时直接跳过，不对变量求值。
             StepRunIntent.VARIABLE_MATCH -> {
                 if (preFailed || canceled) {
-                    message.append(I18nUtil.getCodeLanMessage(BK_JOB_FAILURE_OR_CANCEL))
+                    message.append(preStateMessage(containerFinalStatus))
                     true
                 } else {
                     checkCustomVariableSkip(
@@ -270,7 +283,7 @@ object ControlUtils {
             StepRunIntent.SUCCESS, StepRunIntent.POST_ACTION -> {
                 val result = preFailed || canceled
                 if (result) {
-                    message.append(I18nUtil.getCodeLanMessage(BK_JOB_FAILURE_OR_CANCEL))
+                    message.append(preStateMessage(containerFinalStatus))
                 } else {
                     message.clear()
                 }
@@ -278,8 +291,37 @@ object ControlUtils {
             }
         }
 
+        // `when` 与 `if` 同现时取 AND：意图先给出调度机会，表达式再收窄。
+        // 意图没通过就不必再求值，也避免在日志里多打一条看着像是另一个跳过原因的记录。
+        if (!skip && intent.andExpression != null) {
+            return !evalExpressionAsCode(
+                customCondition = intent.andExpression,
+                buildId = buildId,
+                variables = variables,
+                message = message,
+                preFailed = preFailed,
+                canceled = canceled
+            )
+        }
         return skip
     }
+
+    /**
+     * 本步骤没跑，是因为前面出了什么事。
+     *
+     * 现网这四种情形共用一句「Job失败或被取消」，用户从构建详情里分不出到底是哪一种，
+     * 而这四种的后续处理完全不同（取消要看是谁点的、超时要调时长、环境不可用要看构建机）。
+     * 判定现场这几个信号本来就是分开的，这里按终态各给各的话。
+     */
+    private fun preStateMessage(containerFinalStatus: BuildStatus): String = I18nUtil.getCodeLanMessage(
+        when {
+            containerFinalStatus.isCancel() -> BK_PRE_STATE_BUILD_CANCELED
+            containerFinalStatus.isTimeout() -> BK_PRE_STATE_PRE_TASK_TIMEOUT
+            // TERMINATE 同时兜着 Job 执行超时与构建环境不可用，两者在这里无法再细分
+            containerFinalStatus.isTerminate() -> BK_PRE_STATE_JOB_TERMINATED
+            else -> BK_PRE_STATE_PRE_TASK_FAILED
+        }
+    )
 
     /**
      * 判断前序范围内是否已出现「算失败」的步骤。
@@ -384,11 +426,18 @@ object ControlUtils {
         return skip
     }
 
+    /**
+     * @param preFailed / [canceled] 仅步骤级传入，用于把前序状态喂给 success()/failure()/cancelled()/always()。
+     *   两者都为 null 时不注册状态函数，表达式里写了这几个名字会按未知函数报错——
+     *   Stage / Job 条件走的就是这条路：那两层没有「前序步骤」这个概念，给了函数也编不出值。
+     */
     private fun evalExpressionAsCode(
         customCondition: String?,
         buildId: String,
         variables: Map<String, String>,
-        message: StringBuilder
+        message: StringBuilder,
+        preFailed: Boolean? = null,
+        canceled: Boolean? = null
     ): Boolean {
         return if (!customCondition.isNullOrBlank()) {
             try {
@@ -397,7 +446,12 @@ object ControlUtils {
                 val expressionResult = ExpressionParser.evaluateByMap(
                     expression = EnvReplacementParser.parse(customCondition, variables),
                     contextMap = variablesWithOutOld,
-                    fetchValue = false
+                    fetchValue = false,
+                    functions = if (preFailed != null && canceled != null) {
+                        StatusFunctions.of(preFailed = preFailed, canceled = canceled)
+                    } else {
+                        null
+                    }
                 )
                 logger.info(
                     "[$buildId]|EXPRESSION_CONDITION|skip|CUSTOM_CONDITION_MATCH|expression=$customCondition" +

@@ -32,6 +32,7 @@ import com.tencent.devops.common.api.enums.ScmType
 import com.tencent.devops.common.api.enums.TriggerRepositoryType
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.client.Client
+import com.tencent.devops.common.expression.expression.functions.StatusFunctions
 import com.tencent.devops.common.pipeline.NameAndValue
 import com.tencent.devops.common.pipeline.TemplateDescriptor
 import com.tencent.devops.common.pipeline.container.Container
@@ -508,11 +509,12 @@ class ElementTransfer @Autowired(required = false) constructor(
         val onCancel = step.whenField?.onCancel?.let {
             if (it == WhenField.OnCancelValue.CONTINUE) OnCancel.CONTINUE else OnCancel.SKIP
         }
-        val runCondition = StepRunConditionResolver.resolve(
+        val resolved = StepRunConditionResolver.resolve(
             step = step,
             preFailureSkippedAs = preFailureSkippedAs,
             onCancel = onCancel
         )
+        val runCondition = resolved.runCondition
         val continueOnError = Step.ContinueOnErrorType.parse(step.continueOnError)
         val additionalOptions = ElementAdditionalOptions(
             enable = step.enable ?: true,
@@ -533,6 +535,7 @@ class ElementTransfer @Autowired(required = false) constructor(
             } else {
                 null
             },
+            ifExpression = resolved.andExpression,
             customVariables = if (runCondition == RunCondition.CUSTOM_VARIABLE_MATCH ||
                 runCondition == RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN
             ) {
@@ -789,8 +792,9 @@ class ElementTransfer @Autowired(required = false) constructor(
                 params = step.additionalOptions?.customVariables?.associateBy({ it.key ?: "" }, { it.value ?: "" })
             )
 
-            // 意图轴统一由 when 导出，这里不再写 if 的魔术串
-            else -> null
+            // 意图轴统一由 when 导出，这里不再写 if 的魔术串。
+            // 与意图同现的附加表达式仍走 if，与 when 一起导出就是 YAML 侧的 AND 形态，读回来逐格等价
+            else -> step.additionalOptions?.ifExpression?.takeIf { it.isNotBlank() }
         }
     }
 
@@ -825,7 +829,12 @@ class ElementTransfer @Autowired(required = false) constructor(
             else -> WhenField.OnCancelValue.SKIP
         }
         if (from == null && preFailureSkippedAs == null && onCancel == null) {
-            return if (status == WhenField.Status.SUCCESS) null else status.alias
+            // `when: success` 通常可省略，但与附加表达式同现时必须显式写出来：
+            // 省掉之后读回来只剩一个 `if`，若表达式里有状态函数就会按「不叠加成功前置」解析，
+            // 与导出前的 success AND 表达式不是同一件事
+            val omittable = status == WhenField.Status.SUCCESS &&
+                !StatusFunctions.referencedIn(step.additionalOptions?.ifExpression)
+            return if (omittable) null else status.alias
         }
         return WhenField(status = status, from = from, preFailureSkippedAs = preFailureSkippedAs, onCancel = onCancel)
     }

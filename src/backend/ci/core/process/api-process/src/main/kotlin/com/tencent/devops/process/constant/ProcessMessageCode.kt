@@ -777,7 +777,12 @@ object ProcessMessageCode {
 
     // [即使前面有插件运行失败也运行，即使被取消也运行](Run even if a previous plugin failed, and run even if it was cancelled)
     const val BK_RUNS_EVEN_IF_CANCELED = "bkRunsEvenIfCanceled"
-    const val BK_JOB_FAILURE_OR_CANCEL = "bkJobFailureOrCancel" // Job失败或被取消(Job failure or cancel) skip=true
+    // 步骤因前序状态未运行时的原因。四种情形的后续处理各不相同，分开给话，不再合并成一句
+    const val BK_PRE_STATE_PRE_TASK_FAILED = "bkPreStatePreTaskFailed" // 前序步骤已失败
+    const val BK_PRE_STATE_BUILD_CANCELED = "bkPreStateBuildCanceled" // 构建已被取消
+    const val BK_PRE_STATE_PRE_TASK_TIMEOUT = "bkPreStatePreTaskTimeout" // 前序步骤执行超时
+    const val BK_PRE_STATE_JOB_TERMINATED = "bkPreStateJobTerminated" // Job已被终止（执行超时或构建环境不可用）
+
     const val BK_CHECK_JOB_RUN_CONDITION = "bkCheckJobRunCondition" // 检查Job运行条件/Check Job Run Condition:
     const val BK_RELEASE_LOCK = "bkReleaseLock" // 释放互斥组锁(Release Lock)
     const val BK_GET_LOCKED = "bkGetLocked" // 获得锁定(Matched) 锁定期(Exp):

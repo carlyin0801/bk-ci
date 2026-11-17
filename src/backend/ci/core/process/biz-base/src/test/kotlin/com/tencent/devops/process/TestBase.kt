@@ -368,7 +368,8 @@ open class TestBase : BkCiAbstractTest() {
         retryCount: Int = 0,
         fromStepIds: List<String>? = null,
         preFailureSkippedAs: PreFailureSkippedAs? = null,
-        onCancel: OnCancel? = null
+        onCancel: OnCancel? = null,
+        customCondition: String? = nullObject
     ): ElementAdditionalOptions {
         return ElementAdditionalOptions(
             enable = enable,
@@ -379,7 +380,7 @@ open class TestBase : BkCiAbstractTest() {
             customVariables = customVariables,
             retryCount = retryCount,
             elementPostInfo = elementPostInfo,
-            customCondition = nullObject,
+            customCondition = customCondition,
             subscriptionPauseUser = null
         )
     }

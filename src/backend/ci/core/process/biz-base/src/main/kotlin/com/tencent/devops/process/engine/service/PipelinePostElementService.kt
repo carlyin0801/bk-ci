@@ -227,6 +227,7 @@ class PipelinePostElementService @Autowired constructor(
             additionalOptions.subscriptionPauseUser = null
             additionalOptions.retryCount = 0
             additionalOptions.customCondition = null
+            additionalOptions.ifExpression = null
             additionalOptions.elementPostInfo = elementPostInfo
         }
         // 生成post操作的element

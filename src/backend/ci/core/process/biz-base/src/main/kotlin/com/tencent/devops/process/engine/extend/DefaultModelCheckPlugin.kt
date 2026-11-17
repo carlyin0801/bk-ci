@@ -389,14 +389,23 @@ open class DefaultModelCheckPlugin constructor(
 
         val elementControlOption = element.additionalOptions
         if (elementControlOption?.runCondition == RunCondition.CUSTOM_CONDITION_MATCH) {
-            val length = elementControlOption.customCondition?.length ?: 0
-            if (length > PIPELINE_CONDITION_EXPRESSION_LENGTH_MAX) throw ErrorCodeException(
-                errorCode = ProcessMessageCode.ERROR_PIPELINE_CONDITION_EXPRESSION_TOO_LONG,
-                params = arrayOf(element.name, PIPELINE_CONDITION_EXPRESSION_LENGTH_MAX.toString())
-            )
-            checkStepConditionSyntax(element, elementControlOption.customCondition)
+            checkConditionExpression(element, elementControlOption.customCondition)
         }
+        // 与意图同现的附加表达式（`when` + `if`）走的是同一个求值器，校验口径必须一致，
+        // 否则它会成为绕过长度与语法校验的后门
+        checkConditionExpression(element, elementControlOption?.ifExpression)
         checkRunIntentFrom(container = this, element = element, elementIndex = elementIndex)
+    }
+
+    private fun checkConditionExpression(element: Element, expression: String?) {
+        if (expression.isNullOrBlank()) {
+            return
+        }
+        if (expression.length > PIPELINE_CONDITION_EXPRESSION_LENGTH_MAX) throw ErrorCodeException(
+            errorCode = ProcessMessageCode.ERROR_PIPELINE_CONDITION_EXPRESSION_TOO_LONG,
+            params = arrayOf(element.name, PIPELINE_CONDITION_EXPRESSION_LENGTH_MAX.toString())
+        )
+        checkStepConditionSyntax(element, expression)
     }
 
     /**

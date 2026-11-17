@@ -28,6 +28,7 @@
 package com.tencent.devops.common.pipeline.utils
 
 import com.tencent.devops.common.expression.expression.ExpressionConstants
+import com.tencent.devops.common.expression.expression.functions.StatusFunctions
 
 /**
  * 自定义条件表达式的保存期静态检查。
@@ -35,7 +36,7 @@ import com.tencent.devops.common.expression.expression.ExpressionConstants
  * 只拦「在运行期 100% 跑不出结果、且失败会被 ControlUtils 静默吞掉」的两类写法：
  *
  * 1. 未知函数名。运行期 `ExpressionParser.createTree` 的 allowUnknownKeywords 为 false，
- *    不在 [ExpressionConstants.WELL_KNOWN_FUNCTIONS] 里的函数一律抛 UnrecognizedFunction。
+ *    不在内置表与 [StatusFunctions] 里的函数一律抛 UnrecognizedFunction。
  * 2. `${{ }}` 整体包壳。引擎把 `${{ x }}` 和 `${x}` 当同一种变量占位符处理
  *    （见 EnvUtils 的 tPattern）：壳内文字查不到同名变量就原样留下，表达式随后以
  *    `Unexpected symbol: '${{'` 解析失败。
@@ -52,29 +53,18 @@ object StepConditionSyntaxChecker {
      */
     data class Violation(val origin: String, val suggestion: String)
 
-    /** 受支持的函数清单，用于在报错里直接告诉用户可以写什么 */
-    val supportedFunctions: List<String> = ExpressionConstants.WELL_KNOWN_FUNCTIONS.values.map { it.name }.sorted()
+    /**
+     * 受支持的函数清单，用于在报错里直接告诉用户可以写什么。
+     *
+     * 状态函数不在 WELL_KNOWN_FUNCTIONS 里——它们取值依赖调用现场，由 ControlUtils 在每次判定时
+     * 作为扩展函数注册（见 [StatusFunctions]），但在保存期它们同样是合法写法，必须一并放行。
+     */
+    val supportedFunctions: List<String> =
+        (ExpressionConstants.WELL_KNOWN_FUNCTIONS.values.map { it.name } + StatusFunctions.names).sorted()
 
     private val supportedFunctionHint = supportedFunctions.joinToString(" / ")
 
-    /**
-     * GitHub Actions 状态函数 -> 蓝盾对应写法，key 已去空格并转小写。
-     *
-     * 对应关系以现网 IfType 的既有语义为准：`ALWAYS` = 取消也跑、
-     * `ALWAYS_UNLESS_CANCELLED` = 除取消外都跑，分别就是 GitHub 的 `always()` 与 `!cancelled()`。
-     * 标量 `when: always` 的 on-cancel 默认是 continue，所以它等于 `always()`；
-     * `!cancelled()` 必须显式写 on-cancel: skip，写成标量就跑反了。
-     *
-     * `cancelled()`（仅在取消时运行）在蓝盾步骤级没有等价写法，故意不收进来：
-     * 它会落到未知函数那条分支，拿到一句「不支持，可用函数是这些」的事实陈述，
-     * 好过在这里硬给一个语义不等价的建议把用户带偏。
-     */
-    private val githubActionsSyntax = mapOf(
-        "success()" to "when: success",
-        "failure()" to "when: failure",
-        "always()" to "when: always",
-        "!cancelled()" to "when: {status: always, on-cancel: skip}"
-    )
+    private val knownFunctions: Set<String> = supportedFunctions.map { it.lowercase() }.toSet()
 
     // 与 EnvUtils.tPattern 的双花括号分支保持一致：壳内不允许再出现 $ 和花括号
     private val doubleBracePattern = Regex("""\$\{\{([^${'$'}{}]*)}}""")
@@ -98,9 +88,6 @@ object StepConditionSyntaxChecker {
         }
 
         val unwrapped = stripExpressionWrappers(origin)
-        val normalized = unwrapped.lowercase().replace(" ", "")
-        githubActionsSyntax[normalized]?.let { return Violation(origin, it) }
-
         firstUnknownFunction(unwrapped)?.let {
             return Violation(origin, "$it() 不是受支持的函数，可用函数：$supportedFunctionHint")
         }
@@ -122,6 +109,6 @@ object StepConditionSyntaxChecker {
         val withoutLiterals = stringLiteral.replace(expression, "''")
         return functionCall.findAll(withoutLiterals)
             .map { it.groupValues[1] }
-            .firstOrNull { !ExpressionConstants.WELL_KNOWN_FUNCTIONS.containsKey(it) }
+            .firstOrNull { it.lowercase() !in knownFunctions }
     }
 }

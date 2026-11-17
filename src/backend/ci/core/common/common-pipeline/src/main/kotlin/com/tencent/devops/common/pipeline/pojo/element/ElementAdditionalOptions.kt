@@ -68,6 +68,11 @@ data class ElementAdditionalOptions(
     val customVariables: List<NameAndValue>? = null,
     @get:Schema(title = "自定义条件", required = false)
     var customCondition: String? = "",
+    // 独立于 customCondition 另起一个字段，而不是让 customCondition 在非「自定义条件」意图下也生效：
+    // 存量里存在 runCondition 已切走、customCondition 却还留着上一次编辑残值的数据，
+    // 复用它会让这些步骤凭空多出一个 AND 条件、由跑变不跑。新字段存量必为 null，零回归
+    @get:Schema(title = "与执行条件取 AND 的附加表达式（YAML 里 when 与 if 同现）", required = false)
+    var ifExpression: String? = null,
     @get:Schema(title = "插件post信息", required = false)
     var elementPostInfo: ElementPostInfo? = null,
     @get:Schema(title = "是否设置自定义环境变量", required = false)

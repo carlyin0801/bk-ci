@@ -736,7 +736,7 @@ class ControlUtilsTest : TestBase() {
     }
 
     @Test
-    fun `前序范围 from 只看名单内步骤的成败`() {
+    fun `from scope only watches listed steps`() {
         val preTasks = listOf(
             preTask(stepId = "build", status = BuildStatus.SUCCEED),
             preTask(stepId = "lint", status = BuildStatus.FAILED)
@@ -783,7 +783,7 @@ class ControlUtilsTest : TestBase() {
     }
 
     @Test
-    fun `skipped-as 决定被放过的失败算成功还是算失败`() {
+    fun `skipped-as decides whether a skipped failure counts`() {
         val skipped = listOf(preTask(stepId = "flaky", status = BuildStatus.FAILED, failureSkipped = true))
         // 默认算成功：「前序失败时」判定为没有失败，跳过
         Assertions.assertTrue(
@@ -809,7 +809,7 @@ class ControlUtilsTest : TestBase() {
     }
 
     @Test
-    fun `on-cancel 独立于意图轴，前序失败时也能在取消后继续`() {
+    fun `on-cancel runs on cancel even when intent is failure`() {
         // 旧枚举表达不了的新组合：status=failure + on-cancel=continue
         Assertions.assertFalse(
             ControlUtils.checkTaskSkip(
@@ -836,6 +836,136 @@ class ControlUtilsTest : TestBase() {
             )
         )
     }
+
+    /**
+     * 表达式含状态函数才免掉「前序成功」这道门。
+     * 不含的那一支是存量的全部，必须逐格与改造前一致。
+     */
+    @Test
+    fun `expression without status function still requires previous success`() {
+        val options = elementAdditionalOptions(
+            runCondition = RunCondition.CUSTOM_CONDITION_MATCH,
+            customCondition = "variables.DO_DEPLOY == 'true'"
+        )
+        // 前序成功 + 表达式成立：跑
+        Assertions.assertFalse(expressionSkip(options, BuildStatus.RUNNING))
+        // 前序失败 / 取消：连求值都不做，直接跳过——与改造前同
+        Assertions.assertTrue(expressionSkip(options, BuildStatus.FAILED))
+        Assertions.assertTrue(expressionSkip(options, BuildStatus.CANCELED))
+        Assertions.assertTrue(expressionSkip(options, BuildStatus.TERMINATE))
+    }
+
+    @Test
+    fun `expression with status function skips the previous-success gate`() {
+        val cancelled = elementAdditionalOptions(
+            runCondition = RunCondition.CUSTOM_CONDITION_MATCH,
+            customCondition = "cancelled()"
+        )
+        // 只在取消时跑：四意图覆盖不到的长尾，这是本能力的核心用例
+        Assertions.assertTrue(expressionSkip(cancelled, BuildStatus.RUNNING))
+        Assertions.assertTrue(expressionSkip(cancelled, BuildStatus.FAILED))
+        Assertions.assertFalse(expressionSkip(cancelled, BuildStatus.CANCELED))
+
+        // 失败或取消都清理，等价于 when: {status: failure, on-cancel: continue}
+        val cleanup = elementAdditionalOptions(
+            runCondition = RunCondition.CUSTOM_CONDITION_MATCH,
+            customCondition = "failure() || cancelled()"
+        )
+        Assertions.assertTrue(expressionSkip(cleanup, BuildStatus.RUNNING))
+        Assertions.assertFalse(expressionSkip(cleanup, BuildStatus.FAILED))
+        Assertions.assertFalse(expressionSkip(cleanup, BuildStatus.CANCELED))
+    }
+
+    @Test
+    fun `bare status function matches the corresponding intent`() {
+        listOf(BuildStatus.RUNNING, BuildStatus.FAILED, BuildStatus.CANCELED).forEach { status ->
+            Assertions.assertEquals(
+                expressionSkip(elementAdditionalOptions(runCondition = RunCondition.PRE_TASK_SUCCESS), status),
+                expressionSkip(
+                    elementAdditionalOptions(
+                        runCondition = RunCondition.CUSTOM_CONDITION_MATCH,
+                        customCondition = "success()"
+                    ),
+                    status
+                ),
+                "success() 与 when: success 在 $status 下结果应一致"
+            )
+            Assertions.assertEquals(
+                expressionSkip(
+                    elementAdditionalOptions(runCondition = RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP),
+                    status
+                ),
+                expressionSkip(
+                    elementAdditionalOptions(
+                        runCondition = RunCondition.CUSTOM_CONDITION_MATCH,
+                        customCondition = "failure()"
+                    ),
+                    status
+                ),
+                "failure() 与 when: failure 在 $status 下结果应一致"
+            )
+            Assertions.assertEquals(
+                expressionSkip(
+                    elementAdditionalOptions(runCondition = RunCondition.PRE_TASK_FAILED_EVEN_CANCEL),
+                    status
+                ),
+                expressionSkip(
+                    elementAdditionalOptions(
+                        runCondition = RunCondition.CUSTOM_CONDITION_MATCH,
+                        customCondition = "always()"
+                    ),
+                    status
+                ),
+                "always() 与 when: always 在 $status 下结果应一致"
+            )
+        }
+    }
+
+    @Test
+    fun `evaluation error counts as condition not met`() {
+        val broken = elementAdditionalOptions(
+            runCondition = RunCondition.CUSTOM_CONDITION_MATCH,
+            customCondition = "cancelled() && nosuchfn(x)"
+        )
+        Assertions.assertTrue(expressionSkip(broken, BuildStatus.CANCELED))
+    }
+
+    @Test
+    fun `when and if together take AND`() {
+        val options = elementAdditionalOptions(
+            runCondition = RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP
+        ).apply { ifExpression = "variables.DO_DEPLOY == 'true'" }
+        // 意图成立（前序失败）且表达式成立：跑
+        Assertions.assertFalse(expressionSkip(options, BuildStatus.FAILED))
+        // 意图不成立：不必求值，直接跳过
+        Assertions.assertTrue(expressionSkip(options, BuildStatus.RUNNING))
+
+        // 意图成立但表达式不成立：被 AND 收窄，跳过
+        val narrowed = elementAdditionalOptions(
+            runCondition = RunCondition.PRE_TASK_FAILED_ONLY_EXCEPT_SKIP
+        ).apply { ifExpression = "variables.DO_DEPLOY == 'no'" }
+        Assertions.assertTrue(expressionSkip(narrowed, BuildStatus.FAILED))
+    }
+
+    @Test
+    fun `legacy step does not gain an extra AND condition`() {
+        // ifExpression 是新字段，存量必为 null；customCondition 的残值不应被当成 AND 条件
+        val stale = elementAdditionalOptions(
+            runCondition = RunCondition.PRE_TASK_FAILED_EVEN_CANCEL,
+            customCondition = "variables.DO_DEPLOY == 'no'"
+        )
+        Assertions.assertFalse(expressionSkip(stale, BuildStatus.CANCELED))
+        Assertions.assertFalse(expressionSkip(stale, BuildStatus.FAILED))
+    }
+
+    private fun expressionSkip(options: ElementAdditionalOptions, containerFinalStatus: BuildStatus) =
+        ControlUtils.checkTaskSkip(
+            buildId = buildId,
+            additionalOptions = options,
+            containerFinalStatus = containerFinalStatus,
+            variables = variables + mapOf("variables.DO_DEPLOY" to "true"),
+            hasFailedTaskInSuccessContainer = false
+        )
 
     private fun skip(options: ElementAdditionalOptions, preTasks: List<PreTaskStatus>) = ControlUtils.checkTaskSkip(
         buildId = buildId,

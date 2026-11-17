@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test
 class RunConditionNormalizerTest {
 
     @Test
-    fun `已下线的取值兜底为默认意图，历史数据仍可反序列化`() {
+    fun `retired values fall back to the default intent`() {
         Assertions.assertEquals(RunCondition.PRE_TASK_SUCCESS, RunCondition.parse("OTHER_TASK_RUNNING"))
         Assertions.assertEquals(RunCondition.PRE_TASK_SUCCESS, RunCondition.parse("WHATEVER_UNKNOWN"))
         Assertions.assertNull(RunCondition.parse(null))
@@ -49,7 +49,7 @@ class RunConditionNormalizerTest {
     }
 
     @Test
-    fun `变量匹配保持独立意图，不译成表达式`() {
+    fun `variable match stays its own intent`() {
         // 带点的 key、空串、${} 占位、单引号若译成 key == 'value'，比较结果都会和现网逐项比较不一致
         listOf(
             listOf(NameAndValue("a", "b"), NameAndValue("c", "d")),
@@ -71,7 +71,7 @@ class RunConditionNormalizerTest {
     }
 
     @Test
-    fun `落库枚举解析为意图与三个正交维度的默认值`() {
+    fun `stored enum resolves to intent and default dimensions`() {
         resolve(RunCondition.PRE_TASK_SUCCESS).let {
             Assertions.assertEquals(StepRunIntent.SUCCESS, it.intent)
             Assertions.assertEquals(PreFailureSkippedAs.SUCCESS, it.preFailureSkippedAs)
@@ -103,7 +103,7 @@ class RunConditionNormalizerTest {
     }
 
     @Test
-    fun `显式字段覆盖枚举推导出的默认值`() {
+    fun `explicit fields override the enum defaults`() {
         // 旧枚举无法表达的新组合：前序失败时 + 取消也运行
         val failureOnCancel = RunConditionNormalizer.resolve(
             ElementAdditionalOptions(
@@ -129,7 +129,7 @@ class RunConditionNormalizerTest {
         RunConditionNormalizer.resolve(ElementAdditionalOptions(runCondition = runCondition))
 
     @Test
-    fun `变量列表为空的变量匹配仍是变量匹配，不会落到空表达式`() {
+    fun `empty variable match stays variable match`() {
         // 空表达式在 evalExpressionAsCode 里恒为 false 即「跳过」，而变量列表为空时现网是「不跳过」
         listOf(RunCondition.CUSTOM_VARIABLE_MATCH, RunCondition.CUSTOM_VARIABLE_MATCH_NOT_RUN).forEach { condition ->
             listOf(
@@ -144,7 +144,7 @@ class RunConditionNormalizerTest {
     }
 
     @Test
-    fun `自定义条件表达式原样带出，不被变量匹配覆盖`() {
+    fun `custom condition expression is kept as written`() {
         val resolved = RunConditionNormalizer.resolve(
             ElementAdditionalOptions(
                 runCondition = RunCondition.CUSTOM_CONDITION_MATCH,

@@ -88,8 +88,15 @@ object ExpressionParser {
     /**
      * 通过Map变量表类型计算表达式
      * @param fetchValue 是否将计算结果还原为java类型
+     * @param functions 本次求值额外可用的扩展函数，不传则只有 [ExpressionConstants.WELL_KNOWN_FUNCTIONS]。
+     *   供取值依赖调用现场的函数使用（如状态函数），它们不适合注册进全局内置表
      */
-    fun evaluateByMap(expression: String, contextMap: Map<String, String>, fetchValue: Boolean): Any? {
+    fun evaluateByMap(
+        expression: String,
+        contextMap: Map<String, String>,
+        fetchValue: Boolean,
+        functions: Iterable<IFunctionInfo>? = null
+    ): Any? {
         val context = ExecutionContext(DictionaryContextData())
         val nameValue = mutableListOf<NamedValueInfo>()
         fillContextByMap(contextMap, context, nameValue)
@@ -100,7 +107,8 @@ object ExpressionParser {
                 context = context,
                 nameValue = nameValue,
                 options = options,
-                fetchValue = fetchValue
+                fetchValue = fetchValue,
+                functions = functions
             )
         } catch (e: Throwable) {
             if (options.contextNotNull() && e is ContextNotFoundException) {
@@ -115,9 +123,10 @@ object ExpressionParser {
         context: ExecutionContext,
         nameValue: MutableList<NamedValueInfo>,
         options: EvaluationOptions,
-        fetchValue: Boolean
+        fetchValue: Boolean,
+        functions: Iterable<IFunctionInfo>? = null
     ): Any? {
-        val result = createTree(expression.legalizeExpression(), null, nameValue, null)!!
+        val result = createTree(expression.legalizeExpression(), null, nameValue, functions)!!
             .evaluate(null, context, options, null)
         if (!fetchValue) {
             return result
